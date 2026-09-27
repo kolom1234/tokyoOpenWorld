@@ -37,10 +37,10 @@ module.exports = {
   forbidden: [
     {
       name: 'no-circular',
-      comment: '순환 의존 금지',
+      comment: '순환 의존 금지 (전 구간 type-only인 순환은 런타임에 소거되므로 허용 — ADR-0013)',
       severity: 'error',
       from: {},
-      to: { circular: true },
+      to: { circular: true, via: { dependencyTypesNot: ['type-only'] } },
     },
     {
       name: 'no-cross-package-internals',

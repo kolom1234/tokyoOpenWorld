@@ -1,14 +1,15 @@
 # PROGRESS
-Updated: 2026-09-27 (session #1 — M00-T01 완료)
+Updated: 2026-09-27 (session #2 — M00-T02 완료)
 
 ## Current Milestone: M00 — Foundation
-## Current Task: M00-T02 @sanpo/core (not started)
+## Current Task: M00-T03 CI & codemap (not started)
 - Done in this task: –
 - In progress: –
-- Next step (정확히 한 걸음): `docs/roadmap/M00.md`의 M00-T02 블록과 `docs/modules/core.md`를 읽고 `packages/core/src/api.ts`에 공유 어휘 타입(Vec3d/Quat/Result/CellKey…)부터 작성
+- Next step (정확히 한 걸음): `docs/roadmap/M00.md`의 M00-T03 블록과 `docs/16-context-protocol.md §5`를 읽고 `tools/codemap/src/index.ts`에 TS 컴파일러 API 기반 CODEMAP 생성기 작성(`typescript`는 루트 devDep 6.0.3 사용)
 - Blockers: 없음
 
 ## Recently Completed
+- M00-T02 @sanpo/core — api.ts 공유 어휘 타입, events.ts EventMap, internal/{event-bus,logger,scheduler,rng,hash,result,cell-key,math,config,worker-supervisor}.ts, 테스트 7파일/46건. ADR-0012(hash32/rng 고정), ADR-0013(type-only 순환 허용, depcruise `no-circular` 수정) (2026-09-27)
 - M00-T01 모노레포 골격 — 11 packages + apps/{game,worker} + tools/{pipeline,codemap}, biome/tsc/depcruise/vitest 설정, ADR-0011(Node ≥22.12), `/resume`→`/sanpo-resume` 개명 (2026-09-27)
 - 설계 문서 세트 v1 (CLAUDE.md, docs/00–17, docs/roadmap/M00–M11, docs/modules/*, docs/adr/0001–0010, schemas/*) — 2026-09-27
 
