@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "node -e \"require('node:fs').mkdirSync('../game/dist',{recursive:true})\" && wrangler dev --env local",
+    "seed:local": "wrangler r2 object put sanpo-world-local/world/20260927-0000000-00000000/hello.txt --file test/fixtures/hello.txt --content-type text/plain --local --env local && wrangler kv key put CURRENT_BUILD:v1 20260927-0000000-00000000 --binding CONFIG --local --env local",
     "build": "wrangler deploy --dry-run --outdir dist --env=",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env="

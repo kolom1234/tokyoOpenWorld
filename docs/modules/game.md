@@ -23,10 +23,15 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 ## Files
 | 파일 | 책임 |
 |---|---|
+| index.html, vite.config.ts | Vite 엔트리. dev 서버 격리 헤더 + `/api`·`/world` → `wrangler dev`(8787) 프록시 |
+| public/_headers | 정적 에셋 COOP/COEP/CORP/CSP·캐시 헤더(docs/13 §3) — Worker를 거치지 않는 응답용 |
 | src/main.ts | 엔트리, 오류 화면 |
-| src/caps.ts | 기능 감지 |
-| src/boot.ts | 위 시퀀스 |
-| src/loop.ts | rAF → scheduler.tick |
+| src/caps.ts | 기능 감지 `detectCaps(env?)` → `Caps`(webgpu `available/no-adapter/unsupported`, crossOriginIsolated, `IsolationMode`, decodeWorkers) |
+| src/boot.ts | 위 시퀀스(M00: 1·2·4 + 빈 루프), `parseFlags`, `createIdleFrameSource` |
+| src/loop.ts | rAF → scheduler.tick, `FrameHook`(before/after) |
+| src/world-status.ts | `fetchWorldStatus()` → `WorldStatus`(ready/unconfigured/no-build/error), `WORLD_FORMAT_VERSION` |
+| src/status-view.ts | 부트 상태 화면(M00 임시, `#app[data-isolated|data-webgpu|data-world]` — e2e용) |
+| src/debug/stats.ts | `?debug=1` stats-gl 동적 import |
 | src/wiring/streaming-render.ts | onReady/onEvicted → render(+ack), HLOD 자식 가시성, sim/audio/interactables 분배 |
 | src/wiring/streaming-physics.ts | 물리 반경 필터, `requestSections` → physics.addCell/removeCell |
 | src/wiring/streaming-sim.ts | nav/lanes/meta 전달 |
@@ -41,5 +46,8 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 - 새 기능은 패키지에 구현하고 여기서는 배선만 추가.
 - 각 wiring 파일 ≤ 200줄. 배선 로직이 커지면 해당 패키지 API가 부족하다는 신호 → 패키지 쪽 보강.
 
+## Tests
+test/caps.test.ts(WebGPU 3상태·격리·워커 수), test/boot.test.ts(루프·훅, 월드 상태 분류, 상태 문구, 플래그).
+
 ## Status
-미구현 (M00-T04).
+M00-T04 부트 골격: 기능 감지 표시 + 빈 스케줄러 루프 + `/api/world/current` 조회 + `?debug=1` stats-gl. 부트 5–11단계는 각 패키지 태스크에서 배선.
