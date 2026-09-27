@@ -34,6 +34,9 @@ export function gridConvergenceDeg(ll: LonLat): number;         // γ = 도북 �
 export function trueToGridAzimuthDeg(azTrueDeg: number, ll: LonLat): number; // az − γ, [0, 360)
 // 경계 (internal/bbox.ts)
 export function lonLatBBoxOfWF(b: CellBoundsWF): LonLatBBox;    // WF 사각형 외접 위경도 상자(+1 cm), 원천 조회용
+// JIS X 0410 메시 (internal/jis-mesh.ts) — PLATEAU 원천 파일 선택용
+export function jisMesh3Of(lat: number, lon: number): string;  // 3차 메시(≈1 km) 8자리, 경계 위 점은 북·동 메시
+export function jisMesh3CodesInBBox(b: LonLatBBox): string[];  // 상자와 겹치는 3차 메시(남→북, 서→동)
 ```
 
 ## Invariants
@@ -52,12 +55,14 @@ export function lonLatBBoxOfWF(b: CellBoundsWF): LonLatBBox;    // WF 사각형 
 | src/internal/cells.ts | 셀 계산·부모/자식·HLOD 자식 인덱스 |
 | src/internal/convergence.ts | 수렴각(투영 수치 미분)·방위 보정 |
 | src/internal/bbox.ts | WF 사각형 → 위경도 외접 상자 |
+| src/internal/jis-mesh.ts | JIS X 0410 3차 메시 코드(M01-T02) |
 | test/golden.json | pyproj 기준점 20개 (생성: `tools/pipeline/scripts/golden-geo.py`) |
 
 ## Tests
 `golden.test.ts`: 골든 20점 순/역/아핀/수렴각, 스크램블 WF ≈ (−22.3, ·, 8.6), 23구 범위 왕복 < 1 µm.
 `cells.test.ts`: 셀 경계(x = −256, −0.0001, 0), 자식 16개 합 = 부모, HLOD 인덱스 순서.
 `convergence-bbox.test.ts`: 수렴각 부호, 방위 보정, bbox 포함.
+`jis-mesh.test.ts`: 스크램블 = 53393596, 도쿄역 = 53394611, 경계 소속, 3×3 셀 → 4개 메시.
 
 ## Status
 구현 완료 (M01-T01, 2026-09-27).

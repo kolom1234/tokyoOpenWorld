@@ -40,8 +40,10 @@
 ## 3. 데이터 파이프라인 도구 (`tools/pipeline`)
 | 도구 | 용도 | 라이선스 |
 |---|---|---|
-| **PLATEAU GIS Converter (nusamai) CLI** v0.1.14 | CityGML → glTF/GeoPackage/GeoJSON 변환 (좌표계 지정) | MIT |
-| GDAL/OGR ≥ 3.10 (`gdalwarp`, `ogr2ogr`) | DEM 재투영·모자이크, 벡터 변환 | MIT |
+| Node (컨테이너) | `node:24.21.0-bookworm-slim`에서 복사, pnpm 10.34.5(corepack) | MIT |
+| `saxes` 6.0.0 | **PLATEAU CityGML 리더(채택, ADR-0007)** — 스트리밍 SAX | ISC |
+| **PLATEAU GIS Converter (nusamai) CLI** v0.1.19 | 비교·회귀용 A안 리더(ADR-0007), HLOD 원천 변환 후보 | MIT |
+| GDAL/OGR 3.13.3 (이미지 `ghcr.io/osgeo/gdal:ubuntu-small-3.13.3` 기반; `gdalwarp`, `ogr2ogr`) | DEM 재투영·모자이크, 벡터 변환 | MIT |
 | osmium-tool | OSM PBF 추출/필터 (`osmium extract`, `tags-filter`, `export`) | GPL-3.0 (도구 실행만, 링크 안 함) |
 | `@gltf-transform/core,functions,extensions` 4.5.0 | glTF 병합·정리·meshopt·텍스처 처리 | MIT |
 | `meshoptimizer` (simplify, encode) | LOD 단순화, 압축 | MIT |

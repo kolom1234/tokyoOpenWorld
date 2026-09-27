@@ -35,7 +35,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 ## 4. Stage 상세
 
 ### 4.1 fetch
-- lock 파일의 각 소스를 다운로드 → sha256 검증 → `data/raw/<id>/` 압축 해제.
+- lock 파일의 각 소스를 다운로드 → sha256 검증 → `data/raw/<id>/extracted/` 압축 해제(원본 zip은 `data/raw/<id>/`에 보존).
 - OSM: Geofabrik PBF → `osmium extract --bbox <영역 bbox + 500 m>` 로 축소.
 
 ### 4.2 normalize (소스별 리더 → 공통 레코드)
@@ -43,8 +43,8 @@ data/build/<buildId>/                        (build/hlod/validate)
 
 | 레이어 | 입력 | 리더 | 출력 레코드 핵심 필드 |
 |---|---|---|---|
-| `buildings` | PLATEAU bldg (LOD2 우선, 없으면 LOD1) | `PlateauReader` | `gmlId, lod, measuredHeight, storeys, usage, surfaces[{kind: roof/wall/ground/closure, ringsWF, uv?, tex?}]` |
-| `roads` | PLATEAU tran (LOD3 TrafficArea > LOD2 > LOD1) | `PlateauReader` | `id, function(carriageway/sidewalk/island/crosswalk), polygonWF, source` |
+| `buildings` | PLATEAU bldg (LOD3 > LOD2 > LOD1) | `PlateauReader` | `gmlId, buildingId, lod, measuredHeightM, storeys, storeysBelow, usage(코드), surfaces[{kind: roof/wall/ground/closure/installation, gmlId?, ringsWF, uv?, tex?}], source` |
+| `roads` | PLATEAU tran (도로별 LOD3 TrafficArea > LOD2 > LOD1 Road면) | `PlateauReader` | `id, roadId, lod, function(carriageway/sidewalk/island/crosswalk/other), functionCode, polygonWF, source` |
 | `bridges` | PLATEAU brid | `PlateauReader` | 표면 메시 + 상판 높이 |
 | `furniture` | PLATEAU frn LOD3 | `PlateauReader` | `class(pole/sign/signal/lamp/...), transform, dims` |
 | `vegetation` | PLATEAU veg LOD3 (SolitaryVegetationObject), OSM `natural=tree` | `PlateauReader`, `OsmReader` | `species?, height, crown, posWF` |
@@ -53,10 +53,8 @@ data/build/<buildId>/                        (build/hlod/validate)
 | `rail` | KSJ N02 + OSM railway | `RailReader` | 노선ID, 운영사, 트랙 폴리라인(선로별), 역·플랫폼 |
 | `areas` | e-Stat 소지역 | `BoundaryReader` | 町丁目 폴리곤 + 이름(ja, 로마자) |
 
-**PlateauReader 구현 전략** (M01-T02 스파이크로 확정):
-- A안: nusamai CLI로 CityGML → GeoPackage/glTF 변환 후 읽기 (텍스처·gml:id·속성 보존 여부 검증 필요)
-- B안: 자체 스트리밍 CityGML 파서(SAX, `saxes`)로 `gml:posList` + 속성 직접 추출
-- 인터페이스 `PlateauReader.read(file): AsyncIterable<NormalizedFeature>` 고정 → 구현 교체 가능. 결정은 ADR로 기록.
+**PlateauReader 구현**: 자체 스트리밍 CityGML 파서(SAX, `saxes`) 채택 — ADR-0007(nusamai는 면 종류·도로 기능·UV를 병합해 잃음). 인터페이스 `PlateauReader.read(file): AsyncIterable<NormalizedFeature>` 고정 → 구현 교체 가능(`--reader nusamai`는 비교용).
+좌표는 1 mm 반올림, 셀 파일 안은 id 정렬, gzip 헤더 고정(mtime 0, OS 255) → 바이트 동일. 입력 파일은 대상 셀을 덮는 3차 메시(`jisMesh3CodesInBBox`)로 고른다.
 
 ### 4.3 derive (데이터 공백 채움 + 게임 레이어 생성)
 | 산출 | 방법 |

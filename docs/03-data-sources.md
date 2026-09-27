@@ -60,7 +60,8 @@
   "sources": [
     {
       "id": "plateau-shibuya",
-      "url": "https://www.geospatial.jp/ckan/dataset/plateau-13113-shibuya-ku-<year>",
+      "url": "https://assets.cms.plateau.reearth.io/assets/…/13113_shibuya-ku_pref_2025_citygml_1_op.zip",
+      "dataset": "https://www.geospatial.jp/ckan/dataset/plateau-13113-shibuya-ku-2025",
       "resource": "CityGML(v4)",
       "fiscalYear": 2025,
       "retrievedAt": "2026-10-01",
