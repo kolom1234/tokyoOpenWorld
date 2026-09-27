@@ -46,8 +46,10 @@
 | **PLATEAU GIS Converter (nusamai) CLI** v0.1.19 | 비교·회귀용 A안 리더(ADR-0007), HLOD 원천 변환 후보 | MIT |
 | GDAL/OGR 3.13.3 (이미지 `ghcr.io/osgeo/gdal:ubuntu-small-3.13.3` 기반; `gdalwarp`, `ogr2ogr`) | DEM 재투영·모자이크, 벡터 변환 | MIT |
 | osmium-tool | OSM PBF 추출/필터 (`osmium extract`, `tags-filter`, `export`) | GPL-3.0 (도구 실행만, 링크 안 함) |
-| `@gltf-transform/core,functions,extensions` 4.5.0 | glTF 병합·정리·meshopt·텍스처 처리 | MIT |
-| `meshoptimizer` (simplify, encode) | LOD 단순화, 압축 | MIT |
+| `@gltf-transform/core,extensions` 4.5.0 | glb 작성·읽기, `EXT_meshopt_compression`·`KHR_mesh_quantization` (functions는 sharp 네이티브 의존으로 미사용, ADR-0018) | MIT |
+| `meshoptimizer` 1.3.0 (encode, reorder, simplify) | 압축·정점 캐시 재정렬, LOD 단순화(지형은 RTIN, ADR-0018) | MIT |
+| `earcut` 3.0.2 (+ `@types/earcut` 3.0.0) | 건물 면 폴리곤 삼각분할 | ISC |
+| `ajv` 8.20.0 | validate 단계 JSON Schema 검사 | MIT |
 | KTX-Software `toktx` ≥ 4.3 | KTX2(ETC1S/UASTC) 인코딩 | Apache-2.0 |
 | `proj4` 2.22.0 (JS) / pyproj (검증용) | 좌표 변환 (EPSG 정의 고정 문자열 사용) | MIT |
 | `recast-navigation` (Node) | 셀별 내비메시 타일 굽기 | MIT |

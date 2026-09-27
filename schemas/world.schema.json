@@ -63,7 +63,7 @@
     "areas": {
       "type": "array",
       "items": {
-        "$ref": "sanpo/area"
+        "$ref": "area"
       }
     },
     "spawn": {

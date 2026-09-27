@@ -24,6 +24,11 @@ export const LANE_NO_SIGNAL = 0xffff;
 /** terrain.height 기본값: 257² 격자(1 m 간격, 셀 경계 공유), 양자화 단위 0.01 m. */
 export const HEIGHTFIELD_SIZE = 257;
 export const HEIGHTFIELD_STEP_M = 0.01;
+/**
+ * terrain.height 공통 기준 높이(`minH`, m). 모든 셀이 같은 기준·스텝으로 양자화해야 이웃 셀 경계 샘플의 u16이
+ * 비트 단위로 같다(ADR-0018). 표현 범위 = −100 … +555.35 m(65535 step).
+ */
+export const HEIGHTFIELD_BASE_M = -100;
 
 // ── 섹션 레지스트리 (05 §4 표와 1:1. 새 섹션은 표와 여기 동시 등록) ──
 

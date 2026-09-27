@@ -1,6 +1,6 @@
 // terrain.height(gzip 해제 후) 인코더/디코더 + 미터 높이 → u16 양자화. see docs/05-tile-format.md §4 (terrain.height)
 import type { Result } from '@sanpo/core';
-import { HEIGHTFIELD_STEP_M, type HeightfieldData, type TkcError, TkcErrorCode } from '../api.ts';
+import { HEIGHTFIELD_BASE_M, HEIGHTFIELD_STEP_M, type HeightfieldData, type TkcError, TkcErrorCode } from '../api.ts';
 import { ByteReader, ByteWriter, fail } from './bytes.ts';
 
 const U16_MAX = 0xffff;
@@ -36,29 +36,26 @@ export function parseHeightfield(bytes: Uint8Array): Result<HeightfieldData, Tkc
 }
 
 /**
- * 미터 높이 격자(size², 행 = iz) → 양자화. minH = floor(min/step)·step을 f32로 반올림해 저장값과 동일하게 만들고,
- * v = round((h − minH)/step). 범위(65535 step) 초과·비유한 값은 throw.
- * 주의: 셀마다 minH가 달라 이웃 셀 경계의 복원 높이(minH + v·step)는 수 μm 다를 수 있다(물리 전용 섹션).
+ * 미터 높이 격자(size², 행 = iz) → 양자화. 기준 `minH`(기본 공통값 HEIGHTFIELD_BASE_M)·`step`을 f32로 반올림해 저장값과 같게 하고
+ * v = round((h − minH)/step). 모든 셀이 같은 기준·스텝을 쓰므로 같은 높이 → 같은 u16(이웃 경계 비트 일치, ADR-0018).
+ * 범위(0…65535 step) 밖·비유한 값은 throw.
  */
 export function quantizeHeightfield(
   heightsM: ArrayLike<number>,
   size: number,
   step = HEIGHTFIELD_STEP_M,
+  minH = HEIGHTFIELD_BASE_M,
 ): HeightfieldData {
   if (heightsM.length !== size * size) throw new RangeError(`quantizeHeightfield: ${heightsM.length} ≠ ${size}²`);
-  let min = Number.POSITIVE_INFINITY;
-  for (let i = 0; i < heightsM.length; i++) {
-    const h = heightsM[i] ?? Number.NaN;
-    if (!Number.isFinite(h)) throw new RangeError(`quantizeHeightfield: non-finite height at ${i}`);
-    if (h < min) min = h;
-  }
-  const minH = Math.fround(Math.floor(min / step) * step);
+  const baseF = Math.fround(minH);
   const stepF = Math.fround(step);
   const data = new Uint16Array(size * size);
   for (let i = 0; i < data.length; i++) {
-    const v = Math.round(((heightsM[i] ?? 0) - minH) / stepF);
-    if (v < 0 || v > U16_MAX) throw new RangeError(`quantizeHeightfield: range exceeds ${U16_MAX} steps at ${i}`);
+    const h = heightsM[i] ?? Number.NaN;
+    if (!Number.isFinite(h)) throw new RangeError(`quantizeHeightfield: non-finite height at ${i}`);
+    const v = Math.round((h - baseF) / stepF);
+    if (v < 0 || v > U16_MAX) throw new RangeError(`quantizeHeightfield: ${h} m out of range at ${i}`);
     data[i] = v;
   }
-  return { size, minH, step: stepF, data };
+  return { size, minH: baseF, step: stepF, data };
 }

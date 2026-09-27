@@ -9,7 +9,7 @@ TKC 셀 컨테이너, cells.idx, JCOL, lanes.bin, terrain.height의 인코더/�
 // 상수
 TKC_MAGIC = 0x3143_4B54 /*"TKC1" LE*/; FORMAT_VERSION = 1; TKC_ALIGN = 16; TKC_PREAMBLE_BYTES = 16;
 CELLS_INDEX_MAGIC /*"TKCI"*/; JCOL_MAGIC; JCOL_VERSION = 1; LANES_MAGIC; LANES_VERSION = 1; LANE_NO_SIGNAL = 0xFFFF;
-HEIGHTFIELD_SIZE = 257; HEIGHTFIELD_STEP_M = 0.01; CELL_FLAG = { override: 1, rail: 2 };
+HEIGHTFIELD_SIZE = 257; HEIGHTFIELD_STEP_M = 0.01; HEIGHTFIELD_BASE_M = -100 /*모든 셀 공통 minH, ADR-0018*/; CELL_FLAG = { override: 1, rail: 2 };
 JCOL_MATERIAL = { concrete: 0, …, tile: 7 }; JCOL_FLAG = { rampProxy: 1, climbable: 2 };
 SECTION_REGISTRY: Record<SectionType, { codec: SectionCodec; levels: CellLevel[] }>   // 05 §4 표와 1:1
 type SectionType = keyof typeof SECTION_REGISTRY;  type SectionCodec = 'glb'|'bin'|'bin+gzip'|'json+gzip';
@@ -35,7 +35,7 @@ interface LaneGraphChunk { nodes{id,posLocal,portalKey}; lanes{id,fromNode,toNod
 writeLanes(g): Uint8Array;  parseLanes(bytes): Result<LaneGraphChunk, TkcError>
 // terrain.height (gzip 해제 후)
 writeHeightfield(hf: HeightfieldData): Uint8Array;  parseHeightfield(bytes): Result<HeightfieldData, TkcError>
-quantizeHeightfield(heightsM: ArrayLike<number>, size, step = 0.01): HeightfieldData
+quantizeHeightfield(heightsM: ArrayLike<number>, size, step = 0.01, minH = HEIGHTFIELD_BASE_M): HeightfieldData  // 범위 밖·비유한 throw
 // gzip (Compression/DecompressionStream)
 gzip(bytes): Promise<Uint8Array>   // mtime 0, OS 바이트 0xFF → 같은 런타임에서 결정론
 gunzip(bytes): Promise<Result<Uint8Array, TkcError>>
@@ -44,7 +44,7 @@ DecodedMesh, MeshSlot, CellPayload, HeightfieldData{size,minH,step,data:Uint16Ar
 CellMeta{buildings: MetaBuilding[]; pois: MetaPoi[]; placeNames: MetaPlaceName[]; signals: MetaSignal[]; interactables: InteractableRecord[]}  // = schemas/cell-meta.schema.json
 ```
 
-## M01-T05 사용 예 (파이프라인)
+## 파이프라인 사용 예 (tools/pipeline `stages/build/assemble.ts`)
 ```ts
 const hf = await gzip(writeHeightfield(quantizeHeightfield(heights257x257, HEIGHTFIELD_SIZE)));
 const meta = await gzip(new TextEncoder().encode(JSON.stringify(cellMeta)));
@@ -68,9 +68,9 @@ cells-index.ts, jcol.ts, lanes.ts, heightfield.ts, gzip.ts, xxh64.ts, bytes.ts(L
 test/tkc.test.ts(round-trip 바이트 동일·결정론·정렬·손상 거부·미지 섹션), schema.test.ts(ajv: cell-header·cell-meta), binary.test.ts(cells.idx·JCOL·lanes·heightfield·gzip), hash.test.ts(XXH64 골든). 픽스처는 합성(test/fixtures.ts).
 
 ## Status
-구현 완료 (M01-T04). props.inst·trees.inst·lights.bin 인코더는 해당 태스크(M04~)에서 추가.
+구현 완료 (M01-T04). M01-T05: terrain.height 공통 기준(ADR-0018). props.inst·trees.inst·lights.bin 인코더는 해당 태스크(M04~)에서 추가.
 
 ## Gotchas
 - 섹션 추가 시 05 문서 §4 레지스트리 표와 `SECTION_REGISTRY`(api.ts) 동시 갱신.
-- `quantizeHeightfield`는 셀마다 minH가 달라 이웃 셀 경계의 복원 높이가 μm 단위로 다를 수 있다(물리 전용). 렌더 메시 이음새는 파이프라인이 보장.
+- `quantizeHeightfield`는 기본값으로 공통 기준(−100 m)·스텝을 쓴다 → 같은 높이 = 같은 u16(이웃 경계 비트 일치, ADR-0018). 셀별 min을 넘기면 이 성질이 깨진다.
 - gzip 바이트는 런타임 zlib 버전에 의존 → 파이프라인 재현성 검사는 같은 컨테이너에서.
