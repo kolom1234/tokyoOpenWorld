@@ -24,7 +24,7 @@ stage: fetch | normalize | derive | build | hlod | validate | publish | all
 ```
 data/raw/<sourceId>/...                      (fetch)
 data/normalized/<layer>/<cellId>.ndjson.gz   (normalize: WF 좌표, 셀 버킷)
-data/normalized/terrain/dem_1m.tif           (PRJ, 1 m 그리드)
+data/normalized/terrain/dem_1m.{tif,json}    (PRJ, 1 m 그리드: 픽셀 중심 = 정수 m, + 메타·결측 통계)
 data/derived/<layer>/<cellId>.*              (derive)
 data/build/<buildId>/                        (build/hlod/validate)
    world.json   cells.idx   L0/<ix>/<iz>.tkc   L1/..  L2/..  L3/..
@@ -48,7 +48,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 | `bridges` | PLATEAU brid | `PlateauReader` | 표면 메시 + 상판 높이 |
 | `furniture` | PLATEAU frn LOD3 | `PlateauReader` | `class(pole/sign/signal/lamp/...), transform, dims` |
 | `vegetation` | PLATEAU veg LOD3 (SolitaryVegetationObject), OSM `natural=tree` | `PlateauReader`, `OsmReader` | `species?, height, crown, posWF` |
-| `terrain` | GSI DEM(1 m 우선, 5 m) + PLATEAU dem | `DemReader` (GDAL) | `dem_1m.tif` (5 m는 bicubic 재표본) |
+| `terrain` | GSI DEM1A(1 m, 주) → 결측만 DEM5A(5 m) → 잔여 결측 역거리 보간 | `readers/dem.ts` + GDAL | `dem_1m.tif`(EPSG:6677, 1A bilinear·5A bicubic 재표본, 픽셀 중심 = 정수 PRJ = 정수 WF) |
 | `osm` | OSM PBF | `OsmReader` (osmium export → GeoJSONSeq) | 도로 중심선(lanes, oneway, maxspeed, width, layer, bridge, tunnel), 신호·횡단보도 노드, 철도(railway=*, service, electrified), 플랫폼, landuse/leisure, 이름 |
 | `rail` | KSJ N02 + OSM railway | `RailReader` | 노선ID, 운영사, 트랙 폴리라인(선로별), 역·플랫폼 |
 | `areas` | e-Stat 소지역 | `BoundaryReader` | 町丁目 폴리곤 + 이름(ja, 로마자) |
