@@ -1,7 +1,8 @@
 # 15 — Coding Conventions
 
 ## 1. TypeScript
-- `strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`, `verbatimModuleSyntax: true`, ESM only.
+- `strict: true`, `noUncheckedIndexedAccess: true`, `exactOptionalPropertyTypes: true`, `verbatimModuleSyntax: true`, `erasableSyntaxOnly: true`, ESM only.
+- 상대 import는 `.ts` 확장자를 명시(`import … from './api.ts'`) — Vite·Vitest·Node type-stripping(툴 직접 실행) 공용. `tsc`는 `noEmit` 타입 검사 전용.
 - `any` 금지(불가피하면 `unknown` + 좁히기). Jolt 바인딩처럼 타입이 약한 곳은 `internal/jolt-*.ts`에 격리.
 - `enum` 대신 `as const` 객체 + 유니온 타입.
 - 클래스는 상태를 가진 서비스/리소스에만. 순수 로직은 함수.

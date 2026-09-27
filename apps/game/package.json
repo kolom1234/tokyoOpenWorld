@@ -1,0 +1,19 @@
+{
+  "name": "@sanpo/game",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@sanpo/core": "workspace:*",
+    "@sanpo/geo": "workspace:*",
+    "@sanpo/tile-format": "workspace:*",
+    "@sanpo/input": "workspace:*",
+    "@sanpo/streaming": "workspace:*",
+    "@sanpo/physics": "workspace:*",
+    "@sanpo/audio": "workspace:*",
+    "@sanpo/render": "workspace:*",
+    "@sanpo/sim": "workspace:*",
+    "@sanpo/traversal": "workspace:*",
+    "@sanpo/ui": "workspace:*"
+  }
+}

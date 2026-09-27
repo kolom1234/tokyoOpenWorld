@@ -1,0 +1,12 @@
+{
+  "name": "@sanpo/tile-format",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@sanpo/core": "workspace:*"
+  }
+}
