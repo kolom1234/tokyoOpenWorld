@@ -9,6 +9,7 @@ import { type CellKey, createLogger, packCellKey } from '@sanpo/core';
 import { createPlateauReader } from './readers/plateau/index.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
+import { buildPlateauMini, buildWorldMini, type LockSource } from './stages/fixture.ts';
 import { normalizePlateau } from './stages/normalize-plateau.ts';
 import { hasDemSources, normalizeTerrain, writeTerrainMeta } from './stages/normalize-terrain.ts';
 import { reportMarkdown, validateBuild, writeReport } from './stages/validate.ts';
@@ -34,11 +35,13 @@ function areaCells(area: AreaDef): CellKey[] {
   return out;
 }
 
+function lockSources(): LockSource[] {
+  return (JSON.parse(readFileSync(join(REPO_ROOT, 'data/sources.lock.json'), 'utf8')) as { sources: LockSource[] })
+    .sources;
+}
+
 function lockSourceIds(): string[] {
-  const lock = JSON.parse(readFileSync(join(REPO_ROOT, 'data/sources.lock.json'), 'utf8')) as {
-    sources: { id: string }[];
-  };
-  return lock.sources.map((s) => s.id);
+  return lockSources().map((s) => s.id);
 }
 
 function plateauSources(): string[] {
@@ -143,7 +146,20 @@ async function validate(args: string[]): Promise<void> {
   }
 }
 
-const STAGES: Record<string, (args: string[]) => Promise<void>> = { normalize, build, validate };
+/** tests/fixtures 재생성(M01-T07). 원천·정규화 데이터와 GDAL이 필요 → 컨테이너 전용. */
+async function fixture(args: string[]): Promise<void> {
+  const { values } = parseArgs({ args, options: { only: { type: 'string' }, 'build-id': { type: 'string' } } });
+  const input = {
+    repoRoot: REPO_ROOT,
+    buildId: values['build-id'] ?? makeBuildId(REPO_ROOT),
+    lock: lockSources(),
+    log: log.child('fixture'),
+  };
+  if (values.only !== 'plateau-mini') process.stdout.write(await buildWorldMini(input));
+  if (values.only !== 'world-mini') log.info(`plateau-mini snapshot ${JSON.stringify(await buildPlateauMini(input))}`);
+}
+
+const STAGES: Record<string, (args: string[]) => Promise<void>> = { normalize, build, validate, fixture };
 
 async function main(argv: string[]): Promise<void> {
   const [stage, ...rest] = argv;

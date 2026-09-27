@@ -1,8 +1,11 @@
 // 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8
 import { FORMAT_VERSION } from '@sanpo/tile-format';
+import type { WorldSource } from './world-load.ts';
 
 export type WorldStatus =
   | { kind: 'ready'; buildId: string; baseUrl: string }
+  /** world.json·cells.idx·스폰 주변 셀 헤더까지 확인(world-load.ts). e2e는 이 상태를 기다린다. */
+  | { kind: 'loaded'; source: WorldSource; buildId: string; cells: number; indexed: number }
   /** Worker에 R2/KV 바인딩이 없음(503 world_storage_unconfigured, ADR-0015). */
   | { kind: 'unconfigured' }
   /** KV에 이 formatVersion의 활성 빌드가 없음(404). */

@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "formatVersion": 1,
+  "buildId": "20260927-bbc0262-89260415",
+  "crs": {
+    "projected": "EPSG:6677",
+    "E0": -12000,
+    "N0": -37760,
+    "heightDatum": "TP"
+  },
+  "cellSize": 256,
+  "levels": [
+    256,
+    1024,
+    4096,
+    16384
+  ],
+  "areas": [
+    {
+      "id": "world-mini",
+      "l0": {
+        "minIx": -1,
+        "maxIx": 0,
+        "minIz": -1,
+        "maxIz": 0
+      }
+    }
+  ],
+  "spawn": {
+    "posWF": [
+      -22.3,
+      0,
+      8.6
+    ],
+    "yawDeg": 0
+  },
+  "files": {
+    "cellsIndex": "cells.idx",
+    "materials": "shared/materials/manifest.json",
+    "rail": "global/rail.bin",
+    "map": "global/map.pmtiles"
+  },
+  "createdAt": "2026-09-27T00:00:00Z"
+}

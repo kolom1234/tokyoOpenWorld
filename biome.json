@@ -11,7 +11,8 @@
       "!schemas",
       "!content",
       "!pnpm-lock.yaml",
-      "!packages/geo/test/golden.json"
+      "!packages/geo/test/golden.json",
+      "!tests/fixtures"
     ]
   },
   "formatter": {

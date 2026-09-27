@@ -1,4 +1,4 @@
-# PR·main 품질 게이트: check(biome+tsc+depcruise+size) → test → build → 에셋 크기, 기록 누락 검사. see docs/13-deployment.md §7, docs/14-testing-perf.md §5
+# PR·main 품질 게이트: check(biome+tsc+depcruise+size) → test → build → 에셋 크기, e2e 부트 스모크(world-mini), 기록 누락 검사. see docs/13-deployment.md §7, docs/14-testing-perf.md §5
 name: CI
 
 on:
@@ -43,7 +43,26 @@ jobs:
         run: pnpm build
       - name: Static asset limits (25 MiB/file, 20k files)
         run: pnpm check:assets
-      # TODO(M01-T07): Playwright 스모크(WebGL 폴백, tests/fixtures/world-mini) — 부트 화면 #app[data-isolated/webgpu/world] 검사.
+
+  e2e:
+    name: e2e (playwright chromium · world-mini)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Install Chromium (headless shell)
+        run: pnpm exec playwright install --with-deps --only-shell chromium
+      # webServer가 게임을 빌드(dist/fixtures/world-mini 포함)한 뒤 vite preview로 띄운다(tests/e2e/playwright.config.ts).
+      - name: Boot smoke (?world=mini)
+        run: pnpm test:e2e
+      - name: Upload Playwright traces
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-test-results
+          path: test-results/
+          retention-days: 7
 
   records:
     name: records (codemap · module cards · PROGRESS)

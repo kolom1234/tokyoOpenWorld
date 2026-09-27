@@ -3,15 +3,16 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 103개.
+> 파일 106개.
 
 ## apps/game
-- `apps/game/src/boot.ts` — 부트 시퀀스(M00 골격): 기능 감지 → core 서비스 → 빈 스케줄러 루프 → 월드 상태 조회. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, createIdleFrameSource, BootResult, boot
+- `apps/game/src/boot.ts` — 부트 시퀀스(M00 골격): 기능 감지 → core 서비스 → 빈 스케줄러 루프 → 월드 상태 조회. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
 - `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, StatusView, mountStatusView
+- `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 TKC 헤더 확인. 렌더·스트리밍 전 임시 로더. | exports: WORLD_MINI_BASE_URL, WorldSource, LoadedCell, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
 
 ## apps/worker
@@ -130,11 +131,13 @@
 - `tools/pipeline/src/spike/spike-metrics.ts` — M01-T02 스파이크 비교 지표: 보존(gml:id·속성·면 종류·텍스처·도로 기능), 좌표 일치, 규모. see docs/adr/0007-plateau-reader.md | exports: RunStats, compareOutputs
 - `tools/pipeline/src/stages/build/assemble.ts` — L0 셀 조립: terrain.mesh + terrain.height + buildings.mesh + meta.json → TKC, 영역 빌드(cells.idx·world.json). see docs/04-data-pipeline.md §4.4, docs/05-tile-format.md §1–3 | exports: CellBuildStats, CellBuildInput, buildCell, AreaBuildInput, unionBounds, buildArea
 - `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, quantizePositions, buildBuildings
-- `tools/pipeline/src/stages/build/dem-window.ts` — dem_1m.tif에서 셀 빌드용 높이 창 읽기(GDAL) + 셀별 (257+2m)² 부분 창 추출. see docs/04-data-pipeline.md §4.4, §6 | exports: CELL_SIZE_M, DEM_MARGIN, DemWindow, CellWindow, readDemWindow, cellWindow, sampleAt
+- `tools/pipeline/src/stages/build/dem-window.ts` — dem_1m.tif에서 셀 빌드용 높이 창 읽기(GDAL) + 셀별 (257+2m)² 부분 창 추출. see docs/04-data-pipeline.md §4.4, §6 | exports: CELL_SIZE_M, DEM_MARGIN, DemWindow, CellWindow, readDemWindow, cellWindow, sampleAt, DemWindowMeta, writeDemWindowFiles, readDemWindowFiles
 - `tools/pipeline/src/stages/build/heightfield.ts` — terrain.height 섹션: 셀 창(257²) → 공통 기준·스텝 양자화 → writeHeightfield → gzip. see docs/05-tile-format.md §4 (terrain.height), docs/adr/0018-cell-mesh-build.md | exports: cellHeightfield, encodeTerrainHeight
 - `tools/pipeline/src/stages/build/manifest.ts` — 빌드 식별·매니페스트: buildId(YYYYMMDD-<git7>-<lock8>), world.json 직렬화. see docs/04-data-pipeline.md §2, docs/05-tile-format.md §2 | exports: AreaDef, gitShort, lockHash8, buildDate, makeBuildId, createdAtOf, worldJson
 - `tools/pipeline/src/stages/build/terrain-mesh.ts` — terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: TERRAIN_SIMPLIFY_ERROR_M, TERRAIN_MATERIAL, SURF_DEFAULT, TerrainGeometry, remapVertices, buildTerrainGeometry, encodeTerrainMesh
 - `tools/pipeline/src/stages/build/terrain-rtin.ts` — 지형 단순화: RTIN(직각 이등변 삼각형 이분 계층) + 정확 오차(삼각형 내부 모든 격자 샘플) + 경계 정점 강제. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: rtinTriangulate
+- `tools/pipeline/src/stages/fixture-plateau.ts` — plateau-mini 픽스처: 원천 CityGML에서 셀 1개의 건물 몇 동·도로 몇 개만 잘라 같은 파일 이름으로 기록. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: PlateauMiniOptions, splitCityGml, extractPlateauMini
+- `tools/pipeline/src/stages/fixture.ts` — fixture 단계: tests/fixtures/{world-mini, plateau-mini} 생성(M01-T05 빌드 파이프라인 재사용) + plateau-mini 1셀 빌드 스냅샷. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: WORLD_MINI_AREA, PLATEAU_MINI_CELL, PLATEAU_MINI_SOURCE, PLATEAU_MINI_BUILD_ID, LockSource, fixtureAttribution, FixtureInput, buildWorldMini, buildPlateauMini, PlateauMiniSnapshot, plateauMiniSnapshot, hasPlateauRaw
 - `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
 - `tools/pipeline/src/stages/normalize-terrain.ts` — normalize 단계(지형): GSI DEM1A(주) + DEM5A(결측 채움) → GDAL 재투영(EPSG:6677, 1 m) → 잔여 결측 보간 → data/normalized/terrain/dem_1m.tif. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: NormalizeTerrainInput, GradeReport, NormalizeTerrainResult, gridOfBounds, normalizeTerrain, writeTerrainMeta, hasDemSources
 - `tools/pipeline/src/stages/validate-seams.ts` — validate: 이웃 셀 지형 경계 완전 일치 검사(terrain.height u16 행·열, terrain.mesh 경계 정점). see docs/04-data-pipeline.md §4.6, §6 | exports: CellTerrain, SeamReport, edgeVertices, checkSeams

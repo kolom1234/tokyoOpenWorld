@@ -1,8 +1,9 @@
 // dem_1m.tif에서 셀 빌드용 높이 창 읽기(GDAL) + 셀별 (257+2m)² 부분 창 추출. see docs/04-data-pipeline.md §4.4, §6
 import { execFile } from 'node:child_process';
-import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import { type CellBoundsWF, wfToPrj } from '@sanpo/geo';
 import { HEIGHTFIELD_SIZE } from '@sanpo/tile-format';
 import { type PrjGrid, readFloat32 } from '../../lib/raster.ts';
@@ -112,4 +113,32 @@ export function cellWindow(dem: DemWindow, ix: number, iz: number, margin = DEM_
 /** 로컬 격자 (x, z) 높이(margin 안쪽 음수·size 이상 허용). */
 export function sampleAt(w: CellWindow, x: number, z: number): number {
   return w.values[(z + w.margin) * w.stride + x + w.margin] as number;
+}
+
+/** DEM 창 파일 메타(`<name>.json`, 값은 같은 이름 `.f32.gz` = Float32 LE gzip). 픽스처(plateau-mini)용. */
+export interface DemWindowMeta {
+  crs: 'WF';
+  x0: number;
+  z0: number;
+  width: number;
+  height: number;
+  source: string;
+  note: string;
+}
+
+/** DEM 창 → `<base>.json` + `<base>.f32.gz`(gzip 헤더 mtime 0·OS 255 고정). */
+export function writeDemWindowFiles(base: string, dem: DemWindow, source: string, note: string): void {
+  const meta: DemWindowMeta = { crs: 'WF', x0: dem.x0, z0: dem.z0, width: dem.width, height: dem.height, source, note };
+  writeFileSync(`${base}.json`, `${JSON.stringify(meta, null, 2)}\n`);
+  const gz = gzipSync(Buffer.from(dem.values.buffer, dem.values.byteOffset, dem.values.byteLength), { level: 9 });
+  gz[9] = 0xff; // RFC 1952 OS 바이트 → unknown(플랫폼 무관)
+  writeFileSync(`${base}.f32.gz`, gz);
+}
+
+export function readDemWindowFiles(base: string): DemWindow {
+  const meta = JSON.parse(readFileSync(`${base}.json`, 'utf8')) as DemWindowMeta;
+  const raw = gunzipSync(readFileSync(`${base}.f32.gz`));
+  if (raw.byteLength !== meta.width * meta.height * 4) throw new Error(`readDemWindowFiles: ${base} size mismatch`);
+  const values = new Float32Array(raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength));
+  return { x0: meta.x0, z0: meta.z0, width: meta.width, height: meta.height, values };
 }

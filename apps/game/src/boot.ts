@@ -4,15 +4,47 @@ import { detectCaps } from './caps.ts';
 import { createStatsHook } from './debug/stats.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
-import { fetchWorldStatus } from './world-status.ts';
+import { loadWorld, WORLD_MINI_BASE_URL, type WorldSource } from './world-load.ts';
+import { fetchWorldStatus, type WorldStatus } from './world-status.ts';
 
 /** URL 쿼리 디버그 플래그(docs/15-conventions.md §8). 이후 backend/tier/spawn 추가. */
 export interface BootFlags {
   debug: boolean;
+  /** `?world=mini` → 저장소 픽스처 world-mini(/fixtures/world-mini)를 API 대신 사용(dev·PR preview·staging·CI e2e). */
+  world?: 'mini';
 }
 
 export function parseFlags(search: string): BootFlags {
-  return { debug: new URLSearchParams(search).get('debug') === '1' };
+  const q = new URLSearchParams(search);
+  return { debug: q.get('debug') === '1', ...(q.get('world') === 'mini' ? { world: 'mini' as const } : {}) };
+}
+
+/** 월드 출처 결정(API 또는 픽스처) → 데이터 로드. 각 단계 상태를 onStatus로 알린다. */
+export async function startWorld(
+  flags: BootFlags,
+  onStatus: (w: WorldStatus) => void,
+  fetchFn: (u: string) => Promise<Response> = (u) => fetch(u),
+): Promise<void> {
+  let target: { baseUrl: string; source: WorldSource };
+  if (flags.world === 'mini') target = { baseUrl: WORLD_MINI_BASE_URL, source: 'fixture' };
+  else {
+    const status = await fetchWorldStatus(fetchFn);
+    onStatus(status);
+    if (status.kind !== 'ready') return;
+    target = { baseUrl: status.baseUrl, source: 'api' };
+  }
+  const r = await loadWorld(target.baseUrl, target.source, fetchFn);
+  onStatus(
+    r.ok
+      ? {
+          kind: 'loaded',
+          source: r.value.source,
+          buildId: r.value.buildId,
+          cells: r.value.cells.length,
+          indexed: r.value.indexed,
+        }
+      : { kind: 'error', detail: r.error },
+  );
 }
 
 /** 원점 정지 상태의 임시 FrameSource. traversal/sim 연결(M04–M06) 시 교체된다. */
@@ -40,8 +72,8 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
   if (flags.debug) loop.addHook(await createStatsHook(document.body));
   loop.start();
 
-  // 월드 조회는 루프를 막지 않는다. 실패는 상태 화면에만 표시(M00에는 월드 로드 없음).
-  void fetchWorldStatus().then((world) => {
+  // 월드 조회·로드는 루프를 막지 않는다. 실패는 상태 화면에만 표시. 렌더 연결은 M01-T06.
+  void startWorld(flags, (world) => {
     view.setWorld(world);
     log.child('boot').info('world', world);
   });

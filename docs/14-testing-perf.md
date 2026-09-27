@@ -5,9 +5,9 @@
 |---|---|---|---|
 | 단위 | Vitest | 순수 로직: geo 변환, 셀 키, 우선순위 점수, TKC 인코드/디코드 round-trip, IDM, 신호 현시, 열차 운동 프로파일, 시간표 컴파일, 날씨 전이, 세이브 마이그레이션 | 패키지마다 `test/`. 공개 API 기준 테스트 |
 | 골든 값 | Vitest | 좌표 변환: pyproj로 산출한 기준점 20개(스크램블, 신주쿠역, 도청 등) 오차 < 1 mm | `packages/geo/test/golden.json` |
-| 파이프라인 | Vitest + 픽스처 | `tests/fixtures/plateau-mini/`(건물 5동, 도로, DEM 소형) → 셀 1개 빌드 → 스냅샷 해시 | 결정론 검증(2회 빌드 바이트 동일) |
+| 파이프라인 | Vitest + 픽스처 | `tests/fixtures/plateau-mini/`(건물 5동, 도로 3개, DEM 1셀 창) → normalize → 셀 1개 빌드 → 스냅샷 해시(`expected.json`, gzip 섹션은 해제 바이트 기준) + `world-mini` validate | 결정론 검증(2회 빌드 바이트 동일) |
 | 워커 통합 | Vitest(browser mode) 또는 Playwright | 물리 워커: 캐릭터가 계단 3단 오르기, 연석 올라서기, 차량 0→60 km/h 시간 범위, 자전거 직진 안정 | 수치 허용 오차 명시 |
-| E2E 스모크 | Playwright(Chromium) | 부팅 → 스폰 → 10 s 걷기 → 모드 전환 → 오류 없음 | CI는 WebGL 폴백 강제(`?backend=webgl`) |
+| E2E 스모크 | Playwright(Chromium) | 부팅(`?world=mini` 픽스처 월드) → 스폰 → 10 s 걷기 → 모드 전환 → 오류 없음. 현재(M01-T07): 부팅 + 월드 데이터 로드(`#app[data-world=loaded]`)까지 | CI는 WebGL 폴백 강제(`?backend=webgl`, M01-T06~) |
 | 골든뷰(시각 회귀) | Playwright + 스크린샷 비교 | §3 카메라 북마크 6곳, 고정 시각·날씨·시드 | 픽셀 차 임계 2%(SSIM ≥ 0.97). 로컬 WebGPU 머신에서 갱신 |
 | 성능 | `pnpm perf` | §2 예산 | CI 비차단(리포트), 릴리스 전 차단 |
 

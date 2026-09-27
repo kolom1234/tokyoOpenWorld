@@ -1,5 +1,4 @@
 {
-  "$schema": "../schemas/attribution.schema.json",
   "entries": [
     {
       "id": "gsi-dem",
@@ -13,7 +12,6 @@
         "ko": "출처: 국토지리원 기반지도정보 수치표고모델을 가공하여 작성"
       },
       "files": [
-        "tests/fixtures/world-mini/**",
         "tests/fixtures/plateau-mini/**"
       ],
       "modified": true
@@ -30,7 +28,6 @@
         "ko": "출처: 국토교통성 Project PLATEAU 3D 도시모델(시부야구)을 가공하여 작성"
       },
       "files": [
-        "tests/fixtures/world-mini/**",
         "tests/fixtures/plateau-mini/**"
       ],
       "modified": true
