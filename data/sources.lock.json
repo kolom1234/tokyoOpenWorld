@@ -35,13 +35,19 @@
     },
     {
       "id": "gsi-dem",
-      "url": "TBD (基盤地図情報ダウンロードサービス DEM5A / 1mメッシュ)",
-      "resource": "JPGIS(GML)",
+      "url": "https://service.gsi.go.jp/kiban/app/ (基盤地図情報ダウンロードサービス > 数値標高モデル, 要ログイン・手動取得)",
+      "resource": "JPGIS(GML) 数値標高モデル DEM1A(1mメッシュ 航空レーザ, 主) + DEM5A(5mメッシュ 航空レーザ, 결측 채움), 2次メッシュ 533935·533945, 수평 JGD2024(=JGD2011)",
+      "dataDate": "2025-08-22",
       "fiscalYear": null,
-      "sha256": "TBD",
+      "sha256": {
+        "FG-GML-533935-DEM1A-20250822.zip": "77a346752f00c369cd9f500ee046946f316971d4d1d2c3cfc5c410d78fc96370",
+        "FG-GML-533935-DEM5A-20250822.zip": "e62ba055f530db332d167d325efaa2de53f8f3aac7100c476fc9949af6644a57",
+        "FG-GML-533945-DEM1A-20250822.zip": "10083545ce09e478a0a11a0bfbffa46830aa230fee9016637da50be348e5d69c",
+        "FG-GML-533945-DEM5A-20250822.zip": "6fc59c5a5dc6f5fee29166ba30ab1127128697059c10e532dcc238911f9b8351"
+      },
       "license": "GSI-Content-Terms (CC-BY-4.0 compatible)",
       "attribution": "出典：国土地理院（基盤地図情報 数値標高モデル）を加工して作成",
-      "retrievedAt": null
+      "retrievedAt": "2026-09-27"
     },
     {
       "id": "gsi-photo",
