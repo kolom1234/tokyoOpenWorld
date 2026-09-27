@@ -1,1 +1,6 @@
 * text=auto eol=lf
+# 테스트 픽스처(M01-T07): 바이너리는 변환 금지, 원천 발췌 GML은 원본 바이트 보존.
+tests/fixtures/**/*.tkc binary
+tests/fixtures/**/*.idx binary
+tests/fixtures/**/*.gz binary
+tests/fixtures/**/*.gml -text

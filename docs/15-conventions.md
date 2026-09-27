@@ -46,7 +46,7 @@
 - 파이프라인 출력은 안정 정렬(키 기준) 후 직렬화.
 
 ## 8. 설정
-- 런타임 설정: `packages/*/src/config.ts`의 기본값 객체 + `apps/game/src/config/*.json` 오버라이드 + URL 쿼리 디버그 플래그(`?debug=1&backend=webgl&tier=low&spawn=shinjuku`).
+- 런타임 설정: `packages/*/src/config.ts`의 기본값 객체 + `apps/game/src/config/*.json` 오버라이드 + URL 쿼리 디버그 플래그(`?debug=1&backend=webgl&tier=low&spawn=shinjuku`, `world=mini` = 저장소 픽스처 월드 — ADR-0019).
 - 조정 가능한 게임 파라미터(차량 스펙, 군중 밀도, 신호 계획, 계절표)는 코드가 아닌 `content/**.json|yaml`.
 
 ## 9. 커밋·브랜치

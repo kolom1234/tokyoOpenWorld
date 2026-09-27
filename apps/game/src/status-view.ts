@@ -51,7 +51,11 @@ export function describeWorld(world: WorldStatus | undefined): StatusRow {
   if (world === undefined) return row('확인 중…', 'warn');
   switch (world.kind) {
     case 'ready':
-      return row(`빌드 ${world.buildId}`, 'ok');
+      return row(`빌드 ${world.buildId} (로드 중…)`, 'warn');
+    case 'loaded': {
+      const src = world.source === 'fixture' ? 'world-mini 픽스처' : 'R2';
+      return row(`빌드 ${world.buildId} · ${src} · 셀 ${world.cells}/${world.indexed} 로드`, 'ok');
+    }
     case 'unconfigured':
       return row('준비 중 (저장소 미연결)', 'warn');
     case 'no-build':
@@ -105,6 +109,10 @@ export function mountStatusView(root: HTMLElement): StatusView {
     setWorld(w) {
       world = w;
       root.dataset.world = w.kind;
+      if (w.kind === 'loaded') {
+        root.dataset.worldSource = w.source;
+        root.dataset.worldCells = String(w.cells);
+      }
       render();
     },
     showError(message) {

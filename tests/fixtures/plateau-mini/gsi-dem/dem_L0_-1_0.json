@@ -1,0 +1,9 @@
+{
+  "crs": "WF",
+  "x0": -257,
+  "z0": -1,
+  "width": 259,
+  "height": 259,
+  "source": "gsi-dem",
+  "note": "dem_1m.tif(EPSG:6677 1 m, DEM1A+5A) window: cell L0_-1_0 ± 1 m, row = z (north→south), col = x"
+}

@@ -90,7 +90,9 @@ describe('status rows', () => {
     expect(byKey.webgpu?.state).toBe('warn');
     expect(byKey.sab?.state).toBe('warn');
     expect(describeWorld(undefined).state).toBe('warn');
-    expect(describeWorld({ kind: 'ready', buildId: 'x', baseUrl: '/world/x' })).toMatchObject({ state: 'ok' });
+    expect(describeWorld({ kind: 'ready', buildId: 'x', baseUrl: '/world/x' })).toMatchObject({ state: 'warn' });
+    const loaded = { kind: 'loaded', source: 'fixture', buildId: 'x', cells: 4, indexed: 4 } as const;
+    expect(describeWorld(loaded)).toMatchObject({ state: 'ok', value: '빌드 x · world-mini 픽스처 · 셀 4/4 로드' });
   });
 
   it('parses the debug flag', () => {

@@ -29,7 +29,8 @@ src/stages/build/assemble.ts     셀 TKC 조립 + 영역 빌드(cells.idx·world
 src/stages/build/{roads-mesh,collision,instances,rail-global}.ts   (미구현)
 src/stages/hlod/*.ts  materials.ts  interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts
 src/stages/validate.ts validate-seams.ts   스키마(ajv)·해시·예산·이웃 경계 검사 → report.{json,md} (M01-T05)
-src/stages/publish.ts gc.ts fixture.ts
+src/stages/fixture.ts fixture-plateau.ts   tests/fixtures 생성: world-mini(buildArea 2×2 → validate → 복사 + ATTRIBUTION), plateau-mini(CityGML 원문 발췌·DEM 창·스냅샷), `plateauMiniSnapshot` (M01-T07, ADR-0019)
+src/stages/publish.ts gc.ts
 src/lib/{gltf,triangulate,mesh-ops,polygon,spline,raster,hash,parallel,ndjson-gz}.ts   (gltf·triangulate·polygon·ndjson-gz·raster 구현)
 scripts/golden-geo.py
 scripts/repro-build.sh          같은 컨테이너에서 build 2회 → sha256 비교 → validate
@@ -65,7 +66,7 @@ encodeGlb(mesh) / decodeGlb(bytes)   // lib/gltf.ts, meshopt + KHR_mesh_quantiza
 makeBuildId(repoRoot, date?)  // YYYYMMDD-<git7>-<lock8>, SOURCE_DATE_EPOCH 존중
 validateBuild(dir, schemasDir, lockIds): Promise<ValidateReport>;  writeReport(dir, r)  // report.json + report.md(셀 표)
 ```
-- 실행: `docker/run.sh node tools/pipeline/src/cli.ts build --cells …` → `… validate` / 재현성: `docker/run.sh sh tools/pipeline/scripts/repro-build.sh --cells …`
+- 실행: `docker/run.sh node tools/pipeline/src/cli.ts build --cells …` → `… validate` / 픽스처: `… fixture [--only world-mini|plateau-mini]` / 재현성: `docker/run.sh sh tools/pipeline/scripts/repro-build.sh --cells …`
 - 섹션: terrain.mesh·terrain.height(sources gsi-dem), buildings.mesh(건물 source), meta.json(건물 source, 없으면 영역 PLATEAU 소스). 셀 AABB = 지형 ∪ 건물(mm 바깥 반올림).
 
 ## Invariants
@@ -77,10 +78,10 @@ validateBuild(dir, schemasDir, lockIds): Promise<ValidateReport>;  writeReport(d
 
 ## Tests
 픽스처 셀 빌드 스냅샷 해시, 경계 이음새 검사, 폴리곤·스플라인 유틸 단위 테스트.
-현재: `test/build-terrain.test.ts`(RTIN 오차 상한·면적·경계 정점, 이웃 셀 높이장 u16·메시 경계 정점 완전 일치, 결정론), `test/build-cell.test.ts`(건물 속성·양자화 오차·외향 법선, 영역 빌드 → validate 무오류·lock 위반 검출, 2회 빌드 바이트 동일), `test/dem.test.ts`(FGD DEM 파싱·startPoint·결측 종류, 격자 정렬, 1A/5A 병합), `test/citygml-sax.test.ts`(합성 CityGML: 면 종류·속성·UV·LOD 선택·도로 기능), `test/polygon.test.ts`(클리핑 이음새·보간, gzip 헤더 고정).
+현재: `test/build-terrain.test.ts`(RTIN 오차 상한·면적·경계 정점, 이웃 셀 높이장 u16·메시 경계 정점 완전 일치, 결정론), `test/fixtures.test.ts`(커밋된 world-mini validate·4 이음새·ATTRIBUTION 스키마, plateau-mini normalize→build 2회 동일 + `expected.json` 스냅샷), `test/build-cell.test.ts`(건물 속성·양자화 오차·외향 법선, 영역 빌드 → validate 무오류·lock 위반 검출, 2회 빌드 바이트 동일), `test/dem.test.ts`(FGD DEM 파싱·startPoint·결측 종류, 격자 정렬, 1A/5A 병합), `test/citygml-sax.test.ts`(합성 CityGML: 면 종류·속성·UV·LOD 선택·도로 기능), `test/polygon.test.ts`(클리핑 이음새·보간, gzip 헤더 고정).
 
 ## Status
-M01-T02: PLATEAU 리더(SAX) + normalize(건물·도로) + 컨테이너. M01-T03: DEM → dem_1m.tif. M01-T05: build(지형·건물·meta) + validate(스키마·해시·예산·이음새). 미구현: fetch, derive, 도로/충돌/인스턴스 섹션, hlod, publish, 증분 캐시(`data/build/.cache`), 정확도 샘플·report.html.
+M01-T02: PLATEAU 리더(SAX) + normalize(건물·도로) + 컨테이너. M01-T03: DEM → dem_1m.tif. M01-T05: build(지형·건물·meta) + validate(스키마·해시·예산·이음새). M01-T07: fixture. 미구현: fetch, derive, 도로/충돌/인스턴스 섹션, hlod, publish, 증분 캐시(`data/build/.cache`), 정확도 샘플·report.html.
 
 ## Gotchas
 - 호스트 pnpm node_modules(Windows 정션)는 리눅스 컨테이너에서 깨짐 → `docker/run.sh`가 볼륨으로 가림. 컨테이너 pnpm은 `--store-dir` 고정(안 하면 저장소 루트에 `.pnpm-store/` 생성).
@@ -89,4 +90,5 @@ M01-T02: PLATEAU 리더(SAX) + normalize(건물·도로) + 컨테이너. M01-T03
 - `data/normalized/**`는 Read 금지(settings deny) → 확인은 컨테이너 명령(gdalinfo 등) 출력으로만.
 - 호스트에서 `data/build/**`·`data/normalized/**` 조회는 deny → 결과 확인은 컨테이너 명령(`validate`의 report.md 출력)으로.
 - 컨테이너 날짜는 UTC → KST 오전 9시 전 빌드의 buildId 날짜는 전날.
+- `buildPlateauMini`는 `readDemWindowFiles`/`writeDemWindowFiles`(dem-window.ts)로 GDAL 없는 DEM 창을 쓴다. 스냅샷의 gzip 섹션 해시는 해제 바이트 기준.
 - 바인드 마운트 I/O가 느려 첫 실행(cold)이 2배 가까이 느리다(스파이크 20.9 s vs warm 11.1 s).

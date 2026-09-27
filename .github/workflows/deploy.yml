@@ -102,6 +102,9 @@ jobs:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
       - name: Build
+        # 테스트 픽스처(world-mini)는 production 정적 에셋에서 뺀다(staging·PR preview만 `?world=mini` 지원, docs/13 §7).
+        env:
+          SANPO_WORLD_MINI: '0'
         run: pnpm build && pnpm check:assets
       - name: Deploy to production
         id: deploy
