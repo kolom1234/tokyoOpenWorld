@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 58개.
+> 파일 63개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스(M00 골격): 기능 감지 → core 서비스 → 빈 스케줄러 루프 → 월드 상태 조회. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, createIdleFrameSource, BootResult, boot
@@ -43,8 +43,13 @@
 - `packages/core/src/internal/worker-supervisor.ts` — 워커 생성·오류 감시·지수 백오프 재시작. see docs/15-conventions.md §5–6 | exports: createWorkerSupervisor
 
 ## packages/geo
-- `packages/geo/src/api.ts` — @sanpo/geo 공개 계약(타입·인터페이스). see docs/modules/geo.md
-- `packages/geo/src/index.ts` — @sanpo/geo 공개 엔트리(L1): 좌표 변환(EPSG ↔ WF)·셀 인덱싱. api.ts 재수출 + create* 팩토리만. see docs/modules/geo.md | exports: * from './api.ts'
+- `packages/geo/src/api.ts` — @sanpo/geo 공개 계약(타입·상수). 구현은 internal/*, 재수출은 index.ts. see docs/modules/geo.md, docs/01-architecture.md §7–8 | exports: WORLD_ORIGIN, CELL_SIZES, CELL_FANOUT, LonLat, PrjCoord, CellBoundsWF, LonLatBBox, CellLevel
+- `packages/geo/src/index.ts` — @sanpo/geo 공개 엔트리(L1): 좌표 변환(EPSG ↔ WF)·셀 인덱싱. api.ts 재수출 + 구현 함수. see docs/modules/geo.md | exports: * from './api.ts', lonLatBBoxOfWF, cellBoundsWF, cellOf, cellOriginWF, childrenOf, hlodChildIndex, parentOf, gridConvergenceDeg, trueToGridAzimuthDeg, lonLatToPrj, lonLatToWF, prjToLonLat, prjToWF, wfToLonLat, wfToPrj
+- `packages/geo/src/internal/bbox.ts` — WF 사각형 → 위경도 외접 상자. 파이프라인 원천 조회(fetch) 범위 산출용. see docs/04-data-pipeline.md, docs/modules/geo.md | exports: lonLatBBoxOfWF
+- `packages/geo/src/internal/cells.ts` — WF 셀 인덱싱(L0–L3), 부모/자식, HLOD 자식 인덱스. 음수 인덱스는 floor 기반. see docs/01-architecture.md §8 | exports: cellOf, cellOriginWF, cellBoundsWF, parentOf, childrenOf, hlodChildIndex
+- `packages/geo/src/internal/convergence.ts` — 자오선 수렴각(도북 − 진북)과 방위각 보정. sim이 태양 방위를 도북 기준으로 바꿀 때 쓴다. see docs/01-architecture.md §7 | exports: gridConvergenceDeg, trueToGridAzimuthDeg
+- `packages/geo/src/internal/crs-defs.ts` — EPSG 정의 문자열 고정(외부 조회 금지). pyproj(PROJ 9.5) `CRS.to_proj4()` 출력과 동일한 파라미터. see docs/modules/geo.md | exports: DEF_EPSG_6668, DEF_EPSG_6697, DEF_EPSG_6677
+- `packages/geo/src/internal/transforms.ts` — GEO(EPSG:6668/6697) ↔ PRJ(EPSG:6677) ↔ WF 변환. 좌표계 변환의 유일한 구현. see docs/01-architecture.md §7 | exports: lonLatToPrj, prjToLonLat, prjToWF, wfToPrj, lonLatToWF, wfToLonLat
 
 ## packages/input
 - `packages/input/src/api.ts` — @sanpo/input 공개 계약(타입·인터페이스). see docs/modules/input.md
