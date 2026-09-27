@@ -40,8 +40,8 @@ credits.json                  출처 표기
 |---|---|---|
 | 0 | u8[4] | magic `"TKC1"` (0x54 0x4B 0x43 0x31) |
 | 4 | u16 | formatVersion = 1 |
-| 6 | u16 | flags (bit0 = 헤더 JSON gzip 여부, 기본 0) |
-| 8 | u32 | headerByteLength = N |
+| 6 | u16 | flags — v1은 **항상 0**(bit0 "헤더 JSON gzip"은 예약만. reader는 0이 아니면 `flags` 오류, ADR-0017) |
+| 8 | u32 | headerByteLength = N (패딩 제외 JSON 바이트 수) |
 | 12 | u32 | reserved = 0 |
 | 16 | u8[N] | 헤더 JSON (UTF-8), 이후 0 패딩으로 16바이트 정렬 |
 | … | … | 섹션 데이터 (각 16바이트 정렬, 오프셋은 파일 시작 기준 절대값) |
@@ -63,11 +63,17 @@ credits.json                  출처 표기
 - `originWF` = `(ix*size, 0, iz*size)`. 섹션 내 위치는 **셀 로컬**(`WF − originWF`) float32 → 정밀도 확보.
 - `aabbWF`는 경계를 넘는 건물을 포함한 확장 AABB (컬링·우선순위에 사용).
 
+### 3.1 결정론·검사 규칙 (ADR-0017)
+- **writer**: 헤더 JSON은 위 예시의 고정 키 순서(스키마 밖 필드 없음), `sections`는 `type` 사전순(UTF-16 코드 유닛), `sources`는 정렬·중복 제거, `codec`은 §4 레지스트리 값. 첫 섹션은 `16 + pad16(N)`, 이후 `pad16(이전 끝)`에 배치(0 패딩). 파일은 마지막 섹션 끝에서 끝난다(꼬리 패딩 없음). 헤더 길이 ↔ 오프셋은 고정점 반복으로 결정. 같은 입력 → 같은 바이트.
+- **hash**: `"xxh64:" + XXH64(seed 0)` 16자리 소문자 hex(정규 big-endian 표기), 대상 = 파일에 저장된 섹션 바이트(압축 후). 로드 시 검사는 선택(`verifyTkc`, 파이프라인 validate·테스트).
+- **reader** 거부 조건 → 오류 코드: 길이 < 16 또는 헤더가 파일 밖 `truncated` · 매직 `magic` · `formatVersion ≠ 1` `version` · flags ≠ 0 `flags` · UTF-8/JSON/구조 오류, 등록 타입의 코덱 불일치·중복 `header` · 오프셋 %16 ≠ 0 `align` · 헤더와 겹침, 파일 밖, 섹션끼리 겹침 `range`. `reserved`와 마지막 섹션 뒤 여분 바이트는 무시.
+- **미지 섹션**: 레지스트리에 없는 `type`은 코덱 검사·색인 없이 무시(범위·정렬 검사는 적용). 추가 헤더 필드도 무시.
+
 ## 4. 섹션 레지스트리 (새 섹션은 여기 등록 후 사용)
 | type | codec | 내용 | 소비자 | 레벨 |
 |---|---|---|---|---|
 | `terrain.mesh` | glb | 지면 메시. 속성: POSITION, NORMAL, `_SURF`(u8: 0 asphalt,1 sidewalk,2 grass,3 soil,4 gravel,5 water,6 rail_ballast,7 plaza) | render | L0–L3 |
-| `terrain.height` | bin+gzip | `{u16 size=257, f32 minH, f32 step=0.01}` + `u16[size*size]` (h = minH + v*step), 1 m 간격 | physics, 지면 질의 | L0 |
+| `terrain.height` | bin+gzip | `{u16 size=257, f32 minH, f32 step=0.01}` + `u16[size*size]` (h = minH + v*step), 1 m 간격, 행 우선 `[iz*size + ix]`(iz=0 북쪽 가장자리, ix=0 서쪽) | physics, 지면 질의 | L0 |
 | `buildings.mesh` | glb | 파사드 클래스별 프리미티브. 속성: `_BLDG`(u16 셀내 건물 인덱스), `_FACADE`(u8×4: class, floors, tintIdx, flags), UV0 = 벽면 미터 좌표(u=벽 길이, v=높이) | render | L0–L1 |
 | `roads.mesh` | glb | 차도·보도·연석·광장 | render | L0 |
 | `decals.mesh` | glb | 노면 표시 (별도 폴리곤 오프셋) | render | L0 |
@@ -90,6 +96,8 @@ credits.json                  출처 표기
 `magic "TKCI"`, `u32 count`, 레코드 16 B × count, 정렬(level, iz, ix):
 `{u8 level, u8 pad, i16 ix, i16 iz, u16 flags, u32 byteLength, u32 hash32}`
 - flags bit0 = 수작업 오버라이드 포함, bit1 = 역/철도 포함.
+- `byteLength` = .tkc 파일 바이트 수, `hash32` = .tkc 파일 전체의 XXH64(seed 0) **하위 32비트**(`tkcHash32`).
+- reader: 파일 길이는 정확히 `8 + 16·count`(부족 `truncated`, 초과 `range`), 레코드는 엄격 오름차순(위반·중복 `corrupt`).
 - 클라이언트는 부팅 시 1회 로드(MVP 약 400 레코드 ≈ 6 KB) → 존재하지 않는 셀 요청 방지, 크기 기반 대역폭 예측.
 
 ## 6. JCOL (collision.bin) 포맷
@@ -105,6 +113,7 @@ repeat shapeCount:
   kind 1: f32 halfExtents[3]; 2: f32 halfHeight, radius; 3: f32 halfHeight, radius
 ```
 - 건물 삼각 메시는 셀당 1개로 병합(삼각형별 머티리얼 ID는 `u8[triCount]` 부가 배열로 확장 예정 → v2).
+- 셰이프 헤더 32 B(모든 배열 4바이트 정렬). reader 거부: 미지 kind·kind 4의 iCount ≠ 0·iCount %3 ≠ 0·인덱스 ≥ vCount·비유한 실수(`corrupt`), 길이 부족(`truncated`, 배열 할당 전 검사). 끝 여분 바이트 무시.
 
 ## 7. lanes.bin
 ```
@@ -114,6 +123,8 @@ u32 laneCount; lanes: {u32 id, u32 fromNode, u32 toNode, u8 kind(0 road,1 turn,2
 u32 pointCount; f32[pointCount*3]
 u32 groupCount; groups: {u16 id, u16 intersection, u8 phaseIndex, u8 pad[3]}
 ```
+- 레코드 크기: node 20 B, lane 24 B, group 8 B. `fromNode/toNode` = 이 청크 **nodes 배열 인덱스**(id 아님, ADR-0017). `ptOffset/ptCount` = 점(xyz 3 float) 단위 범위. `signalGroup` = `groups[].id` 또는 0xFFFF.
+- reader 거부: 노드 인덱스 ≥ nodeCount, 점 범위 초과, 없는 signalGroup, 비유한 좌표(`corrupt`), 길이 부족(`truncated`).
 
 ## 8. 버전 정책
 - 포맷 비호환 변경 → `formatVersion` 증가 + ADR + 런타임은 단일 버전만 지원(구 빌드 즉시 폐기).

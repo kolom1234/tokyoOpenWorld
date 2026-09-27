@@ -1,68 +1,76 @@
 # @sanpo/tile-format
-Layer: L1 | Depends: core | Used by: streaming(decode worker), physics(worker: JCOL), sim(worker: lanes), apps/worker(타입), tools/pipeline(encode)
+Layer: L1 | Depends: core | Used by: streaming(decode worker), physics(worker: JCOL), sim(worker: lanes), apps/worker(타입), apps/game(`FORMAT_VERSION`), tools/pipeline(encode)
 
 ## Purpose
-TKC 셀 컨테이너, cells.idx, JCOL, lanes.bin의 인코더/디코더와 섹션 레지스트리. 포맷 스펙 = `docs/05-tile-format.md` (이 패키지가 유일 구현).
+TKC 셀 컨테이너, cells.idx, JCOL, lanes.bin, terrain.height의 인코더/디코더와 섹션 레지스트리. 포맷 스펙 = `docs/05-tile-format.md` (이 패키지가 유일 구현). 구현 결정 = ADR-0017.
 
-## Public API (src/api.ts)
+## Public API (src/api.ts 타입·상수, src/index.ts 함수)
 ```ts
-export const TKC_MAGIC = 0x3143_4B54;  // "TKC1" LE
-export const FORMAT_VERSION = 1;
-export type SectionType = 'terrain.mesh'|'terrain.height'|'buildings.mesh'|'roads.mesh'|'decals.mesh'|'overrides.mesh'
-  |'props.inst'|'trees.inst'|'collision.bin'|'nav.bin'|'lanes.bin'|'lights.bin'|'audio.json'|'meta.json'|'hlod.mesh';
-export type SectionCodec = 'glb' | 'bin' | 'bin+gzip' | 'json+gzip';
-export interface SectionEntry { type: SectionType | string; offset: number; length: number; codec: SectionCodec; sources: string[]; hash: string }
-export interface CellHeader { cell: { level: number; ix: number; iz: number }; buildId: string; originWF: [number, number, number];
-  aabbWF: { min: [number, number, number]; max: [number, number, number] }; sections: SectionEntry[]; materials: string[]; stats: CellStats }
-export interface TkcReader { header: CellHeader; section(type: SectionType): Uint8Array | undefined }  // 원본 버퍼 view(복사 없음)
-export function readTkc(buf: ArrayBuffer): Result<TkcReader, TkcError>;
-export function writeTkc(header: Omit<CellHeader, 'sections'>, sections: Array<{ type: SectionType; codec: SectionCodec; sources: string[]; data: Uint8Array }>): Uint8Array;
-export function readCellsIndex(buf: ArrayBuffer): CellsIndex;   // Map<CellKey, {byteLength, hash32, flags}>
-export function writeCellsIndex(entries: CellsIndexEntry[]): Uint8Array;
-export function parseJcol(bytes: Uint8Array): JcolShape[];  export function writeJcol(shapes: JcolShape[]): Uint8Array;
-export function parseLanes(bytes: Uint8Array): LaneGraphChunk; export function writeLanes(g: LaneGraphChunk): Uint8Array;
-export async function gunzip(bytes: Uint8Array): Promise<Uint8Array>;   // DecompressionStream (브라우저/Node 22+ 공통)
-// ── 셀 데이터 모델 (디코드 결과. 이 블록이 정의 원본) ──
-export interface DecodedMesh {
-  primitives: Array<{
-    materialId: string; child?: number;           // HLOD 자식 그룹
-    attributes: Record<string, { array: ArrayBufferView; itemSize: number; normalized: boolean }>;
-    index?: Uint32Array | Uint16Array;
-    boundsLocal: { min: [number, number, number]; max: [number, number, number] };
-  }>;
-}
-export interface CellPayload {
-  key: CellKey; id: string; level: 0|1|2|3; originWF: Vec3d; header: CellHeader;
-  meshes: Partial<Record<'terrain'|'buildings'|'roads'|'decals'|'overrides'|'hlod', DecodedMesh>>;
-  heightfield?: HeightfieldData;
-  instances?: { props?: PropBatch[]; trees?: TreeBatch };
-  collision?: ArrayBuffer;      // requestSections로만 채워짐(onReady payload에는 없음)
-  nav?: ArrayBuffer; lanes?: ArrayBuffer; lights?: LightRecord[]; audio?: AudioZones; meta?: CellMeta;
-}
-export interface HeightfieldData { size: number; minH: number; step: number; data: Uint16Array }
-export interface PropBatch { typeId: number; transforms: Float32Array /* x,y,z,yaw,scale (셀 로컬) */ }
-export interface TreeBatch { count: number; records: ArrayBuffer }
-export interface LightRecord { kind: number; schedule: number; kelvin: number; posLocal: [number, number, number]; dirOct: [number, number]; lumen: number; range: number }
-export interface AudioZones { zones: Array<{ kind: string; polygonLocal: [number, number][]; y0: number; y1: number }>; emitters: Array<{ kind: string; pos: [number, number, number] }> }
-export interface InteractableRecord { id: string; kind: 'seat'|'bikeDock'|'carShare'|'gate'|'viewpoint'|'door'; posLocal: [number, number, number]; yaw?: number; radius: number }
-export interface CellMeta { buildings: unknown[]; pois: unknown[]; placeNames: unknown[]; signals: unknown[]; interactables: InteractableRecord[] }  // 나머지 필드 형태 = schemas/cell-meta.schema.json (json-schema-to-typescript로 생성 권장)
+// 상수
+TKC_MAGIC = 0x3143_4B54 /*"TKC1" LE*/; FORMAT_VERSION = 1; TKC_ALIGN = 16; TKC_PREAMBLE_BYTES = 16;
+CELLS_INDEX_MAGIC /*"TKCI"*/; JCOL_MAGIC; JCOL_VERSION = 1; LANES_MAGIC; LANES_VERSION = 1; LANE_NO_SIGNAL = 0xFFFF;
+HEIGHTFIELD_SIZE = 257; HEIGHTFIELD_STEP_M = 0.01; CELL_FLAG = { override: 1, rail: 2 };
+JCOL_MATERIAL = { concrete: 0, …, tile: 7 }; JCOL_FLAG = { rampProxy: 1, climbable: 2 };
+SECTION_REGISTRY: Record<SectionType, { codec: SectionCodec; levels: CellLevel[] }>   // 05 §4 표와 1:1
+type SectionType = keyof typeof SECTION_REGISTRY;  type SectionCodec = 'glb'|'bin'|'bin+gzip'|'json+gzip';
+// 오류: 리더는 throw 대신 Result<T, TkcError>. writer의 잘못된 입력만 throw(프로그래밍 오류).
+TkcErrorCode = { Truncated, Magic, Version, Flags, Header, Range, Align, Corrupt };  interface TkcError { code; message }
+// TKC
+interface SectionEntry { type: string; offset; length; codec: SectionCodec; sources: string[]; hash: string /* xxh64:<16hex> */ }
+interface CellHeader { cell: { level: CellLevel; ix; iz }; buildId; originWF: Vec3Tuple; aabbWF: { min; max }; sections: SectionEntry[]; materials: string[]; stats: CellStats }
+type CellHeaderInput = Omit<CellHeader, 'sections'>;  interface TkcSectionInput { type: SectionType; sources: readonly string[]; data: Uint8Array }
+interface TkcReader { header: CellHeader; section(t: SectionType): Uint8Array | undefined /* 원본 view */; entry(t): SectionEntry | undefined }
+writeTkc(header: CellHeaderInput, sections: readonly TkcSectionInput[]): Uint8Array   // data는 코덱대로 이미 인코딩된 바이트
+readTkc(buf: ArrayBuffer | Uint8Array): Result<TkcReader, TkcError>
+verifyTkc(r: TkcReader): Result<true, TkcError>;  sectionHash(data): string;  isSectionType(s): s is SectionType
+// cells.idx
+interface CellsIndexEntry { level; ix; iz; flags; byteLength; hash32 };  type CellsIndex = ReadonlyMap<CellKey, { flags; byteLength; hash32 }>
+writeCellsIndex(entries): Uint8Array;  readCellsIndex(buf): Result<CellsIndex, TkcError>;  tkcHash32(tkcBytes): number
+// JCOL (collision.bin, gzip 해제 후)
+type JcolShape = JcolTriMesh{vertices,indices} | JcolConvexHull{vertices} | JcolBox{halfExtents} | JcolRound{kind:'capsule'|'cylinder'; halfHeight; radius}
+  // 공통: layer, material, flags, posLocal: Vec3Tuple, quat: [x,y,z,w]
+writeJcol(shapes): Uint8Array;  parseJcol(bytes): Result<JcolShape[], TkcError>
+// lanes.bin (gzip 해제 후) — SoA
+interface LaneGraphChunk { nodes{id,posLocal,portalKey}; lanes{id,fromNode,toNode,kind,speedKmh,signalGroup,ptOffset,ptCount,widthCm}; pointsLocal; groups{id,intersection,phaseIndex} }
+writeLanes(g): Uint8Array;  parseLanes(bytes): Result<LaneGraphChunk, TkcError>
+// terrain.height (gzip 해제 후)
+writeHeightfield(hf: HeightfieldData): Uint8Array;  parseHeightfield(bytes): Result<HeightfieldData, TkcError>
+quantizeHeightfield(heightsM: ArrayLike<number>, size, step = 0.01): HeightfieldData
+// gzip (Compression/DecompressionStream)
+gzip(bytes): Promise<Uint8Array>   // mtime 0, OS 바이트 0xFF → 같은 런타임에서 결정론
+gunzip(bytes): Promise<Result<Uint8Array, TkcError>>
+// ── 셀 데이터 모델 (정의 원본 = src/api.ts) ──
+DecodedMesh, MeshSlot, CellPayload, HeightfieldData{size,minH,step,data:Uint16Array}, PropBatch, TreeBatch, LightRecord, AudioZones,
+CellMeta{buildings: MetaBuilding[]; pois: MetaPoi[]; placeNames: MetaPlaceName[]; signals: MetaSignal[]; interactables: InteractableRecord[]}  // = schemas/cell-meta.schema.json
+```
+
+## M01-T05 사용 예 (파이프라인)
+```ts
+const hf = await gzip(writeHeightfield(quantizeHeightfield(heights257x257, HEIGHTFIELD_SIZE)));
+const meta = await gzip(new TextEncoder().encode(JSON.stringify(cellMeta)));
+const tkc = writeTkc(header, [{ type: 'terrain.mesh', sources: ['gsi-dem'], data: glb }, { type: 'terrain.height', sources: ['gsi-dem'], data: hf },
+  { type: 'meta.json', sources: ['plateau-shibuya'], data: meta }]);
+indexEntries.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });  // → writeCellsIndex
 ```
 
 ## Invariants
-- 리틀엔디언, 섹션 16바이트 정렬, 오프셋은 파일 절대값.
-- `writeTkc`는 섹션을 `type` 사전순으로 배치(결정론).
-- 미지 섹션은 읽기 시 무시. `formatVersion` 불일치 시 `TkcError.Version`.
+- 리틀엔디언, 섹션 16바이트 정렬, 오프셋은 파일 절대값. 헤더 JSON 고정 키 순서, 섹션 `type` 사전순, sources 정렬·중복 제거 → 결정론(05 §3.1).
+- 미지 섹션·추가 헤더 필드는 읽기 시 무시(범위·정렬 검사는 적용). `formatVersion` 불일치 → `version`, flags ≠ 0 → `flags`.
+- 섹션 view·JCOL 배열은 입력 버퍼를 공유(정렬 시 zero-copy). 입력을 transfer하면 무효. lanes·heightfield 결과는 사본.
 - glb 디코드(meshopt)는 이 패키지가 아니라 streaming decode worker 책임(여기선 바이트 + 데이터 모델 타입만).
-- JSON Schema 검증(ajv)은 여기 두지 않는다 → tools/pipeline validate 단계와 테스트에서만.
+- JSON Schema 검증(ajv, devDependency)은 테스트와 tools/pipeline validate에서만. 런타임은 손으로 쓴 구조 검사.
 
 ## Files
-tkc-writer.ts, tkc-reader.ts, cells-index.ts, jcol.ts, lanes.ts, sections.ts(레지스트리·코덱 상수), gzip.ts, model.ts(셀 데이터 모델 타입).
+src/api.ts(계약·레지스트리·모델), src/index.ts, src/internal/: tkc-writer.ts, tkc-reader.ts, header-check.ts(구조 검사·정규 직렬화), sections.ts(레지스트리 조회·해시·정렬),
+cells-index.ts, jcol.ts, lanes.ts, heightfield.ts, gzip.ts, xxh64.ts, bytes.ts(LE 읽기/쓰기). 모델 타입은 Hard Rule 4에 따라 api.ts에(별도 model.ts 없음).
 
 ## Tests
-round-trip(바이트 동일), 손상 입력(짧은 버퍼, 잘못된 매직, 범위 밖 오프셋) 거부, 정렬 검사, JSON Schema 일치(`schemas/cell-header.schema.json`).
+test/tkc.test.ts(round-trip 바이트 동일·결정론·정렬·손상 거부·미지 섹션), schema.test.ts(ajv: cell-header·cell-meta), binary.test.ts(cells.idx·JCOL·lanes·heightfield·gzip), hash.test.ts(XXH64 골든). 픽스처는 합성(test/fixtures.ts).
 
 ## Status
-미구현 (M01-T04).
+구현 완료 (M01-T04). props.inst·trees.inst·lights.bin 인코더는 해당 태스크(M04~)에서 추가.
 
 ## Gotchas
-- 섹션 추가 시 05 문서 §4 레지스트리 표와 `sections.ts` 동시 갱신.
+- 섹션 추가 시 05 문서 §4 레지스트리 표와 `SECTION_REGISTRY`(api.ts) 동시 갱신.
+- `quantizeHeightfield`는 셀마다 minH가 달라 이웃 셀 경계의 복원 높이가 μm 단위로 다를 수 있다(물리 전용). 렌더 메시 이음새는 파이프라인이 보장.
+- gzip 바이트는 런타임 zlib 버전에 의존 → 파이프라인 재현성 검사는 같은 컨테이너에서.

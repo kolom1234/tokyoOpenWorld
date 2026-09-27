@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 81개.
+> 파일 92개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스(M00 골격): 기능 감지 → core 서비스 → 빈 스케줄러 루프 → 월드 상태 조회. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, createIdleFrameSource, BootResult, boot
@@ -12,7 +12,7 @@
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, StatusView, mountStatusView
-- `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WORLD_FORMAT_VERSION, WorldStatus, fetchWorldStatus
+- `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
@@ -73,8 +73,19 @@
 - `packages/streaming/src/index.ts` — @sanpo/streaming 공개 엔트리(L2): 셀 로딩/언로딩·우선순위·캐시. api.ts 재수출 + create* 팩토리만. see docs/modules/streaming.md | exports: * from './api.ts'
 
 ## packages/tile-format
-- `packages/tile-format/src/api.ts` — @sanpo/tile-format 공개 계약(타입·인터페이스). see docs/modules/tile-format.md
-- `packages/tile-format/src/index.ts` — @sanpo/tile-format 공개 엔트리(L1): TKC 셀 컨테이너 인코더/디코더. api.ts 재수출 + create* 팩토리만. see docs/modules/tile-format.md | exports: * from './api.ts'
+- `packages/tile-format/src/api.ts` — @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md | exports: TKC_MAGIC, FORMAT_VERSION, TKC_ALIGN, TKC_PREAMBLE_BYTES, CELLS_INDEX_MAGIC, JCOL_MAGIC, JCOL_VERSION, LANES_MAGIC, LANES_VERSION, LANE_NO_SIGNAL, HEIGHTFIELD_SIZE, HEIGHTFIELD_STEP_M, SectionCodec, SectionSpec, SECTION_REGISTRY, SectionType, TkcErrorCode, TkcError, Vec3Tuple, SectionEntry, CellStats, CellHeader, CellHeaderInput, TkcSectionInput, TkcReader, CELL_FLAG, CellsIndexEntry, CellsIndexRecord, CellsIndex, JCOL_MATERIAL, JCOL_FLAG, JcolKind, JcolTriMesh, JcolConvexHull, JcolBox, JcolRound, JcolShape, LaneGraphChunk, DecodedMesh, MeshSlot, CellPayload, HeightfieldData, PropBatch, TreeBatch, LightRecord, AudioZones, I18nText, MetaBuilding, PoiKind, MetaPoi, MetaPlaceName, MetaSignal, InteractableRecord, CellMeta
+- `packages/tile-format/src/index.ts` — @sanpo/tile-format 공개 엔트리(L1): TKC 셀 컨테이너·cells.idx·JCOL·lanes·terrain.height 인코더/디코더. api.ts 재수출 + 순수 함수. see docs/modules/tile-format.md | exports: * from './api.ts', readCellsIndex, tkcHash32, writeCellsIndex, gunzip, gzip, parseHeightfield, quantizeHeightfield, writeHeightfield, parseJcol, writeJcol, parseLanes, writeLanes, isSectionType, sectionHash, readTkc, verifyTkc, writeTkc
+- `packages/tile-format/src/internal/bytes.ts` — 리틀엔디언 바이트 쓰기/읽기 헬퍼(범위 검사, 정렬 시 zero-copy typed view). see docs/05-tile-format.md (모든 수치 LE) | exports: fail, ByteWriter, ByteReader, asBytes, allFinite
+- `packages/tile-format/src/internal/cells-index.ts` — cells.idx 인코더/디코더 + .tkc 파일 hash32. 레코드 16 B, (level, iz, ix) 오름차순. see docs/05-tile-format.md §5 | exports: writeCellsIndex, readCellsIndex, tkcHash32
+- `packages/tile-format/src/internal/gzip.ts` — gzip/gunzip — Compression/DecompressionStream(브라우저·워커·Node 22+ 공통). see docs/05-tile-format.md §4 (gzip 코덱) | exports: gzip, gunzip
+- `packages/tile-format/src/internal/header-check.ts` — 런타임 헤더 구조 검사(ajv 없이, schemas/cell-header.schema.json의 부분집합) + 정규 직렬화. see docs/05-tile-format.md §3 | exports: checkHeader, canonicalHeaderJson
+- `packages/tile-format/src/internal/heightfield.ts` — terrain.height(gzip 해제 후) 인코더/디코더 + 미터 높이 → u16 양자화. see docs/05-tile-format.md §4 (terrain.height) | exports: writeHeightfield, parseHeightfield, quantizeHeightfield
+- `packages/tile-format/src/internal/jcol.ts` — JCOL(collision.bin 압축 해제 후) 인코더/디코더. 셀 로컬 좌표, f32. see docs/05-tile-format.md §6, docs/08-physics.md §3 | exports: writeJcol, parseJcol
+- `packages/tile-format/src/internal/lanes.ts` — lanes.bin(gzip 해제 후) 인코더/디코더. SoA 청크, 참조 무결성(노드 인덱스·점 범위·신호 그룹) 검사. see docs/05-tile-format.md §7 | exports: writeLanes, parseLanes
+- `packages/tile-format/src/internal/sections.ts` — 섹션 레지스트리 조회·섹션 해시·16바이트 정렬 유틸. see docs/05-tile-format.md §3–4 | exports: HASH_RE, isSectionType, sectionSpec, sectionHash, align16
+- `packages/tile-format/src/internal/tkc-reader.ts` — TKC v1 디코더: 프리앰블·헤더 검사, 섹션 범위/정렬/겹침 검사, 미지 섹션 무시, 원본 버퍼 view 제공. see docs/05-tile-format.md §3, §8 | exports: readTkc, verifyTkc
+- `packages/tile-format/src/internal/tkc-writer.ts` — TKC v1 인코더: 섹션 type 사전순 배치, 16바이트 정렬, 고정 키 순서 헤더 JSON(결정론). see docs/05-tile-format.md §3 | exports: writeTkc
+- `packages/tile-format/src/internal/xxh64.ts` — XXH64(seed 0) — 섹션 해시·cells.idx hash32. BigInt 없이 u32 hi/lo 쌍 연산(파이프라인 처리량). see docs/05-tile-format.md §3, §5 | exports: xxh64Hex, xxh64Low32
 
 ## packages/traversal
 - `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약(타입·인터페이스). see docs/modules/traversal.md
