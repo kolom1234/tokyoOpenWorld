@@ -1,9 +1,5 @@
 // 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8
-/**
- * 클라이언트가 지원하는 TKC formatVersion.
- * TODO(M01-T04): @sanpo/tile-format의 FORMAT_VERSION 상수로 교체.
- */
-export const WORLD_FORMAT_VERSION = 1;
+import { FORMAT_VERSION } from '@sanpo/tile-format';
 
 export type WorldStatus =
   | { kind: 'ready'; buildId: string; baseUrl: string }
@@ -34,7 +30,7 @@ async function errorCode(res: Response): Promise<string | undefined> {
 /** 네트워크·파싱 실패도 예외 대신 `{ kind: 'error' }`로 돌려준다(부트 화면 표시용). */
 export async function fetchWorldStatus(
   fetchFn: FetchLike = (u) => fetch(u),
-  formatVersion: number = WORLD_FORMAT_VERSION,
+  formatVersion: number = FORMAT_VERSION,
 ): Promise<WorldStatus> {
   let res: Response;
   try {

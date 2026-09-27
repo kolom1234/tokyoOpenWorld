@@ -29,7 +29,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/caps.ts | 기능 감지 `detectCaps(env?)` → `Caps`(webgpu `available/no-adapter/unsupported`, crossOriginIsolated, `IsolationMode`, decodeWorkers) |
 | src/boot.ts | 위 시퀀스(M00: 1·2·4 + 빈 루프), `parseFlags`, `createIdleFrameSource` |
 | src/loop.ts | rAF → scheduler.tick, `FrameHook`(before/after) |
-| src/world-status.ts | `fetchWorldStatus()` → `WorldStatus`(ready/unconfigured/no-build/error), `WORLD_FORMAT_VERSION` |
+| src/world-status.ts | `fetchWorldStatus()` → `WorldStatus`(ready/unconfigured/no-build/error). 기본 `fv` = `@sanpo/tile-format` `FORMAT_VERSION` |
 | src/status-view.ts | 부트 상태 화면(M00 임시, `#app[data-isolated|data-webgpu|data-world]` — e2e용) |
 | src/debug/stats.ts | `?debug=1` stats-gl 동적 import |
 | src/wiring/streaming-render.ts | onReady/onEvicted → render(+ack), HLOD 자식 가시성, sim/audio/interactables 분배 |

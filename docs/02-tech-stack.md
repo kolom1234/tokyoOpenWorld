@@ -32,6 +32,7 @@
 | 린트/포맷 | Biome | 2.5.14 |
 | 의존 규칙 | dependency-cruiser | 18.4.0 |
 | 단위 테스트 | Vitest | 5.0.2 |
+| JSON Schema 검증 | `ajv` (draft 2020-12, `ajv/dist/2020`) — 테스트·파이프라인 validate 전용, 런타임 번들 금지 (ADR-0017) | 8.20.0 (MIT) |
 | E2E/골든뷰 | Playwright | 1.63.0 |
 | 타입 | `@types/three` | 0.186.0 |
 | 타입(Node 툴·스크립트) | `@types/node` — 하한 Node 22 API로 고정(ADR-0011·0014) | 22.20.4 |

@@ -128,6 +128,11 @@
     },
     "stats": {
       "type": "object",
+      "required": [
+        "tris",
+        "colliderTris",
+        "instances"
+      ],
       "properties": {
         "tris": {
           "type": "integer"
