@@ -1,36 +1,53 @@
-// 부트 시퀀스(M00 골격): 기능 감지 → core 서비스 → 빈 스케줄러 루프 → 월드 상태 조회. see docs/modules/game.md §부트 시퀀스
-import { type CameraState, createLogger, createScheduler, type FrameSource, type PlayerState } from '@sanpo/core';
+// 부트 시퀀스(M01): 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → 셀 표시. see docs/modules/game.md §부트 시퀀스
+import {
+  type CameraState,
+  createEventBus,
+  createLogger,
+  createScheduler,
+  type FrameSource,
+  type Logger,
+  type PlayerState,
+  type Scheduler,
+} from '@sanpo/core';
 import { detectCaps } from './caps.ts';
+import { createDebugOverlay } from './debug/overlay.ts';
 import { createStatsHook } from './debug/stats.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
-import { loadWorld, WORLD_MINI_BASE_URL, type WorldSource } from './world-load.ts';
+import { type LoadedWorld, loadWorld, WORLD_MINI_BASE_URL, type WorldSource } from './world-load.ts';
 import { fetchWorldStatus, type WorldStatus } from './world-status.ts';
+import { createWorldView, type WorldView } from './world-view.ts';
 
-/** URL 쿼리 디버그 플래그(docs/15-conventions.md §8). 이후 backend/tier/spawn 추가. */
+/** URL 쿼리 디버그 플래그(docs/15-conventions.md §8). 이후 tier/spawn 추가. */
 export interface BootFlags {
   debug: boolean;
   /** `?world=mini` → 저장소 픽스처 world-mini(/fixtures/world-mini)를 API 대신 사용(dev·PR preview·staging·CI e2e). */
   world?: 'mini';
+  /** `?backend=webgl` → WebGPU가 있어도 WebGL2 백엔드 강제(폴백 경로 확인). */
+  backend?: 'webgl';
 }
 
 export function parseFlags(search: string): BootFlags {
   const q = new URLSearchParams(search);
-  return { debug: q.get('debug') === '1', ...(q.get('world') === 'mini' ? { world: 'mini' as const } : {}) };
+  return {
+    debug: q.get('debug') === '1',
+    ...(q.get('world') === 'mini' ? { world: 'mini' as const } : {}),
+    ...(q.get('backend') === 'webgl' ? { backend: 'webgl' as const } : {}),
+  };
 }
 
-/** 월드 출처 결정(API 또는 픽스처) → 데이터 로드. 각 단계 상태를 onStatus로 알린다. */
+/** 월드 출처 결정(API 또는 픽스처) → 데이터 로드. 각 단계 상태를 onStatus로 알리고, 성공하면 로드 결과를 돌려준다. */
 export async function startWorld(
   flags: BootFlags,
   onStatus: (w: WorldStatus) => void,
   fetchFn: (u: string) => Promise<Response> = (u) => fetch(u),
-): Promise<void> {
+): Promise<LoadedWorld | undefined> {
   let target: { baseUrl: string; source: WorldSource };
   if (flags.world === 'mini') target = { baseUrl: WORLD_MINI_BASE_URL, source: 'fixture' };
   else {
     const status = await fetchWorldStatus(fetchFn);
     onStatus(status);
-    if (status.kind !== 'ready') return;
+    if (status.kind !== 'ready') return undefined;
     target = { baseUrl: status.baseUrl, source: 'api' };
   }
   const r = await loadWorld(target.baseUrl, target.source, fetchFn);
@@ -45,6 +62,7 @@ export async function startWorld(
         }
       : { kind: 'error', detail: r.error },
   );
+  return r.ok ? r.value : undefined;
 }
 
 /** 원점 정지 상태의 임시 FrameSource. traversal/sim 연결(M04–M06) 시 교체된다. */
@@ -56,6 +74,47 @@ export function createIdleFrameSource(now: () => number = Date.now): FrameSource
 
 export interface BootResult {
   loop: Loop;
+  /** 렌더 초기화 실패 시 undefined(상태 화면에 오류 표시, 루프는 계속). */
+  world: WorldView | undefined;
+}
+
+/** 전체 화면 캔버스(상태 화면 뒤). */
+function mountCanvas(doc: Document): HTMLCanvasElement {
+  const canvas = doc.createElement('canvas');
+  canvas.id = 'view';
+  doc.body.prepend(canvas);
+  return canvas;
+}
+
+async function setupWorldView(
+  flags: BootFlags,
+  scheduler: Scheduler,
+  log: Logger,
+  view: StatusView,
+): Promise<WorldView | undefined> {
+  try {
+    const world = await createWorldView({
+      canvas: mountCanvas(document),
+      bus: createEventBus(log),
+      log,
+      backend: flags.backend === 'webgl' ? 'webgl' : 'auto',
+    });
+    for (const p of world.providers) scheduler.add(p);
+    scheduler.setFrameSource(world.frameSource);
+    document.body.classList.add('rendering');
+    view.setRenderer(world.render.backend, world.render.depth);
+    if (flags.debug) {
+      const overlay = createDebugOverlay({ parent: document.body, ...world, log });
+      scheduler.add(overlay.system);
+      // e2e·콘솔 조작용 핸들(디버그 모드에서만 노출).
+      Object.assign(globalThis, { __SANPO_DEBUG__: { world, rebaseTest: overlay.rebaseTest } });
+    }
+    return world;
+  } catch (e) {
+    view.showError(`렌더러 초기화 실패: ${e instanceof Error ? e.message : String(e)}`);
+    log.child('boot').error('render init', e);
+    return undefined;
+  }
 }
 
 export async function boot(view: StatusView, flags: BootFlags = parseFlags(location.search)): Promise<BootResult> {
@@ -66,16 +125,21 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
 
   const scheduler = createScheduler({ log, clock: () => performance.now() });
   scheduler.setFrameSource(createIdleFrameSource());
+  const world = await setupWorldView(flags, scheduler, log, view);
   await scheduler.init();
 
   const loop = createLoop({ scheduler });
   if (flags.debug) loop.addHook(await createStatsHook(document.body));
   loop.start();
 
-  // 월드 조회·로드는 루프를 막지 않는다. 실패는 상태 화면에만 표시. 렌더 연결은 M01-T06.
-  void startWorld(flags, (world) => {
-    view.setWorld(world);
-    log.child('boot').info('world', world);
+  // 월드 조회·로드는 루프를 막지 않는다. 실패는 상태 화면에만 표시.
+  void startWorld(flags, (w) => {
+    view.setWorld(w);
+    log.child('boot').info('world', w);
+  }).then(async (loaded) => {
+    if (loaded === undefined || world === undefined) return;
+    const shown = await world.showWorld(loaded);
+    view.setRendered(shown);
   });
-  return { loop };
+  return { loop, world };
 }

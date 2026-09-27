@@ -1,15 +1,16 @@
 # PROGRESS
-Updated: 2026-09-28 (session #10 — M01-T07 완료(T06보다 먼저), PR 리뷰 대기)
+Updated: 2026-09-28 (session #11 — M01-T06 완료, PR 리뷰·사람 육안 확인 대기)
 
-## Current Milestone: M01 — Geo & First Cell (T01–T05, T07 완료 · 남은 것 T06)
-## Current Task: M01-T06 Minimal render & free camera (not started)
-- 순서 변경(2026-09-28): **M01-T07을 T06보다 먼저 완료.** T06(렌더)을 원천 데이터·GDAL·R2가 없는 클라우드 세션에서 하려면 저장소 안에 실제 셀 데이터가 있어야 해서다. → `tests/fixtures/world-mini`(L0 2×2, 스크램블 교차로·스퀘어)를 `?world=mini`로 로드(ADR-0019)
-- Done in this task: –
+## Current Milestone: M01 — Geo & First Cell (T01–T07 전부 구현 · T06 PR 병합 + 육안 확인 대기)
+## Current Task: M01-T06 Minimal render & free camera (done — PR 리뷰 대기)
+- Done in this task: `@sanpo/render`(WebGPURenderer 초기화 + WebGL2 폴백, **reversed-Z** — ADR-0006 Accepted, 방향광 1개 + 반구광, 씬 그래프, DecodedMesh→Mesh, 원점 재설정 2048 m/256 m 격자), `@sanpo/input`(키보드·마우스·Pointer Lock/드래그, 컨텍스트, phase 0 스냅샷), `@sanpo/traversal`(FSM + freecam만, physics 없음), apps/game `world-view.ts`·`start-view.ts`·`wiring/camera.ts`·`debug/{local-cells,overlay}.ts`, `?backend=webgl`, e2e `render.spec.ts`(WebGL2/SwiftShader 스크린샷·건물 픽셀·원점 재설정 왕복 픽셀 차 0), ADR-0020(DecodedMesh 속성 규약)
 - In progress: –
-- Next step (정확히 한 걸음): M01-T07 PR 병합 확인 → `### M01-T06` 블록 + `docs/modules/render.md` 읽고 `packages/render/src/internal/renderer/init.ts`(WebGPURenderer 초기화 + reversed-Z 확인 → ADR-0006)부터. 셀 입력은 `pnpm dev` → `http://localhost:5173/?world=mini`; `apps/game/src/world-load.ts` `loadCell()`이 지금은 헤더만 확인하고 바이트를 버리므로 `LoadedCell`에 TKC 바이트(또는 `TkcReader`)를 실어 `debug/local-cells.ts`로 넘긴다(terrain POSITION float32, buildings POSITION u16 + 노드 TRS — ADR-0018)
-- Blockers: 없음
+- **임시 코드(삭제 예정)**: `apps/game/src/debug/local-cells.ts`(메인 스레드 glb 파싱 + `LocalGround`) → **M02-T05에서 삭제**(roadmap M02-T05 블록에 기록). `LoadedCell.tkc`·`world-view.ts showWorld`도 그때 streaming 배선으로 교체.
+- Next step (정확히 한 걸음): PR 병합 + 사람 육안 확인(PR 본문 체크리스트: 실제 GPU WebGPU, 조작, Scramble Square ≈ 230 m, O 키 원점 재설정 떨림 없음) → `/sanpo-resume M02-T01`(`### M02-T01` 블록 + `docs/modules/streaming.md`부터)
+- Blockers: 없음 (WebGPU 백엔드 실동작은 GPU 있는 사람 환경에서만 확인 가능 — 클라우드 세션은 WebGL2/SwiftShader만 검증)
 
 ## Recently Completed
+- M01-T06 Minimal render & free camera — three 0.186.1 `WebGPURenderer`(`reversedDepthBuffer` — WebGPU depth32float, WebGL2는 `EXT_clip_control` 필요·SwiftShader에 있음, 없으면 logarithmic; `backend-caps.ts` 사전 판정), AgX, 방향광(방위 200°·고도 50°) + 반구광, 단색 PBR 2종(`terrain_ground`·`facade_default`). 원점 재설정: 카메라 ≥ 2048 m → 256 m 격자 스냅, 같은 renderPrep에서 노드·카메라 재계산(누적 없음). freecam: 관성 감쇠 3/s, 휠 0.5–60 m/s(×1.25/노치), Shift ×4, E/Q, 고도 ≤ 1,000 m, 지면 + 1 m. 시작: WF(−60, 지면+60, −15) → Scramble Square(지붕 TP 245.6 m, 지면 대비 ≈ 231 m). `?debug=1` 오버레이 + O 키(+4096 m → 1 s → 복귀). headless Chromium(SwiftShader WebGL2): 셀 4·draw 9·tris 230k·≈ 7 FPS, 원점 재설정 2회 왕복 전후 픽셀 차 0. 테스트 +7파일/+31건, e2e +2 (2026-09-28)
 - M01-T07 Test fixture world — `tests/fixtures/world-mini`(L0_-1..0 × -1..0, 셀 484–903 KiB, 건물 412동, validate 0 오류·이웃 4쌍 1028 샘플 비트 일치, ATTRIBUTION) + `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1셀 창 + `expected.json` 스냅샷), 합계 3.38 MB. `pipeline fixture`(`stages/fixture{,-plateau}.ts`, 컨테이너), `fixtures.test.ts`(호스트 Windows = 컨테이너 스냅샷 일치). 게임 `?world=mini` → `world-load.ts`(world.json 원점·포맷 검증 → cells.idx → 스폰 ± 1 셀 헤더), Vite 플러그인(dev 서빙·build 복사, production `SANPO_WORLD_MINI=0`), Playwright 1.63.0 `tests/e2e/boot.spec.ts` + CI `e2e` 잡. `.gitignore` 예외 확인(`*.tkc` → `!tests/fixtures/**`), `.gitattributes` 바이너리·GML 보존, Biome 픽스처 제외. ADR-0019 (2026-09-28)
 - M01-T05 Minimal cell build — `stages/build/{dem-window,heightfield,terrain-rtin,terrain-mesh,buildings-mesh,manifest,assemble}.ts`, `stages/validate{,-seams}.ts`, `lib/{gltf,triangulate}.ts`, `cli build|validate`, `scripts/repro-build.sh`. tile-format `HEIGHTFIELD_BASE_M = −100`(모든 셀 공통 minH), 지형 = **RTIN 정확 오차 ≤ 5 cm**(meshopt simplify는 실측 최대 0.64 m·경계 조각·접힘으로 교체), ADR-0018. 3×3(L0_-2..0_-1..1): 셀 484–903 KiB(≤ 4 MB), 건물 1082동, 이웃 12쌍 경계(높이장 3084 샘플 + 메시 3084 정점) 비트 일치, 컨테이너 2회 빌드 11파일 sha256 동일, validate 0 오류(ajv: world·헤더·meta). `world.schema` `$ref` 수정. 테스트 +3파일/+17건 (2026-09-28)
 - M01-T04 @sanpo/tile-format — `writeTkc/readTkc/verifyTkc`(고정 키 순서 헤더, type 사전순, 16 B 정렬, 고정점 레이아웃), `SECTION_REGISTRY`(05 §4, 코덱·허용 레벨), `writeCellsIndex/readCellsIndex/tkcHash32`, `writeJcol/parseJcol`, `writeLanes/parseLanes`(SoA, fromNode/toNode = 노드 인덱스), `writeHeightfield/parseHeightfield/quantizeHeightfield`, `gzip/gunzip`(OS 바이트 0xFF 정규화), XXH64(u32 hi/lo, python-xxhash 골든 15개). 리더는 전부 `Result<_, TkcError>`(truncated/magic/version/flags/header/range/align/corrupt). 테스트 4파일/51건(합성 픽스처): round-trip 바이트 동일, 잘못된 매직/버전/flags, 범위 밖·겹침 오프셋, 정렬 위반, 미지 섹션 무시, ajv(cell-header·cell-meta). ADR-0017, apps/game `WORLD_FORMAT_VERSION` → `FORMAT_VERSION` (2026-09-28)
@@ -26,7 +27,10 @@ Updated: 2026-09-28 (session #10 — M01-T07 완료(T06보다 먼저), PR 리뷰
 - [pipeline] `normalizePlateau`는 대상 셀 버킷을 메모리에 모두 보유(3×3 ≈ 수십 MB) → MVP 전체 294셀 실행 전 셀별 임시 파일 스필 필요(M02).
 - [pipeline] 건물 셀 배정 중심점 = 모든 면 정점 평균(installation 포함). M01-T05 실측: 셀 밖 돌출 최대 68.2 m(L0_-1_0, 허용 256 m) → 유지. 발자국 기준 전환은 294셀 빌드에서 문제가 보이면.
 - [pipeline] 도로 레코드는 TrafficArea 단위로 매우 잘게 나뉨(3×3에 27.7k) → M03 도로 메시 빌드 시 병합/삼각분할 비용 확인.
-- [ci] e2e는 부팅 + 월드 데이터 로드까지만(`?world=mini`). 스폰·걷기·모드 전환·`?backend=webgl` 강제는 M01-T06(렌더)·M04 이후 `tests/e2e/boot.spec.ts`에 추가. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
+- [ci] e2e = 부트·월드 로드(`boot.spec.ts`) + 렌더 스모크(`render.spec.ts`, WebGL2/SwiftShader 강제). WebGPU 경로는 CI에 GPU가 없어 미검증(사람 확인). 걷기·모드 전환은 M04 이후. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
+- [e2e] 클라우드 세션 Chromium은 Playwright 번들 버전과 달라 `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e`로 실행. 실행 전 떠 있는 `vite preview`가 있으면 `reuseExistingServer`로 **옛 빌드**를 테스트하니 먼저 종료할 것.
+- [render] 메인 스레드 예산: SwiftShader에서 `render` 시스템 ≈ 30 ms(> 4 ms 경고)는 CPU 래스터라서 — 실제 GPU 수치는 사람 확인·`pnpm perf`(M02~). 임시 로더의 glb 파싱(부트 1회, 4셀)도 Hard Rule 8 예외 → M02-T05에서 워커로.
+- [game] 게임 번들(three 포함) ≈ 1.05 MB(gzip 300 KB) → Vite 500 kB 경고. 코드 분할은 M03(후처리·대기 추가 시) 재검토.
 - [fixtures] world-mini·plateau-mini는 생성물 → 셀 포맷·빌드 코드 변경 시 `docker/run.sh node tools/pipeline/src/cli.ts fixture`로 재생성(`fixtures.test.ts`가 불일치를 알려 줌). plateau-mini 건물은 appearance 제거로 UV 없음, 도로는 normalize 테스트용(셀 빌드에 도로 섹션 없음).
 - [game] 부트 상태 화면(src/status-view.ts)은 DOM 임시 구현 → @sanpo/ui(M08) 로딩 화면으로 대체.
 - [worker] `/world/*` 엣지 캐시(`caches.default`)는 단위 테스트에서 생략됨(Node에 없음) → M02-T06 miniflare 테스트.
@@ -45,7 +49,6 @@ Updated: 2026-09-28 (session #10 — M01-T07 완료(T06보다 먼저), PR 리뷰
 - 프리뷰 URL은 staging Worker의 버전(`pr-<N>` 별칭)이며 staging 바인딩을 공유한다.
 
 ## Decisions Pending
-- ADR-0006 깊이 버퍼 전략 → M01-T06
 - 라이선스 ⚠ 항목 → M11-T05 (단, 공개 배포 전 필수)
 
 ## Pre-flight (사람이 해야 할 일)

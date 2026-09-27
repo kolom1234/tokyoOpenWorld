@@ -3,7 +3,7 @@ import { createLogger, createScheduler, type GameSystem } from '@sanpo/core';
 import { describe, expect, it } from 'vitest';
 import { createIdleFrameSource, parseFlags } from '../src/boot.ts';
 import { createLoop } from '../src/loop.ts';
-import { describeCaps, describeWorld } from '../src/status-view.ts';
+import { describeCaps, describeRenderer, describeWorld } from '../src/status-view.ts';
 import { fetchWorldStatus } from '../src/world-status.ts';
 
 function manualRaf() {
@@ -95,9 +95,16 @@ describe('status rows', () => {
     expect(describeWorld(loaded)).toMatchObject({ state: 'ok', value: '빌드 x · world-mini 픽스처 · 셀 4/4 로드' });
   });
 
-  it('parses the debug flag', () => {
+  it('parses the debug and backend flags', () => {
     expect(parseFlags('?debug=1').debug).toBe(true);
     expect(parseFlags('?debug=0').debug).toBe(false);
     expect(parseFlags('').debug).toBe(false);
+    expect(parseFlags('?world=mini&debug=1&backend=webgl')).toEqual({ debug: true, world: 'mini', backend: 'webgl' });
+    expect(parseFlags('?backend=webgpu')).toEqual({ debug: false });
+  });
+
+  it('describes the renderer row (backend · depth · shown cells)', () => {
+    expect(describeRenderer('webgl2', 'reversed-z', undefined).value).toBe('WebGL2 · 깊이 reversed-z');
+    expect(describeRenderer('webgpu', 'reversed-z', 4).value).toBe('WebGPU · 깊이 reversed-z · 셀 4 표시');
   });
 });

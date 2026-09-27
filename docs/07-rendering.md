@@ -11,7 +11,7 @@ renderer.toneMapping = AgXToneMapping;            // 기본. 포토모드에서 
 renderer.outputColorSpace = SRGBColorSpace;
 ```
 - 백엔드 판별: WebGPU 불가 → WebGL2 폴백 자동. 폴백 시 품질 상한 Medium(§9).
-- 깊이: 근평면 0.1 m, 원평면 60 km. reversed-Z 옵션이 r186에 있으면 사용, 없으면 `logarithmicDepthBuffer`. (M01-T06에서 확인 후 ADR)
+- 깊이: 근평면 0.1 m, 원평면 60 km. **reversed-Z**(`reversedDepthBuffer: true` — WebGPU 항상, WebGL2는 `EXT_clip_control` 있을 때), 불가 시 `logarithmicDepthBuffer`. 생성 전 `backend-caps.ts`가 판정(ADR-0006).
 - 광량 단위: 태양 조도 lux(맑은 한낮 ≈ 100,000), 가로등 lumen. 노출은 자동 노출(EV100)로 흡수.
 
 ## 2. 씬 그래프

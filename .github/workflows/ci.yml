@@ -54,8 +54,17 @@ jobs:
       - name: Install Chromium (headless shell)
         run: pnpm exec playwright install --with-deps --only-shell chromium
       # webServer가 게임을 빌드(dist/fixtures/world-mini 포함)한 뒤 vite preview로 띄운다(tests/e2e/playwright.config.ts).
-      - name: Boot smoke (?world=mini)
+      - name: Boot + render smoke (?world=mini, WebGL2/SwiftShader)
         run: pnpm test:e2e
+      # M01-T06: 시작 화면·원점 재설정 후 스크린샷(tests/e2e/render.spec.ts) — 리뷰어가 렌더 변경을 눈으로 확인.
+      - name: Upload render screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-screenshots
+          path: test-results/screenshots/
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Upload Playwright traces
         if: failure()
         uses: actions/upload-artifact@v7
