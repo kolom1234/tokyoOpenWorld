@@ -10,6 +10,7 @@ export {
   parentOf,
 } from './internal/cells.ts';
 export { gridConvergenceDeg, trueToGridAzimuthDeg } from './internal/convergence.ts';
+export { jisMesh3CodesInBBox, jisMesh3Of } from './internal/jis-mesh.ts';
 export {
   lonLatToPrj,
   lonLatToWF,

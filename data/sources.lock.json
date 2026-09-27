@@ -4,13 +4,14 @@
   "sources": [
     {
       "id": "plateau-shibuya",
-      "url": "TBD (G空間情報センター plateau-13113-shibuya-ku-<最新年度>)",
-      "resource": "CityGML(v4)",
-      "fiscalYear": null,
-      "sha256": "TBD",
+      "url": "https://assets.cms.plateau.reearth.io/assets/48/e684f3-fb86-44d4-b7e3-a3d72d54582d/13113_shibuya-ku_pref_2025_citygml_1_op.zip",
+      "dataset": "https://www.geospatial.jp/ckan/dataset/plateau-13113-shibuya-ku-2025",
+      "resource": "CityGML(v5) 13113_shibuya-ku_pref_2025_citygml_1_op.zip (649,322,807 B)",
+      "fiscalYear": 2025,
+      "sha256": "f7437469d85b1d4a85f2141671b08bbb84d6e05cb15ad2a8b4e8f6a28e67831d",
       "license": "PLATEAU-SitePolicy (CC-BY-4.0 compatible)",
       "attribution": "出典：国土交通省 Project PLATEAU 3D都市モデル（渋谷区）を加工して作成",
-      "retrievedAt": null
+      "retrievedAt": "2026-09-27"
     },
     {
       "id": "plateau-shinjuku",

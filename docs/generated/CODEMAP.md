@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 63개.
+> 파일 77개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스(M00 골격): 기능 감지 → core 서비스 → 빈 스케줄러 루프 → 월드 상태 조회. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, createIdleFrameSource, BootResult, boot
@@ -44,11 +44,12 @@
 
 ## packages/geo
 - `packages/geo/src/api.ts` — @sanpo/geo 공개 계약(타입·상수). 구현은 internal/*, 재수출은 index.ts. see docs/modules/geo.md, docs/01-architecture.md §7–8 | exports: WORLD_ORIGIN, CELL_SIZES, CELL_FANOUT, LonLat, PrjCoord, CellBoundsWF, LonLatBBox, CellLevel
-- `packages/geo/src/index.ts` — @sanpo/geo 공개 엔트리(L1): 좌표 변환(EPSG ↔ WF)·셀 인덱싱. api.ts 재수출 + 구현 함수. see docs/modules/geo.md | exports: * from './api.ts', lonLatBBoxOfWF, cellBoundsWF, cellOf, cellOriginWF, childrenOf, hlodChildIndex, parentOf, gridConvergenceDeg, trueToGridAzimuthDeg, lonLatToPrj, lonLatToWF, prjToLonLat, prjToWF, wfToLonLat, wfToPrj
+- `packages/geo/src/index.ts` — @sanpo/geo 공개 엔트리(L1): 좌표 변환(EPSG ↔ WF)·셀 인덱싱. api.ts 재수출 + 구현 함수. see docs/modules/geo.md | exports: * from './api.ts', lonLatBBoxOfWF, cellBoundsWF, cellOf, cellOriginWF, childrenOf, hlodChildIndex, parentOf, gridConvergenceDeg, trueToGridAzimuthDeg, jisMesh3CodesInBBox, jisMesh3Of, lonLatToPrj, lonLatToWF, prjToLonLat, prjToWF, wfToLonLat, wfToPrj
 - `packages/geo/src/internal/bbox.ts` — WF 사각형 → 위경도 외접 상자. 파이프라인 원천 조회(fetch) 범위 산출용. see docs/04-data-pipeline.md, docs/modules/geo.md | exports: lonLatBBoxOfWF
 - `packages/geo/src/internal/cells.ts` — WF 셀 인덱싱(L0–L3), 부모/자식, HLOD 자식 인덱스. 음수 인덱스는 floor 기반. see docs/01-architecture.md §8 | exports: cellOf, cellOriginWF, cellBoundsWF, parentOf, childrenOf, hlodChildIndex
 - `packages/geo/src/internal/convergence.ts` — 자오선 수렴각(도북 − 진북)과 방위각 보정. sim이 태양 방위를 도북 기준으로 바꿀 때 쓴다. see docs/01-architecture.md §7 | exports: gridConvergenceDeg, trueToGridAzimuthDeg
 - `packages/geo/src/internal/crs-defs.ts` — EPSG 정의 문자열 고정(외부 조회 금지). pyproj(PROJ 9.5) `CRS.to_proj4()` 출력과 동일한 파라미터. see docs/modules/geo.md | exports: DEF_EPSG_6668, DEF_EPSG_6697, DEF_EPSG_6677
+- `packages/geo/src/internal/jis-mesh.ts` — JIS X 0410 지역 메시(3차, ≈1 km) 코드. PLATEAU 원천 파일은 3차 메시 단위로 나뉜다. see docs/modules/geo.md | exports: jisMesh3Of, jisMesh3CodesInBBox
 - `packages/geo/src/internal/transforms.ts` — GEO(EPSG:6668/6697) ↔ PRJ(EPSG:6677) ↔ WF 변환. 좌표계 변환의 유일한 구현. see docs/01-architecture.md §7 | exports: lonLatToPrj, prjToLonLat, prjToWF, wfToPrj, lonLatToWF, wfToLonLat
 
 ## packages/input
@@ -98,4 +99,17 @@
 - `tools/codemap/src/render.ts` — CODEMAP.md 마크다운 렌더링(패키지별 그룹, 타임스탬프 없음 → 재생성 결과가 결정론적). see docs/16-context-protocol.md §5 | exports: CodemapEntry, groupOf, renderLine, renderCodemap
 
 ## tools/pipeline
-- `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <cmd>`). see docs/04-data-pipeline.md, docs/modules/pipeline.md
+- `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
+- `tools/pipeline/src/lib/ndjson-gz.ts` — 결정론적 ndjson.gz 입출력: 키 정렬된 레코드 → gzip(헤더 mtime=0, OS=255 고정). see docs/04-data-pipeline.md §1(재현성) | exports: writeNdjsonGz, readNdjsonGz
+- `tools/pipeline/src/lib/polygon.ts` — 폴리곤 유틸: 셀 경계(축정렬 XZ 사각형) 클리핑. 도로·지형처럼 셀 경계에서 자르는 레이어용. see docs/04-data-pipeline.md §4.2, §6 | exports: ringAreaXZ, clipRingsToRect
+- `tools/pipeline/src/readers/plateau/citygml-assemble.ts` — SAX 파서가 모은 건물·도로 컨텍스트 → 정규화 레코드(LOD 선택 규칙). see docs/04-data-pipeline.md §4.2 | exports: BuildingCtx, AreaCtx, RoadCtx, finishBuilding, finishRoad
+- `tools/pipeline/src/readers/plateau/citygml-sax-state.ts` — B안 CityGML 스트리밍 파서의 상태기계: SAX 이벤트 → 건물·도로 레코드. 드라이버는 citygml-sax.ts. see docs/adr/0007-plateau-reader.md | exports: SaxStats, CityGmlState
+- `tools/pipeline/src/readers/plateau/citygml-sax.ts` — B안 PlateauReader: saxes 스트리밍 파서로 CityGML을 직접 읽는다(외부 바이너리 없음). see docs/adr/0007-plateau-reader.md | exports: CityGmlSaxReader, createCityGmlSaxReader, parseCityGmlString
+- `tools/pipeline/src/readers/plateau/codes.ts` — PLATEAU 코드리스트 → 게임 레이어 축약값. 원 코드는 레코드에 보존한다. see docs/04-data-pipeline.md §4.2 | exports: TrafficAreaType, roadFunctionOf, knownNumber
+- `tools/pipeline/src/readers/plateau/geometry.ts` — PLATEAU 기하 공통 유틸: EPSG:6697 좌표열 → WF 링, 면 법선 분류, 중심점. see docs/04-data-pipeline.md §4.2 | exports: latLonHToWF, lonLatHToWF, parsePosList, dropClosingPoint, newellNormal, ringNormalY, polygonArea3D, classifyByNormal, centroidXZ
+- `tools/pipeline/src/readers/plateau/index.ts` — PLATEAU 리더 진입점: 공통 타입 재수출 + 구현 선택. 채택안(ADR-0007) = citygml-sax. see docs/04-data-pipeline.md §4.2 | exports: createCityGmlSaxReader, parseCityGmlString, createNusamaiReader, * from './types.ts', createPlateauReader
+- `tools/pipeline/src/readers/plateau/nusamai.ts` — A안 PlateauReader(스파이크 비교용): nusamai CLI → GeoPackage(EPSG:6697) → ogr2ogr GeoJSONSeq → 레코드. see docs/adr/0007-plateau-reader.md | exports: createNusamaiReader
+- `tools/pipeline/src/readers/plateau/types.ts` — PLATEAU 리더 공통 계약: 정규화 레코드 타입 + `PlateauReader` 인터페이스(구현 교체 가능). see docs/04-data-pipeline.md §4.2, docs/adr/0007-plateau-reader.md | exports: SurfaceKind, RoadFunction, RingsWF, SurfaceRecord, BuildingRecord, RoadRecord, NormalizedFeature, PlateauReadOptions, PlateauReader
+- `tools/pipeline/src/spike/plateau-spike.ts` — M01-T02 스파이크 CLI: A안(nusamai)·B안(citygml-sax)을 같은 3×3 셀로 돌려 비교한다. 결과 요약은 docs/adr/0007-plateau-reader.md | exports: SPIKE_CELLS
+- `tools/pipeline/src/spike/spike-metrics.ts` — M01-T02 스파이크 비교 지표: 보존(gml:id·속성·면 종류·텍스처·도로 기능), 좌표 일치, 규모. see docs/adr/0007-plateau-reader.md | exports: RunStats, compareOutputs
+- `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
