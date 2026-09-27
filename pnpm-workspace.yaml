@@ -2,3 +2,8 @@ packages:
   - packages/*
   - apps/*
   - tools/*
+
+# 설치 스크립트 허용 목록(pnpm 10 기본 차단). wrangler 번들러(esbuild)·로컬 런타임(workerd)만 허용.
+onlyBuiltDependencies:
+  - esbuild
+  - workerd

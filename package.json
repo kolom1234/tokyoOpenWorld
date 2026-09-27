@@ -8,17 +8,22 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "check": "biome check . && tsc -p tsconfig.json && depcruise packages apps tools",
+    "check": "biome check . && pnpm typecheck && depcruise packages apps tools && node scripts/check-size.ts",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "typecheck": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
     "depcruise": "depcruise packages apps tools",
     "test": "vitest run",
+    "build": "pnpm --filter @sanpo/game build && pnpm --filter @sanpo/worker build",
+    "check:size": "node scripts/check-size.ts",
+    "check:assets": "node scripts/check-asset-size.ts",
+    "check:records": "node scripts/check-records.ts",
     "codemap": "node tools/codemap/src/index.ts",
     "pipeline": "node tools/pipeline/src/cli.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",
+    "@types/node": "22.20.4",
     "dependency-cruiser": "18.4.0",
     "typescript": "6.0.3",
     "vitest": "5.0.2"

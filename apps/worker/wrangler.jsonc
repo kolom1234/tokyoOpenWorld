@@ -1,0 +1,28 @@
+// Cloudflare Worker 설정. see docs/13-deployment.md §2, docs/modules/worker.md
+// R2(WORLD)·KV(CONFIG) 바인딩은 리소스를 만들기 전까지 의도적으로 생략한다.
+// 바인딩이 없으면 /world/*, /api/world/current는 503(world_storage_unconfigured)으로 비활성 — 배포 자체는 성공한다.
+// 리소스 생성 후 아래 주석 블록을 top-level과 env.staging에 각각 추가(바인딩은 env 간 상속되지 않음):
+//   "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-prod" }],   // staging: "sanpo-world-dev"
+//   "kv_namespaces": [{ "binding": "CONFIG", "id": "<kv-namespace-id>" }]
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tokyo-sanpo",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": "../game/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/world/*", "/api/*"]
+  },
+  "observability": { "enabled": true },
+  "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" },
+  "env": {
+    "staging": {
+      "name": "tokyo-sanpo-staging",
+      "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" }
+    }
+  }
+}

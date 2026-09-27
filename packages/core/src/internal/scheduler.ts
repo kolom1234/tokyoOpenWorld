@@ -1,5 +1,13 @@
 // 프레임 스케줄러: phase 오름차순 실행, dtReal 클램프, FrameContext 구성. see docs/01-architecture.md §5
-import type { FrameContext, FrameSource, GameSystem, Scheduler, SchedulerDeps, SystemProvider } from '../api.ts';
+import type {
+  FrameContext,
+  FrameSource,
+  GameSystem,
+  Logger,
+  Scheduler,
+  SchedulerDeps,
+  SystemProvider,
+} from '../api.ts';
 
 /** dtReal 상한(s). 탭 전환·디버거 정지 후 폭주 방지. */
 export const MAX_DT_REAL_S = 0.1;
@@ -24,6 +32,33 @@ function byPhaseThenOrder(a: Entry, b: Entry): number {
   return a.sys.phase - b.sys.phase || a.order - b.order;
 }
 
+function buildFrame(source: FrameSource, frameIndex: number, dtReal: number): FrameContext {
+  return {
+    frameIndex,
+    dtReal,
+    dtGame: dtReal * source.timeScale(),
+    gameTimeMs: source.gameTimeMs(),
+    camera: source.camera(),
+    player: source.player(),
+  };
+}
+
+/** 시스템 1개 update: 예외 격리 + 예산 초과 경고(시스템별 간격 제한). */
+function runSystem(e: Entry, frame: FrameContext, clock: () => number, log: Logger): void {
+  if (e.removed) return;
+  const t0 = clock();
+  try {
+    e.sys.update(frame);
+  } catch (err) {
+    log.error(`system '${e.sys.id}' update threw`, err);
+  }
+  const spentMs = clock() - t0;
+  if (spentMs > SYSTEM_BUDGET_MS && frame.frameIndex - e.lastWarnFrame >= BUDGET_WARN_INTERVAL_FRAMES) {
+    e.lastWarnFrame = frame.frameIndex;
+    log.warn(`system '${e.sys.id}' took ${spentMs.toFixed(2)} ms (> ${SYSTEM_BUDGET_MS} ms budget)`);
+  }
+}
+
 export function createScheduler(deps: SchedulerDeps): Scheduler {
   const log = deps.log.child('scheduler');
   // copy-on-write: tick 중 add/remove가 일어나도 현재 프레임의 순회 목록은 불변.
@@ -39,21 +74,6 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       ...entries,
       { sys, order: orderSeq++, lastWarnFrame: -BUDGET_WARN_INTERVAL_FRAMES, removed: false },
     ].sort(byPhaseThenOrder);
-  };
-
-  const runOne = (e: Entry, frame: FrameContext): void => {
-    if (e.removed) return;
-    const t0 = deps.clock();
-    try {
-      e.sys.update(frame);
-    } catch (err) {
-      log.error(`system '${e.sys.id}' update threw`, err);
-    }
-    const spentMs = deps.clock() - t0;
-    if (spentMs > SYSTEM_BUDGET_MS && frame.frameIndex - e.lastWarnFrame >= BUDGET_WARN_INTERVAL_FRAMES) {
-      e.lastWarnFrame = frame.frameIndex;
-      log.warn(`system '${e.sys.id}' took ${spentMs.toFixed(2)} ms (> ${SYSTEM_BUDGET_MS} ms budget)`);
-    }
   };
 
   return {
@@ -82,16 +102,8 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
       if (!source) throw new Error('Scheduler.tick: setFrameSource() must be called first');
       const rawDt = lastNowMs === undefined ? 0 : (nowMs - lastNowMs) / 1000;
       lastNowMs = nowMs;
-      const dtReal = Math.min(Math.max(rawDt, 0), MAX_DT_REAL_S);
-      const frame: FrameContext = {
-        frameIndex: frameIndex++,
-        dtReal,
-        dtGame: dtReal * source.timeScale(),
-        gameTimeMs: source.gameTimeMs(),
-        camera: source.camera(),
-        player: source.player(),
-      };
-      for (const e of entries) runOne(e, frame);
+      const frame = buildFrame(source, frameIndex++, Math.min(Math.max(rawDt, 0), MAX_DT_REAL_S));
+      for (const e of entries) runSystem(e, frame, deps.clock, log);
     },
   };
 }

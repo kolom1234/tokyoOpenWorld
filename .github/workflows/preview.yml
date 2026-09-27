@@ -1,0 +1,128 @@
+# PR 미리보기: staging Worker에 `wrangler versions upload`(배포 아님) → 프리뷰 URL을 PR 코멘트로 갱신. see docs/13-deployment.md §7
+# - 시크릿이 없으면(포크 PR·Dependabot 등) 전 단계를 건너뛰고 성공 처리.
+# - staging Worker가 아직 한 번도 배포되지 않았으면 "첫 staging 배포 후 활성화" 안내 코멘트를 남기고 성공 처리.
+name: Preview
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_SEND_METRICS: 'false'
+  FORCE_COLOR: '0'
+  WORKER_NAME: tokyo-sanpo-staging
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check Cloudflare secrets
+        id: gate
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          if [ "$HAS_TOKEN" = "true" ] && [ "$HAS_ACCOUNT" = "true" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare secrets are not available (fork PR?) — skipping preview."
+            echo "Preview skipped: Cloudflare secrets not available for this PR." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.gate.outputs.enabled == 'true'
+      - uses: ./.github/actions/setup
+        if: steps.gate.outputs.enabled == 'true'
+      - name: Build
+        if: steps.gate.outputs.enabled == 'true'
+        run: pnpm build && pnpm check:assets
+      - name: Upload preview version
+        id: upload
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-preview.ndjson
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          log="$RUNNER_TEMP/versions-upload.log"
+          set +e
+          pnpm exec wrangler versions upload --env staging \
+            --preview-alias "pr-$PR_NUMBER" --message "PR #$PR_NUMBER @ ${HEAD_SHA::7}" 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            # wrangler: "You cannot upload a new version of a Worker that does not yet exist" / API code 10007
+            if grep -Eq 'does not yet exist|code: 10007' "$log"; then
+              echo "state=not-deployed" >> "$GITHUB_OUTPUT"
+              echo "::notice::$WORKER_NAME has never been deployed — preview will activate after the first staging deploy."
+              exit 0
+            fi
+            exit "$status"
+          fi
+          out="$WRANGLER_OUTPUT_FILE_PATH"
+          field() { jq -r "select(.type == \"version-upload\") | .$1 // empty" "$out" | head -n 1; }
+          {
+            echo "state=uploaded"
+            echo "version_id=$(field version_id)"
+            echo "preview_url=$(field preview_url)"
+            echo "alias_url=$(field preview_alias_url)"
+          } >> "$GITHUB_OUTPUT"
+      - name: Comment on PR
+        if: steps.upload.outputs.state != ''
+        uses: actions/github-script@v9
+        env:
+          STATE: ${{ steps.upload.outputs.state }}
+          VERSION_ID: ${{ steps.upload.outputs.version_id }}
+          PREVIEW_URL: ${{ steps.upload.outputs.preview_url }}
+          ALIAS_URL: ${{ steps.upload.outputs.alias_url }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        with:
+          script: |
+            const marker = '<!-- sanpo-preview -->';
+            const { STATE, VERSION_ID, PREVIEW_URL, ALIAS_URL, HEAD_SHA, WORKER_NAME } = process.env;
+            const sha = HEAD_SHA.slice(0, 7);
+            let body;
+            if (STATE === 'not-deployed') {
+              body = [
+                marker,
+                '### 🚧 미리보기 비활성 — 첫 staging 배포 후 활성화',
+                `staging Worker \`${WORKER_NAME}\`가 아직 한 번도 배포되지 않아 미리보기 버전을 올릴 수 없습니다.`,
+                'main에 병합되어 `deploy.yml`이 staging을 처음 배포하면, 이후 PR 업데이트부터 미리보기 URL이 자동으로 달립니다.',
+                '',
+                `<sub>commit ${sha}</sub>`,
+              ].join('\n');
+            } else {
+              const rows = [
+                ALIAS_URL && `| PR 고정 URL | ${ALIAS_URL} |`,
+                PREVIEW_URL && `| 이 커밋 버전 | ${PREVIEW_URL} |`,
+              ].filter(Boolean);
+              body = [
+                marker,
+                '### 🔍 Preview (Cloudflare Workers)',
+                rows.length ? '| | URL |\n|---|---|\n' + rows.join('\n') : '프리뷰 URL이 출력되지 않았습니다(워커의 workers.dev/Preview URLs 설정 확인).',
+                '',
+                `<sub>version \`${VERSION_ID || '?'}\` · commit ${sha} · staging 바인딩 사용(R2/KV 미구성 시 /world/*·/api/world/current는 503)</sub>`,
+              ].join('\n');
+            }
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 });
+            const mine = comments.find((c) => c.user?.type === 'Bot' && c.body?.includes(marker));
+            if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body });

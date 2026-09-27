@@ -16,6 +16,9 @@
 | 모듈 카드 | 150줄 | 세부는 해당 docs 섹션으로 |
 | docs/*.md | 400줄 | 하위 문서로 분할 + 지도 갱신 |
 | 셰이더(TSL) 파일 | 250줄 | 노드 함수 단위 분할 |
+| CLAUDE.md | 200줄 | 상세는 docs로 |
+
+- 게이트: `pnpm check`의 마지막 단계 `scripts/check-size.ts`가 **정본**(TS 파일·함수 본문(Biome와 같은 `{}` 사이 줄 수)·모듈 카드·docs·CLAUDE.md). 테스트 파일은 함수 길이 제외. Biome `noExcessiveLinesPerFunction`은 일부 함수(객체 반환 팩토리 등)를 놓치므로 보조로만 본다. TSL 250줄은 셰이더 파일 명명 규칙이 정해지면(M03) 추가.
 
 ## 3. 네이밍
 - 파일: `kebab-case.ts`, 워커: `*.worker.ts`, 테스트: `*.test.ts`.

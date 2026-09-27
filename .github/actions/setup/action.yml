@@ -1,0 +1,19 @@
+# 공용 셋업: pnpm(packageManager 필드 버전) + Node + 의존성 설치(--frozen-lockfile). see docs/13-deployment.md §7
+name: Setup workspace
+description: Install pnpm, Node.js and workspace dependencies
+inputs:
+  node-version:
+    description: Node.js major version (ADR-0011 — 24 기본, 22 하한 매트릭스)
+    required: false
+    default: '24'
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v6
+    - uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile

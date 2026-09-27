@@ -41,71 +41,93 @@ interface Ctx {
   setTimer: (fn: () => void, ms: number) => void;
 }
 
+/** 워커 1개의 가변 상태. supervise()의 핸들과 fail/onData/start 헬퍼가 공유한다. */
+interface Slot {
+  readonly name: string;
+  readonly log: Logger;
+  readonly factory: WorkerFactory;
+  readonly msgHandlers: Set<(data: unknown) => void>;
+  readonly restartHandlers: Set<(n: number) => void>;
+  state: SupervisedWorkerState;
+  worker: Worker | undefined;
+  /** 성공 메시지 없이 이어진 재시작 횟수 */
+  streak: number;
+  totalRestarts: number;
+}
+
+function start(ctx: Ctx, s: Slot): void {
+  s.state = 'running';
+  try {
+    s.worker = wire(
+      s.factory(),
+      s.log,
+      (data) => onData(ctx, s, data),
+      (reason) => fail(ctx, s, reason),
+    );
+  } catch (e) {
+    fail(ctx, s, e);
+  }
+}
+
+function fail(ctx: Ctx, s: Slot, reason: unknown): void {
+  if (s.state !== 'running') return;
+  s.log.error('worker failed', reason);
+  s.worker?.terminate();
+  s.worker = undefined;
+  if (s.streak >= ctx.maxRestarts) {
+    s.state = 'failed';
+    s.log.error(`giving up after ${s.streak} consecutive restarts`);
+    return;
+  }
+  s.state = 'restarting';
+  const delayMs = ctx.backoffMs * 2 ** s.streak;
+  s.streak++;
+  ctx.setTimer(() => {
+    if (s.state !== 'restarting') return; // 그 사이 terminate됨
+    start(ctx, s);
+    s.totalRestarts++;
+    s.log.info(`restarted (#${s.totalRestarts})`);
+    for (const h of s.restartHandlers) h(s.totalRestarts);
+  }, delayMs);
+}
+
+function onData(ctx: Ctx, s: Slot, data: unknown): void {
+  if (isWorkerErrorMessage(data)) {
+    if (data.fatal) fail(ctx, s, data.message);
+    else s.log.warn('worker reported', data.message);
+    return;
+  }
+  s.streak = 0;
+  for (const h of s.msgHandlers) h(data);
+}
+
 function supervise(ctx: Ctx, name: string, factory: WorkerFactory): SupervisedWorker {
-  const log = ctx.log.child(name);
-  const msgHandlers = new Set<(data: unknown) => void>();
-  const restartHandlers = new Set<(n: number) => void>();
-  let state: SupervisedWorkerState = 'running';
-  let worker: Worker | undefined;
-  let streak = 0; // 성공 메시지 없이 이어진 재시작 횟수
-  let totalRestarts = 0;
-
-  const fail = (reason: unknown): void => {
-    if (state !== 'running') return;
-    log.error('worker failed', reason);
-    worker?.terminate();
-    worker = undefined;
-    if (streak >= ctx.maxRestarts) {
-      state = 'failed';
-      log.error(`giving up after ${streak} consecutive restarts`);
-      return;
-    }
-    state = 'restarting';
-    const delayMs = ctx.backoffMs * 2 ** streak;
-    streak++;
-    ctx.setTimer(() => {
-      if (state !== 'restarting') return; // 그 사이 terminate됨
-      start();
-      totalRestarts++;
-      log.info(`restarted (#${totalRestarts})`);
-      for (const h of restartHandlers) h(totalRestarts);
-    }, delayMs);
+  const s: Slot = {
+    name,
+    log: ctx.log.child(name),
+    factory,
+    msgHandlers: new Set(),
+    restartHandlers: new Set(),
+    state: 'running',
+    worker: undefined,
+    streak: 0,
+    totalRestarts: 0,
   };
-
-  const onData = (data: unknown): void => {
-    if (isWorkerErrorMessage(data)) {
-      if (data.fatal) fail(data.message);
-      else log.warn('worker reported', data.message);
-      return;
-    }
-    streak = 0;
-    for (const h of msgHandlers) h(data);
-  };
-
-  const start = (): void => {
-    state = 'running';
-    try {
-      worker = wire(factory(), log, onData, fail);
-    } catch (e) {
-      fail(e);
-    }
-  };
-
-  start();
+  start(ctx, s);
   return {
     name,
-    state: () => state,
+    state: () => s.state,
     post(msg, transfer) {
-      if (state !== 'running' || !worker) return false;
-      worker.postMessage(msg, transfer ?? []);
+      if (s.state !== 'running' || !s.worker) return false;
+      s.worker.postMessage(msg, transfer ?? []);
       return true;
     },
-    onMessage: (h) => subscribe(msgHandlers, h),
-    onRestart: (h) => subscribe(restartHandlers, h),
+    onMessage: (h) => subscribe(s.msgHandlers, h),
+    onRestart: (h) => subscribe(s.restartHandlers, h),
     terminate() {
-      state = 'terminated';
-      worker?.terminate();
-      worker = undefined;
+      s.state = 'terminated';
+      s.worker?.terminate();
+      s.worker = undefined;
     },
   };
 }
