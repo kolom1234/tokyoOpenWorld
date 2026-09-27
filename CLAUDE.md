@@ -91,7 +91,7 @@ content/             수작업 에셋 원본(오버라이드 랜드마크, 소�
 pnpm i                      # 설치 (Node 24 LTS 권장, ≥22.12 허용 — ADR-0011; pnpm 10)
 pnpm dev                    # 게임 + 워커 로컬 실행 (wrangler dev, 로컬 R2)
 pnpm check                  # biome + tsc(브라우저·Node 2개 tsconfig) + depcruise + check-size
-pnpm build                  # 게임(현재 placeholder) + worker dry-run 번들
+pnpm build                  # 게임(vite build) + worker dry-run 번들
 pnpm test                   # vitest
 pnpm test:e2e               # playwright 스모크 + 골든뷰
 pnpm perf                   # 자동 비행 경로 성능 측정

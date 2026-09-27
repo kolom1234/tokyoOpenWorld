@@ -59,6 +59,13 @@ importers:
       '@sanpo/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      stats-gl:
+        specifier: 4.2.3
+        version: 4.2.3
+    devDependencies:
+      vite:
+        specifier: 8.3.1
+        version: 8.3.1(@types/node@22.20.4)(esbuild@0.28.1)
 
   apps/worker:
     dependencies:
@@ -1094,6 +1101,14 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  stats-gl@4.2.3:
+    resolution: {integrity: sha512-XxDFKl4kpB9siOTQ5szzT095uvJjj6Q3KLd7AbaceH8lJzRTnFARhBt4AnqKOpdY37iJGK+2H8W9bntMIUghYw==}
+    peerDependencies:
+      three: '*'
+    peerDependenciesMeta:
+      three:
+        optional: true
+
   std-env@4.2.0:
     resolution: {integrity: sha512-oCUKSupKTHX53EyjDtuZQ64pjLJ6yYCtpmEw0goYxtjG9KpbRe8KAsl2tBUGU9DyMcJ0RwJ8GqJAFzMXcXW1Rw==}
 
@@ -1961,6 +1976,8 @@ snapshots:
   sisteransi@1.0.5: {}
 
   source-map-js@1.2.1: {}
+
+  stats-gl@4.2.3: {}
 
   std-env@4.2.0: {}
 

@@ -19,3 +19,11 @@ export function json(status: number, body: unknown, cacheControl = 'no-store'): 
     headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': cacheControl },
   });
 }
+
+/** 저장소 바인딩 미구성 응답(ADR-0015). 클라이언트는 `error` 코드로 "월드 데이터 준비 중"을 표시한다. */
+export function storageUnconfigured(binding: 'WORLD' | 'CONFIG'): Response {
+  return json(503, {
+    error: 'world_storage_unconfigured',
+    message: `${binding} binding is not configured on this deployment; world data is disabled.`,
+  });
+}

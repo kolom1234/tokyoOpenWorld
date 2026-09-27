@@ -4,6 +4,8 @@
 // 리소스 생성 후 아래 주석 블록을 top-level과 env.staging에 각각 추가(바인딩은 env 간 상속되지 않음):
 //   "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-prod" }],   // staging: "sanpo-world-dev"
 //   "kv_namespaces": [{ "binding": "CONFIG", "id": "<kv-namespace-id>" }]
+// env.local은 `pnpm dev`(wrangler dev --env local) 전용 — R2/KV를 miniflare가 .wrangler/state에 시뮬레이션한다.
+// 실제 리소스가 없으므로 배포 불가(배포하지 말 것). 시드: `pnpm --filter @sanpo/worker seed:local` (ADR-0016)
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "tokyo-sanpo",
@@ -23,6 +25,14 @@
     "staging": {
       "name": "tokyo-sanpo-staging",
       "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" }
+    },
+    "local": {
+      "name": "tokyo-sanpo-local",
+      "workers_dev": false,
+      "preview_urls": false,
+      "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" },
+      "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-local" }],
+      "kv_namespaces": [{ "binding": "CONFIG", "id": "sanpo-config-local" }]
     }
   }
 }

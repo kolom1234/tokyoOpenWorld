@@ -3,13 +3,25 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 48개.
+> 파일 58개.
+
+## apps/game
+- `apps/game/src/boot.ts` — 부트 시퀀스(M00 골격): 기능 감지 → core 서비스 → 빈 스케줄러 루프 → 월드 상태 조회. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, createIdleFrameSource, BootResult, boot
+- `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
+- `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
+- `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
+- `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
+- `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, StatusView, mountStatusView
+- `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WORLD_FORMAT_VERSION, WorldStatus, fetchWorldStatus
 
 ## apps/worker
-- `apps/worker/src/env.ts` — Worker 바인딩 타입(Env). R2·KV는 선택 — 리소스 생성 전 배포를 허용하기 위해 optional. see docs/modules/worker.md | exports: AssetsBinding, WorldBucket, ConfigKv, Env
-- `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, withSecurityHeaders, json
+- `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
+- `apps/worker/src/env.ts` — Worker 바인딩 타입(Env). R2·KV는 선택 — 리소스 생성 전 배포를 허용하기 위해 optional. see docs/modules/worker.md | exports: AssetsBinding, WorldRange, WorldObject, WorldObjectBody, WorldBucket, ConfigKv, WorkerContext, Env
+- `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, withSecurityHeaders, json, storageUnconfigured
 - `apps/worker/src/index.ts` — Worker 엔트리(라우터): /api/*, /world/*는 Worker, 나머지는 Static Assets. see docs/13-deployment.md §4, docs/modules/worker.md | exports: handleRequest, default
-- `apps/worker/src/routes/world.ts` — `/world/*`(R2)·`/api/world/current`(KV) 라우트. 바인딩이 없으면 503으로 비활성. see docs/13-deployment.md §4 | exports: storageUnconfigured, handleWorldCurrent, handleWorldData
+- `apps/worker/src/routes/current.ts` — `GET /api/world/current?fv=<n>`: KV `CURRENT_BUILD:v<n>` → 활성 buildId·baseUrl. see docs/13-deployment.md §4, §8 | exports: handleWorldCurrent
+- `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답만 캐시. see docs/13-deployment.md §4 | exports: contentRange, handleWorldData
+- `apps/worker/src/validate.ts` — 요청 입력 검증: buildId 형식, /world 경로(경로 조작 차단), formatVersion 쿼리. see docs/13-deployment.md §4 | exports: BUILD_ID_RE, isValidBuildId, parseWorldPath, parseFormatVersion
 
 ## packages/audio
 - `packages/audio/src/api.ts` — @sanpo/audio 공개 계약(타입·인터페이스). see docs/modules/audio.md

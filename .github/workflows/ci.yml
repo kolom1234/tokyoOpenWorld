@@ -39,11 +39,11 @@ jobs:
         run: pnpm check
       - name: Unit tests
         run: pnpm test
-      - name: Build (game placeholder + worker dry-run bundle)
+      - name: Build (game vite build + worker dry-run bundle)
         run: pnpm build
       - name: Static asset limits (25 MiB/file, 20k files)
         run: pnpm check:assets
-      # TODO(M00-T04): Playwright 스모크(WebGL 폴백, tests/fixtures/world-mini) — 게임 부트 스켈레톤 이후 추가.
+      # TODO(M01-T07): Playwright 스모크(WebGL 폴백, tests/fixtures/world-mini) — 부트 화면 #app[data-isolated/webgpu/world] 검사.
 
   records:
     name: records (codemap · module cards · PROGRESS)

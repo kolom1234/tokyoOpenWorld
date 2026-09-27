@@ -6,14 +6,40 @@ export interface AssetsBinding {
   fetch(request: Request): Promise<Response>;
 }
 
-/** R2Bucket 중 사용하는 부분. TODO(M00-T04): get 옵션(range/onlyIf)·R2ObjectBody 타입 구체화. */
+/** R2Range 중 응답 Content-Range 계산에 쓰는 형태. 런타임에 따라 쓰지 않는 키가 `undefined`로 존재할 수 있다. */
+export interface WorldRange {
+  offset?: number | undefined;
+  length?: number | undefined;
+  suffix?: number | undefined;
+}
+
+/** R2Object 중 사용하는 부분(메타데이터만, 본문 없음 — head 결과·조건부 요청 불일치). */
+export interface WorldObject {
+  size: number;
+  httpEtag: string;
+  range?: WorldRange;
+  writeHttpMetadata(headers: Headers): void;
+}
+
+/** R2ObjectBody 중 사용하는 부분. */
+export interface WorldObjectBody extends WorldObject {
+  body: ReadableStream;
+}
+
+/** R2Bucket 중 사용하는 부분. `range`/`onlyIf`에 요청 Headers를 그대로 넘기면 R2가 Range·조건부 헤더를 해석한다. */
 export interface WorldBucket {
-  get(key: string, options?: unknown): Promise<unknown>;
+  get(key: string, options?: { range?: Headers; onlyIf?: Headers }): Promise<WorldObjectBody | WorldObject | null>;
+  head(key: string): Promise<WorldObject | null>;
 }
 
 /** KVNamespace 중 사용하는 부분. */
 export interface ConfigKv {
   get(key: string): Promise<string | null>;
+}
+
+/** ExecutionContext 중 사용하는 부분(응답 후 캐시 저장). */
+export interface WorkerContext {
+  waitUntil(promise: Promise<unknown>): void;
 }
 
 export interface Env {

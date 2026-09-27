@@ -4,19 +4,25 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node -e \"const fs=require('node:fs');fs.rmSync('dist',{recursive:true,force:true});fs.cpSync('placeholder','dist',{recursive:true})\""
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
+    "@sanpo/audio": "workspace:*",
     "@sanpo/core": "workspace:*",
     "@sanpo/geo": "workspace:*",
-    "@sanpo/tile-format": "workspace:*",
     "@sanpo/input": "workspace:*",
-    "@sanpo/streaming": "workspace:*",
     "@sanpo/physics": "workspace:*",
-    "@sanpo/audio": "workspace:*",
     "@sanpo/render": "workspace:*",
     "@sanpo/sim": "workspace:*",
+    "@sanpo/streaming": "workspace:*",
+    "@sanpo/tile-format": "workspace:*",
     "@sanpo/traversal": "workspace:*",
-    "@sanpo/ui": "workspace:*"
+    "@sanpo/ui": "workspace:*",
+    "stats-gl": "4.2.3"
+  },
+  "devDependencies": {
+    "vite": "8.3.1"
   }
 }
