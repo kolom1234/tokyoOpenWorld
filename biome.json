@@ -2,7 +2,17 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": ["**", "!**/node_modules", "!**/dist", "!data", "!docs", "!schemas", "!content", "!pnpm-lock.yaml"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/dist",
+      "!data",
+      "!docs",
+      "!schemas",
+      "!content",
+      "!pnpm-lock.yaml",
+      "!packages/geo/test/golden.json"
+    ]
   },
   "formatter": {
     "enabled": true,
