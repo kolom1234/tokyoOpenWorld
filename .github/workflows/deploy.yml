@@ -1,0 +1,122 @@
+# main 병합 → staging(tokyo-sanpo-staging) 자동 배포 → Environment "production" 수동 승인 → production(tokyo-sanpo). see docs/13-deployment.md §7
+# 시크릿(CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID)이 없으면 배포 단계를 건너뛰고 성공 처리한다.
+# 시크릿 값은 wrangler 프로세스 env로만 전달하고 echo/인자로 쓰지 않는다(Actions 로그 마스킹은 보조 수단).
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  WRANGLER_SEND_METRICS: 'false'
+  FORCE_COLOR: '0'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  staging:
+    name: staging (tokyo-sanpo-staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-staging
+      cancel-in-progress: false
+    outputs:
+      enabled: ${{ steps.gate.outputs.enabled }}
+    steps:
+      - name: Check Cloudflare secrets
+        id: gate
+        env:
+          # 값이 아닌 존재 여부(true/false)만 전달한다.
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          if [ "$HAS_TOKEN" = "true" ] && [ "$HAS_ACCOUNT" = "true" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Cloudflare secrets are not available — skipping deploy."
+            echo "Deploy skipped: CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not available." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/checkout@v7
+        if: steps.gate.outputs.enabled == 'true'
+      - uses: ./.github/actions/setup
+        if: steps.gate.outputs.enabled == 'true'
+      - name: Build
+        if: steps.gate.outputs.enabled == 'true'
+        run: pnpm build && pnpm check:assets
+      - name: Deploy to staging
+        id: deploy
+        if: steps.gate.outputs.enabled == 'true'
+        working-directory: apps/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-staging.ndjson
+        run: |
+          pnpm exec wrangler deploy --env staging --message "main@${GITHUB_SHA::7}"
+          url=$(jq -r 'select(.type == "deploy") | .targets[]? | select(endswith("workers.dev"))' "$WRANGLER_OUTPUT_FILE_PATH" | head -n 1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Staging deployed: ${url:-(no workers.dev URL)}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke test staging
+        if: steps.deploy.outputs.url != ''
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: .github/scripts/smoke.sh "$URL"
+
+  production:
+    name: production (tokyo-sanpo)
+    needs: staging
+    if: needs.staging.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 승인 게이트: Settings → Environments → production → Required reviewers.
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      actions: read # 환경 보호 규칙 조회
+    steps:
+      - name: Require manual approval rule on the production environment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 환경이 보호 규칙 없이 자동 생성된 경우 승인 없이 이 잡이 시작된다 → 배포 전에 중단한다.
+          reviewers=$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/environments/production" \
+            | jq '[.protection_rules[]? | select(.type == "required_reviewers")] | length')
+          if [ "$reviewers" -lt 1 ]; then
+            echo "::error::Environment 'production' has no required reviewers — configure it before production deploys (see PR description / PROGRESS.md)."
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Build
+        run: pnpm build && pnpm check:assets
+      - name: Deploy to production
+        id: deploy
+        working-directory: apps/worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-production.ndjson
+        run: |
+          pnpm exec wrangler deploy --env="" --message "main@${GITHUB_SHA::7}"
+          url=$(jq -r 'select(.type == "deploy") | .targets[]? | select(endswith("workers.dev"))' "$WRANGLER_OUTPUT_FILE_PATH" | head -n 1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Production deployed: ${url:-(no workers.dev URL)}" >> "$GITHUB_STEP_SUMMARY"
+      - name: Smoke test production
+        if: steps.deploy.outputs.url != ''
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+        run: .github/scripts/smoke.sh "$URL"

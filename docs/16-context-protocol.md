@@ -56,7 +56,10 @@ Layer: L2 | Depends: core, geo | Used by: apps/game
 ## 5. CODEMAP 자동 생성 (`tools/codemap`)
 - TypeScript 컴파일러 API로 각 패키지의 파일 목록 + export 심볼 + 첫 줄 책임 주석을 추출 → `docs/generated/CODEMAP.md`.
 - 형식: `packages/render/src/internal/materials/facade/grid.ts — floor/bay SDF | exports: facadeGrid, FacadeGridParams`
-- `pnpm codemap`을 handoff 때마다 실행. 사람이 편집하지 않음.
+- `pnpm codemap`을 handoff 때마다 실행. 사람이 편집하지 않음. 타임스탬프 없음(결정론) — CI `records` 잡이 재생성 결과와 커밋본이 다르면 실패시킨다(`pnpm codemap --check`로 로컬 확인).
+- 대상: `packages/*/src`, `apps/*/src`, `tools/*/src`, `scripts/**` (테스트·`.d.ts` 제외).
+- CI 기록 검사(`scripts/check-records.ts`): `packages/<pkg>/src/api.ts` 변경 시 `docs/modules/<pkg>.md` 미변경이면 실패, 코드 변경 PR에 `PROGRESS.md` 미변경이면 경고.
+- 세션 종료 훅(SessionEnd)으로 자동 실행하지 않는다 — 클라우드 세션은 VM 회수로 끝나 훅 실행·결과 커밋이 보장되지 않음(PROGRESS 메모, M00-T03).
 
 ## 6. ADR (Architecture Decision Record)
 - 위치 `docs/adr/NNNN-title.md`, 형식: Status / Context / Decision / Consequences / Alternatives (각 5줄 이내 권장).

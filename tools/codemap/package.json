@@ -2,5 +2,8 @@
   "name": "@sanpo/codemap",
   "version": "0.0.0",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
 }

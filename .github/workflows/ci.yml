@@ -1,0 +1,70 @@
+# PR·main 품질 게이트: check(biome+tsc+depcruise+size) → test → build → 에셋 크기, 기록 누락 검사. see docs/13-deployment.md §7, docs/14-testing-perf.md §5
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  WRANGLER_SEND_METRICS: 'false'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    name: check (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # 24 = .nvmrc 기본, 22 = engines 하한(ADR-0011). 22.x 최신은 type-stripping 기본 활성(22.18+).
+        node: ['24', '22']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Lint · typecheck · depcruise · size (pnpm check)
+        run: pnpm check
+      - name: Unit tests
+        run: pnpm test
+      - name: Build (game placeholder + worker dry-run bundle)
+        run: pnpm build
+      - name: Static asset limits (25 MiB/file, 20k files)
+        run: pnpm check:assets
+      # TODO(M00-T04): Playwright 스모크(WebGL 폴백, tests/fixtures/world-mini) — 게임 부트 스켈레톤 이후 추가.
+
+  records:
+    name: records (codemap · module cards · PROGRESS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # PR merge-base 계산용
+      - uses: ./.github/actions/setup
+      - name: CODEMAP is up to date
+        run: |
+          pnpm codemap
+          if [ -n "$(git status --porcelain -- docs/generated/CODEMAP.md)" ]; then
+            echo "::error file=docs/generated/CODEMAP.md::CODEMAP.md is stale — run 'pnpm codemap' and commit the result."
+            git --no-pager diff --stat -- docs/generated/CODEMAP.md
+            git --no-pager diff -- docs/generated/CODEMAP.md | head -n 60
+            exit 1
+          fi
+      - name: Module cards (fail) · PROGRESS.md (warn)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: pnpm check:records --base "$BASE_SHA"

@@ -9,6 +9,7 @@
 | (확장) R2 커스텀 도메인 | `world.<domain>` | 트래픽 증가 시 Worker 우회 CDN 캐시 (§5) |
 
 ## 2. `apps/worker/wrangler.jsonc`
+아래는 **목표 구성**. 현재 커밋본은 R2 버킷·KV가 아직 없어 `r2_buckets`/`kv_namespaces`를 생략하고 `workers_dev`·`preview_urls: true`를 켠다(ADR-0015). 바인딩이 없으면 `/world/*`, `/api/world/current`는 `503 {error:"world_storage_unconfigured"}`로 비활성 — 배포는 성공. 리소스 생성 후 top-level과 `env.staging` **양쪽에** 바인딩 추가(env 간 상속 안 됨, `vars`도 동일).
 ```jsonc
 {
   "name": "tokyo-sanpo",
@@ -50,6 +51,7 @@
 ## 4. Worker 라우트 (`apps/worker/src/routes/`)
 | 경로 | 동작 |
 |---|---|
+| `GET /api/health` | `{ ok, bindings: { world, config } }`(boolean만, no-store) — 배포 스모크 테스트용 |
 | `GET /api/world/current?fv=1` | KV `CURRENT_BUILD:v1` → `{ buildId, formatVersion, baseUrl }` (Cache-Control max-age=60) |
 | `GET /world/<buildId>/<path>` | ① `caches.default` 조회 → ② 미스 시 `env.WORLD.get(key, { range: req.headers, onlyIf: req.headers })` → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답만 `ctx.waitUntil(cache.put)` (206은 캐시 안 함) → 없으면 404(`max-age=300`) |
 | `GET /api/weather` | `LIVE_WEATHER=true`일 때만. Open-Meteo 현재 날씨(도쿄 중심 좌표) 프록시, 10분 캐시 |
@@ -68,9 +70,11 @@
 ## 7. CI/CD (GitHub Actions)
 | 워크플로 | 트리거 | 단계 |
 |---|---|---|
-| `ci.yml` | PR | Node 24 + pnpm 설치(`--frozen-lockfile`) → `pnpm check` → `pnpm test` → `pnpm build` → 에셋 크기 검사 → Playwright 스모크(WebGL 폴백, `tests/fixtures/world-mini` 로컬 서빙) |
-| `preview.yml` | PR | `wrangler versions upload` → 프리뷰 URL 코멘트 |
-| `deploy.yml` | main 머지 | 빌드 → `wrangler deploy` (staging) → 스모크 → 수동 승인 → production |
+| `ci.yml` | PR, main push | **check**(Node 24·22 매트릭스): `pnpm install --frozen-lockfile` → `pnpm check`(biome·tsc·depcruise·check-size) → `pnpm test` → `pnpm build`(게임 + worker dry-run) → `pnpm check:assets`(25 MiB/파일, 2만 파일). **records**: `pnpm codemap` 결과 ≠ 커밋본이면 실패, PR이면 `check:records`(api.ts↔모듈 카드 실패, 코드↔PROGRESS 경고). Playwright 스모크는 M00-T04 이후 |
+| `preview.yml` | PR | staging Worker에 `wrangler versions upload --preview-alias pr-<N>`(배포 아님) → 프리뷰 URL을 PR 코멘트 1개로 갱신. staging이 한 번도 배포되지 않았으면 안내 코멘트 후 성공 |
+| `deploy.yml` | main push, 수동 | staging 빌드 → `wrangler deploy --env staging` → `/api/health` 스모크 → Environment `production` 수동 승인 → 재빌드 → `wrangler deploy` → 스모크. production 잡은 환경에 Required reviewers가 없으면 배포 전 실패(자동 생성된 무보호 환경 방지) |
+- 시크릿이 없으면(포크 PR·Dependabot) preview/deploy는 존재 여부만 `secrets.X != ''`로 판정해 건너뛰고 성공. 시크릿은 wrangler 프로세스 env로만 전달(echo·인자 금지).
+- 공용 셋업: `.github/actions/setup`(pnpm → Node → install), 스모크: `.github/scripts/smoke.sh`.
 - 시크릿: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. 월드 퍼블리시용 `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`는 **빌드 머신 로컬에만**(CI에 두지 않음).
 - ODPT 키는 파이프라인(오프라인 시간표 컴파일)에서만 사용. 런타임·클라이언트에 비밀값 없음.
 

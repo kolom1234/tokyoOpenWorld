@@ -3,8 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "build": "wrangler deploy --dry-run --outdir dist --env=",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env="
+  },
   "dependencies": {
     "@sanpo/core": "workspace:*",
     "@sanpo/tile-format": "workspace:*"
+  },
+  "devDependencies": {
+    "wrangler": "4.141.0"
   }
 }
