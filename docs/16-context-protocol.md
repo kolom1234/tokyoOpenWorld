@@ -75,6 +75,6 @@ Layer: L2 | Depends: core, geo | Used by: apps/game
 ## 8. 슬래시 커맨드 (`.claude/commands/`)
 | 커맨드 | 역할 |
 |---|---|
-| `/resume` | CLAUDE.md → PROGRESS.md → 태스크 블록 → 모듈 카드 순서로 읽고 계획 3줄 제시 |
+| `/sanpo-resume` | CLAUDE.md → PROGRESS.md → 태스크 블록 → 모듈 카드 순서로 읽고 계획 3줄 제시 |
 | `/handoff` | PROGRESS 갱신, 모듈 카드·ADR 확인, codemap 재생성, 테스트, 커밋 |
 | `/new-task` | 로드맵에 새 태스크 블록 추가(형식 강제) |

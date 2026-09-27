@@ -9,6 +9,7 @@
 MVP 구역: 시부야–하라주쿠–신주쿠 (약 3.6 × 5.4 km). 이후 23구로 확장.
 
 ## 2. 세션 시작 절차 (반드시 이 순서)
+`/sanpo-resume` 커맨드(`.claude/commands/sanpo-resume.md`)가 아래 절차를 수행한다. (`/resume`은 Claude Code 기본 명령과 충돌하므로 쓰지 않는다)
 1. 이 파일을 읽는다.
 2. `PROGRESS.md`를 읽는다 → "Current Task"와 "Next Steps" 확인.
 3. 작업 대상 태스크 ID(예: `M03-T04`)의 블록만 `docs/roadmap/M03.md`에서 grep(`### M03-T04`)으로 찾아 읽는다.
@@ -87,7 +88,7 @@ content/             수작업 에셋 원본(오버라이드 랜드마크, 소�
 
 ## 7. 자주 쓰는 명령
 ```
-pnpm i                      # 설치 (Node 24 LTS, pnpm 10)
+pnpm i                      # 설치 (Node 24 LTS 권장, ≥22.12 허용 — ADR-0011; pnpm 10)
 pnpm dev                    # 게임 + 워커 로컬 실행 (wrangler dev, 로컬 R2)
 pnpm check                  # biome + tsc + depcruise
 pnpm test                   # vitest

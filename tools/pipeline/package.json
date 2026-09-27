@@ -1,0 +1,11 @@
+{
+  "name": "@sanpo/pipeline",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@sanpo/core": "workspace:*",
+    "@sanpo/geo": "workspace:*",
+    "@sanpo/tile-format": "workspace:*"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@sanpo/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@sanpo/core": "workspace:*",
+    "@sanpo/tile-format": "workspace:*"
+  }
+}

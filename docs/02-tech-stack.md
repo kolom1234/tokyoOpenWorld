@@ -24,7 +24,7 @@
 ## 2. 빌드·품질 도구
 | 영역 | 선택 | 버전 |
 |---|---|---|
-| 런타임 | Node.js 24 LTS | 24.x |
+| 런타임 | Node.js 24 LTS (`.nvmrc`=24, `engines` ≥22.12 허용 — ADR-0011) | 24.x (하한 22.12) |
 | 패키지 매니저 | pnpm (workspaces) | 10.34.5 (`packageManager` 필드 고정) |
 | 언어 | TypeScript | 6.0.3 (`typescript-eslint` 호환 범위 < 6.1. TS 7 전환은 별도 ADR) |
 | 번들러 | Vite | 8.3.1 |
