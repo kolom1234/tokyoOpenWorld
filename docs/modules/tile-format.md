@@ -58,6 +58,7 @@ indexEntries.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash
 - 미지 섹션·추가 헤더 필드는 읽기 시 무시(범위·정렬 검사는 적용). `formatVersion` 불일치 → `version`, flags ≠ 0 → `flags`.
 - 섹션 view·JCOL 배열은 입력 버퍼를 공유(정렬 시 zero-copy). 입력을 transfer하면 무효. lanes·heightfield 결과는 사본.
 - glb 디코드(meshopt)는 이 패키지가 아니라 streaming decode worker 책임(여기선 바이트 + 데이터 모델 타입만).
+- `DecodedMesh.attributes` 키 = glTF 의미 이름(`POSITION`·`NORMAL`·`TEXCOORD_0`·`_BLDG`…), 밀집 배열, POSITION = 셀 로컬 float32(양자화 해제) — ADR-0020.
 - JSON Schema 검증(ajv, devDependency)은 테스트와 tools/pipeline validate에서만. 런타임은 손으로 쓴 구조 검사.
 
 ## Files

@@ -1,8 +1,8 @@
-// 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 TKC 헤더 확인. 렌더·스트리밍 전 임시 로더.
+// 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 TKC(헤더 확인 + 리더 보관). 스트리밍 전 임시 로더.
 // M02 streaming(디코드 워커)이 들어오면 셀 fetch·검증은 거기로 옮기고 여기엔 매니페스트 검증만 남긴다. see docs/modules/game.md, docs/05-tile-format.md §1–3
-import { type CellKey, cellIdString, err, ok, packCellKey, type Result } from '@sanpo/core';
+import { type CellKey, cellIdString, err, ok, packCellKey, type Result, type Vec3d } from '@sanpo/core';
 import { cellOf, WORLD_ORIGIN } from '@sanpo/geo';
-import { type CellsIndex, FORMAT_VERSION, readCellsIndex, readTkc } from '@sanpo/tile-format';
+import { type CellsIndex, FORMAT_VERSION, readCellsIndex, readTkc, type TkcReader } from '@sanpo/tile-format';
 
 /** 저장소 픽스처 world-mini(tests/fixtures/world-mini)의 정적 경로. `?world=mini`로 선택(vite.config.ts가 서빙·복사). */
 export const WORLD_MINI_BASE_URL = '/fixtures/world-mini';
@@ -18,15 +18,20 @@ interface WorldManifest {
 }
 
 export interface LoadedCell {
+  key: CellKey;
   id: string;
   bytes: number;
   sections: string[];
+  /** 검증된 TKC 리더(섹션 view — 원본 바이트 보유). M01-T06 debug/local-cells.ts가 메시로 변환(M02-T05에서 streaming으로 대체). */
+  tkc: TkcReader;
 }
 
 export interface LoadedWorld {
   source: WorldSource;
   baseUrl: string;
   buildId: string;
+  /** world.json spawn.posWF(WF m). */
+  spawnWF: Vec3d;
   /** cells.idx 레코드 수(모든 레벨). */
   indexed: number;
   /** 스폰 셀 ± 1 안에서 받아 헤더를 확인한 L0 셀. */
@@ -89,7 +94,7 @@ async function loadCell(
   if (packCellKey(h.cell.level, h.cell.ix, h.cell.iz) !== key || h.buildId !== expect.buildId) {
     return err(`${id}: header cell/buildId mismatch`);
   }
-  return ok({ id, bytes: bytes.value.byteLength, sections: h.sections.map((s) => s.type) });
+  return ok({ key, id, bytes: bytes.value.byteLength, sections: h.sections.map((s) => s.type), tkc: r.value });
 }
 
 /** world.json → cells.idx → 스폰 주변 셀. 실패는 예외 대신 Result(부트 화면 표시). */
@@ -115,5 +120,7 @@ export async function loadWorld(
     cells.push(c.value);
   }
   if (cells.length === 0) return err('no L0 cells around spawn');
-  return ok({ source, baseUrl, buildId: m.value.buildId, indexed: index.value.size, cells });
+  const [x, y, z] = m.value.spawn.posWF;
+  const spawnWF = { x, y, z };
+  return ok({ source, baseUrl, buildId: m.value.buildId, spawnWF, indexed: index.value.size, cells });
 }

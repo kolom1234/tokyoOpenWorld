@@ -4,3 +4,4 @@ tests/fixtures/**/*.tkc binary
 tests/fixtures/**/*.idx binary
 tests/fixtures/**/*.gz binary
 tests/fixtures/**/*.gml -text
+*.png binary

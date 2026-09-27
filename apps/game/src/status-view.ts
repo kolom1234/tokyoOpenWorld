@@ -65,10 +65,30 @@ export function describeWorld(world: WorldStatus | undefined): StatusRow {
   }
 }
 
+/** 렌더러 행: 초기화된 백엔드·깊이 전략(ADR-0006)과 화면에 올린 셀 수. */
+export function describeRenderer(backend: string, depth: string, cells: number | undefined): StatusRow {
+  const label = backend === 'webgpu' ? 'WebGPU' : 'WebGL2';
+  const shown = cells === undefined ? '' : ` · 셀 ${cells} 표시`;
+  return { key: 'renderer', label: '렌더러', value: `${label} · 깊이 ${depth}${shown}`, state: 'ok' };
+}
+
 export interface StatusView {
   setCaps(caps: Caps): void;
   setWorld(world: WorldStatus): void;
+  setRenderer(backend: string, depth: string): void;
+  /** 렌더에 추가한 셀 수(e2e: `data-rendered-cells`). */
+  setRendered(cells: number): void;
   showError(message: string): void;
+}
+
+function rowElements(doc: Document, r: StatusRow): HTMLElement[] {
+  const dt = doc.createElement('dt');
+  dt.textContent = r.label;
+  const dd = doc.createElement('dd');
+  dd.textContent = r.value;
+  dd.dataset.key = r.key;
+  dd.dataset.state = r.state;
+  return [dt, dd];
 }
 
 /** root 내용을 교체한다. 텍스트는 모두 textContent로 넣는다(HTML 주입 없음). */
@@ -78,24 +98,17 @@ export function mountStatusView(root: HTMLElement): StatusView {
   title.textContent = 'TOKYO SANPO';
   const note = doc.createElement('p');
   note.className = 'note';
-  note.textContent = '부트 스켈레톤 (M00) — 기능 감지 결과';
+  note.textContent = 'M01 — 기능 감지·월드 로드 상태';
   const list = doc.createElement('dl');
   list.className = 'caps';
   root.replaceChildren(title, note, list);
 
   let rows: StatusRow[] = [];
   let world: WorldStatus | undefined;
+  let renderer: { backend: string; depth: string; cells?: number } | undefined;
   const render = (): void => {
-    const cells = [...rows, describeWorld(world)].flatMap((r) => {
-      const dt = doc.createElement('dt');
-      dt.textContent = r.label;
-      const dd = doc.createElement('dd');
-      dd.textContent = r.value;
-      dd.dataset.key = r.key;
-      dd.dataset.state = r.state;
-      return [dt, dd];
-    });
-    list.replaceChildren(...cells);
+    const r0 = renderer ? [describeRenderer(renderer.backend, renderer.depth, renderer.cells)] : [];
+    list.replaceChildren(...[...rows, ...r0, describeWorld(world)].flatMap((r) => rowElements(doc, r)));
   };
   render();
 
@@ -115,10 +128,21 @@ export function mountStatusView(root: HTMLElement): StatusView {
       }
       render();
     },
+    setRenderer(backend, depth) {
+      renderer = { backend, depth };
+      root.dataset.backend = backend;
+      render();
+    },
+    setRendered: (n) => {
+      if (renderer) renderer.cells = n;
+      root.dataset.renderedCells = String(n);
+      render();
+    },
     showError(message) {
       const err = doc.createElement('pre');
       err.className = 'error';
       err.textContent = message;
+      root.dataset.error = 'true';
       root.append(err);
     },
   };

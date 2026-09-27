@@ -230,6 +230,10 @@ export interface DecodedMesh {
     materialId: string;
     /** HLOD 자식 그룹 0..15. */
     child?: number;
+    /**
+     * 키 = glTF 의미 이름(`POSITION`, `NORMAL`, `TEXCOORD_0`, `_SURF`, `_BLDG`, `_FACADE`). 배열은 밀집(인터리브 없음).
+     * POSITION은 셀 로컬 미터 float32(양자화는 디코더가 해제). ADR-0020.
+     */
     attributes: Record<string, { array: ArrayBufferView; itemSize: number; normalized: boolean }>;
     index?: Uint32Array | Uint16Array;
     boundsLocal: { min: Vec3Tuple; max: Vec3Tuple };
