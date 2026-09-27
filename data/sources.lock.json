@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "note": "M01-T02/T03 및 해당 태스크에서 실제 URL·sha256·retrievedAt을 채운다. sha256이 'TBD'인 항목은 fetch 단계에서 실패하도록 구현.",
+  "sources": [
+    {
+      "id": "plateau-shibuya",
+      "url": "TBD (G空間情報センター plateau-13113-shibuya-ku-<最新年度>)",
+      "resource": "CityGML(v4)",
+      "fiscalYear": null,
+      "sha256": "TBD",
+      "license": "PLATEAU-SitePolicy (CC-BY-4.0 compatible)",
+      "attribution": "出典：国土交通省 Project PLATEAU 3D都市モデル（渋谷区）を加工して作成",
+      "retrievedAt": null
+    },
+    {
+      "id": "plateau-shinjuku",
+      "url": "TBD (plateau-13104-shinjuku-ku-<最新年度>)",
+      "resource": "CityGML(v4)",
+      "fiscalYear": null,
+      "sha256": "TBD",
+      "license": "PLATEAU-SitePolicy (CC-BY-4.0 compatible)",
+      "attribution": "出典：国土交通省 Project PLATEAU 3D都市モデル（新宿区）を加工して作成",
+      "retrievedAt": null
+    },
+    {
+      "id": "plateau-tokyo23",
+      "url": "https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku",
+      "resource": "CityGML(v2) 2020年度",
+      "fiscalYear": 2020,
+      "sha256": "TBD",
+      "license": "PLATEAU-SitePolicy (CC-BY-4.0 compatible)",
+      "attribution": "出典：国土交通省 Project PLATEAU 3D都市モデル（東京都23区）を加工して作成",
+      "retrievedAt": null
+    },
+    {
+      "id": "gsi-dem",
+      "url": "TBD (基盤地図情報ダウンロードサービス DEM5A / 1mメッシュ)",
+      "resource": "JPGIS(GML)",
+      "fiscalYear": null,
+      "sha256": "TBD",
+      "license": "GSI-Content-Terms (CC-BY-4.0 compatible)",
+      "attribution": "出典：国土地理院（基盤地図情報 数値標高モデル）を加工して作成",
+      "retrievedAt": null
+    },
+    {
+      "id": "gsi-photo",
+      "url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
+      "resource": "XYZ tiles z14–z16 (HLOD 지면 저주파 색 추출용, 다운샘플만 저장)",
+      "fiscalYear": null,
+      "retrievedAt": null,
+      "sha256": "TBD (타일 목록 매니페스트 해시)",
+      "license": "GSI-Content-Terms (CC-BY-4.0 compatible)",
+      "attribution": "出典：地理院タイル（全国最新写真（シームレス））を加工して作成"
+    },
+    {
+      "id": "osm-kanto",
+      "url": "https://download.geofabrik.de/asia/japan/kanto-latest.osm.pbf",
+      "resource": "PBF snapshot (retrievedAt 고정)",
+      "fiscalYear": null,
+      "sha256": "TBD",
+      "license": "ODbL-1.0",
+      "attribution": "© OpenStreetMap contributors",
+      "retrievedAt": null
+    },
+    {
+      "id": "ksj-n02",
+      "url": "TBD (国土数値情報 N02 最新版)",
+      "resource": "GeoJSON/Shape",
+      "fiscalYear": null,
+      "sha256": "TBD",
+      "license": "KSJ-Terms (⚠ 확인)",
+      "attribution": "出典：国土数値情報（鉄道データ）（国土交通省）を加工して作成",
+      "retrievedAt": null
+    },
+    {
+      "id": "estat-small-area",
+      "url": "TBD (e-Stat 境界データ 小地域 2020 東京都)",
+      "resource": "Shape",
+      "fiscalYear": 2020,
+      "sha256": "TBD",
+      "license": "Gov-Standard-Terms-2.0 (CC-BY-4.0 compatible)",
+      "attribution": "出典：政府統計の総合窓口(e-Stat)",
+      "retrievedAt": null
+    },
+    {
+      "id": "odpt-tokyometro",
+      "url": "TBD (ODPT Tokyo Metro GTFS, 개발자 키 필요)",
+      "resource": "GTFS-JP",
+      "fiscalYear": null,
+      "sha256": "TBD",
+      "license": "ODPT Basic License",
+      "attribution": "公共交通オープンデータセンター / 東京地下鉄株式会社",
+      "retrievedAt": null
+    },
+    {
+      "id": "wikidata",
+      "url": "https://query.wikidata.org/sparql",
+      "resource": "SPARQL 결과 스냅샷(POI 이름·좌표)",
+      "fiscalYear": null,
+      "retrievedAt": null,
+      "sha256": "TBD (스냅샷 JSON 해시)",
+      "license": "CC0-1.0",
+      "attribution": "Wikidata (CC0)"
+    }
+  ]
+}

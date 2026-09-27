@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./data/raw/**)",
+      "Read(./data/normalized/**)",
+      "Read(./data/derived/**)",
+      "Read(./data/build/**)",
+      "Read(./**/dist/**)",
+      "Read(./**/*.wasm)",
+      "Read(./**/*.glb)",
+      "Read(./**/*.tkc)",
+      "Read(./**/*.ktx2)",
+      "Read(./**/*.pmtiles)",
+      "Read(./pnpm-lock.yaml)",
+      "Read(./perf-results/**)"
+    ]
+  }
+}

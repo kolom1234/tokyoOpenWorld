@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sanpo/world",
+  "title": "world.json manifest",
+  "type": "object",
+  "required": [
+    "schema",
+    "formatVersion",
+    "buildId",
+    "crs",
+    "cellSize",
+    "levels",
+    "areas",
+    "spawn",
+    "files",
+    "createdAt"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "formatVersion": {
+      "const": 1
+    },
+    "buildId": {
+      "type": "string",
+      "pattern": "^[0-9]{8}-[0-9a-f]{7}-[0-9a-f]{8}$"
+    },
+    "crs": {
+      "type": "object",
+      "required": [
+        "projected",
+        "E0",
+        "N0",
+        "heightDatum"
+      ],
+      "properties": {
+        "projected": {
+          "const": "EPSG:6677"
+        },
+        "E0": {
+          "const": -12000.0
+        },
+        "N0": {
+          "const": -37760.0
+        },
+        "heightDatum": {
+          "const": "TP"
+        }
+      }
+    },
+    "cellSize": {
+      "const": 256
+    },
+    "levels": {
+      "const": [
+        256,
+        1024,
+        4096,
+        16384
+      ]
+    },
+    "areas": {
+      "type": "array",
+      "items": {
+        "$ref": "sanpo/area"
+      }
+    },
+    "spawn": {
+      "type": "object",
+      "required": [
+        "posWF",
+        "yawDeg"
+      ],
+      "properties": {
+        "posWF": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "yawDeg": {
+          "type": "number"
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "required": [
+        "cellsIndex",
+        "materials",
+        "rail",
+        "map"
+      ],
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

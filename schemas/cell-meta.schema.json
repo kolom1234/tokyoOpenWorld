@@ -1,0 +1,225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sanpo/cell-meta",
+  "title": "meta.json section",
+  "type": "object",
+  "required": [
+    "buildings",
+    "pois",
+    "placeNames",
+    "signals",
+    "interactables"
+  ],
+  "properties": {
+    "buildings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "gmlId",
+          "usage",
+          "height"
+        ],
+        "properties": {
+          "gmlId": {
+            "type": "string"
+          },
+          "usage": {
+            "type": "string"
+          },
+          "height": {
+            "type": "number"
+          },
+          "storeys": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "override": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "pois": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "posLocal",
+          "radius",
+          "nameI18n",
+          "descriptionKey"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "landmark",
+              "street",
+              "park",
+              "shrine",
+              "temple",
+              "viewpoint",
+              "station",
+              "other"
+            ]
+          },
+          "posLocal": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "radius": {
+            "type": "number"
+          },
+          "nameI18n": {
+            "type": "object",
+            "required": [
+              "ja",
+              "en",
+              "ko"
+            ]
+          },
+          "wikidataId": {
+            "type": "string",
+            "pattern": "^Q[0-9]+$"
+          },
+          "descriptionKey": {
+            "type": "string",
+            "description": "i18n key, text in content/poi/*.yaml"
+          }
+        }
+      }
+    },
+    "placeNames": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "nameI18n",
+          "polygonLocal"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "nameI18n": {
+            "type": "object"
+          },
+          "polygonLocal": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
+      }
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "intersectionId",
+          "heads"
+        ],
+        "properties": {
+          "intersectionId": {
+            "type": "integer"
+          },
+          "heads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "kind",
+                "posLocal",
+                "yaw",
+                "group"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "vehicle",
+                    "pedestrian",
+                    "arrow"
+                  ]
+                },
+                "posLocal": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3
+                },
+                "yaw": {
+                  "type": "number"
+                },
+                "group": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "interactables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "posLocal",
+          "radius"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "seat",
+              "bikeDock",
+              "carShare",
+              "gate",
+              "viewpoint",
+              "door"
+            ]
+          },
+          "posLocal": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "yaw": {
+            "type": "number"
+          },
+          "radius": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

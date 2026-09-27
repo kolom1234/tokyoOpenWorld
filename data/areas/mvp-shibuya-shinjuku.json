@@ -1,0 +1,6 @@
+{
+  "id": "mvp-shibuya-shinjuku",
+  "l0": { "minIx": -7, "maxIx": 6, "minIz": -17, "maxIz": 3 },
+  "hlodSources": ["plateau-tokyo23"],
+  "hlodExtentWF": { "minX": -16384, "maxX": 32768, "minZ": -32768, "maxZ": 16384 }
+}

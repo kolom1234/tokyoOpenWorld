@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sanpo/attribution",
+  "title": "content/ATTRIBUTION.json",
+  "type": "object",
+  "required": [
+    "entries"
+  ],
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "license",
+          "attribution",
+          "files"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "data",
+              "texture",
+              "model",
+              "sound",
+              "font",
+              "code",
+              "text"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "license": {
+            "type": "string",
+            "description": "SPDX id or named license (e.g. CC0-1.0, CC-BY-4.0, ODbL-1.0, OFL-1.1, PLATEAU-SitePolicy)"
+          },
+          "attribution": {
+            "type": "object",
+            "description": "per-language credit strings",
+            "properties": {
+              "ja": {
+                "type": "string"
+              },
+              "en": {
+                "type": "string"
+              },
+              "ko": {
+                "type": "string"
+              }
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "glob patterns of repo/content files covered"
+          },
+          "modified": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

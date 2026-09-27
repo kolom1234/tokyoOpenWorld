@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sanpo/area",
+  "title": "Pipeline area definition",
+  "type": "object",
+  "required": [
+    "id",
+    "l0"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "l0": {
+      "type": "object",
+      "required": [
+        "minIx",
+        "maxIx",
+        "minIz",
+        "maxIz"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "minIx": {
+          "type": "integer"
+        },
+        "maxIx": {
+          "type": "integer"
+        },
+        "minIz": {
+          "type": "integer"
+        },
+        "maxIz": {
+          "type": "integer"
+        }
+      },
+      "description": "inclusive L0 cell index range (WF)"
+    },
+    "hlodSources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "hlodExtentWF": {
+      "type": "object",
+      "required": [
+        "minX",
+        "maxX",
+        "minZ",
+        "maxZ"
+      ],
+      "properties": {
+        "minX": {
+          "type": "number"
+        },
+        "maxX": {
+          "type": "number"
+        },
+        "minZ": {
+          "type": "number"
+        },
+        "maxZ": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

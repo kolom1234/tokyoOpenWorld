@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sanpo/cell-header",
+  "title": "TKC header JSON",
+  "type": "object",
+  "required": [
+    "cell",
+    "buildId",
+    "originWF",
+    "aabbWF",
+    "sections",
+    "materials",
+    "stats"
+  ],
+  "properties": {
+    "cell": {
+      "type": "object",
+      "required": [
+        "level",
+        "ix",
+        "iz"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            0,
+            1,
+            2,
+            3
+          ]
+        },
+        "ix": {
+          "type": "integer"
+        },
+        "iz": {
+          "type": "integer"
+        }
+      }
+    },
+    "buildId": {
+      "type": "string"
+    },
+    "originWF": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "aabbWF": {
+      "type": "object",
+      "required": [
+        "min",
+        "max"
+      ],
+      "properties": {
+        "min": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "max": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "offset",
+          "length",
+          "codec",
+          "sources",
+          "hash"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 16,
+            "multipleOf": 16
+          },
+          "length": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "codec": {
+            "enum": [
+              "glb",
+              "bin",
+              "bin+gzip",
+              "json+gzip"
+            ]
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1
+          },
+          "hash": {
+            "type": "string",
+            "pattern": "^xxh64:[0-9a-f]{16}$"
+          }
+        }
+      }
+    },
+    "materials": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "tris": {
+          "type": "integer"
+        },
+        "colliderTris": {
+          "type": "integer"
+        },
+        "instances": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

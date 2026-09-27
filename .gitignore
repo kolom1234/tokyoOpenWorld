@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.wrangler/
+data/raw/
+data/normalized/
+data/derived/
+data/build/
+perf-results/
+test-results/
+playwright-report/
+*.tkc
+!tests/fixtures/**
+.env*
+!data/areas/
+!data/sources.lock.json
