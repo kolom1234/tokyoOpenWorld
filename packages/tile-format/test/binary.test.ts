@@ -6,6 +6,7 @@ import {
   type CellsIndexEntry,
   gunzip,
   gzip,
+  HEIGHTFIELD_BASE_M,
   type LaneGraphChunk,
   parseHeightfield,
   parseJcol,
@@ -163,6 +164,17 @@ describe('terrain.height', () => {
     expect(maxErr).toBeLessThan(0.0051);
     expect(code(parseHeightfield(bytes.subarray(0, 100)))).toBe('truncated');
     expect(() => quantizeHeightfield([0, 0, 0, 1000], 2)).toThrow(/range/);
+    expect(() => quantizeHeightfield([0, 0, 0, -100.01], 2)).toThrow(/range/);
+  });
+
+  it('uses the shared base so equal heights quantize to equal u16 in every cell (ADR-0018)', () => {
+    // 경계 열(33.337)은 같고 셀 최솟값은 다른 두 격자.
+    const west = quantizeHeightfield([2.5, 33.337, 2.5, 33.337], 2);
+    const east = quantizeHeightfield([33.337, 80.25, 33.337, 90.1], 2);
+    expect(west.minH).toBe(HEIGHTFIELD_BASE_M);
+    expect(east.minH).toBe(west.minH);
+    expect(east.step).toBe(west.step);
+    expect([west.data[1], west.data[3]]).toEqual([east.data[0], east.data[2]]);
   });
 });
 

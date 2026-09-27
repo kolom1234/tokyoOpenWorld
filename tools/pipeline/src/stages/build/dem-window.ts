@@ -1,0 +1,115 @@
+// dem_1m.tif에서 셀 빌드용 높이 창 읽기(GDAL) + 셀별 (257+2m)² 부분 창 추출. see docs/04-data-pipeline.md §4.4, §6
+import { execFile } from 'node:child_process';
+import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { promisify } from 'node:util';
+import { type CellBoundsWF, wfToPrj } from '@sanpo/geo';
+import { HEIGHTFIELD_SIZE } from '@sanpo/tile-format';
+import { type PrjGrid, readFloat32 } from '../../lib/raster.ts';
+
+const run = promisify(execFile);
+
+/** 셀 크기(m) = 257 격자 − 1. */
+export const CELL_SIZE_M = HEIGHTFIELD_SIZE - 1;
+/** 법선 중앙 차분용 여유 샘플(셀 바깥 1 m). 이웃 셀도 같은 샘플을 보므로 경계 법선이 일치한다. */
+export const DEM_MARGIN = 1;
+
+/** 정수 WF 격자 창: values[(z − z0)·width + (x − x0)] = (x, z) 지점 높이(m). */
+export interface DemWindow {
+  x0: number;
+  z0: number;
+  width: number;
+  height: number;
+  values: Float32Array;
+}
+
+/** 셀 1개 창: (size + 2·margin)², 로컬 (x, z) ∈ [−margin, size − 1 + margin]. */
+export interface CellWindow {
+  size: number;
+  margin: number;
+  stride: number;
+  values: Float32Array;
+}
+
+function toInt(v: number, what: string): number {
+  const r = Math.round(v);
+  if (Math.abs(v - r) > 1e-6) throw new Error(`dem-window: ${what} ${v} is not on the integer grid`);
+  return r;
+}
+
+/** WF 정수 좌표 → dem_1m 픽셀(col,row). 픽셀 중심 = 정수 PRJ = 정수 WF(normalize-terrain). */
+function pixelOf(grid: PrjGrid, x: number, z: number): { col: number; row: number } {
+  const p = wfToPrj({ x, y: 0, z });
+  return { col: toInt(p.easting, 'easting') - grid.eMin, row: grid.nMax - toInt(p.northing, 'northing') };
+}
+
+/** 창 밖(래스터 범위 밖) 샘플은 가장 가까운 가장자리 값으로 채운다(영역 외곽 셀의 여유 샘플만 해당). */
+function padFromClip(clip: Float32Array, cw: number, ch: number, off: { c: number; r: number }, w: number, h: number) {
+  const out = new Float32Array(w * h);
+  for (let r = 0; r < h; r++) {
+    const rr = Math.min(Math.max(r - off.r, 0), ch - 1);
+    for (let c = 0; c < w; c++) {
+      const cc = Math.min(Math.max(c - off.c, 0), cw - 1);
+      out[r * w + c] = clip[rr * cw + cc] as number;
+    }
+  }
+  return out;
+}
+
+/**
+ * `dem_1m.tif`(+ `dem_1m.json`의 grid)에서 WF 경계(양끝 포함) ± margin 창을 읽는다. GDAL 필요 → 컨테이너 전용.
+ * `workDir`에 임시 ENVI 파일을 만들고 지운다.
+ */
+export async function readDemWindow(
+  terrainDir: string,
+  bounds: CellBoundsWF,
+  margin: number,
+  workDir: string,
+): Promise<DemWindow> {
+  const grid = (JSON.parse(readFileSync(join(terrainDir, 'dem_1m.json'), 'utf8')) as { grid: PrjGrid }).grid;
+  const x0 = bounds.minX - margin;
+  const z0 = bounds.minZ - margin;
+  const width = bounds.maxX + margin - x0 + 1;
+  const height = bounds.maxZ + margin - z0 + 1;
+  const tl = pixelOf(grid, x0, z0);
+  const c0 = Math.max(tl.col, 0);
+  const r0 = Math.max(tl.row, 0);
+  const cw = Math.min(tl.col + width, grid.width) - c0;
+  const ch = Math.min(tl.row + height, grid.height) - r0;
+  if (cw <= 0 || ch <= 0) throw new Error('readDemWindow: bounds outside dem_1m.tif');
+  mkdirSync(workDir, { recursive: true });
+  const bin = join(workDir, 'dem-window.bin');
+  await run(
+    'gdal_translate',
+    ['-q', '-of', 'ENVI', '-ot', 'Float32', '-srcwin', `${c0}`, `${r0}`, `${cw}`, `${ch}`].concat([
+      join(terrainDir, 'dem_1m.tif'),
+      bin,
+    ]),
+  );
+  const clip = readFloat32(bin, cw * ch);
+  rmSync(workDir, { recursive: true, force: true });
+  const values = padFromClip(clip, cw, ch, { c: c0 - tl.col, r: r0 - tl.row }, width, height);
+  return { x0, z0, width, height, values };
+}
+
+/** 셀 (ix, iz)의 (257 + 2·margin)² 부분 창. 창이 셀 + margin을 덮지 않으면 throw. */
+export function cellWindow(dem: DemWindow, ix: number, iz: number, margin = DEM_MARGIN): CellWindow {
+  const size = HEIGHTFIELD_SIZE;
+  const stride = size + 2 * margin;
+  const cx = ix * CELL_SIZE_M - margin - dem.x0;
+  const cz = iz * CELL_SIZE_M - margin - dem.z0;
+  if (cx < 0 || cz < 0 || cx + stride > dem.width || cz + stride > dem.height) {
+    throw new Error(`cellWindow: L0_${ix}_${iz} (+${margin}) outside DEM window`);
+  }
+  const values = new Float32Array(stride * stride);
+  for (let r = 0; r < stride; r++) {
+    const src = (cz + r) * dem.width + cx;
+    values.set(dem.values.subarray(src, src + stride), r * stride);
+  }
+  return { size, margin, stride, values };
+}
+
+/** 로컬 격자 (x, z) 높이(margin 안쪽 음수·size 이상 허용). */
+export function sampleAt(w: CellWindow, x: number, z: number): number {
+  return w.values[(z + w.margin) * w.stride + x + w.margin] as number;
+}
