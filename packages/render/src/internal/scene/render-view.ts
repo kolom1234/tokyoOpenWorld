@@ -1,5 +1,5 @@
 // 렌더 시점 상태: WF 카메라(float64) 보관, 원점 재설정 판정·실행(origin/rebased), three 카메라에 렌더 좌표 대입. see docs/07-rendering.md §2
-import { type CameraState, type EventBus, type Logger, type Vec3d, vec3Copy } from '@sanpo/core';
+import { type CameraState, type EventBus, type Logger, quatCopy, type Vec3d, vec3Copy } from '@sanpo/core';
 import { PerspectiveCamera } from 'three/webgpu';
 import type { RenderConfig } from '../../api.ts';
 import { needsRebase, snapOrigin, toRender } from './origin.ts';
@@ -37,7 +37,7 @@ export function createRenderView(cfg: Readonly<RenderConfig>, bus: EventBus, log
     },
     setCamera(c) {
       vec3Copy(cam.posWF, c.posWF);
-      cam.quat = { ...c.quat };
+      quatCopy(cam.quat, c.quat);
       cam.fovDeg = c.fovDeg;
       cam.near = c.near;
     },

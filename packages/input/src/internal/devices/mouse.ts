@@ -23,10 +23,18 @@ export function attachMouse(target: HTMLElement, raw: RawInput): MouseDevice {
       /* 드래그 조작으로 대체 */
     }
   };
-  const onDown = (e: PointerEvent): void => buttonDown(raw, e.button);
-  const onUp = (e: PointerEvent): void => buttonUp(raw, e.button);
+  // 드래그 시점 회전은 target에서 시작한 드래그만(다른 UI에서 텍스트 선택 등은 무시).
+  let dragging = false;
+  const onDown = (e: PointerEvent): void => {
+    dragging = true;
+    buttonDown(raw, e.button);
+  };
+  const onUp = (e: PointerEvent): void => {
+    if (e.buttons === 0) dragging = false;
+    buttonUp(raw, e.button);
+  };
   const onMove = (e: PointerEvent): void => {
-    if (locked() || e.buttons !== 0) mouseMove(raw, e.movementX, e.movementY);
+    if (locked() || (dragging && e.buttons !== 0)) mouseMove(raw, e.movementX, e.movementY);
   };
   const onWheel = (e: WheelEvent): void => {
     e.preventDefault();
