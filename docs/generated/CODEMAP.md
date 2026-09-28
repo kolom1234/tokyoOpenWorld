@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 132개.
+> 파일 137개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스(M01): 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → 셀 표시. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -91,8 +91,13 @@
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts'
 
 ## packages/streaming
-- `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). see docs/modules/streaming.md
+- `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). M02-T01 = 설정(관심·우선순위·상주 한도)만. see docs/modules/streaming.md, docs/06-world-streaming.md §3–4, §9 | exports: InterestConfig, PriorityConfig, StreamingConfig
 - `packages/streaming/src/index.ts` — @sanpo/streaming 공개 엔트리(L2): 셀 로딩/언로딩·우선순위·캐시. api.ts 재수출 + create* 팩토리만. see docs/modules/streaming.md | exports: * from './api.ts'
+- `packages/streaming/src/internal/cell-index.ts` — cells.idx 조회(존재 여부·바이트 수·레벨별 목록·범위). 파싱은 @sanpo/tile-format. see docs/05-tile-format.md §5, docs/06-world-streaming.md §10 | exports: IndexExtent, CellIndex, createCellIndex, parseCellIndex
+- `packages/streaming/src/internal/config.ts` — streaming 기본 설정(06 §3–4, 07 §9 L0 반경 배율, ADR-0021). 오버라이드는 createStreaming deps.config → mergeConfig. | exports: DEFAULT_STREAMING_CONFIG
+- `packages/streaming/src/internal/geometry.ts` — 관심점 전처리(고도·진행 방향)와 셀 AABB 수평 거리·뷰 쐐기 판정. interest/priority 공용 순수 함수. see docs/06-world-streaming.md §3–4 | exports: InterestFrame, PreparedPoint, preparePoints, aabbDistanceM, effectiveDistanceM, inViewWedge
+- `packages/streaming/src/internal/interest.ts` — 관심점 → 레벨별 원하는 셀 집합(로드/히스테리시스 유지)과 상주 한도 해제 계획. 순수 함수. see docs/06-world-streaming.md §3, ADR-0021 | exports: Zone, LevelRule, DesiredCells, EvictionPlan, l0RadiusM, l1RadiusM, levelRule, computeDesired, nearestDistanceM, planEvictions, countByLevel
+- `packages/streaming/src/internal/priority.ts` — 요청 우선순위 점수(낮을수록 먼저): 거리/레벨크기 × 뷰 배율, 발밑 셀 고정 최우선, 부모 선행 클램프. 순수 함수. see docs/06-world-streaming.md §4, ADR-0021 | exports: RankedCell, footCells, scoreCells, rankCells
 
 ## packages/tile-format
 - `packages/tile-format/src/api.ts` — @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md | exports: TKC_MAGIC, FORMAT_VERSION, TKC_ALIGN, TKC_PREAMBLE_BYTES, CELLS_INDEX_MAGIC, JCOL_MAGIC, JCOL_VERSION, LANES_MAGIC, LANES_VERSION, LANE_NO_SIGNAL, HEIGHTFIELD_SIZE, HEIGHTFIELD_STEP_M, HEIGHTFIELD_BASE_M, SectionCodec, SectionSpec, SECTION_REGISTRY, SectionType, TkcErrorCode, TkcError, Vec3Tuple, SectionEntry, CellStats, CellHeader, CellHeaderInput, TkcSectionInput, TkcReader, CELL_FLAG, CellsIndexEntry, CellsIndexRecord, CellsIndex, JCOL_MATERIAL, JCOL_FLAG, JcolKind, JcolTriMesh, JcolConvexHull, JcolBox, JcolRound, JcolShape, LaneGraphChunk, DecodedMesh, MeshSlot, CellPayload, HeightfieldData, PropBatch, TreeBatch, LightRecord, AudioZones, I18nText, MetaBuilding, PoiKind, MetaPoi, MetaPlaceName, MetaSignal, InteractableRecord, CellMeta

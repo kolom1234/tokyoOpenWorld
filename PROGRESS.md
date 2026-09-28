@@ -1,15 +1,16 @@
 # PROGRESS
-Updated: 2026-09-28 (session #11 — M01-T06 완료, PR 리뷰·사람 육안 확인 대기)
+Updated: 2026-09-28 (session #12 — M02-T01 완료, PR 리뷰 대기)
 
-## Current Milestone: M01 — Geo & First Cell (T01–T07 전부 구현 · T06 PR 병합 + 육안 확인 대기)
-## Current Task: M01-T06 Minimal render & free camera (done — PR 리뷰 대기)
-- Done in this task: `@sanpo/render`(WebGPURenderer 초기화 + WebGL2 폴백, **reversed-Z** — ADR-0006 Accepted, 방향광 1개 + 반구광, 씬 그래프, DecodedMesh→Mesh, 원점 재설정 2048 m/256 m 격자), `@sanpo/input`(키보드·마우스·Pointer Lock/드래그, 컨텍스트, phase 0 스냅샷), `@sanpo/traversal`(FSM + freecam만, physics 없음), apps/game `world-view.ts`·`start-view.ts`·`wiring/camera.ts`·`debug/{local-cells,overlay}.ts`, `?backend=webgl`, e2e `render.spec.ts`(WebGL2/SwiftShader 스크린샷·건물 픽셀·원점 재설정 왕복 픽셀 차 0), ADR-0020(DecodedMesh 속성 규약)
+## Current Milestone: M02 — Streaming & Deploy (T01 완료 · T02–T07 남음)
+## Current Task: M02-T01 Interest & priority (done — PR 리뷰 대기)
+- Done in this task: `packages/streaming/src/internal/{cell-index,interest,priority,geometry,config}.ts`(순수 함수) + `api.ts` `StreamingConfig`. cells.idx 조회(`parseCellIndex` → `CellIndex`), 레벨별 원하는 셀 집합(`computeDesired` → load/keep, 반경 × 1.25 히스테리시스 + 고도 전환 히스테리시스), 소프트 리밋 해제 계획(`planEvictions`), 우선순위(`scoreCells/rankCells` — 발밑 −1 고정, 부모 선행 클램프, 뷰 쐐기 ×0.5, teleport ×0.05). ADR-0021(06 §3–4 수치 확정·식 정정, L1 한도 64 → 80), 06 §3–4·모듈 카드 갱신. 테스트 3파일/+36건(합성 cells.idx + world-mini)
 - In progress: –
 - **임시 코드(삭제 예정)**: `apps/game/src/debug/local-cells.ts`(메인 스레드 glb 파싱 + `LocalGround`) → **M02-T05에서 삭제**(roadmap M02-T05 블록에 기록). `LoadedCell.tkc`·`world-view.ts showWorld`도 그때 streaming 배선으로 교체.
-- Next step (정확히 한 걸음): PR 병합 + 사람 육안 확인(PR 본문 체크리스트: 실제 GPU WebGPU, 조작, Scramble Square ≈ 230 m, O 키 원점 재설정 떨림 없음) → `/sanpo-resume M02-T01`(`### M02-T01` 블록 + `docs/modules/streaming.md`부터)
-- Blockers: 없음 (WebGPU 백엔드 실동작은 GPU 있는 사람 환경에서만 확인 가능 — 클라우드 세션은 WebGL2/SwiftShader만 검증)
+- Next step (정확히 한 걸음): PR 병합 → `/sanpo-resume M02-T02`(`### M02-T02` 블록 + `docs/06-world-streaming.md §6–7, §9`·`docs/05-tile-format.md §3–4` + `docs/modules/streaming.md`). M01-T06 사람 육안 확인(실제 GPU WebGPU, O 키 원점 재설정)도 아직 남음.
+- Blockers: 없음
 
 ## Recently Completed
+- M02-T01 Interest & priority — 06 §3–4 순수 함수. 한 점 기준(셀 내 위치 샘플) 원하는 L0 셀 수: 도보 11–16(해제 16–22), 자전거 16–21, 차량 27–32(42–48), 열차 39–45(57–65, 진행 방향 가중 시 ≈ 35), freecam 고도 0/100/300 m = R0 384/434/534, 300 m 초과 3×3(유지 5×5, 300–375 m는 원형 유지). L1 3 km(고고도 ≤ 3.5 km, 최대 상주 79–80 → 한도 80), L2 12 km, L3 전부. 부팅 순서 = 발밑 → L3 → L2 → L1 → 거리순. `computeDesired` 브루트포스 전수 대조 일치. ADR-0021 (2026-09-28)
 - M01-T06 Minimal render & free camera — three 0.186.1 `WebGPURenderer`(`reversedDepthBuffer` — WebGPU depth32float, WebGL2는 `EXT_clip_control` 필요·SwiftShader에 있음, 없으면 logarithmic; `backend-caps.ts` 사전 판정), AgX, 방향광(방위 200°·고도 50°) + 반구광, 단색 PBR 2종(`terrain_ground`·`facade_default`). 원점 재설정: 카메라 ≥ 2048 m → 256 m 격자 스냅, 같은 renderPrep에서 노드·카메라 재계산(누적 없음). freecam: 관성 감쇠 3/s, 휠 0.5–60 m/s(×1.25/노치), Shift ×4, E/Q, 고도 ≤ 1,000 m, 지면 + 1 m. 시작: WF(−60, 지면+60, −15) → Scramble Square(지붕 TP 245.6 m, 지면 대비 ≈ 231 m). `?debug=1` 오버레이 + O 키(+4096 m → 1 s → 복귀). headless Chromium(SwiftShader WebGL2): 셀 4·draw 9·tris 230k·≈ 7 FPS, 원점 재설정 2회 왕복 전후 픽셀 차 0. 테스트 +7파일/+31건, e2e +2 (2026-09-28)
 - M01-T07 Test fixture world — `tests/fixtures/world-mini`(L0_-1..0 × -1..0, 셀 484–903 KiB, 건물 412동, validate 0 오류·이웃 4쌍 1028 샘플 비트 일치, ATTRIBUTION) + `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1셀 창 + `expected.json` 스냅샷), 합계 3.38 MB. `pipeline fixture`(`stages/fixture{,-plateau}.ts`, 컨테이너), `fixtures.test.ts`(호스트 Windows = 컨테이너 스냅샷 일치). 게임 `?world=mini` → `world-load.ts`(world.json 원점·포맷 검증 → cells.idx → 스폰 ± 1 셀 헤더), Vite 플러그인(dev 서빙·build 복사, production `SANPO_WORLD_MINI=0`), Playwright 1.63.0 `tests/e2e/boot.spec.ts` + CI `e2e` 잡. `.gitignore` 예외 확인(`*.tkc` → `!tests/fixtures/**`), `.gitattributes` 바이너리·GML 보존, Biome 픽스처 제외. ADR-0019 (2026-09-28)
 - M01-T05 Minimal cell build — `stages/build/{dem-window,heightfield,terrain-rtin,terrain-mesh,buildings-mesh,manifest,assemble}.ts`, `stages/validate{,-seams}.ts`, `lib/{gltf,triangulate}.ts`, `cli build|validate`, `scripts/repro-build.sh`. tile-format `HEIGHTFIELD_BASE_M = −100`(모든 셀 공통 minH), 지형 = **RTIN 정확 오차 ≤ 5 cm**(meshopt simplify는 실측 최대 0.64 m·경계 조각·접힘으로 교체), ADR-0018. 3×3(L0_-2..0_-1..1): 셀 484–903 KiB(≤ 4 MB), 건물 1082동, 이웃 12쌍 경계(높이장 3084 샘플 + 메시 3084 정점) 비트 일치, 컨테이너 2회 빌드 11파일 sha256 동일, validate 0 오류(ajv: world·헤더·meta). `world.schema` `$ref` 수정. 테스트 +3파일/+17건 (2026-09-28)
@@ -19,7 +20,6 @@ Updated: 2026-09-28 (session #11 — M01-T06 완료, PR 리뷰·사람 육안 �
 - M01-T01 @sanpo/geo — proj4 2.22.0 고정, `internal/{crs-defs,transforms,cells,convergence,bbox}.ts`, pyproj 골든 20점(`tools/pipeline/scripts/golden-geo.py` → `packages/geo/test/golden.json`, pyproj 3.7.2/PROJ 9.5.1). 골든 대비 최대 오차 ≈ 3 nm(< 1 mm), 스크램블(35.6595, 139.70055) → WF (−22.290, ·, 8.567) ≈ (−22.3, ·, 8.6) 확인. 테스트 3파일/99건 (2026-09-27)
 - M00-T04 Boot skeleton — `apps/game` Vite 8.3.1 빌드(placeholder 삭제), `public/_headers`(정적 에셋 COOP/COEP/CORP/CSP·캐시), caps/boot/loop/world-status/status-view, `?debug=1` stats-gl, dev 프록시. Worker `/api/world/current`(KV)·`/world/*`(캐시→R2 Range·조건부·HEAD), validate/cache 분리, `env.local` + `seed:local`(ADR-0016). smoke.sh가 `/` 격리 헤더 검사. 로컬 검증: Chromium에서 crossOriginIsolated=true·WebGPU 감지·로컬 R2 fetch(200/206/304) (2026-09-27)
 - M00-T03 CI & codemap — `tools/codemap`(TS 컴파일러 API, 결정론 출력, `--check`), `scripts/check-{size,asset-size,records}.ts`, `.github/workflows/{ci,preview,deploy}.yml` + `actions/setup` + `scripts/smoke.sh`, PR 템플릿, 최소 Worker(바인딩 optional, `/api/health`), 게임 placeholder 빌드, core `createScheduler`/`supervise` 60줄 이하로 분할(동작 동일). ADR-0014(tsconfig.node.json + @types/node 22), ADR-0015(R2/KV 바인딩 optional) (2026-09-27)
-- M00-T02 @sanpo/core — api.ts 공유 어휘 타입, events.ts EventMap, internal/{event-bus,logger,scheduler,rng,hash,result,cell-key,math,config,worker-supervisor}.ts, 테스트 7파일/46건. ADR-0012(hash32/rng 고정), ADR-0013(type-only 순환 허용, depcruise `no-circular` 수정) (2026-09-27)
 
 ## Known Issues
 - [pipeline] GSI DEM 2025판 표고는 JGD2024(2025 개정) 기준, PLATEAU는 JGD2011 → LOD3 차도 정점 vs dem_1m 차 중앙값 +0.05 m(IQR −0.03~+0.18, p95 +8.2 m = 고가도로). M01-T05는 도로 메시 없음 → M03 도로 빌드 때 도로면 우선 스냅 여부 결정.
@@ -33,6 +33,7 @@ Updated: 2026-09-28 (session #11 — M01-T06 완료, PR 리뷰·사람 육안 �
 - [game] 게임 번들(three 포함) ≈ 1.05 MB(gzip 300 KB) → Vite 500 kB 경고. 코드 분할은 M03(후처리·대기 추가 시) 재검토.
 - [fixtures] world-mini·plateau-mini는 생성물 → 셀 포맷·빌드 코드 변경 시 `docker/run.sh node tools/pipeline/src/cli.ts fixture`로 재생성(`fixtures.test.ts`가 불일치를 알려 줌). plateau-mini 건물은 appearance 제거로 UV 없음, 도로는 normalize 테스트용(셀 빌드에 도로 섹션 없음).
 - [game] 부트 상태 화면(src/status-view.ts)은 DOM 임시 구현 → @sanpo/ui(M08) 로딩 화면으로 대체.
+- [streaming] `computeDesired`는 관심점당 셀 ≈ 300개를 훑는다(할당 있음, 미측정) → M02-T03 서비스에서 관심점 셀이 바뀌거나 ~250 ms마다만 호출하고 `pnpm perf`로 확인. 고고도 L1 +16셀 메모리는 M02-T04 HLOD 크기로 확인(ADR-0021).
 - [worker] `/world/*` 엣지 캐시(`caches.default`)는 단위 테스트에서 생략됨(Node에 없음) → M02-T06 miniflare 테스트.
 - [ci] Biome `noExcessiveLinesPerFunction`이 일부 함수(예: 객체 반환 팩토리)를 놓침 → `scripts/check-size.ts`가 정본(docs/15 §2).
 - [tile-format] `props.inst`·`trees.inst`·`lights.bin`·`audio.json` 인코더/디코더 미구현(레지스트리·모델 타입만) → 해당 태스크(M04~)에서 추가. 헤더 gzip(flags bit0)은 v1 미지원(ADR-0017).
