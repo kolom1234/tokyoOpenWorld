@@ -13,6 +13,14 @@ Layer: L2 | Depends: core, geo, tile-format, meshoptimizer(디코더) | Used by:
 - 내부 순수 함수(패키지 밖 비공개): `cell-index.ts` `parseCellIndex/createCellIndex → CellIndex{has,get,byteLength,keysAt,extentAt}`,
   `interest.ts` `computeDesired(index, frame, resident, cfg) → {load, keep}`, `planEvictions`, `l0RadiusM/l1RadiusM/levelRule`,
   `priority.ts` `scoreCells/rankCells(candidates, frame, cfg)`, `geometry.ts` `InterestFrame{points, mode, tier, groundHeightAt?}`·거리·뷰 쐐기.
+- **구현됨(M02-T02, ADR-0022)**: `StreamingConfig`에 `fetch: FetchConfig{maxConcurrent 8, retries 3, backoffMs 250, cacheStorage}`,
+  `decode: DecodeConfig{workers 0=자동, perWorker 2, verifyHash}`. 공개 팩토리(저수준, createStreaming이 조립할 부품):
+  `createFetcher(CellFetcherDeps) → Fetcher{fetchCell(key, expectedBytes, signal) → Result<CellFetchResult{bytes, fromCache}, CellFetchError>, invalidate(key)}`,
+  `purgeStaleCaches(caches, buildId)`, `cacheName(buildId)`,
+  `createDecodePool(DecodePoolDeps{supervisor, log, config, createWorker?}) → DecodePool{decode(bytes, DecodeRequest, signal) → Result<DecodeResult{payload, workerMs}, DecodeError>, stats, dispose}`,
+  `DEFAULT_STREAMING_CONFIG`. 테스트 대역용 `FetchLike`·`CacheStorageLike`.
+- 내부: `scheduler.ts` `createLoadScheduler({index, fetcher, pool, …, onStage, onDone}) → {request(key, score, sections?), cancel, stageOf, stats}`,
+  워커 쪽 `decode.ts` `decodeCell`·`glb.ts` `decodeGlb`·`decode-host.ts`·`protocol.ts`.
 
 ## Invariants
 - 발밑 L0 셀은 항상 최우선.
@@ -23,16 +31,26 @@ Layer: L2 | Depends: core, geo, tile-format, meshoptimizer(디코더) | Used by:
 - `live` = render ack. physics 콜라이더는 `requestSections`로 별도 공급.
 - 디코드 결과 배열은 소비자에게 소유권 이전(메인에서 재사용 금지). 예외: heightfield(ground 질의용 보관).
 - Cache Storage 이름에 buildId 포함, 부팅 시 타 buildId 삭제.
+- 메인 스레드는 fetch 대기·postMessage(transfer)만 — TKC/glb 파싱·gzip·hash32는 전부 워커(ADR-0022). `decode()`로 넘긴 바이트는 분리된다.
+- 디코드 결과 배열은 모두 독립 버퍼(서로·입력과 공유 없음). transfer 목록 = `transferList(payload)`(중복 없음).
+- 취소된 요청은 결과를 내지 않는다(워커는 단계 경계에서 멈추고 `cancelled`, 메인은 즉시 `aborted`).
 
 ## Files
-cell-index.ts, interest.ts, priority.ts, geometry.ts, config.ts(순수), scheduler.ts, fetcher.ts, decode.worker.ts, lifecycle.ts, ground.ts.
+cell-index.ts, interest.ts, priority.ts, geometry.ts, config.ts(순수), scheduler.ts, fetcher.ts, decode-pool.ts, protocol.ts,
+decode.worker.ts(엔트리), decode-host.ts, decode.ts, glb.ts, decode-util.ts(워커 쪽), lifecycle.ts·ground.ts(M02-T03).
 
 ## Tests
-priority/interest 단위, lifecycle 상태 전이, 헤드리스 이동 시뮬(목 fetcher), world-mini 디코드 통합.
+priority/interest/cell-index 단위, decode(world-mini ↔ 파이프라인 스냅샷 `tests/fixtures/snapshots/world-mini-decode.json`),
+decode-pool(가짜 워커 + **실제 worker_threads**로 decode.worker.ts 실행 — `test/support/node-worker-shim.ts`), fetcher(재시도·취소·캐시 대역),
+scheduler(순서·동시성·단계별 취소 + HTTP `/fixtures/world-mini` → 캐시 → 워커 스레드 전 경로), e2e `tests/e2e/decode.spec.ts`(Chromium 모듈 워커).
+lifecycle 상태 전이·헤드리스 이동 시뮬은 M02-T03.
 
 ## Status
-M02-T01 완료(관심·우선순위·cells.idx 조회 순수 함수 + 테스트 3파일). fetcher·워커·lifecycle·서비스는 M02-T02~T03.
+M02-T01 관심·우선순위 완료. M02-T02 fetch·Cache Storage·디코드 워커 풀·로드 큐 완료(ADR-0022). lifecycle·ground·`createStreaming`은 M02-T03.
 
 ## Gotchas
 - `KTX2Loader`는 render 소관(streaming은 텍스처를 다루지 않음 — 셀에는 텍스처 없음).
-- AbortController 취소 후 늦게 도착한 워커 결과는 폐기(요청 세대 번호 비교).
+- AbortController 취소 후 늦게 도착한 워커 결과는 폐기(풀이 요청 id로 비교).
+- 워커 기본 팩토리는 `new Worker(new URL('./decode.worker.ts', import.meta.url), {type:'module'})` 리터럴이어야 Vite가 워커 청크를 만든다.
+- 워커 파일은 DOM/WebWorker lib 충돌을 피하려고 최소 `WorkerScope` 인터페이스로 `globalThis`를 본다.
+- glb는 파이프라인 부분집합만(05 §4). writer를 바꾸면 스냅샷 테스트(`tools/pipeline/test/world-mini-decode.test.ts` `-u`)부터.

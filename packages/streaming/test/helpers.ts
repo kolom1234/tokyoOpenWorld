@@ -10,7 +10,7 @@ import {
   type QualityTier,
 } from '@sanpo/core';
 import { cellBoundsWF } from '@sanpo/geo';
-import { type CellsIndexEntry, writeCellsIndex } from '@sanpo/tile-format';
+import { type CellPayload, type CellsIndexEntry, tkcHash32, writeCellsIndex } from '@sanpo/tile-format';
 import { type CellIndex, parseCellIndex } from '../src/internal/cell-index.ts';
 import type { InterestFrame } from '../src/internal/geometry.ts';
 
@@ -78,4 +78,55 @@ export function worldMiniIndex(): CellIndex {
   const r = parseCellIndex(readFileSync(resolve(WORLD_MINI, 'cells.idx')));
   if (!r.ok) throw new Error(`worldMiniIndex: ${r.error.code}`);
   return r.value;
+}
+
+/** world-mini world.json buildId. */
+export const WORLD_MINI_BUILD_ID = (
+  JSON.parse(readFileSync(resolve(WORLD_MINI, 'world.json'), 'utf8')) as { buildId: string }
+).buildId;
+
+export const WORLD_MINI_CELLS = [
+  [-1, -1],
+  [0, -1],
+  [-1, 0],
+  [0, 0],
+] as const;
+
+/** world-mini 셀 .tkc 바이트(매번 새 ArrayBuffer — transfer 가능). */
+export function worldMiniCell(ix: number, iz: number): ArrayBuffer {
+  const b = readFileSync(resolve(WORLD_MINI, `L0/${ix}/${iz}.tkc`));
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
+}
+
+/** 파이프라인 디코드 스냅샷(tools/pipeline/test/world-mini-decode.test.ts가 기록 — 여기서는 읽기만). */
+export const DECODE_SNAPSHOT = resolve(import.meta.dirname, '../../../tests/fixtures/snapshots/world-mini-decode.json');
+
+const bytesOf = (a: ArrayBufferView) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
+
+/** 스냅샷과 같은 모양의 요약(메시 섹션만). */
+export function summarizeMeshes(p: CellPayload): { tris: number; sections: Record<string, unknown> } {
+  const sections: Record<string, unknown> = {};
+  const slots = [
+    ['buildings.mesh', p.meshes.buildings],
+    ['terrain.mesh', p.meshes.terrain],
+  ] as const;
+  for (const [type, mesh] of slots) {
+    if (!mesh) continue;
+    sections[type] = mesh.primitives.map((prim) => {
+      const attributes: Record<string, unknown> = {};
+      for (const [name, a] of Object.entries(prim.attributes)) {
+        const type = a.array.constructor.name;
+        attributes[name] = { itemSize: a.itemSize, type, normalized: a.normalized, hash: tkcHash32(bytesOf(a.array)) };
+      }
+      const index = Uint32Array.from(prim.index ?? []);
+      return {
+        materialId: prim.materialId,
+        vertices: (prim.attributes.POSITION?.array.byteLength ?? 0) / 12,
+        indices: index.length,
+        indexHash: tkcHash32(bytesOf(index)),
+        attributes,
+      };
+    });
+  }
+  return { tris: p.header.stats.tris, sections };
 }

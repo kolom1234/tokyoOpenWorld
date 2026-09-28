@@ -89,6 +89,9 @@ credits.json                  출처 표기
 | `hlod.mesh` | glb | 병합·단순화 메시 (건물+지형), `_FACADE` 유지. **자식 셀 16개 영역별 프리미티브 분할**, 각 프리미티브 `extras.child = 0..15` (자식 인덱스 = (iz%4)*4 + (ix%4), 음수는 양의 나머지) | render | L1–L3 |
 
 - `glb`: glTF 2.0 바이너리, `EXT_meshopt_compression` + `KHR_mesh_quantization`. 텍스처는 포함하지 않고 `extras.materialId`로 shared 머티리얼 참조.
+  **런타임 디코더(streaming 워커)가 받는 부분집합**(ADR-0022): 메시 1개를 가리키는 노드 1개(이동 + **균일** 스케일, 회전·행렬 없음),
+  프리미티브 `mode` = TRIANGLES, 속성 `componentType` i8/u8/i16/u16/u32/f32, meshopt `ATTRIBUTES/TRIANGLES/INDICES`(+ 필터), 압축 안 된 뷰는 BIN chunk.
+  HLOD 자식 그룹은 프리미티브 `extras.child`. 이 밖의 glb는 `unsupported` 오류 → 파이프라인 writer(`tools/pipeline/src/lib/gltf.ts`)를 바꿀 때 함께 확인.
 - `gzip`: 런타임은 `DecompressionStream('gzip')`로 디코드(워커).
 - 소비자가 모르는 섹션 타입은 무시(전방 호환).
 

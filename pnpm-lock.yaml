@@ -178,6 +178,9 @@ importers:
       '@sanpo/tile-format':
         specifier: workspace:*
         version: link:../tile-format
+      meshoptimizer:
+        specifier: 1.3.0
+        version: 1.3.0
 
   packages/tile-format:
     dependencies:

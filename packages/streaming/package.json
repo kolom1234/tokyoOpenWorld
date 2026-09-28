@@ -9,6 +9,7 @@
   "dependencies": {
     "@sanpo/core": "workspace:*",
     "@sanpo/geo": "workspace:*",
-    "@sanpo/tile-format": "workspace:*"
+    "@sanpo/tile-format": "workspace:*",
+    "meshoptimizer": "1.3.0"
   }
 }
