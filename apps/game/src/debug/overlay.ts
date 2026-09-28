@@ -1,6 +1,7 @@
 // `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md
 import type { GameSystem, GroundQuery, Logger } from '@sanpo/core';
 import type { RenderService, RenderStats } from '@sanpo/render';
+import type { StreamingStats } from '@sanpo/streaming';
 import type { TraversalService } from '@sanpo/traversal';
 
 /** 재설정 거리(2048 m, 01-architecture §7)의 2배 동쪽으로 → 확실히 재설정 2회(갈 때·올 때). */
@@ -18,6 +19,8 @@ const BACKEND_LABEL: Readonly<Record<RenderStats['backend'], string>> = { webgpu
 export interface DebugOverlayDeps {
   parent: HTMLElement;
   render: RenderService;
+  /** 월드 로드 뒤에 생긴다(getter). */
+  readonly streaming?: { stats(): StreamingStats } | undefined;
   traversal: TraversalService;
   ground: GroundQuery;
   log: Logger;
@@ -34,7 +37,23 @@ export interface DebugOverlay {
 
 const fmt = (n: number, d = 1): string => n.toFixed(d).replace('-0.0', '0.0');
 
-export function describeDebug(s: RenderStats, fps: number, t: TraversalService, groundY: number | undefined): string[] {
+/** 스트리밍 한 줄: 레벨별 상주(L0/L1/L2/L3)·진행 중·HLOD 페이드. */
+export function describeStreaming(st: StreamingStats | undefined, r: RenderStats): string {
+  if (!st) return '스트리밍 대기(월드 로드 전)';
+  const [l0, l1, l2, l3] = st.residentByLevel;
+  return (
+    `스트리밍 상주 L0 ${l0} · L1 ${l1} · L2 ${l2} · L3 ${l3} · 대기 ${st.queued} · fetch ${st.fetching} · 디코드 ${st.decoding} · ` +
+    `실패 ${st.failures} · HLOD 부모 ${r.hlodParents} · 페이드 ${r.hlodFading}`
+  );
+}
+
+export function describeDebug(
+  s: RenderStats,
+  fps: number,
+  t: TraversalService,
+  groundY: number | undefined,
+  st?: StreamingStats,
+): string[] {
   const p = t.camera.posWF;
   const agl = groundY === undefined ? '지면 미적재' : `지면 위 ${fmt(p.y - groundY)} m`;
   const o = s.renderOriginWF;
@@ -45,8 +64,18 @@ export function describeDebug(s: RenderStats, fps: number, t: TraversalService, 
     `고도 T.P. ${fmt(p.y)} m · ${agl} · ${fmt(t.hud.speedKmh ?? 0)} km/h`,
     `원점 (${o.x}, ${o.y}, ${o.z}) · 재설정 ${s.originRebases}회`,
     `셀 ${s.cells} · draw ${s.drawCalls} · tris ${s.triangles.toLocaleString('en-US')}`,
+    describeStreaming(st, s),
     `[클릭] 마우스 잠금 · WASD 이동 · E/Q 상승/하강 · 휠 속도 · Shift ×4 · [O] 원점 재설정 테스트`,
   ];
+}
+
+/** e2e용 `data-*`. */
+function writeDataset(el: HTMLElement, s: RenderStats): void {
+  el.dataset.backend = s.backend;
+  el.dataset.depth = s.depth;
+  el.dataset.cells = String(s.cells);
+  el.dataset.frames = String(s.frames);
+  el.dataset.rebases = String(s.originRebases);
 }
 
 export function createDebugOverlay(deps: DebugOverlayDeps): DebugOverlay {
@@ -64,12 +93,9 @@ export function createDebugOverlay(deps: DebugOverlayDeps): DebugOverlay {
   const refresh = (): void => {
     const s = render.stats();
     const p = traversal.camera.posWF;
-    el.textContent = describeDebug(s, fps, traversal, deps.ground.groundHeightAt(p.x, p.z)).join('\n');
-    el.dataset.backend = s.backend;
-    el.dataset.depth = s.depth;
-    el.dataset.cells = String(s.cells);
-    el.dataset.frames = String(s.frames);
-    el.dataset.rebases = String(s.originRebases);
+    const st = deps.streaming?.stats();
+    el.textContent = describeDebug(s, fps, traversal, deps.ground.groundHeightAt(p.x, p.z), st).join('\n');
+    writeDataset(el, s);
   };
 
   const rebaseTest = async (): Promise<void> => {

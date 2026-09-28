@@ -1,17 +1,24 @@
 # PROGRESS
-Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + M02-T03·T04 완료, 브랜치 `claude/m02-queue`, draft PR #14)
+Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + M02-T03·T04·T05 완료, 브랜치 `claude/m02-queue`, draft PR #14)
 
-## Current Milestone: M02 — Streaming & Deploy (T01–T04 완료 · T05–T07 남음)
-## Current Task: M02-T05 Render cell adapter & HLOD switching (다음)
-- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03, M02-T04(아래 Recently Completed).
+## Current Milestone: M02 — Streaming & Deploy (T01–T05 완료 · T06–T07 남음)
+## Current Task: M02-T06 Worker routes & publish (다음)
+- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03, M02-T04, M02-T05(아래 Recently Completed).
 - In progress: –
-- **임시 코드(삭제 예정)**: `apps/game/src/debug/local-cells.ts`(메인 스레드 glb 파싱 + `LocalGround`) → **M02-T05에서 삭제**. 교체 = `createStreaming`
-  (`onReady` payload·`groundHeightAt`, ADR-0023). `LoadedCell.tkc`·`world-view.ts showWorld`도 그때 streaming 배선으로.
 - 로컬 빌드(커밋 안 됨, data/build): `20260928-7e215f4-7fb58d45` = MVP L0 294 + L1 24 + L2 144 + L3 9, validate 오류 0. T05 화면 확인·T07 publish에 재사용 가능(코드가 바뀌면 재빌드).
-- Next step (정확히 한 걸음): `### M02-T05` 블록 + 07 §2–3·06 §5·01 §4 읽고 render `hlod.mesh`(`_CHILD` + 셀별 uniform 16개 페이드, ADR-0024) → `apps/game/src/wiring/streaming-render.ts`.
+- 로컬 확인: `pnpm --filter @sanpo/game dev` → `http://localhost:5173/?world=local&debug=1`(dev 전용 `/local-world` = data/build 최신 또는 `SANPO_LOCAL_BUILD`).
+- Next step (정확히 한 걸음): `### M02-T06` 블록 + `docs/13-deployment.md §2–5, §8`·`docs/04 §4.7` 읽고 `apps/worker/src/routes/world.ts`·`cache.ts` 점검 → `tools/pipeline/src/stages/publish.ts`(S3 호환). R2 버킷·KV 생성은 wrangler로 가능(사용자 승인됨), **R2 S3 API 키는 사람이 발급**해야 할 수 있음.
 - Blockers: 없음
 
 ## Recently Completed
+- M02-T05 Render cell adapter & HLOD switching — render: `hlod.mesh` → 셀당 draw 2(`_CHILD` u8 → f32 `_child`), HLOD 머티리얼(TSL per-object uniform vec4 × 4 페이드, 원-핫 선택,
+  alphaHash 디더, 페이드 0 = 정점 붕괴), `scene/hlod-switch.ts`(숨김 0.3 s·보임 즉시·부모 도착 전 상태 보관), `setHlodChildVisible`·`precompile()`(기본+HLOD compileAsync)·stats.
+  game: `wiring/streaming-render.ts`(phase 45 관심점, phase 55 적용 = 2 ms + 업로드 4 MiB/프레임·첫 셀 보장, ack, 부모 숨김/표시 순서), `world-view.showWorld` = precompile → createStreaming(워커)
+  → whenReady(스폰 384 m) → 시작 시점, **임시 로더 `debug/local-cells.ts` 삭제**, `world-load`는 world.json·cells.idx만, 오버레이 스트리밍 줄, dev 전용 `?world=local`(`/local-world` → data/build).
+  **수락(실제 GPU, 로컬 MVP 빌드)**: 신주쿠 서쪽 400 m → 2 m 급강하(8 s): 0.5 s 간격 19 샘플 지평선 아래 구멍(하늘색) 화소 0, 오류 0, 60 FPS, draw 63–74·2.1–2.35M tris,
+  L0 9(> 300 m, 3×3) → 23 → 16(지상). 스크린샷 `docs/screenshots/M02-T05-shinjuku-{400m,dive-327m,dive-177m,dive-52m,ground}.png`.
+  55 s 저공 비행(60 m/s): rAF 간격 p50 16.67·p99 16.85·최대 18.3 ms(> 33 ms 0), render p99 5.7 ms(> 4 ms 48프레임 — 셀 업로드), 적용 최대 3.1–4.5 ms, streaming 최대 0.55 ms.
+  부팅(스크램블) 첫 표시 2.9 s. 테스트 +3파일/+10건, e2e 5 통과(WebGL2 폴백 포함). ADR-0025 (2026-09-29)
 - M02-T04 HLOD pipeline — `stages/hlod/{far-buildings,tokyo23-lod1(+worker),dem-far,child-split,boxes,l1,l2,l3,run}.ts`, `validate-hlod.ts`, `lib/{geom2d,png}.ts`,
   CLI `hlod-prep`(23구 2020 zip 5.3 GB를 풀지 않고 `unzip -p` 스트림·워커 14개 → 원경 건물 **1,767,804동 / L2 57셀, 543 s**; 標高タイル dem_png z14 676장 → WF 8 m 원경 DEM 26 s)·`hlod`(73 s).
   L1 = 영역 L0 부모 24셀(L0 정규화 건물 용접 + meshopt simplify 25%·절대 2 m, dem_1m 4 m; 영역 밖 자식 = 원경 박스), L2 = OBB 박스(≥ 20 m·≥ 1000 m², ≤ 12k) + 64 m 블록 매스,
@@ -49,7 +56,8 @@ Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + M02-T03·T
 - [pipeline] 도로 레코드는 TrafficArea 단위로 매우 잘게 나뉨(3×3에 27.7k) → M03 도로 메시 빌드 시 병합/삼각분할 비용 확인.
 - [ci] e2e = 부트·월드 로드(`boot.spec.ts`) + 렌더 스모크(`render.spec.ts`, WebGL2/SwiftShader 강제) + 디코드 워커(`decode.spec.ts`, `?probe=decode`). WebGPU 경로는 CI에 GPU가 없어 미검증 → 로컬 실제 GPU(Chrome headed, `channel: 'chrome'`)로 확인(2026-09-29). 걷기·모드 전환은 M04 이후. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
 - [e2e] 클라우드 세션 Chromium은 Playwright 번들 버전과 달라 `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e`로 실행. 실행 전 떠 있는 `vite preview`가 있으면 `reuseExistingServer`로 **옛 빌드**를 테스트하니 먼저 종료할 것.
-- [render] 메인 스레드 예산: SwiftShader에서 `render` 시스템 ≈ 30 ms는 CPU 래스터라서. 실제 GPU(RTX 3050)에선 60 FPS 고정, 첫 프레임만 53.6 ms(셰이더·파이프라인 컴파일) → `compileAsync` 선컴파일(06 §6). 임시 로더의 glb 파싱(부트 1회, 4셀)도 Hard Rule 8 예외 → M02-T05에서 워커로.
+- [render] 셀 추가 프레임의 GPU 업로드(다음 render에서 발생): 큰 L1 셀 1개(≈ 7 MB)가 그 프레임 render를 5–10 ms 늘린다(프레임 드롭은 없음, 18.3 ms 최대). 업로드 분할·HLOD 셀 크기는 `pnpm perf`(M02-T07~) 뒤 판단(ADR-0025). 첫 프레임 render 33–57 ms(초기 업로드) 1회.
+- [render] L0 셀은 페이드 인 없이 즉시 나타나고 부모 그룹이 0.3 s 디더로 사라진다(겹침 0.3 s, 점묘). freecam 관심점엔 forward가 없어 뷰 쐐기 우선순위 미적용(traversal 개선 시).
 - [game] 게임 번들(three 포함) ≈ 1.05 MB(gzip 300 KB) → Vite 500 kB 경고. 코드 분할은 M03(후처리·대기 추가 시) 재검토.
 - [fixtures] world-mini·plateau-mini는 생성물 → 셀 포맷·빌드 코드 변경 시 `docker/run.sh node tools/pipeline/src/cli.ts fixture`로 재생성(`fixtures.test.ts`가 불일치를 알려 줌). plateau-mini 건물은 appearance 제거로 UV 없음, 도로는 normalize 테스트용(셀 빌드에 도로 섹션 없음).
 - [game] 부트 상태 화면(src/status-view.ts)은 DOM 임시 구현 → @sanpo/ui(M08) 로딩 화면으로 대체.

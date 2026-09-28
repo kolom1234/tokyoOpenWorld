@@ -1,4 +1,4 @@
-// 부트 시퀀스(M01): 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → 셀 표시. see docs/modules/game.md §부트 시퀀스
+// 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스
 import {
   type CameraState,
   createEventBus,
@@ -14,15 +14,24 @@ import { createDebugOverlay } from './debug/overlay.ts';
 import { createStatsHook } from './debug/stats.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
-import { type LoadedWorld, loadWorld, WORLD_MINI_BASE_URL, type WorldSource } from './world-load.ts';
+import {
+  type LoadedWorld,
+  loadWorld,
+  WORLD_LOCAL_BASE_URL,
+  WORLD_MINI_BASE_URL,
+  type WorldSource,
+} from './world-load.ts';
 import { fetchWorldStatus, type WorldStatus } from './world-status.ts';
 import { createWorldView, type WorldView } from './world-view.ts';
 
 /** URL 쿼리 디버그 플래그(docs/15-conventions.md §8). 이후 tier/spawn 추가. */
 export interface BootFlags {
   debug: boolean;
-  /** `?world=mini` → 저장소 픽스처 world-mini(/fixtures/world-mini)를 API 대신 사용(dev·PR preview·staging·CI e2e). */
-  world?: 'mini';
+  /**
+   * `?world=mini` → 저장소 픽스처 world-mini(/fixtures/world-mini)를 API 대신 사용(dev·PR preview·staging·CI e2e).
+   * `?world=local` → 로컬 파이프라인 빌드(data/build/<SANPO_LOCAL_BUILD>, vite dev 전용 /local-world).
+   */
+  world?: 'mini' | 'local';
   /** `?backend=webgl` → WebGPU가 있어도 WebGL2 백엔드 강제(폴백 경로 확인). */
   backend?: 'webgl';
   /** `?probe=decode` → 부트 대신 world-mini 디코드 워커 프로브(debug/decode-probe.ts, e2e decode.spec.ts). */
@@ -33,7 +42,7 @@ export function parseFlags(search: string): BootFlags {
   const q = new URLSearchParams(search);
   return {
     debug: q.get('debug') === '1',
-    ...(q.get('world') === 'mini' ? { world: 'mini' as const } : {}),
+    ...(q.get('world') === 'mini' || q.get('world') === 'local' ? { world: q.get('world') as 'mini' | 'local' } : {}),
     ...(q.get('backend') === 'webgl' ? { backend: 'webgl' as const } : {}),
     ...(q.get('probe') === 'decode' ? { probe: 'decode' as const } : {}),
   };
@@ -47,6 +56,7 @@ export async function startWorld(
 ): Promise<LoadedWorld | undefined> {
   let target: { baseUrl: string; source: WorldSource };
   if (flags.world === 'mini') target = { baseUrl: WORLD_MINI_BASE_URL, source: 'fixture' };
+  else if (flags.world === 'local') target = { baseUrl: WORLD_LOCAL_BASE_URL, source: 'local' };
   else {
     const status = await fetchWorldStatus(fetchFn);
     onStatus(status);
@@ -60,7 +70,7 @@ export async function startWorld(
           kind: 'loaded',
           source: r.value.source,
           buildId: r.value.buildId,
-          cells: r.value.cells.length,
+          cells: r.value.spawnCells.length,
           indexed: r.value.indexed,
         }
       : { kind: 'error', detail: r.error },
@@ -100,6 +110,7 @@ async function setupWorldView(
       canvas: mountCanvas(document),
       bus: createEventBus(log),
       log,
+      scheduler,
       backend: flags.backend === 'webgl' ? 'webgl' : 'auto',
     });
     for (const p of world.providers) scheduler.add(p);
@@ -107,7 +118,17 @@ async function setupWorldView(
     document.body.classList.add('rendering');
     view.setRenderer(world.render.backend, world.render.depth);
     if (flags.debug) {
-      const overlay = createDebugOverlay({ parent: document.body, ...world, log });
+      const overlay = createDebugOverlay({
+        parent: document.body,
+        render: world.render,
+        traversal: world.traversal,
+        ground: world.ground,
+        log,
+        // streaming은 월드 로드 뒤에 생긴다 → getter로 넘긴다(스프레드하면 undefined로 고정).
+        get streaming() {
+          return world.streaming;
+        },
+      });
       scheduler.add(overlay.system);
       // e2e·콘솔 조작용 핸들(디버그 모드에서만 노출).
       Object.assign(globalThis, { __SANPO_DEBUG__: { world, rebaseTest: overlay.rebaseTest } });

@@ -55,12 +55,13 @@ score  = max(score, score(parent) + 0.001)  if parent ∈ 같은 요청 후보 &
 ## 5. HLOD 교체 규칙 (틈/중복 없는 전환)
 - L1–L3의 `hlod.mesh`는 **자식 16개 영역별 프리미티브 그룹**(`extras.child = 0..15`)으로 분할 저장한다.
 - 렌더러는 자식 셀이 `live`(= render ack)가 되면 부모의 해당 그룹만 숨긴다 → 부분 로딩 중에도 구멍/겹침 없음.
-- 전환 시 0.3 s 디더 크로스페이드(TSL `alphaHash` 기반, 투명 정렬 불필요).
+- 전환 시 0.3 s 디더 크로스페이드(TSL `alphaHash` 기반, 투명 정렬 불필요). 자식별 페이드 = 셀 메시 per-object uniform 16개, 정점 `_CHILD`로 선택 → 셀당 draw 2(ADR-0024·0025).
 - 자식 해제 시 부모 그룹을 먼저 다시 보이게 한 후 자식 제거.
 
 ## 6. 적용 예산 (메인 스레드)
 - 프레임당 GPU 업로드/오브젝트 생성 ≤ 2 ms (측정 기반 적응: 초과 시 다음 프레임으로 이월).
 - 한 프레임에 `onReady` 콜백(+ `cell/ready` 키 이벤트) 최대 2개, 해제(`onEvicted` + `cell/evicted`) 최대 8개.
+- wiring(apps/game `streaming-render.ts`)은 받은 셀을 시간 2 ms + **업로드 4 MiB/프레임** 예산으로 render에 적용(첫 셀은 항상) — GPU 업로드는 다음 render에서 일어나 시간 예산에 안 잡히므로(ADR-0025).
 - 셰이더: 머티리얼 클래스 수가 고정(`07-rendering.md §4`)이므로 부팅 시 `renderer.compileAsync`로 선컴파일 → 스트리밍 중 컴파일 끊김 없음.
 
 ## 7. 캐시 계층

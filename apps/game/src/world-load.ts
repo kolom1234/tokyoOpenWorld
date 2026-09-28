@@ -1,13 +1,16 @@
-// 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 TKC(헤더 확인 + 리더 보관). 스트리밍 전 임시 로더.
-// M02 streaming(디코드 워커)이 들어오면 셀 fetch·검증은 거기로 옮기고 여기엔 매니페스트 검증만 남긴다. see docs/modules/game.md, docs/05-tile-format.md §1–3
-import { type CellKey, cellIdString, err, ok, packCellKey, type Result, type Vec3d } from '@sanpo/core';
+// 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023).
+// see docs/modules/game.md, docs/05-tile-format.md §1–3
+import { type CellKey, err, ok, type Result, type Vec3d } from '@sanpo/core';
 import { cellOf, WORLD_ORIGIN } from '@sanpo/geo';
-import { type CellsIndex, FORMAT_VERSION, readCellsIndex, readTkc, type TkcReader } from '@sanpo/tile-format';
+import { type CellsIndex, FORMAT_VERSION, readCellsIndex } from '@sanpo/tile-format';
 
 /** 저장소 픽스처 world-mini(tests/fixtures/world-mini)의 정적 경로. `?world=mini`로 선택(vite.config.ts가 서빙·복사). */
 export const WORLD_MINI_BASE_URL = '/fixtures/world-mini';
 
-export type WorldSource = 'api' | 'fixture';
+/** 로컬 파이프라인 빌드(data/build/<buildId>, dev 서버 전용 — vite.config.ts `SANPO_LOCAL_BUILD`). `?world=local`. */
+export const WORLD_LOCAL_BASE_URL = '/local-world';
+
+export type WorldSource = 'api' | 'fixture' | 'local';
 
 interface WorldManifest {
   formatVersion: number;
@@ -15,15 +18,6 @@ interface WorldManifest {
   crs: { projected: string; E0: number; N0: number };
   spawn: { posWF: [number, number, number] };
   files: { cellsIndex: string };
-}
-
-export interface LoadedCell {
-  key: CellKey;
-  id: string;
-  bytes: number;
-  sections: string[];
-  /** 검증된 TKC 리더(섹션 view — 원본 바이트 보유). M01-T06 debug/local-cells.ts가 메시로 변환(M02-T05에서 streaming으로 대체). */
-  tkc: TkcReader;
 }
 
 export interface LoadedWorld {
@@ -34,8 +28,10 @@ export interface LoadedWorld {
   spawnWF: Vec3d;
   /** cells.idx 레코드 수(모든 레벨). */
   indexed: number;
-  /** 스폰 셀 ± 1 안에서 받아 헤더를 확인한 L0 셀. */
-  cells: LoadedCell[];
+  /** 파싱된 cells.idx(streaming 입력). */
+  cellsIndex: CellsIndex;
+  /** 스폰 셀 ± 1 중 색인에 있는 L0 셀(부팅 whenReady 대상). */
+  spawnCells: CellKey[];
 }
 
 type FetchLike = (input: string) => Promise<Response>;
@@ -77,27 +73,7 @@ export function cellsAroundSpawn(index: CellsIndex, spawn: [number, number, numb
   return [...index.keys()].filter((k) => keys.has(k));
 }
 
-async function loadCell(
-  fetchFn: FetchLike,
-  baseUrl: string,
-  key: CellKey,
-  expect: { byteLength: number; buildId: string },
-): Promise<Result<LoadedCell, string>> {
-  const id = cellIdString(key);
-  const [, ix, iz] = id.split('_');
-  const bytes = await getBytes(fetchFn, `${baseUrl}/L0/${ix}/${iz}.tkc`);
-  if (!bytes.ok) return bytes;
-  if (bytes.value.byteLength !== expect.byteLength) return err(`${id}: ${bytes.value.byteLength} B ≠ cells.idx`);
-  const r = readTkc(bytes.value);
-  if (!r.ok) return err(`${id}: ${r.error.code} ${r.error.message}`);
-  const h = r.value.header;
-  if (packCellKey(h.cell.level, h.cell.ix, h.cell.iz) !== key || h.buildId !== expect.buildId) {
-    return err(`${id}: header cell/buildId mismatch`);
-  }
-  return ok({ key, id, bytes: bytes.value.byteLength, sections: h.sections.map((s) => s.type), tkc: r.value });
-}
-
-/** world.json → cells.idx → 스폰 주변 셀. 실패는 예외 대신 Result(부트 화면 표시). */
+/** world.json → cells.idx → 스폰 주변 셀 목록. 실패는 예외 대신 Result(부트 화면 표시). */
 export async function loadWorld(
   baseUrl: string,
   source: WorldSource,
@@ -111,16 +87,17 @@ export async function loadWorld(
   if (!idxBytes.ok) return idxBytes;
   const index = readCellsIndex(idxBytes.value);
   if (!index.ok) return err(`cells.idx: ${index.error.code} ${index.error.message}`);
-  const cells: LoadedCell[] = [];
-  for (const key of cellsAroundSpawn(index.value, m.value.spawn.posWF)) {
-    const entry = index.value.get(key);
-    if (!entry) continue;
-    const c = await loadCell(fetchFn, baseUrl, key, { byteLength: entry.byteLength, buildId: m.value.buildId });
-    if (!c.ok) return c;
-    cells.push(c.value);
-  }
-  if (cells.length === 0) return err('no L0 cells around spawn');
+  const spawnCells = cellsAroundSpawn(index.value, m.value.spawn.posWF);
+  if (spawnCells.length === 0) return err('no L0 cells around spawn');
   const [x, y, z] = m.value.spawn.posWF;
   const spawnWF = { x, y, z };
-  return ok({ source, baseUrl, buildId: m.value.buildId, spawnWF, indexed: index.value.size, cells });
+  return ok({
+    source,
+    baseUrl,
+    buildId: m.value.buildId,
+    spawnWF,
+    indexed: index.value.size,
+    cellsIndex: index.value,
+    spawnCells,
+  });
 }
