@@ -63,7 +63,9 @@ score  = max(score, score(parent) + 0.001)  if parent ∈ 같은 요청 후보 &
 
 ## 7. 캐시 계층
 1. 브라우저 HTTP 캐시 (`Cache-Control: immutable`, URL에 buildId 포함).
-2. Cache Storage `sanpo-world-<buildId>`: 방문한 셀 저장(최대 1.5 GB, LRU). 부팅 시 다른 buildId 캐시 삭제.
+2. Cache Storage `sanpo-world-<buildId>`: 방문한 셀 저장(최대 1.5 GB, LRU — 상한 적용은 M02-T03). 부팅 시 다른 buildId 캐시 삭제(`purgeStaleCaches`).
+   키 = 셀 URL. 저장은 네트워크 응답의 `Response.clone()`(메인 JS 복사 없음), 적중 시 크기가 cells.idx와 다르면 삭제 후 네트워크.
+   워커가 hash32·컨테이너 손상(`mismatch`/`corrupt` 등)을 보고하면 스케줄러가 해당 캐시 항목을 지운다(`Fetcher.invalidate`).
 3. 메모리: 디코드 결과는 소비자에게 넘기면 폐기(중복 보관 금지). 재방문·`requestSections`는 2)에서 재읽기·재디코드. Cache Storage 미스(축출) 시 네트워크 재요청.
 
 ## 8. 부팅 로딩 순서 (`whenReady`)
@@ -95,6 +97,16 @@ export function createStreaming(deps: { bus: EventBus; log: Logger; config: Stre
 - `CellPayload`는 워커에서 생성되어 Transferable로 전달된다. 소비자는 배열을 소유권 이전받는다(복사 금지).
 - 물리용 `collision`은 `requestSections` 결과를 wiring이 물리 워커로 transfer — 메인에 남기지 않는다.
 - `heightfield`는 예외: streaming이 `groundHeightAt`용으로 원본을 보관(셀당 ≈132 KB, L0 최대 72개 ≈ 9.5 MB). 물리 워커용 높이장은 `requestSections(['terrain.height'])`로 별도 디코드된 것을 사용.
+- **fetch는 메인(비동기만), 디코드는 워커**(ADR-0022): 메인은 fetch·Cache Storage를 기다린 뒤 바이트를 워커로 transfer만 한다(파싱 없음).
+  워커 = hash32 검사(cells.idx) → `readTkc` → 셀·buildId 확인 → 섹션 디코드(glb = 자체 부분집합 파서 + `meshoptimizer/decoder`, gzip = `DecompressionStream`).
+  onReady 기본 섹션 = 렌더 메시(`terrain/buildings/roads/decals/overrides/hlod.mesh`) + `terrain.height`. `requestSections`용으로
+  `collision.bin`·`lanes.bin`(gunzip된 ArrayBuffer)·`nav.bin`·`meta.json`도 디코드. props/trees/lights/audio는 해당 태스크에서 추가.
+- 재시도: 첫 시도 + **3회**(250 → 500 → 1000 ms), 대상 = 네트워크 오류·408·429·5xx·크기 불일치. 404 등 나머지 4xx·취소는 즉시 실패.
+  3회 실패 후 `failed` → 60 s 재시도 정책은 lifecycle(M02-T03).
+- 워커 풀: 워커 수 = `hardwareConcurrency − 2`(1…4), 워커당 동시 2개(대기열은 풀이 FIFO로 보관). 동시 fetch ≤ 8, 디코드 대기 ≤ 워커 수 × 2일 때만 새 fetch.
+- 취소: 셀별 AbortController 하나가 fetch·백오프 대기·디코드를 모두 끊는다. 대기열이면 제거, 워커 안이면 `cancel` 메시지 →
+  워커가 다음 단계 경계(섹션·프리미티브, 매크로태스크 양보)에서 중단하고 `cancelled`만 보낸다. 늦게 온 결과는 요청 id로 폐기.
+  워커가 죽으면(감독자 재시작) 그 워커의 작업은 `worker` 오류(바이트 소실 → 재요청은 캐시에서).
 
 ## 10. 내부 파일 구성 (권장)
 ```
@@ -104,7 +116,11 @@ src/internal/interest.ts        관심점 → 원하는 셀 집합 (레벨별)
 src/internal/priority.ts        점수 계산 (순수 함수, 테스트 대상)
 src/internal/scheduler.ts       fetch/디코드 큐, 동시성, 취소
 src/internal/fetcher.ts         fetch + Cache Storage + 재시도
-src/internal/decode.worker.ts   TKC 파싱, gzip, meshopt 디코드 → CellPayload
+src/internal/decode-pool.ts     워커 풀(메인): 배분·대기열·취소·늦은 결과 폐기
+src/internal/protocol.ts        워커 메시지 판별 유니온
+src/internal/decode.worker.ts   워커 엔트리(self ↔ decode-host)
+src/internal/decode-host.ts     워커 본체: 요청별 AbortController, 결과 transfer
+src/internal/decode.ts, glb.ts  TKC 파싱, gzip, meshopt 디코드 → CellPayload
 src/internal/lifecycle.ts       상태기계, ack, eviction
 src/internal/ground.ts          heightfield 질의
 ```

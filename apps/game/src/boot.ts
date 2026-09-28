@@ -25,6 +25,8 @@ export interface BootFlags {
   world?: 'mini';
   /** `?backend=webgl` → WebGPU가 있어도 WebGL2 백엔드 강제(폴백 경로 확인). */
   backend?: 'webgl';
+  /** `?probe=decode` → 부트 대신 world-mini 디코드 워커 프로브(debug/decode-probe.ts, e2e decode.spec.ts). */
+  probe?: 'decode';
 }
 
 export function parseFlags(search: string): BootFlags {
@@ -33,6 +35,7 @@ export function parseFlags(search: string): BootFlags {
     debug: q.get('debug') === '1',
     ...(q.get('world') === 'mini' ? { world: 'mini' as const } : {}),
     ...(q.get('backend') === 'webgl' ? { backend: 'webgl' as const } : {}),
+    ...(q.get('probe') === 'decode' ? { probe: 'decode' as const } : {}),
   };
 }
 

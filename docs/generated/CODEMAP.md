@@ -3,11 +3,12 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 137개.
+> 파일 147개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스(M01): 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → 셀 표시. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
 - `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
+- `apps/game/src/debug/decode-probe.ts` — `?probe=decode` 디버그 프로브(렌더 없이 실행): world-mini 셀을 streaming fetch → 디코드 워커로 두 번(네트워크·Cache Storage) 읽어 | exports: ProbeCell, DecodeProbeReport, runDecodeProbe
 - `apps/game/src/debug/local-cells.ts` — 임시 셀 로더(M01-T06 → **M02-T05에서 삭제**, streaming 디코드 워커로 대체): 검증된 TKC → 메인 스레드에서 glb 파싱 | exports: decodeLocalCell, sampleHeightfield, LocalGround, createLocalGround
 - `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeDebug, createDebugOverlay
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
@@ -91,13 +92,22 @@
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts'
 
 ## packages/streaming
-- `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). M02-T01 = 설정(관심·우선순위·상주 한도)만. see docs/modules/streaming.md, docs/06-world-streaming.md §3–4, §9 | exports: InterestConfig, PriorityConfig, StreamingConfig
-- `packages/streaming/src/index.ts` — @sanpo/streaming 공개 엔트리(L2): 셀 로딩/언로딩·우선순위·캐시. api.ts 재수출 + create* 팩토리만. see docs/modules/streaming.md | exports: * from './api.ts'
+- `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). M02-T01 설정 + M02-T02 fetch·디코드 워커 풀. see docs/modules/streaming.md, docs/06-world-streaming.md §3–4, §7, §9 | exports: InterestConfig, PriorityConfig, FetchConfig, DecodeConfig, StreamingConfig, CellFetchErrorCode, CellFetchError, CellFetchResult, Fetcher, FetchLike, CacheStorageLike, CacheLike, CellFetcherDeps, DecodeRequest, DecodeErrorCode, DecodeError, DecodeResult, DecodePoolStats, DecodePool, DecodePoolDeps
+- `packages/streaming/src/index.ts` — @sanpo/streaming 공개 엔트리(L2): 셀 로딩/언로딩·우선순위·캐시. api.ts 재수출 + create* 팩토리만. see docs/modules/streaming.md | exports: * from './api.ts', DEFAULT_STREAMING_CONFIG, createDecodePool, cacheName, createFetcher, purgeStaleCaches
 - `packages/streaming/src/internal/cell-index.ts` — cells.idx 조회(존재 여부·바이트 수·레벨별 목록·범위). 파싱은 @sanpo/tile-format. see docs/05-tile-format.md §5, docs/06-world-streaming.md §10 | exports: IndexExtent, CellIndex, createCellIndex, parseCellIndex
 - `packages/streaming/src/internal/config.ts` — streaming 기본 설정(06 §3–4, 07 §9 L0 반경 배율, ADR-0021). 오버라이드는 createStreaming deps.config → mergeConfig. | exports: DEFAULT_STREAMING_CONFIG
+- `packages/streaming/src/internal/decode-host.ts` — 디코드 워커 본체(환경 독립): 메시지 처리, 요청별 AbortController, 결과 transfer. decode.worker.ts가 self에 연결한다. see docs/06-world-streaming.md §2, §9 | exports: PostFn, DecodeHost, DecodeHostOptions, createDecodeHost
+- `packages/streaming/src/internal/decode-pool.ts` — 디코드 워커 풀(메인): 워커당 동시 perWorker개, 초과분 FIFO 대기, 취소 → 대기열 제거 또는 워커에 cancel. 늦게 온 결과는 id로 폐기. | exports: autoWorkerCount, createDecodePool
+- `packages/streaming/src/internal/decode-util.ts` — 디코드 공용: Result 오류 헬퍼, 취소 확인 함수형, transfer 목록 수집. see docs/06-world-streaming.md §9 | exports: fail, AbortCheck, yieldTask, abortCheck, transferList
+- `packages/streaming/src/internal/decode.ts` — TKC 파일 → CellPayload(워커 전용): hash32·헤더(셀·buildId) 검사 → 섹션별 디코드(glb=meshopt, gzip 해제). see docs/05-tile-format.md §3–4, docs/06-world-streaming.md §9 | exports: DEFAULT_SECTIONS, DECODABLE, DecodeOptions, decodeCell
+- `packages/streaming/src/internal/decode.worker.ts` — 디코드 워커 엔트리(모듈 워커): self ↔ createDecodeHost 연결만. 예외는 WorkerErrorMessage로 보고. see docs/06-world-streaming.md §9, docs/15-conventions.md §5–6
+- `packages/streaming/src/internal/fetcher.ts` — 셀 fetch: Cache Storage(`sanpo-world-<buildId>`) 조회 → 네트워크(AbortController, 지수 백오프 재시도) → 캐시 저장. | exports: CACHE_PREFIX, cacheName, cellUrl, retryableStatus, abortableSleep, purgeStaleCaches, createFetcher
 - `packages/streaming/src/internal/geometry.ts` — 관심점 전처리(고도·진행 방향)와 셀 AABB 수평 거리·뷰 쐐기 판정. interest/priority 공용 순수 함수. see docs/06-world-streaming.md §3–4 | exports: InterestFrame, PreparedPoint, preparePoints, aabbDistanceM, effectiveDistanceM, inViewWedge
+- `packages/streaming/src/internal/glb.ts` — 셀 glb 섹션 → DecodedMesh(워커 전용). 파이프라인이 쓰는 부분집합만: 노드 1개(이동 + 균일 스케일), EXT_meshopt_compression, | exports: decodeGlb
 - `packages/streaming/src/internal/interest.ts` — 관심점 → 레벨별 원하는 셀 집합(로드/히스테리시스 유지)과 상주 한도 해제 계획. 순수 함수. see docs/06-world-streaming.md §3, ADR-0021 | exports: Zone, LevelRule, DesiredCells, EvictionPlan, l0RadiusM, l1RadiusM, levelRule, computeDesired, nearestDistanceM, planEvictions, countByLevel
 - `packages/streaming/src/internal/priority.ts` — 요청 우선순위 점수(낮을수록 먼저): 거리/레벨크기 × 뷰 배율, 발밑 셀 고정 최우선, 부모 선행 클램프. 순수 함수. see docs/06-world-streaming.md §4, ADR-0021 | exports: RankedCell, footCells, scoreCells, rankCells
+- `packages/streaming/src/internal/protocol.ts` — 디코드 워커 메시지(판별 유니온). 메인 ↔ decode.worker. see docs/15-conventions.md §6, docs/06-world-streaming.md §9 | exports: ToDecodeWorker, FromDecodeWorker, isFromDecodeWorker
+- `packages/streaming/src/internal/scheduler.ts` — 셀 로드 큐: 점수 낮은 순으로 fetch(동시 ≤ maxConcurrent) → 디코드 풀(대기 ≤ 풀 용량), 셀별 AbortController로 단계 무관 취소. | exports: LoadStage, LoadError, LoadResult, LoadSchedulerDeps, LoadScheduler, createLoadScheduler
 
 ## packages/tile-format
 - `packages/tile-format/src/api.ts` — @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md | exports: TKC_MAGIC, FORMAT_VERSION, TKC_ALIGN, TKC_PREAMBLE_BYTES, CELLS_INDEX_MAGIC, JCOL_MAGIC, JCOL_VERSION, LANES_MAGIC, LANES_VERSION, LANE_NO_SIGNAL, HEIGHTFIELD_SIZE, HEIGHTFIELD_STEP_M, HEIGHTFIELD_BASE_M, SectionCodec, SectionSpec, SECTION_REGISTRY, SectionType, TkcErrorCode, TkcError, Vec3Tuple, SectionEntry, CellStats, CellHeader, CellHeaderInput, TkcSectionInput, TkcReader, CELL_FLAG, CellsIndexEntry, CellsIndexRecord, CellsIndex, JCOL_MATERIAL, JCOL_FLAG, JcolKind, JcolTriMesh, JcolConvexHull, JcolBox, JcolRound, JcolShape, LaneGraphChunk, DecodedMesh, MeshSlot, CellPayload, HeightfieldData, PropBatch, TreeBatch, LightRecord, AudioZones, I18nText, MetaBuilding, PoiKind, MetaPoi, MetaPlaceName, MetaSignal, InteractableRecord, CellMeta

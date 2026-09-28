@@ -1,0 +1,294 @@
+{
+  "L0_-1_-1": {
+    "tris": 67051,
+    "sections": {
+      "buildings.mesh": [
+        {
+          "materialId": "facade_default",
+          "vertices": 61459,
+          "indices": 98007,
+          "indexHash": 739488061,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 862798395
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3399934311
+            },
+            "TEXCOORD_0": {
+              "itemSize": 2,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 2061129954
+            },
+            "_BLDG": {
+              "itemSize": 1,
+              "type": "Uint16Array",
+              "normalized": false,
+              "hash": 23520387
+            },
+            "_FACADE": {
+              "itemSize": 4,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 794973675
+            }
+          }
+        }
+      ],
+      "terrain.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 17704,
+          "indices": 103146,
+          "indexHash": 4258414977,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 3323083368
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 4211999862
+            },
+            "_SURF": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 1033423684
+            }
+          }
+        }
+      ]
+    }
+  },
+  "L0_0_-1": {
+    "tris": 58982,
+    "sections": {
+      "buildings.mesh": [
+        {
+          "materialId": "facade_default",
+          "vertices": 40314,
+          "indices": 59880,
+          "indexHash": 1431444654,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 2588278836
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 1872715708
+            },
+            "TEXCOORD_0": {
+              "itemSize": 2,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1898049053
+            },
+            "_BLDG": {
+              "itemSize": 1,
+              "type": "Uint16Array",
+              "normalized": false,
+              "hash": 1178869063
+            },
+            "_FACADE": {
+              "itemSize": 4,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 2757667359
+            }
+          }
+        }
+      ],
+      "terrain.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 20024,
+          "indices": 117066,
+          "indexHash": 1010512572,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1579233423
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3577343280
+            },
+            "_SURF": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 1501496493
+            }
+          }
+        }
+      ]
+    }
+  },
+  "L0_-1_0": {
+    "tris": 61706,
+    "sections": {
+      "buildings.mesh": [
+        {
+          "materialId": "facade_default",
+          "vertices": 54100,
+          "indices": 79866,
+          "indexHash": 140262363,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 3443902539
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 970051818
+            },
+            "TEXCOORD_0": {
+              "itemSize": 2,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1944247185
+            },
+            "_BLDG": {
+              "itemSize": 1,
+              "type": "Uint16Array",
+              "normalized": false,
+              "hash": 4238496291
+            },
+            "_FACADE": {
+              "itemSize": 4,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 3115302225
+            }
+          }
+        }
+      ],
+      "terrain.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 18055,
+          "indices": 105252,
+          "indexHash": 1354509899,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 3449087685
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 1517422201
+            },
+            "_SURF": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 3014100718
+            }
+          }
+        }
+      ]
+    }
+  },
+  "L0_0_0": {
+    "tris": 42759,
+    "sections": {
+      "buildings.mesh": [
+        {
+          "materialId": "facade_default",
+          "vertices": 31615,
+          "indices": 40179,
+          "indexHash": 2499466958,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 2811868454
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 736369189
+            },
+            "TEXCOORD_0": {
+              "itemSize": 2,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1563330417
+            },
+            "_BLDG": {
+              "itemSize": 1,
+              "type": "Uint16Array",
+              "normalized": false,
+              "hash": 3529830153
+            },
+            "_FACADE": {
+              "itemSize": 4,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 1465074873
+            }
+          }
+        }
+      ],
+      "terrain.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 15196,
+          "indices": 88098,
+          "indexHash": 4286801710,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 3451079015
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 4108201293
+            },
+            "_SURF": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 2425987547
+            }
+          }
+        }
+      ]
+    }
+  }
+}

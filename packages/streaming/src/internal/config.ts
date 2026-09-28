@@ -28,4 +28,6 @@ export const DEFAULT_STREAMING_CONFIG: StreamingConfig = {
   },
   // L1 64 → 80: 고고도 R1 3.5 km의 해제 반경(4.375 km) 셀 수 최대 80(ADR-0021).
   residentMax: [72, 80, 64, 16],
+  fetch: { maxConcurrent: 8, retries: 3, backoffMs: 250, cacheStorage: true },
+  decode: { workers: 0, perWorker: 2, verifyHash: true },
 };

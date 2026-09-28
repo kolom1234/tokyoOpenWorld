@@ -23,6 +23,13 @@ M01-T05 빌드 파이프라인 그대로(`buildArea` → `validateBuild` 0 오�
 
 플래그가 없으면 게임은 `/api/world/current` → R2 빌드를 쓴다. 부트 화면 `#app[data-world="loaded"][data-world-source="fixture"][data-world-cells="4"]`가 e2e 판정 기준(`tests/e2e/boot.spec.ts`).
 
+## snapshots/world-mini-decode.json — 셀 메시 디코드 기준값 (M02-T02)
+world-mini 4셀의 `terrain.mesh`·`buildings.mesh`를 **파이프라인 디코더(gltf-transform)**로 풀어 요약한 값: 프리미티브별 정점·인덱스 수,
+속성 레이아웃(itemSize·타입·정규화), 내용 해시(`tkcHash32` — POSITION은 셀 로컬 float32로 역양자화한 값, 인덱스는 u32).
+`tools/pipeline/test/world-mini-decode.test.ts`가 기록·검사(`toMatchFileSnapshot`, 갱신 `-u`)하고, 런타임 디코더
+(`packages/streaming/test/decode.test.ts`·`scheduler.test.ts`, e2e `tests/e2e/decode.spec.ts`)는 **읽기만** 해서 일치를 확인한다(ADR-0022).
+world-mini를 재생성하면 이 파일도 `-u`로 갱신한다.
+
 ## plateau-mini/ — 원천 발췌(파이프라인 단위 테스트 입력)
 | 경로 | 내용 |
 |---|---|
