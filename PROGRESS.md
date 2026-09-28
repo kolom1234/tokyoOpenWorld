@@ -1,16 +1,24 @@
 # PROGRESS
-Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 실제 GPU 확인 + M02-T03 완료, 브랜치 `claude/m02-queue`)
+Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + M02-T03·T04 완료, 브랜치 `claude/m02-queue`, draft PR #14)
 
-## Current Milestone: M02 — Streaming & Deploy (T01–T03 완료 · T04–T07 남음)
-## Current Task: M02-T04 HLOD pipeline (다음)
-- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03(아래 Recently Completed).
+## Current Milestone: M02 — Streaming & Deploy (T01–T04 완료 · T05–T07 남음)
+## Current Task: M02-T05 Render cell adapter & HLOD switching (다음)
+- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03, M02-T04(아래 Recently Completed).
 - In progress: –
 - **임시 코드(삭제 예정)**: `apps/game/src/debug/local-cells.ts`(메인 스레드 glb 파싱 + `LocalGround`) → **M02-T05에서 삭제**. 교체 = `createStreaming`
   (`onReady` payload·`groundHeightAt`, ADR-0023). `LoadedCell.tkc`·`world-view.ts showWorld`도 그때 streaming 배선으로.
-- Next step (정확히 한 걸음): `### M02-T04` 블록 + `docs/04-data-pipeline.md §4.5`·`docs/05-tile-format.md §4(hlod.mesh)` 읽고 `tools/pipeline/src/stages/hlod/` 작성.
+- 로컬 빌드(커밋 안 됨, data/build): `20260928-7e215f4-7fb58d45` = MVP L0 294 + L1 24 + L2 144 + L3 9, validate 오류 0. T05 화면 확인·T07 publish에 재사용 가능(코드가 바뀌면 재빌드).
+- Next step (정확히 한 걸음): `### M02-T05` 블록 + 07 §2–3·06 §5·01 §4 읽고 render `hlod.mesh`(`_CHILD` + 셀별 uniform 16개 페이드, ADR-0024) → `apps/game/src/wiring/streaming-render.ts`.
 - Blockers: 없음
 
 ## Recently Completed
+- M02-T04 HLOD pipeline — `stages/hlod/{far-buildings,tokyo23-lod1(+worker),dem-far,child-split,boxes,l1,l2,l3,run}.ts`, `validate-hlod.ts`, `lib/{geom2d,png}.ts`,
+  CLI `hlod-prep`(23구 2020 zip 5.3 GB를 풀지 않고 `unzip -p` 스트림·워커 14개 → 원경 건물 **1,767,804동 / L2 57셀, 543 s**; 標高タイル dem_png z14 676장 → WF 8 m 원경 DEM 26 s)·`hlod`(73 s).
+  L1 = 영역 L0 부모 24셀(L0 정규화 건물 용접 + meshopt simplify 25%·절대 2 m, dem_1m 4 m; 영역 밖 자식 = 원경 박스), L2 = OBB 박스(≥ 20 m·≥ 1000 m², ≤ 12k) + 64 m 블록 매스,
+  L3 = 128 m 매스 + ≥ 80 m 박스, 자식 지형 = 65² RTIN + 스커트, **`hlod.mesh` = 머티리얼별 프리미티브 + `_CHILD` u8**(05 §4 변경: 셀당 draw 2), 야간 `_FACADE.flags`.
+  **수락(MVP 실빌드 20260928-7e215f4-7fb58d45)**: L1 최대 2.42 MiB ≤ 3 MB, L2 최대 1.82 MiB·L3 최대 1.39 MiB ≤ 2 MB(재시도 0), 모든 정점 `_CHILD` ∈ 0..15·지형 자식 16/16·stats 일치 → validate 오류 0(L0 294셀·이음새 553쌍 포함).
+  데이터: PLATEAU 신주쿠·메구로 2025(pref 판 = 3차 메시 단위 → 시부야 zip에 없는 5메시만), 23구 2020, `gsi-dem-tiles` → lock·03·ATTRIBUTION. normalize 다중 소스(같은 메시 파일 1회, 이전엔 덮어씀) → MVP 294셀 건물 44,292·도로 조각 269,140.
+  테스트 +1파일/+9건(pipeline 53). ADR-0024 (2026-09-29)
 - M02-T03 Lifecycle, ack, eviction, ground — `createStreaming`(service·planner·lifecycle·ground·waiters·cell-cache·cache-lru). 재계산 = L0 셀·모드·티어 변화 즉시 + 250 ms,
   진행 중 요청은 해제 반경 밖에서만 취소, 해제는 프레임당 ≤ 8(실행 직전 `inLoadZone` 재확인), onReady ≤ 2/프레임·render ack → live,
   failed → 60 s 뒤 재요청(기록 정리), whenReady = 영역 셀 pin + live|failed면 resolve, Cache Storage 1.5 GB LRU(세션 간 = 저장 순서 근사, 부팅 seed 백그라운드).
@@ -35,8 +43,8 @@ Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 실제 GPU 확인 + M02
 
 ## Known Issues
 - [pipeline] GSI DEM 2025판 표고는 JGD2024(2025 개정) 기준, PLATEAU는 JGD2011 → LOD3 차도 정점 vs dem_1m 차 중앙값 +0.05 m(IQR −0.03~+0.18, p95 +8.2 m = 고가도로). M01-T05는 도로 메시 없음 → M03 도로 빌드 때 도로면 우선 스냅 여부 결정.
-- [pipeline] `fetch` 미구현 → 이번엔 zip에서 필요한 것만 수동 해제(`data/raw/plateau-shibuya/extracted/`: udx/bldg·tran 4메시 + codelists + schemas). fetch 구현 시 lock sha256 검증 + `extracted/` 전체 해제.
-- [pipeline] `normalizePlateau`는 대상 셀 버킷을 메모리에 모두 보유(3×3 ≈ 수십 MB) → MVP 전체 294셀 실행 전 셀별 임시 파일 스필 필요(M02).
+- [pipeline] `fetch` 미구현 → zip에서 필요한 것만 수동 해제(`data/raw/plateau-{shibuya,shinjuku,meguro}/extracted/`: MVP 24메시 udx/bldg·tran + codelists + schemas, 2026-09-29). 23구 zip은 풀지 않음(hlod-prep 스트림). 標高タイル은 hlod-prep이 받음. fetch 구현 시 lock sha256 검증.
+- [pipeline] `normalizePlateau`는 대상 셀 버킷을 메모리에 모두 보유 → MVP 294셀은 `NODE_OPTIONS=--max-old-space-size=12288`로 통과(2026-09-29). 23구 전체 L0로 넓힐 때 셀별 스필 필요.
 - [pipeline] 건물 셀 배정 중심점 = 모든 면 정점 평균(installation 포함). M01-T05 실측: 셀 밖 돌출 최대 68.2 m(L0_-1_0, 허용 256 m) → 유지. 발자국 기준 전환은 294셀 빌드에서 문제가 보이면.
 - [pipeline] 도로 레코드는 TrafficArea 단위로 매우 잘게 나뉨(3×3에 27.7k) → M03 도로 메시 빌드 시 병합/삼각분할 비용 확인.
 - [ci] e2e = 부트·월드 로드(`boot.spec.ts`) + 렌더 스모크(`render.spec.ts`, WebGL2/SwiftShader 강제) + 디코드 워커(`decode.spec.ts`, `?probe=decode`). WebGPU 경로는 CI에 GPU가 없어 미검증 → 로컬 실제 GPU(Chrome headed, `channel: 'chrome'`)로 확인(2026-09-29). 걷기·모드 전환은 M04 이후. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
@@ -55,6 +63,7 @@ Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 실제 GPU 확인 + M02
 - [pipeline] validate 미구현 항목: 랜드마크 20곳 정확도 샘플, report.html(현재 report.json·report.md), world.json·셀 간 교차 검사 일부. 증분 캐시(`data/build/.cache`)도 미구현 → 매 빌드 전체 재생성(3×3 ≈ 5 s).
 - [pipeline] terrain `_SURF`는 전부 7(plaza) 임시값 → M03 도로·녹지 분류. buildings.mesh는 면별 정점(weld 없음, 정점/삼각형 ≈ 1.9) → 크기 문제 시 weld.
 - [pipeline] world.json의 `files.materials/rail/map`은 아직 없는 파일을 가리킨다(스키마 필수 필드) → 각 태스크(M03/M07/M08)에서 생성.
+- [pipeline] HLOD: 2020(L2/L3) vs 2025(L0/L1) 원천 차이로 원경 전환 시 일부 건물 등장·소멸 가능. 항공사진 지면색(04 §4.5 L2)·나무 임포스터는 M03/M04. 2020 원천 용도 코드가 대부분 null → 야간 점등 단계 기본 6.
 - [tools] `pnpm pipeline`은 `normalize`·`build`·`validate` 구현. terrain normalize·build는 GDAL 필요 → 컨테이너 전용. 재현성(gzip=zlib 버전)은 컨테이너 기준.
 - [geo] 골든 재생성 `--check`는 pyproj가 필요해 CI 미포함 → 파이프라인 CI(M01-T05 이후)에서 pyproj 설치 후 추가 검토.
 - [geo] build가 world.json `crs`를 `WORLD_ORIGIN`에서 생성(validate로 확인), 게임 부트(`world-load.ts checkManifest`)도 `WORLD_ORIGIN`과 대조(M01-T07). 셀 전체 해시(hash32) 검사는 메인 스레드 예산 때문에 M02 디코드 워커로.

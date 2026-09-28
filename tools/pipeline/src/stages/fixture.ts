@@ -152,8 +152,7 @@ export async function plateauMiniSnapshot(
 ): Promise<PlateauMiniSnapshot> {
   rmSync(workDir, { recursive: true, force: true });
   const norm = await normalizePlateau({
-    sourceId: PLATEAU_MINI_SOURCE,
-    rawRoot: join(fixtureDir, PLATEAU_MINI_SOURCE),
+    sources: [{ sourceId: PLATEAU_MINI_SOURCE, rawRoot: join(fixtureDir, PLATEAU_MINI_SOURCE) }],
     cells: [PLATEAU_MINI_CELL],
     outDir: join(workDir, 'normalized'),
     reader: createPlateauReader('citygml-sax'),

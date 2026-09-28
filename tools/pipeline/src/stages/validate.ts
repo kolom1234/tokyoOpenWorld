@@ -14,6 +14,7 @@ import {
 } from '@sanpo/tile-format';
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020.js';
 import { decodeGlb } from '../lib/gltf.ts';
+import { type HlodCellReport, hlodSummary, inspectHlodCell } from './validate-hlod.ts';
 import { type CellTerrain, checkSeams, type SeamReport } from './validate-seams.ts';
 
 /** docs/04 §4.6 예산(L0). 크기는 10진 MB. */
@@ -36,6 +37,7 @@ export interface CellReport {
 export interface ValidateReport {
   buildId: string;
   cells: CellReport[];
+  hlod: HlodCellReport[];
   seams: Omit<SeamReport, 'errors'>;
   errors: string[];
 }
@@ -89,7 +91,7 @@ interface CellCtx {
   errors: string[];
 }
 
-function checkHeader(r: TkcReader, tkc: Uint8Array, id: string, ctx: CellCtx): void {
+function checkHeader(r: TkcReader, tkc: Uint8Array, id: string, ctx: CellCtx, l0Budget = true): void {
   schemaErrors(ctx.v.header, rawHeader(tkc), `${id} header`, ctx.errors);
   const vr = verifyTkc(r);
   if (!vr.ok) ctx.errors.push(`${id}: ${vr.error.code} ${vr.error.message}`);
@@ -99,6 +101,7 @@ function checkHeader(r: TkcReader, tkc: Uint8Array, id: string, ctx: CellCtx): v
     for (const src of s.sources)
       if (!ctx.lockIds.has(src)) ctx.errors.push(`${id}: ${s.type} source ${src} not in lock`);
   }
+  if (!l0Budget) return; // HLOD 예산은 validate-hlod
   if (tkc.byteLength > BUDGET.cellBytes) ctx.errors.push(`${id}: ${tkc.byteLength} B > ${BUDGET.cellBytes}`);
   const st = h.stats;
   if (st.tris > BUDGET.tris || st.colliderTris > BUDGET.colliderTris || st.instances > BUDGET.instances) {
@@ -159,13 +162,25 @@ export async function validateBuild(
   const ctx: CellCtx = { buildId: world.buildId, v: createValidators(schemasDir), lockIds, errors };
   schemaErrors(ctx.v.world, world, 'world.json', errors);
   const cells: CellReport[] = [];
+  const hlod: HlodCellReport[] = [];
   const terrains: CellTerrain[] = [];
   for (const [key, e] of readIndex(dir, errors)) {
-    const { ix, iz } = unpackCellKey(key);
+    const { level, ix, iz } = unpackCellKey(key);
     const id = cellIdString(key);
-    const tkc = new Uint8Array(readFileSync(join(dir, 'L0', String(ix), `${iz}.tkc`)));
+    const tkc = new Uint8Array(readFileSync(join(dir, `L${level}`, String(ix), `${iz}.tkc`)));
     if (tkc.byteLength !== e.byteLength || tkcHash32(tkc) !== e.hash32)
       errors.push(`${id}: cells.idx size/hash mismatch`);
+    if (level > 0) {
+      const r = readTkc(tkc);
+      if (!r.ok) {
+        errors.push(`${id}: ${r.error.code} ${r.error.message}`);
+        continue;
+      }
+      checkHeader(r.value, tkc, id, ctx, false);
+      const h = await inspectHlodCell(r.value, tkc.byteLength, id, errors);
+      if (h) hlod.push(h);
+      continue;
+    }
     const res = await inspectCell(tkc, id, ctx);
     if (res) {
       cells.push(res[0]);
@@ -174,7 +189,7 @@ export async function validateBuild(
   }
   const { errors: seamErrors, ...seams } = checkSeams(terrains);
   errors.push(...seamErrors);
-  return { buildId: world.buildId, cells, seams, errors };
+  return { buildId: world.buildId, cells, hlod, seams, errors };
 }
 
 /** 셀 표(Markdown): PR 본문·인계용. */
@@ -193,6 +208,7 @@ export function reportMarkdown(r: ValidateReport): string {
     ...rows,
     '',
     `seams: ${s.pairs} pairs, ${s.heightSamples} height samples, ${s.meshVertices} mesh edge vertices compared`,
+    ...hlodSummary(r.hlod ?? []),
     `errors: ${r.errors.length}`,
     ...r.errors.map((e) => `- ${e}`),
     '',

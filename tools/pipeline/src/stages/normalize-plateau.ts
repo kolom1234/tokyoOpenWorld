@@ -1,7 +1,8 @@
 // normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2
 // 규칙: 건물은 중심점 셀에만(분할 금지), 도로면은 셀 경계에서 클리핑. 셀 파일 내부는 id 오름차순(결정론).
+// 여러 소스(구)는 한 번에 같은 버킷으로 — 都 pref 판은 3차 메시 단위라 같은 메시 파일이 여러 구 zip에 있다 → 파일명 기준 첫 소스만 읽는다.
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { type CellKey, cellIdString, type Logger, unpackCellKey } from '@sanpo/core';
 import { type CellBoundsWF, cellBoundsWF, cellOf, jisMesh3CodesInBBox, lonLatBBoxOfWF } from '@sanpo/geo';
 import { writeNdjsonGz } from '../lib/ndjson-gz.ts';
@@ -12,10 +13,15 @@ import type { NormalizedFeature, PlateauReader, RoadRecord } from '../readers/pl
 /** normalize가 읽는 PLATEAU 레이어(파일명 `<mesh>_<layer>_<epsg>_op.gml`). */
 const LAYERS = ['bldg', 'tran'] as const;
 
-export interface NormalizePlateauInput {
+export interface PlateauSourceRoot {
   sourceId: string;
   /** 압축 해제된 원천 루트(그 아래 `udx/<layer>/*.gml`). */
   rawRoot: string;
+}
+
+export interface NormalizePlateauInput {
+  /** 우선순위 순(같은 메시 파일은 앞 소스 것만). */
+  sources: readonly PlateauSourceRoot[];
   cells: readonly CellKey[];
   /** 보통 `data/normalized`. */
   outDir: string;
@@ -24,7 +30,8 @@ export interface NormalizePlateauInput {
 }
 
 export interface NormalizePlateauResult {
-  files: string[];
+  /** 읽은 파일(소스 순). 같은 이름의 뒤 소스 파일은 제외. */
+  files: { sourceId: string; file: string }[];
   features: number;
   buildings: number;
   roadPieces: number;
@@ -108,13 +115,21 @@ export async function normalizePlateau(input: NormalizePlateauInput): Promise<No
   for (const k of input.cells) {
     if (unpackCellKey(k).level !== 0) throw new RangeError(`normalizePlateau: L0 cells only (${cellIdString(k)})`);
   }
-  const files = plateauFilesForCells(input.rawRoot, input.cells);
+  const seen = new Set<string>();
+  const files: NormalizePlateauResult['files'] = [];
+  for (const src of input.sources) {
+    for (const file of plateauFilesForCells(src.rawRoot, input.cells)) {
+      if (seen.has(basename(file))) continue;
+      seen.add(basename(file));
+      files.push({ sourceId: src.sourceId, file });
+    }
+  }
   const buildings = new Map<CellKey, Bucket>();
   const roads = new Map<CellKey, Bucket>();
   const res: NormalizePlateauResult = { files, features: 0, buildings: 0, roadPieces: 0, written: [] };
-  for (const file of files) {
+  for (const { sourceId, file } of files) {
     const t0 = performance.now();
-    for await (const f of reader.read(file, { sourceId: input.sourceId })) {
+    for await (const f of reader.read(file, { sourceId })) {
       res.features++;
       const n = place(f, targets, f.layer === 'buildings' ? buildings : roads);
       if (f.layer === 'buildings') res.buildings += n;

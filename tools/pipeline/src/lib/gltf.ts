@@ -18,6 +18,8 @@ export interface GlbPrimitive {
   /** 키 순서 = 기록 순서(결정론). */
   attributes: Record<string, GlbAttribute>;
   indices: Uint32Array;
+  /** HLOD 자식 영역 0..15 → primitive `extras.child`(05 §4 hlod.mesh). */
+  child?: number;
 }
 
 export interface GlbMesh {
@@ -33,6 +35,7 @@ export interface DecodedGlb {
     materialId: string;
     attributes: Record<string, { array: TypedArray; itemSize: number; normalized: boolean }>;
     indices: Uint32Array;
+    child?: number;
   }>;
   translation: Vec3Tuple;
   scale: Vec3Tuple;
@@ -59,9 +62,16 @@ function maxIndex(indices: Uint32Array): number {
   return m;
 }
 
-function addPrimitive(doc: Document, p: GlbPrimitive): ReturnType<Document['createPrimitive']> {
+type Material = ReturnType<Document['createMaterial']>;
+
+function addPrimitive(
+  doc: Document,
+  p: GlbPrimitive,
+  materials: Map<string, Material>,
+): ReturnType<Document['createPrimitive']> {
   const buffer = doc.getRoot().listBuffers()[0];
-  const prim = doc.createPrimitive().setExtras({ materialId: p.materialId });
+  const extras = p.child === undefined ? { materialId: p.materialId } : { materialId: p.materialId, child: p.child };
+  const prim = doc.createPrimitive().setExtras(extras);
   for (const [name, a] of Object.entries(p.attributes)) {
     const acc = doc
       .createAccessor(name)
@@ -79,7 +89,12 @@ function addPrimitive(doc: Document, p: GlbPrimitive): ReturnType<Document['crea
       .setArray(idx)
       .setBuffer(buffer ?? null),
   );
-  const mat = doc.createMaterial(p.materialId).setExtras({ materialId: p.materialId });
+  // 같은 머티리얼 ID는 문서에 1개(HLOD는 자식별 프리미티브가 머티리얼을 공유).
+  let mat = materials.get(p.materialId);
+  if (!mat) {
+    mat = doc.createMaterial(p.materialId).setExtras({ materialId: p.materialId });
+    materials.set(p.materialId, mat);
+  }
   return prim.setMaterial(mat);
 }
 
@@ -93,7 +108,8 @@ export async function encodeGlb(mesh: GlbMesh): Promise<Uint8Array> {
   });
   doc.createExtension(KHRMeshQuantization).setRequired(true);
   const m = doc.createMesh(mesh.name);
-  for (const p of mesh.primitives) m.addPrimitive(addPrimitive(doc, p));
+  const materials = new Map<string, Material>();
+  for (const p of mesh.primitives) m.addPrimitive(addPrimitive(doc, p, materials));
   const node = doc.createNode(mesh.name).setMesh(m);
   if (mesh.translation) node.setTranslation([...mesh.translation]);
   if (mesh.scale !== undefined) node.setScale([mesh.scale, mesh.scale, mesh.scale]);
@@ -119,8 +135,9 @@ export async function decodeGlb(bytes: Uint8Array): Promise<DecodedGlb> {
       if (acc) attributes[name] = attributeOf(acc);
     }
     const idx = p.getIndices()?.getArray();
-    const extras = p.getExtras() as { materialId?: string };
-    return { materialId: extras.materialId ?? '', attributes, indices: Uint32Array.from(idx ?? []) };
+    const extras = p.getExtras() as { materialId?: string; child?: number };
+    const base = { materialId: extras.materialId ?? '', attributes, indices: Uint32Array.from(idx ?? []) };
+    return extras.child === undefined ? base : { ...base, child: extras.child };
   });
   return {
     primitives,

@@ -88,11 +88,13 @@ data/build/<buildId>/                        (build/hlod/validate)
 ### 4.5 hlod
 | 레벨 | 셀 크기 | 내용 | 목표 크기 |
 |---|---|---|---|
-| L1 | 1024 m | L0 16개 병합 → 건물 simplify 25%, 소품 제거, 나무→임포스터 카드, 지형 4 m | ≤ 3 MB |
-| L2 | 4096 m | 건물 = LOD1 박스(높이 유지, 틴트), 지형 16 m, 지면 색 = 항공사진 저주파 | ≤ 2 MB |
-| L3 | 16384 m | 블록 단위 압출 매스, 지형 64 m | ≤ 2 MB |
-- MVP 영역 밖 23구: `plateau-tokyo23` LOD1로 L2/L3만 생성. `hlodExtentWF`는 L3(16384 m) 격자에 정렬(3×3 L3 셀이 23구 전체를 덮음).
-- 야간용: L1–L3 건물에 창 발광 마스크 파라미터 포함(원거리 야경).
+| L1 | 1024 m | L0 16개 병합 → 건물 simplify 25%(건물 단위 용접, 절대 오차 ≤ 2 m), 소품 제거, 나무→임포스터 카드(M04), 지형 4 m(dem_1m, RTIN 0.25 m) | ≤ 3 MB |
+| L2 | 4096 m | 건물 = LOD1 박스(방향 사각형 OBB, 높이 유지 — 높이 ≥ 20 m·바닥 ≥ 1000 m² 부피 순 ≤ 12k동) + 나머지 64 m 블록 매스, 지형 16 m(RTIN 1 m), 지면 색 = 항공사진 저주파(M03) | ≤ 2 MB |
+| L3 | 16384 m | 128 m 블록 압출 매스(면적 가중 높이) + 높이 ≥ 80 m 개별 박스, 지형 64 m(RTIN 4 m) | ≤ 2 MB |
+- 명령: `hlod-prep`(원천 → data/derived: `--step buildings` 23구 zip 스트림 → `far-buildings/L2_*.ndjson.gz`, `--step dem` 標高タイル → `terrain-far/dem_far.{json,f32}` 8 m) → `hlod --build-id <id>`(build 결과에 L1–L3 추가, cells.idx 병합).
+- L1 = 영역 L0의 부모. 영역 밖 자식은 23구 원경 박스 + 원경 DEM. L2/L3 = `hlodExtentWF` 전체(`plateau-tokyo23` LOD1, 23구 밖은 지형만). `hlodExtentWF`는 L3(16384 m) 격자에 정렬(3×3 L3 셀이 23구 전체를 덮음).
+- 자식 분할: 건물 = 중심점(normalize와 같은 `centroidXZ`)의 자식, 지형 = 자식 정사각형별 65² RTIN 패치 + 네 변 스커트(깊이 = 격자 간격). 자식 번호는 정점 속성 `_CHILD`(머티리얼별 프리미티브 1개). 예산 초과 시 단순화 강화 재시도(ADR-0024).
+- 야간용: L1–L3 건물 `_FACADE.flags` = 점등 단계(하위 4비트, 용도별) + 창 패턴 시드(상위 4비트)(원거리 야경, 05 §4).
 
 ### 4.6 validate (실패 시 publish 차단)
 - 스키마 검증(world.json, 셀 헤더, meta).

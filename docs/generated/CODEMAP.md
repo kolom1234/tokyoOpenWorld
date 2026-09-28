@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 154개.
+> 파일 167개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스(M01): 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → 셀 표시. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -161,8 +161,10 @@
 ## tools/pipeline
 - `tools/pipeline/src/checks/terrain-gsi.ts` — M01-T03 수락 검증: dem_1m.tif 표고 vs 地理院地図 표시값(GSI 표고 API) 비교 + GDAL/@sanpo/geo 투영 일치 확인. 네트워크 필요(CI 제외).
 - `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
+- `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
 - `tools/pipeline/src/lib/gltf.ts` — 셀 glb 섹션 인코드/디코드: gltf-transform 문서 → EXT_meshopt_compression + KHR_mesh_quantization glb. see docs/05-tile-format.md §4 (glb), docs/adr/0018-cell-mesh-build.md | exports: GlbArray, GlbAttribute, GlbPrimitive, GlbMesh, DecodedGlb, encodeGlb, decodeGlb
 - `tools/pipeline/src/lib/ndjson-gz.ts` — 결정론적 ndjson.gz 입출력: 키 정렬된 레코드 → gzip(헤더 mtime=0, OS=255 고정). see docs/04-data-pipeline.md §1(재현성) | exports: writeNdjsonGz, readNdjsonGz
+- `tools/pipeline/src/lib/png.ts` — 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용. 외부 의존 없음(node:zlib). | exports: DecodedPng, decodePng
 - `tools/pipeline/src/lib/polygon.ts` — 폴리곤 유틸: 셀 경계(축정렬 XZ 사각형) 클리핑. 도로·지형처럼 셀 경계에서 자르는 레이어용. see docs/04-data-pipeline.md §4.2, §6 | exports: ringAreaXZ, clipRingsToRect
 - `tools/pipeline/src/lib/raster.ts` — 래스터 유틸: 투영 격자 정의(PRJ 정수 m = 픽셀 중심), Float32 raw 입출력, GDAL VRT 기록, 결측 병합·통계. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: PrjGrid, geoTransformOf, targetExtentOf, readFloat32, writeGridVrt, FillStats, mergeWithFallback, ValueStats, valueStats
 - `tools/pipeline/src/lib/triangulate.ts` — 3D 평면 폴리곤(외곽 + 구멍) 삼각분할: Newell 법선 → 지배 축 투영 → earcut → 법선 방향으로 감기 정렬. see docs/04-data-pipeline.md §4.4-2 | exports: Vec3, Triangulated, newellNormal, triangulateRings
@@ -186,7 +188,18 @@
 - `tools/pipeline/src/stages/build/terrain-rtin.ts` — 지형 단순화: RTIN(직각 이등변 삼각형 이분 계층) + 정확 오차(삼각형 내부 모든 격자 샘플) + 경계 정점 강제. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: rtinTriangulate
 - `tools/pipeline/src/stages/fixture-plateau.ts` — plateau-mini 픽스처: 원천 CityGML에서 셀 1개의 건물 몇 동·도로 몇 개만 잘라 같은 파일 이름으로 기록. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: PlateauMiniOptions, splitCityGml, extractPlateauMini
 - `tools/pipeline/src/stages/fixture.ts` — fixture 단계: tests/fixtures/{world-mini, plateau-mini} 생성(M01-T05 빌드 파이프라인 재사용) + plateau-mini 1셀 빌드 스냅샷. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: WORLD_MINI_AREA, PLATEAU_MINI_CELL, PLATEAU_MINI_SOURCE, PLATEAU_MINI_BUILD_ID, LockSource, fixtureAttribution, FixtureInput, buildWorldMini, buildPlateauMini, PlateauMiniSnapshot, plateauMiniSnapshot, hasPlateauRaw
-- `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
+- `tools/pipeline/src/stages/hlod/boxes.ts` — 원경 건물 기하: 방향 사각형 박스(LOD1 박스, 벽 4 + 지붕, 바닥 없음)와 격자 블록 매스(작은 건물 묶음). 평면 법선·벽 UV는 L0 규칙과 같다. | exports: BOX_SINK_M, addPrism, addFarBox, MassCell, accumulateMasses, MASS_MIN_COVERAGE, addMass
+- `tools/pipeline/src/stages/hlod/child-split.ts` — HLOD 자식 16영역 분할: 자식 인덱스, 자식별 지형 패치(RTIN + 스커트), 머티리얼별 프리미티브 + `_CHILD` 정점 속성 → 한 glb. | exports: CHILDREN, PATCH_N, childKeys, MeshStream, ChildGeometry, emptyChildren, HeightFn, PatchSpec, addTerrainPatch, patchOf, HlodEncoded, encodeHlod
+- `tools/pipeline/src/stages/hlod/dem-far.ts` — 원경 지형(L2/L3·영역 밖 L1): 地理院 標高タイル(dem_png, z14 ≈ DEM10B/5A) 받기 → WF 8 m 격자로 재표본 → 이중선형 조회. | exports: DEM_TILE_Z, DEM_TILE_URL, FAR_DEM_STEP_M, FarDem, tileRange, demPngHeight, fetchDemTiles, resampleFarDem, farDemHeight, writeFarDem, readFarDem
+- `tools/pipeline/src/stages/hlod/far-buildings.ts` — 원경 건물 레코드(FarBuilding): PLATEAU 건물 → 중심점·방향 사각형(OBB)·바닥 높이·높이·바닥 면적·용도. L2/L3·영역 밖 L1 HLOD 입력. | exports: FarBuilding, farBuildingOf, farToLine, farFromRow, floorsOf, nightFlags
+- `tools/pipeline/src/stages/hlod/l1.ts` — L1 HLOD(1024 m = L0 4×4): 영역 안 자식 = L0 정규화 건물(LOD2/3 면) 병합 → meshopt simplify 25% + dem_1m 4 m 지형, | exports: L1_PARAMS, L1Sources, addSimplifiedBuildings, farIn, L1Result, buildL1
+- `tools/pipeline/src/stages/hlod/l2.ts` — L2 HLOD(4096 m = L1 4×4): 건물 = LOD1 박스(방향 사각형, 높이 유지) — 크고 높은 건물 우선 상한까지, 나머지는 64 m 블록 매스. | exports: FarLevelParams, L2_PARAMS, FarLevelResult, splitBoxes, buildFarLevel, buildL2
+- `tools/pipeline/src/stages/hlod/l3.ts` — L3 HLOD(16384 m = L2 4×4): 블록 단위 압출 매스(128 m 격자, 면적 가중 높이) + 초고층(≥ 80 m)만 개별 박스(스카이라인). | exports: L3_PARAMS, buildL3
+- `tools/pipeline/src/stages/hlod/run.ts` — hlod 단계: L1(영역 L0의 부모)·L2/L3(hlodExtentWF 전체) → hlod.mesh 1섹션 TKC, 크기 예산 초과 시 단순화 강화 후 재시도, | exports: FAR_SOURCES, HlodInput, HlodCellStats, runHlod
+- `tools/pipeline/src/stages/hlod/tokyo23-lod1.ts` — 23구 원경 건물 추출: plateau-tokyo23 zip의 udx/bldg/*.gml을 풀지 않고 `unzip -p` 스트림 → SAX 리더 → FarBuilding | exports: FAR_BUILDINGS_DIR, listBldgMembers, extractMember, ExtractInput, extractTokyo23, readFarBuildings
+- `tools/pipeline/src/stages/hlod/tokyo23-lod1.worker.ts` — 워커 스레드: zip 멤버 1개씩 받아 원경 건물 줄을 돌려준다(tokyo23-lod1.ts runPool).
+- `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: PlateauSourceRoot, NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
 - `tools/pipeline/src/stages/normalize-terrain.ts` — normalize 단계(지형): GSI DEM1A(주) + DEM5A(결측 채움) → GDAL 재투영(EPSG:6677, 1 m) → 잔여 결측 보간 → data/normalized/terrain/dem_1m.tif. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: NormalizeTerrainInput, GradeReport, NormalizeTerrainResult, gridOfBounds, normalizeTerrain, writeTerrainMeta, hasDemSources
+- `tools/pipeline/src/stages/validate-hlod.ts` — validate(HLOD L1–L3): 레벨별 크기 예산(L1 ≤ 3 MB, L2/L3 ≤ 2 MB), hlod.mesh 자식 그룹(모든 정점 _CHILD ∈ 0..15, | exports: HLOD_BUDGET_BYTES, HlodCellReport, inspectHlodCell, hlodSummary
 - `tools/pipeline/src/stages/validate-seams.ts` — validate: 이웃 셀 지형 경계 완전 일치 검사(terrain.height u16 행·열, terrain.mesh 경계 정점). see docs/04-data-pipeline.md §4.6, §6 | exports: CellTerrain, SeamReport, edgeVertices, checkSeams
 - `tools/pipeline/src/stages/validate.ts` — validate 단계: 스키마(world.json·셀 헤더·meta.json, ajv) + cells.idx 일치 + 섹션 해시 + 예산 + 경계 이음새 → report. see docs/04-data-pipeline.md §4.6 | exports: BUDGET, CellReport, ValidateReport, createValidators, validateBuild, reportMarkdown, writeReport

@@ -8,6 +8,10 @@ import { FORMAT_VERSION } from '@sanpo/tile-format';
 export interface AreaDef {
   id: string;
   l0: { minIx: number; maxIx: number; minIz: number; maxIz: number };
+  /** HLOD 원경 소스(lock id). */
+  hlodSources?: string[];
+  /** HLOD 범위(WF, L3 16384 m 격자 정렬). */
+  hlodExtentWF?: { minX: number; maxX: number; minZ: number; maxZ: number };
 }
 
 /** 스폰 = 스크램블 교차로(05 §2 예시, M01-T01에서 WF 확인). */

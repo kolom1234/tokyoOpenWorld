@@ -27,7 +27,14 @@ src/stages/build/buildings-mesh.ts buildings.mesh(u16 POSITION·균일 scale, _B
 src/stages/build/manifest.ts     buildId·world.json (M01-T05)
 src/stages/build/assemble.ts     셀 TKC 조립 + 영역 빌드(cells.idx·world.json) (M01-T05)
 src/stages/build/{roads-mesh,collision,instances,rail-global}.ts   (미구현)
-src/stages/hlod/*.ts  materials.ts  interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts
+src/stages/hlod/far-buildings.ts  FarBuilding(중심점·OBB·y0·높이·면적·용도) + 줄 형식 + nightFlags (M02-T04, ADR-0024)
+src/stages/hlod/tokyo23-lod1{,.worker}.ts  23구 zip `unzip -p` 스트림 → 워커 스레드 → L2 버킷(data/derived/far-buildings)
+src/stages/hlod/dem-far.ts        標高タイル dem_png z14 받기(manifest) → WF 8 m 원경 격자, farDemHeight
+src/stages/hlod/child-split.ts    childKeys, 자식 지형 패치(RTIN + 스커트), MeshStream, encodeHlod(머티리얼별 프리미티브 + `_CHILD`)
+src/stages/hlod/boxes.ts          OBB 박스·블록 매스 기하 / l1.ts(용접 + meshopt simplify) / l2.ts(buildFarLevel) / l3.ts / run.ts(예산 재시도·cells.idx 병합)
+src/stages/validate-hlod.ts       HLOD 예산·자식 그룹 검사
+src/lib/{geom2d,png}.ts           볼록 껍질·최소 면적 사각형 / 최소 PNG 디코더
+materials.ts  interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts   (미구현)
 src/stages/validate.ts validate-seams.ts   스키마(ajv)·해시·예산·이웃 경계 검사 → report.{json,md} (M01-T05)
 src/stages/fixture.ts fixture-plateau.ts   tests/fixtures 생성: world-mini(buildArea 2×2 → validate → 복사 + ATTRIBUTION), plateau-mini(CityGML 원문 발췌·DEM 창·스냅샷), `plateauMiniSnapshot` (M01-T07, ADR-0019)
 src/stages/publish.ts gc.ts
@@ -43,7 +50,9 @@ docker/run.sh                   컨테이너 실행(저장소 → /work, node_mo
 interface PlateauReader { readonly name: 'nusamai' | 'citygml-sax'; read(file: string, opts: { sourceId: string }): AsyncIterable<NormalizedFeature> }
 type NormalizedFeature = BuildingRecord | RoadRecord;   // 필드: docs/04-data-pipeline.md §4.2 표, 정의: readers/plateau/types.ts
 createPlateauReader(impl = 'citygml-sax'); parseCityGmlString(xml, sourceId)   // 후자는 테스트·픽스처용
-normalizePlateau({ sourceId, rawRoot, cells, outDir, reader, log })            // → data/normalized/{buildings,roads}/<cellId>.ndjson.gz
+createCityGmlSaxReader().readChunks(asyncIterableOfStrings, { sourceId })       // 스트림 입력(unzip -p)
+normalizePlateau({ sources: [{ sourceId, rawRoot }…], cells, outDir, reader, log })  // → data/normalized/{buildings,roads}/<cellId>.ndjson.gz
+                                                                                // 소스들을 한 버킷으로, 같은 메시 파일명은 앞 소스만(都 pref 판 = 메시 단위)
 ```
 - 원천 배치: `data/raw/<sourceId>/<zip>` + `data/raw/<sourceId>/extracted/{udx,codelists,…}`.
 - 실행: `tools/pipeline/docker/run.sh node tools/pipeline/src/cli.ts normalize --layer plateau --source plateau-shibuya --cells L0_-1_0,…`
@@ -69,6 +78,15 @@ validateBuild(dir, schemasDir, lockIds): Promise<ValidateReport>;  writeReport(d
 - 실행: `docker/run.sh node tools/pipeline/src/cli.ts build --cells …` → `… validate` / 픽스처: `… fixture [--only world-mini|plateau-mini]` / 재현성: `docker/run.sh sh tools/pipeline/scripts/repro-build.sh --cells …`
 - 섹션: terrain.mesh·terrain.height(sources gsi-dem), buildings.mesh(건물 source), meta.json(건물 source, 없으면 영역 PLATEAU 소스). 셀 AABB = 지형 ∪ 건물(mm 바깥 반올림).
 
+## HLOD (M02-T04, ADR-0024)
+```ts
+extractTokyo23({ zipPath, sourceId, extent, derivedDir, log, workers? });  fetchDemTiles(rawDir, extent, log) → manifestSha;  resampleFarDem(rawDir, extent) → FarDem
+runHlod({ area, buildId, normalizedDir, derivedDir, outDir, levels, log }) → HlodCellStats[]   // L1(영역 부모)·L2/L3(hlodExtentWF) TKC + cells.idx 병합
+buildL1(key, { l0Buildings, dem1m, farDem, far }, ratio);  buildFarLevel(key, far, dem, params)  // → ChildGeometry[16] → encodeHlod
+```
+- 실행: `docker/run.sh node tools/pipeline/src/cli.ts hlod-prep [--step buildings|dem] [--workers 14]` → `build` → `hlod --build-id <id>` → `validate`.
+- 예산: L1 3e6 B, L2/L3 2e6 B(10진). 초과 시 L1 비율 × 0.6ⁿ, L2/L3 박스 × 0.6ⁿ·매스 격자 × 2(≤ 4회).
+
 ## Invariants
 - 모든 단계 결정론(정렬·시드). 같은 입력 → 같은 바이트.
 - 셀 경계 규칙(04 §6) 준수. 건물 분할 금지.
@@ -78,10 +96,11 @@ validateBuild(dir, schemasDir, lockIds): Promise<ValidateReport>;  writeReport(d
 
 ## Tests
 픽스처 셀 빌드 스냅샷 해시, 경계 이음새 검사, 폴리곤·스플라인 유틸 단위 테스트.
-현재: `test/build-terrain.test.ts`(RTIN 오차 상한·면적·경계 정점, 이웃 셀 높이장 u16·메시 경계 정점 완전 일치, 결정론), `test/fixtures.test.ts`(커밋된 world-mini validate·4 이음새·ATTRIBUTION 스키마, plateau-mini normalize→build 2회 동일 + `expected.json` 스냅샷), `test/build-cell.test.ts`(건물 속성·양자화 오차·외향 법선, 영역 빌드 → validate 무오류·lock 위반 검출, 2회 빌드 바이트 동일), `test/dem.test.ts`(FGD DEM 파싱·startPoint·결측 종류, 격자 정렬, 1A/5A 병합), `test/citygml-sax.test.ts`(합성 CityGML: 면 종류·속성·UV·LOD 선택·도로 기능), `test/polygon.test.ts`(클리핑 이음새·보간, gzip 헤더 고정).
+현재: `test/hlod.test.ts`(자식 분할 합집합·예산·박스 외향·매스 피복·simplify 25%·PNG/dem_png·OBB), `test/build-terrain.test.ts`(RTIN 오차 상한·면적·경계 정점, 이웃 셀 높이장 u16·메시 경계 정점 완전 일치, 결정론), `test/fixtures.test.ts`(커밋된 world-mini validate·4 이음새·ATTRIBUTION 스키마, plateau-mini normalize→build 2회 동일 + `expected.json` 스냅샷), `test/build-cell.test.ts`(건물 속성·양자화 오차·외향 법선, 영역 빌드 → validate 무오류·lock 위반 검출, 2회 빌드 바이트 동일), `test/dem.test.ts`(FGD DEM 파싱·startPoint·결측 종류, 격자 정렬, 1A/5A 병합), `test/citygml-sax.test.ts`(합성 CityGML: 면 종류·속성·UV·LOD 선택·도로 기능), `test/polygon.test.ts`(클리핑 이음새·보간, gzip 헤더 고정).
 
 ## Status
-M01-T02: PLATEAU 리더(SAX) + normalize(건물·도로) + 컨테이너. M01-T03: DEM → dem_1m.tif. M01-T05: build(지형·건물·meta) + validate(스키마·해시·예산·이음새). M01-T07: fixture. 미구현: fetch, derive, 도로/충돌/인스턴스 섹션, hlod, publish, 증분 캐시(`data/build/.cache`), 정확도 샘플·report.html.
+M01-T02: PLATEAU 리더(SAX) + normalize(건물·도로) + 컨테이너. M01-T03: DEM → dem_1m.tif. M01-T05: build(지형·건물·meta) + validate(스키마·해시·예산·이음새). M01-T07: fixture.
+M02-T04: hlod-prep(23구 원경 건물·標高タイル) + hlod(L1–L3) + validate HLOD 검사, normalize 다중 소스. 미구현: fetch, derive, 도로/충돌/인스턴스 섹션, publish, 증분 캐시(`data/build/.cache`), 정확도 샘플·report.html, HLOD 항공사진 지면색.
 
 ## Gotchas
 - 호스트 pnpm node_modules(Windows 정션)는 리눅스 컨테이너에서 깨짐 → `docker/run.sh`가 볼륨으로 가림. 컨테이너 pnpm은 `--store-dir` 고정(안 하면 저장소 루트에 `.pnpm-store/` 생성).
