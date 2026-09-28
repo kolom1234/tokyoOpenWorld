@@ -4,12 +4,12 @@
 | 리소스 | 이름(예) | 용도 |
 |---|---|---|
 | Worker | `tokyo-sanpo` (+ `tokyo-sanpo-staging`) | 게임 번들(Static Assets) + `/world/*` R2 프록시 + `/api/*` |
-| R2 버킷 | `sanpo-world-prod`, `sanpo-world-dev` | 월드 데이터 `world/<buildId>/**` |
-| KV | `SANPO_CONFIG` | `CURRENT_BUILD:v<formatVersion>` = 활성 buildId |
+| R2 버킷 | `sanpo-world-prod`, `sanpo-world-dev`(staging) — 위치 힌트 apac, 2026-09-29 생성 | 월드 데이터 `world/<buildId>/**` |
+| KV | `SANPO_CONFIG`(prod), `SANPO_CONFIG_STAGING` | `CURRENT_BUILD:v<formatVersion>` = 활성 buildId, `BUILDS:v<fv>`·`BUILD_FILES:<id>`(퍼블리시·gc, ADR-0026) |
 | (확장) R2 커스텀 도메인 | `world.<domain>` | 트래픽 증가 시 Worker 우회 CDN 캐시 (§5) |
 
 ## 2. `apps/worker/wrangler.jsonc`
-아래는 **목표 구성**. 현재 커밋본은 R2 버킷·KV가 아직 없어 `r2_buckets`/`kv_namespaces`를 생략하고 `workers_dev`·`preview_urls: true`를 켠다(ADR-0015). 바인딩이 없으면 `/world/*`, `/api/world/current`는 `503 {error:"world_storage_unconfigured"}`로 비활성 — 배포는 성공. 리소스 생성 후 top-level과 `env.staging` **양쪽에** 바인딩 추가(env 간 상속 안 됨, `vars`도 동일).
+아래는 구성 요약. **M02-T06에서 리소스를 만들고 바인딩을 추가했다**: top-level = `sanpo-world-prod` + `SANPO_CONFIG`, `env.staging` = `sanpo-world-dev` + `SANPO_CONFIG_STAGING`(env 간 상속 안 됨 → 양쪽에). 바인딩이 없는 환경에서는 여전히 `/world/*`, `/api/world/current` → `503 {error:"world_storage_unconfigured"}`(ADR-0015). 퍼블리시 CLI는 이 파일에서 버킷·KV id를 읽는다.
 ```jsonc
 {
   "name": "tokyo-sanpo",
@@ -54,8 +54,8 @@
 |---|---|
 | `GET /api/health` | `{ ok, bindings: { world, config } }`(boolean만, no-store) — 배포 스모크 테스트용 |
 | `GET /api/world/current?fv=1` | KV `CURRENT_BUILD:v1` → `{ buildId, formatVersion, baseUrl }` (Cache-Control max-age=60) |
-| `GET /world/<buildId>/<path>` | ① `caches.default` 조회 → ② 미스 시 `env.WORLD.get(key, { range: req.headers, onlyIf: req.headers })` → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답만 `ctx.waitUntil(cache.put)` (206은 캐시 안 함) → 없으면 404(`max-age=300`) |
-| `GET /api/weather` | `LIVE_WEATHER=true`일 때만. Open-Meteo 현재 날씨(도쿄 중심 좌표) 프록시, 10분 캐시 |
+| `GET /world/<buildId>/<path>` | 평범한 GET: ① `caches.default` 조회 → ② 미스 시 R2 → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답만 `ctx.waitUntil(cache.put)`. Range·조건부 헤더가 있으면 캐시를 건너뛰고 `env.WORLD.get(key, { range, onlyIf })`가 206/304/412. 없으면 404(`max-age=300`). 진단 `X-Sanpo-Cache: HIT/MISS/BYPASS`(ADR-0026) |
+| `GET /api/weather` | `LIVE_WEATHER=true`일 때만(아니면 404). Open-Meteo 현재 날씨(도쿄역, m/s) → `{time, temperatureC, precipitationMm, weatherCode, cloudCover 0–1, windMs, windDirDeg, isDay}`, 10분 캐시, 상류 오류 502 |
 | `POST /api/log` | 오류 보고 1% 샘플링(M11, Workers Analytics Engine 선택) |
 - buildId 형식 검증 정규식 `^[0-9]{8}-[0-9a-f]{7}-[0-9a-f]{8}$`, 경로 `..` 차단.
 
@@ -78,8 +78,12 @@
 - 공용 셋업: `.github/actions/setup`(pnpm → Node → install), 스모크: `.github/scripts/smoke.sh`.
 - **world-mini 픽스처(M01-T07, ADR-0019)**: `vite build`가 `tests/fixtures/world-mini`를 `dist/fixtures/world-mini/`로 복사 → PR preview·staging 정적 에셋(`/fixtures/*` = `Cache-Control: no-cache`). 게임은 `?world=mini`일 때만 이 경로를 쓴다. production 빌드는 `SANPO_WORLD_MINI=0`으로 복사 생략.
 - 시크릿: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. 월드 퍼블리시용 `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`는 **빌드 머신 로컬에만**(CI에 두지 않음).
+  키가 없으면 퍼블리시는 같은 API 토큰으로 R2 REST 업로드 + 배포된 Worker HEAD 검증(ADR-0026).
+- 월드 퍼블리시(빌드 머신, 호스트에서): `pnpm pipeline publish --build-id <id> --env dev|prod [--set-current] [--verify-url https://<worker>/world]`,
+  검증만 `--verify-only --verify-url …`, 정리 `pnpm pipeline gc --env dev [--apply]`. 데이터 롤백 = `CURRENT_BUILD:v1`을 직전 buildId로(§8).
 - ODPT 키는 파이프라인(오프라인 시간표 컴파일)에서만 사용. 런타임·클라이언트에 비밀값 없음.
 
 ## 8. 릴리스 호환성
 - 클라이언트 번들은 지원 `formatVersion`을 상수로 가진다. `/api/world/current?fv=<n>`로 해당 포맷의 buildId를 받는다 → 코드와 데이터를 독립 배포 가능.
 - 데이터 롤백 = KV 값을 직전 buildId로 되돌림(즉시).
+- 현재(2026-09-29, M02-T07): staging = `20260928-b2d1e36-7fb58d45`(MVP L0 294 + HLOD 177, 212 MB, dev 버킷). production 데이터 없음(첫 prod 퍼블리시 전까지 `/api/world/current` = no_build → 스모크는 경고만).

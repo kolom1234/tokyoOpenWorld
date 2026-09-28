@@ -88,11 +88,13 @@ data/build/<buildId>/                        (build/hlod/validate)
 ### 4.5 hlod
 | 레벨 | 셀 크기 | 내용 | 목표 크기 |
 |---|---|---|---|
-| L1 | 1024 m | L0 16개 병합 → 건물 simplify 25%, 소품 제거, 나무→임포스터 카드, 지형 4 m | ≤ 3 MB |
-| L2 | 4096 m | 건물 = LOD1 박스(높이 유지, 틴트), 지형 16 m, 지면 색 = 항공사진 저주파 | ≤ 2 MB |
-| L3 | 16384 m | 블록 단위 압출 매스, 지형 64 m | ≤ 2 MB |
-- MVP 영역 밖 23구: `plateau-tokyo23` LOD1로 L2/L3만 생성. `hlodExtentWF`는 L3(16384 m) 격자에 정렬(3×3 L3 셀이 23구 전체를 덮음).
-- 야간용: L1–L3 건물에 창 발광 마스크 파라미터 포함(원거리 야경).
+| L1 | 1024 m | L0 16개 병합 → 건물 simplify 25%(건물 단위 용접, 절대 오차 ≤ 2 m), 소품 제거, 나무→임포스터 카드(M04), 지형 4 m(dem_1m, RTIN 0.25 m) | ≤ 3 MB |
+| L2 | 4096 m | 건물 = LOD1 박스(방향 사각형 OBB, 높이 유지 — 높이 ≥ 20 m·바닥 ≥ 1000 m² 부피 순 ≤ 12k동) + 나머지 64 m 블록 매스, 지형 16 m(RTIN 1 m), 지면 색 = 항공사진 저주파(M03) | ≤ 2 MB |
+| L3 | 16384 m | 128 m 블록 압출 매스(면적 가중 높이) + 높이 ≥ 80 m 개별 박스, 지형 64 m(RTIN 4 m) | ≤ 2 MB |
+- 명령: `hlod-prep`(원천 → data/derived: `--step buildings` 23구 zip 스트림 → `far-buildings/L2_*.ndjson.gz`, `--step dem` 標高タイル → `terrain-far/dem_far.{json,f32}` 8 m) → `hlod --build-id <id>`(build 결과에 L1–L3 추가, cells.idx 병합).
+- L1 = 영역 L0의 부모. 영역 밖 자식은 23구 원경 박스 + 원경 DEM. L2/L3 = `hlodExtentWF` 전체(`plateau-tokyo23` LOD1, 23구 밖은 지형만). `hlodExtentWF`는 L3(16384 m) 격자에 정렬(3×3 L3 셀이 23구 전체를 덮음).
+- 자식 분할: 건물 = 중심점(normalize와 같은 `centroidXZ`)의 자식, 지형 = 자식 정사각형별 65² RTIN 패치 + 네 변 스커트(깊이 = 격자 간격). 자식 번호는 정점 속성 `_CHILD`(머티리얼별 프리미티브 1개). 예산 초과 시 단순화 강화 재시도(ADR-0024).
+- 야간용: L1–L3 건물 `_FACADE.flags` = 점등 단계(하위 4비트, 용도별) + 창 패턴 시드(상위 4비트)(원거리 야경, 05 §4).
 
 ### 4.6 validate (실패 시 publish 차단)
 - 스키마 검증(world.json, 셀 헤더, meta).
@@ -103,9 +105,10 @@ data/build/<buildId>/                        (build/hlod/validate)
 - 보고서: `data/build/<buildId>/report.html` (셀별 크기 히트맵, 경고 목록).
 
 ### 4.7 publish
-1. S3 호환 API로 `world/<buildId>/**` 업로드 (Content-Type: `application/octet-stream`/`application/json`/`image/ktx2`, 멀티파트, 동시성 16).
-2. 업로드 완료 검증(개수·크기) 후 KV `CURRENT_BUILD:v<formatVersion> = <buildId>` 설정 → 클라이언트는 다음 세션부터 새 빌드.
-3. 이전 빌드는 7일 유지 후 `pnpm pipeline gc`로 삭제(현재+직전 1개는 항상 유지).
+1. `world/<buildId>/**` 업로드(world.json·cells.idx·L0–L3 .tkc, Content-Type `application/json`/`application/octet-stream`, 동시성 16, 재시도 3회) + `manifest.json`(경로·크기·sha256).
+   업로더: R2 S3 키가 있으면 S3 호환(SigV4, > 64 MiB 멀티파트), 없으면 Cloudflare API 토큰으로 R2 REST(ADR-0026).
+2. 검증(S3 HEAD 또는 `--verify-url` Worker HEAD, 전 파일 크기) 후 KV `BUILDS:v<fv>`·`BUILD_FILES:<id>` 기록, `--set-current`면 `CURRENT_BUILD:v<formatVersion> = <buildId>` → 클라이언트는 다음 세션부터 새 빌드.
+3. 이전 빌드는 7일 유지 후 `pnpm pipeline gc --apply`로 삭제(현재 + 직전 1개 = 현재보다 먼저 퍼블리시된 것 중 가장 최근은 항상 유지).
 
 ## 5. 성능 목표(파이프라인)
 MVP 영역 전체 `all` ≤ 90분(8코어), 셀 1개 증분 빌드 ≤ 30초.

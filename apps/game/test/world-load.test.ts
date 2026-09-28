@@ -1,6 +1,8 @@
 // 월드 데이터 로드: 커밋된 world-mini 픽스처를 가짜 fetch로 서빙 → 매니페스트·원점·cells.idx·스폰 주변 셀 확인, 실패 분류. see docs/modules/game.md
+
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { cellIdString } from '@sanpo/core';
 import { describe, expect, it } from 'vitest';
 import { parseFlags, startWorld } from '../src/boot.ts';
 import { checkManifest, loadWorld, WORLD_MINI_BASE_URL } from '../src/world-load.ts';
@@ -26,17 +28,14 @@ function fixtureFetch(patch: (path: string, body: Uint8Array) => Uint8Array = (_
 }
 
 describe('loadWorld (world-mini fixture)', () => {
-  it('loads the manifest, index and the 4 cells around the Scramble spawn', async () => {
+  it('loads the manifest and index and lists the 4 spawn-area cells (no cell fetch — streaming does that)', async () => {
     const { fn, seen } = fixtureFetch();
     const r = await loadWorld(WORLD_MINI_BASE_URL, 'fixture', fn);
     if (!r.ok) throw new Error(r.error);
     expect(r.value.indexed).toBe(4);
-    expect(r.value.cells.map((c) => c.id)).toEqual(['L0_-1_-1', 'L0_0_-1', 'L0_-1_0', 'L0_0_0']);
-    for (const c of r.value.cells) {
-      expect(c.sections).toEqual(['buildings.mesh', 'meta.json', 'terrain.height', 'terrain.mesh']);
-      expect(c.bytes).toBeLessThanOrEqual(4_000_000);
-    }
-    expect(seen[0]).toBe('/fixtures/world-mini/world.json');
+    expect(r.value.cellsIndex.size).toBe(4);
+    expect(r.value.spawnCells.map(cellIdString)).toEqual(['L0_-1_-1', 'L0_0_-1', 'L0_-1_0', 'L0_0_0']);
+    expect(seen).toEqual(['/fixtures/world-mini/world.json', '/fixtures/world-mini/cells.idx']);
   });
 
   it('rejects a missing fixture served as SPA fallback, origin/format mismatch and size mismatch', async () => {
@@ -45,9 +44,9 @@ describe('loadWorld (world-mini fixture)', () => {
     expect(checkManifest(JSON.stringify({ ...world, crs: { ...world.crs, E0: 0 } }))).toMatchObject({ ok: false });
     expect(checkManifest(JSON.stringify({ ...world, formatVersion: 2 }))).toMatchObject({ ok: false });
     expect(checkManifest(JSON.stringify(world))).toMatchObject({ ok: true });
-    const truncated = fixtureFetch((p, b) => (p.endsWith('0/0.tkc') ? b.subarray(0, 1000) : b));
+    const truncated = fixtureFetch((p, b) => (p.endsWith('cells.idx') ? b.subarray(0, 20) : b));
     const r = await loadWorld(WORLD_MINI_BASE_URL, 'fixture', truncated.fn);
-    expect(r.ok ? '' : r.error).toMatch(/L0_0_0: 1000 B/);
+    expect(r.ok ? '' : r.error).toMatch(/cells\.idx: truncated/);
   });
 });
 
@@ -58,7 +57,7 @@ describe('startWorld', () => {
     const states: WorldStatus[] = [];
     const { fn, seen } = fixtureFetch();
     const loaded = await startWorld(flags, (s) => states.push(s), fn);
-    expect(loaded?.cells.map((c) => c.id)).toEqual(['L0_-1_-1', 'L0_0_-1', 'L0_-1_0', 'L0_0_0']);
+    expect(loaded?.spawnCells.map(cellIdString)).toEqual(['L0_-1_-1', 'L0_0_-1', 'L0_-1_0', 'L0_0_0']);
     expect(loaded?.spawnWF).toEqual({ x: -22.3, y: 0, z: 8.6 });
     expect(seen.some((u) => u.startsWith('/api/'))).toBe(false);
     expect(states).toEqual([{ kind: 'loaded', source: 'fixture', buildId: expect.any(String), cells: 4, indexed: 4 }]);

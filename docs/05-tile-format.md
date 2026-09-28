@@ -86,12 +86,12 @@ credits.json                  출처 표기
 | `lights.bin` | bin+gzip | `{u32 count}` + `{u8 kind, u8 schedule, u16 kelvin, f32 x,y,z, i8x2 dirOct, u16 lumen, f32 range}` | render | L0 (L1은 발광 마스크) |
 | `audio.json` | json+gzip | `{zones:[{kind, polygonLocal:[[x,z]…], y0, y1}], emitters:[{kind, pos}]}` | audio | L0 |
 | `meta.json` | json+gzip | `{buildings:[{gmlId, usage, height, storeys, name?}], pois:[…], placeNames:[…], signals:[…]}` | ui, sim | L0 |
-| `hlod.mesh` | glb | 병합·단순화 메시 (건물+지형), `_FACADE` 유지. **자식 셀 16개 영역별 프리미티브 분할**, 각 프리미티브 `extras.child = 0..15` (자식 인덱스 = (iz%4)*4 + (ix%4), 음수는 양의 나머지) | render | L1–L3 |
+| `hlod.mesh` | glb | 병합·단순화 메시 (건물+지형), `_FACADE` 유지. **자식 셀 16개 영역 분할 = 정점 속성 `_CHILD`(u8, 0..15)** (자식 인덱스 = (iz%4)*4 + (ix%4), 음수는 양의 나머지) — 머티리얼별 프리미티브 1개: 지형(`terrain_ground`: POSITION·NORMAL·`_SURF`·`_CHILD`, 자식 패치마다 네 변 스커트) → 건물(`facade_default`: POSITION·NORMAL·TEXCOORD_0·`_FACADE`·`_CHILD`). 렌더는 셀당 draw 2개 + 자식별 표시·페이드 uniform(ADR-0024). 모든 프리미티브가 한 노드 변환(u16 균일 양자화) 공유. HLOD `_FACADE.flags` = `점등 단계(0–15) \| 창 시드 << 4` | render | L1–L3 |
 
 - `glb`: glTF 2.0 바이너리, `EXT_meshopt_compression` + `KHR_mesh_quantization`. 텍스처는 포함하지 않고 `extras.materialId`로 shared 머티리얼 참조.
   **런타임 디코더(streaming 워커)가 받는 부분집합**(ADR-0022): 메시 1개를 가리키는 노드 1개(이동 + **균일** 스케일, 회전·행렬 없음),
   프리미티브 `mode` = TRIANGLES, 속성 `componentType` i8/u8/i16/u16/u32/f32, meshopt `ATTRIBUTES/TRIANGLES/INDICES`(+ 필터), 압축 안 된 뷰는 BIN chunk.
-  HLOD 자식 그룹은 프리미티브 `extras.child`. 이 밖의 glb는 `unsupported` 오류 → 파이프라인 writer(`tools/pipeline/src/lib/gltf.ts`)를 바꿀 때 함께 확인.
+  HLOD 자식 그룹은 정점 속성 `_CHILD`(구 `extras.child`도 디코드는 한다). 이 밖의 glb는 `unsupported` 오류 → 파이프라인 writer(`tools/pipeline/src/lib/gltf.ts`)를 바꿀 때 함께 확인.
 - `gzip`: 런타임은 `DecompressionStream('gzip')`로 디코드(워커).
 - 소비자가 모르는 섹션 타입은 무시(전방 호환).
 

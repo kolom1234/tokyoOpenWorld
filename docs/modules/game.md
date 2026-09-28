@@ -23,23 +23,22 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 ## Files
 | 파일 | 책임 |
 |---|---|
-| index.html, vite.config.ts | Vite 엔트리. dev 서버 격리 헤더 + `/api`·`/world` → `wrangler dev`(8787) 프록시 + `sanpo-world-mini` 플러그인(dev 서빙, build 시 `dist/fixtures/world-mini` 복사, `SANPO_WORLD_MINI=0`이면 생략) |
+| index.html, vite.config.ts | Vite 엔트리. dev 서버 격리 헤더 + `/api`·`/world` → `wrangler dev`(8787) 프록시 + `sanpo-world-mini` 플러그인(dev 서빙, build 시 `dist/fixtures/world-mini` 복사, `SANPO_WORLD_MINI=0`이면 생략) + `sanpo-local-build`(dev 전용 `/local-world` → `data/build/<SANPO_LOCAL_BUILD | 최신>`) |
 | public/_headers | 정적 에셋 COOP/COEP/CORP/CSP·캐시 헤더(docs/13 §3) — Worker를 거치지 않는 응답용 |
 | src/main.ts | 엔트리, 오류 화면, `?probe=decode`면 부트 대신 `debug/decode-probe.ts` 동적 import |
 | src/caps.ts | 기능 감지 `detectCaps(env?)` → `Caps`(webgpu `available/no-adapter/unsupported`, crossOriginIsolated, `IsolationMode`, decodeWorkers) |
-| src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini`, `backend=webgl`, `probe=decode`), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
-| src/world-view.ts | M01-T06 최소 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: 로컬 높이장 }, freecam 시작)`·카메라 배선 → `providers`·`frameSource`, `showWorld(loaded)`(셀 → render.addCell, 지면 등록, 시작 시점 재설정) |
+| src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini|local`, `backend=webgl`, `probe=decode`), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
+| src/world-view.ts | 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: streaming 높이장(프록시) }, freecam 시작)`·카메라 배선 → `providers`·`frameSource`. `showWorld(loaded)` = `render.precompile` → `createStreaming`(디코드 워커) + streaming-render 배선을 스케줄러에 추가 → `whenReady(스폰 384 m, L0)` → 시작 시점 재설정 → 스폰 3×3 live 수(M02-T05) |
 | src/start-view.ts | 시작 시점: 스크램블 교차로 북서 상공(WF −60, −15) 지면 위 60 m → Scramble Square(WF 130.8, 130, 132.5) 바라봄 |
 | src/wiring/camera.ts | phase 65: `render.setCamera(traversal.camera)` |
-| src/debug/local-cells.ts | **임시(M02-T05에서 삭제)**: TKC → GLTFLoader+meshopt(메인 스레드) → `CellPayload`(ADR-0020), `terrain.height` → `LocalGround`(이중선형) |
-| src/debug/overlay.ts | `?debug=1` 오버레이(FPS·백엔드·깊이·카메라 WF·고도·원점·재설정 횟수·draw/tris, `data-*` e2e용) + **O 키 원점 재설정 테스트**(+4096 m → 1 s → 복귀). `globalThis.__SANPO_DEBUG__ = { world, rebaseTest }`(디버그 모드만) |
-| src/world-load.ts | `loadWorld(baseUrl, source, fetch?)` → `Result<LoadedWorld, string>`: world.json(`checkManifest`: formatVersion·WORLD_ORIGIN) → cells.idx → 스폰 셀 ± 1 TKC 크기·헤더 확인. `WORLD_MINI_BASE_URL`. M02 streaming 도입 시 셀 로드는 그쪽으로 |
+| src/debug/overlay.ts | `?debug=1` 오버레이(FPS·백엔드·깊이·카메라 WF·고도·원점·재설정 횟수·draw/tris·스트리밍 레벨별 상주/대기/fetch/디코드/실패·HLOD 부모/페이드, `data-*` e2e용) + **O 키 원점 재설정 테스트**(+4096 m → 1 s → 복귀). `globalThis.__SANPO_DEBUG__ = { world, rebaseTest }`(디버그 모드만) |
+| src/world-load.ts | `loadWorld(baseUrl, source, fetch?)` → `Result<LoadedWorld, string>`: world.json(`checkManifest`: formatVersion·WORLD_ORIGIN) → cells.idx(`cellsIndex`) → `spawnCells`(스폰 셀 ± 1 중 색인에 있는 L0). 셀 fetch·검증은 streaming. `WORLD_MINI_BASE_URL`, `WORLD_LOCAL_BASE_URL`(`/local-world`) |
 | src/loop.ts | rAF → scheduler.tick, `FrameHook`(before/after) |
 | src/world-status.ts | `fetchWorldStatus()` → `WorldStatus`(ready/loaded/unconfigured/no-build/error). 기본 `fv` = `@sanpo/tile-format` `FORMAT_VERSION` |
 | src/status-view.ts | 부트 상태 화면(M00 임시, `#app[data-isolated|data-webgpu|data-world|data-world-source|data-world-cells|data-backend|data-rendered-cells|data-error]` — e2e용). 셀이 화면에 올라오면 CSS로 숨김(오류 시 유지) |
 | src/debug/stats.ts | `?debug=1` stats-gl 동적 import |
 | src/debug/decode-probe.ts | `?probe=decode`(main.ts가 부트 대신 동적 import): world-mini 셀을 streaming `createFetcher` → `createDecodePool`로 2회(네트워크·Cache Storage) + 동시 4셀 + 취소 → 셀당 시간·정점/인덱스 수·긴 작업 → `globalThis.__SANPO_DECODE_PROBE__`, `#app[data-probe]`(e2e `decode.spec.ts`, ADR-0022) |
-| src/wiring/streaming-render.ts | onReady/onEvicted → render(+ack), HLOD 자식 가시성, sim/audio/interactables 분배 |
+| src/wiring/streaming-render.ts | phase 45 `streaming.setInterest(traversal.interest)`, phase 55 적용(2 ms + 업로드 4 MiB/프레임, 첫 셀 보장): `addCell → ack('render') → 부모 HLOD 자식 숨김`, 해제 = `부모 보임 → removeCell`(M02-T05, ADR-0025). sim/audio/interactables 분배는 해당 태스크 |
 | src/wiring/streaming-physics.ts | 물리 반경 필터, `requestSections` → physics.addCell/removeCell |
 | src/wiring/streaming-sim.ts | nav/lanes/meta 전달 |
 | src/wiring/sim-physics.ts | MessageChannel 생성·연결 |
@@ -55,11 +54,12 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 
 ## Tests
 test/caps.test.ts(WebGPU 3상태·격리·워커 수), test/boot.test.ts(루프·훅, 월드 상태 분류, 상태 문구, 플래그), test/world-load.test.ts(커밋된 world-mini를 가짜 fetch로: 4셀 로드, SPA 폴백·원점·포맷·크기 불일치 거부, `?world=mini`는 API 미호출),
-test/local-cells.test.ts(L0_0_0 건물 양자화 해제 → 지붕 TP 245.6 m, 지형 float32·인덱스, 높이장 보간, 시작 시점 = 지면 + 60 m·Scramble Square 조준), test/overlay.test.ts(오버레이 문구).
+test/start-view.test.ts(시작 시점 = 지면 + 60 m·Scramble Square 조준), test/streaming-render.test.ts(적용 순서·바이트 예산·해제 순서·적용 전 해제·L3), test/overlay.test.ts(오버레이 문구).
 E2E(Playwright, `pnpm test:e2e` — 빌드 + vite preview, Chromium은 `--enable-unsafe-swiftshader`, 로컬 다른 Chromium은 `PW_CHROMIUM_PATH`):
 `tests/e2e/boot.spec.ts`(`?world=mini` → `data-world=loaded`·셀 4·격리·콘솔 오류 없음),
 `tests/e2e/render.spec.ts`(`?world=mini&debug=1&backend=webgl` → 셀 4 렌더, 중앙 타워·하단 건물 픽셀 비율, O 테스트 전후 픽셀 차 0; 스크린샷 `test-results/screenshots/` → CI 아티팩트 `e2e-screenshots`).
 `tests/e2e/decode.spec.ts`(`?world=mini&probe=decode` → 4셀 정점·인덱스 수 = 파이프라인 스냅샷, 2차 Cache Storage, 취소, 긴 작업 0, 셀당 시간 첨부 `decode-probe.json`).
 
 ## Status
-M00-T04 부트 골격: 기능 감지 표시 + 빈 스케줄러 루프 + `/api/world/current` 조회 + `?debug=1` stats-gl. M01-T07: 4단계 데이터 로드(world.json 원점 검증·cells.idx·스폰 주변 셀 헤더) + `?world=mini`. M01-T06: render·input·traversal(freecam) 조립, 임시 셀 로더, 디버그 오버레이. 부트 5·6·9–11단계는 각 패키지 태스크에서 배선.
+M00-T04 부트 골격: 기능 감지 표시 + 빈 스케줄러 루프 + `/api/world/current` 조회 + `?debug=1` stats-gl. M01-T07: 4단계 데이터 로드 + `?world=mini`. M01-T06: render·input·traversal(freecam) 조립, 디버그 오버레이.
+M02-T05: streaming(6단계)·streaming→render 배선(9단계 일부)·whenReady·precompile(10단계 일부), 임시 셀 로더 삭제, `?world=local`. 나머지 5·9–11단계는 각 패키지 태스크에서.

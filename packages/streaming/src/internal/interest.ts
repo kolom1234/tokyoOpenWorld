@@ -121,6 +121,21 @@ export function computeDesired(
   return out;
 }
 
+/**
+ * 한 셀이 지금 어느 관심점의 로드 영역 안인가(L3는 항상 참). computeDesired의 셀 단위 판정과 같다 —
+ * 재계산 사이에 미뤄 둔 해제를 실행하기 직전 재확인용.
+ */
+export function inLoadZone(key: CellKey, frame: InterestFrame, cfg: InterestConfig): boolean {
+  const { level } = unpackCellKey(key);
+  if (level === 3) return true;
+  const size = CELL_SIZES[level];
+  for (const p of preparePoints(frame, cfg)) {
+    const rule = levelRule(level, p, frame, cfg);
+    if (inZone(rule.load, level, key, p, Math.floor(p.x / size), Math.floor(p.z / size))) return true;
+  }
+  return false;
+}
+
 /** 관심점들까지의 최소 유효 거리(m). 관심점이 없으면 +∞. */
 export function nearestDistanceM(key: CellKey, points: readonly PreparedPoint[]): number {
   const b = cellBoundsWF(key);

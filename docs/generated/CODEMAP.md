@@ -3,23 +3,23 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 147개.
+> 파일 175개.
 
 ## apps/game
-- `apps/game/src/boot.ts` — 부트 시퀀스(M01): 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → 셀 표시. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
+- `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
 - `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
 - `apps/game/src/debug/decode-probe.ts` — `?probe=decode` 디버그 프로브(렌더 없이 실행): world-mini 셀을 streaming fetch → 디코드 워커로 두 번(네트워크·Cache Storage) 읽어 | exports: ProbeCell, DecodeProbeReport, runDecodeProbe
-- `apps/game/src/debug/local-cells.ts` — 임시 셀 로더(M01-T06 → **M02-T05에서 삭제**, streaming 디코드 워커로 대체): 검증된 TKC → 메인 스레드에서 glb 파싱 | exports: decodeLocalCell, sampleHeightfield, LocalGround, createLocalGround
-- `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeDebug, createDebugOverlay
+- `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeStreaming, describeDebug, createDebugOverlay
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/start-view.ts` — 시작 시점(M01-T06): 스크램블 교차로 북서쪽 상공 약 60 m에서 Shibuya Scramble Square를 바라본다. 골든뷰 북마크(M03)가 생기면 그쪽으로 이동. | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라(phase 20 확정) → render.setCamera(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
-- `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 TKC(헤더 확인 + 리더 보관). 스트리밍 전 임시 로더. | exports: WORLD_MINI_BASE_URL, WorldSource, LoadedCell, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
+- `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
+- `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
-- `apps/game/src/world-view.ts` — 부트 7–9단계 최소 조립(M01-T06): render + input + traversal(freecam) + 카메라 배선 + 임시 셀 로더. see docs/modules/game.md §부트 시퀀스 | exports: WorldView, WorldViewDeps, createWorldView
+- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(freecam) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
@@ -27,6 +27,7 @@
 - `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, withSecurityHeaders, json, storageUnconfigured
 - `apps/worker/src/index.ts` — Worker 엔트리(라우터): /api/*, /world/*는 Worker, 나머지는 Static Assets. see docs/13-deployment.md §4, docs/modules/worker.md | exports: handleRequest, default
 - `apps/worker/src/routes/current.ts` — `GET /api/world/current?fv=<n>`: KV `CURRENT_BUILD:v<n>` → 활성 buildId·baseUrl. see docs/13-deployment.md §4, §8 | exports: handleWorldCurrent
+- `apps/worker/src/routes/weather.ts` — `/api/weather`: LIVE_WEATHER=true일 때만 Open-Meteo 현재 날씨(도쿄 중심) 프록시 → 10분 엣지 캐시. 꺼져 있으면 404(disabled). | exports: OPEN_METEO_URL, LiveWeather, toLiveWeather, handleWeather
 - `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답만 캐시. see docs/13-deployment.md §4 | exports: contentRange, handleWorldData
 - `apps/worker/src/validate.ts` — 요청 입력 검증: buildId 형식, /world 경로(경로 조작 차단), formatVersion 쿼리. see docs/13-deployment.md §4 | exports: BUILD_ID_RE, isValidBuildId, parseWorldPath, parseFormatVersion
 
@@ -74,14 +75,17 @@
 - `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 호스트·캐릭터/차량/자전거. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts'
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 = 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계). see docs/modules/render.md, docs/07-rendering.md §11 | exports: RenderBackend, DepthMode, RenderConfig, RenderStats, RenderService, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일. | exports: RenderBackend, DepthMode, RenderConfig, RenderStats, RenderService, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/lighting/sun.ts` — 방향광 1개(태양) + 반구광(하늘 산란 대용). 물리 광량·대기·CSM은 M03(07 §6). 태양 방향은 sim(EnvironmentState)이 오면 교체. | exports: DEFAULT_SUN_DIR_WF, sunDirFromAzEl, SunRig, createSunRig
-- `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼(M01 최소: 단색 PBR). 07 §4 고정 클래스·TSL 파사드는 M03. see docs/07-rendering.md §3–4 | exports: MaterialRegistry, createMaterialRegistry
+- `packages/render/src/internal/materials/hlod.ts` — HLOD 머티리얼: 기본 단색 PBR + 자식 16영역 표시·디더 페이드. 셀별 페이드 16개는 per-object uniform(vec4 × 4, objectGroup)으로, | exports: HlodFadeData, createHlodFades, createHlodMaterial
+- `packages/render/src/internal/materials/precompile.ts` — 셰이더 선컴파일(06 §6): 고정 머티리얼 ID별 기본·HLOD 변형을 작은 더미 메시로 씬에 잠깐 붙여 `compileAsync` → 스트리밍 중 첫 사용 끊김 제거. | exports: precompileMaterials
+- `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼(M01 최소: 단색 PBR) + HLOD 변형(자식 페이드, M02-T05). 07 §4 고정 클래스·TSL 파사드는 M03. see docs/07-rendering.md §3–4 | exports: MaterialRegistry, PRECOMPILE_IDS, createMaterialRegistry
 - `packages/render/src/internal/renderer/backend-caps.ts` — 초기화 전 백엔드·깊이 기능 예측: WebGPU 어댑터 유무, WebGL2 EXT_clip_control(reversed-Z 필요조건). see docs/07-rendering.md §1, ADR-0006 | exports: BackendProbe, webgl2HasClipControl, probeBackend
 - `packages/render/src/internal/renderer/init.ts` — WebGPURenderer 초기화(WebGL2 폴백) + 깊이 전략 결정(reversed-Z 우선, 불가 시 logarithmic — ADR-0006). see docs/07-rendering.md §1 | exports: InitializedRenderer, resolveDepthMode, initRenderer
 - `packages/render/src/internal/scene/cell-node.ts` — 셀 → 렌더 노드: DecodedMesh 프리미티브 → BufferGeometry(TypedArray 그대로) + 공유 머티리얼, 슬롯별 Group(위치 = originWF − renderOrigin). see docs/07-rendering.md §2–3 | exports: CellRenderNode, threeAttributeName, buildGeometry, createCellNode, placeCellNode, disposeCellNode, CellSet, createCellSet
+- `packages/render/src/internal/scene/hlod-switch.ts` — HLOD 자식 표시 상태: 자식 셀이 live면 부모의 그 자식 영역을 0.3 s 디더로 숨기고, 자식이 해제되면 즉시 다시 보인다(구멍 없음). | exports: HLOD_CHILDREN, HLOD_FADE_S, HlodSwitch, createHlodSwitch
 - `packages/render/src/internal/scene/origin.ts` — 렌더 원점 재설정 순수 계산: 판정(거리 ≥ 2048 m), 256 m 격자 스냅, 노드 위치 = WF − renderOrigin(float64 → 대입 시 float32). see docs/01-architecture.md §7, docs/07-rendering.md §2 | exports: needsRebase, snapOrigin, toRender
 - `packages/render/src/internal/scene/render-view.ts` — 렌더 시점 상태: WF 카메라(float64) 보관, 원점 재설정 판정·실행(origin/rebased), three 카메라에 렌더 좌표 대입. see docs/07-rendering.md §2 | exports: RenderView, createRenderView
 - `packages/render/src/internal/scene/scene-graph.ts` — 씬 그래프 골격: scene → worldRoot(원점 고정) → 레이어 루트, skyRoot(카메라 상대). see docs/07-rendering.md §2 | exports: LayerRoot, SLOT_ROOT, SceneGraph, createSceneGraph
@@ -92,8 +96,10 @@
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts'
 
 ## packages/streaming
-- `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). M02-T01 설정 + M02-T02 fetch·디코드 워커 풀. see docs/modules/streaming.md, docs/06-world-streaming.md §3–4, §7, §9 | exports: InterestConfig, PriorityConfig, FetchConfig, DecodeConfig, StreamingConfig, CellFetchErrorCode, CellFetchError, CellFetchResult, Fetcher, FetchLike, CacheStorageLike, CacheLike, CellFetcherDeps, DecodeRequest, DecodeErrorCode, DecodeError, DecodeResult, DecodePoolStats, DecodePool, DecodePoolDeps
-- `packages/streaming/src/index.ts` — @sanpo/streaming 공개 엔트리(L2): 셀 로딩/언로딩·우선순위·캐시. api.ts 재수출 + create* 팩토리만. see docs/modules/streaming.md | exports: * from './api.ts', DEFAULT_STREAMING_CONFIG, createDecodePool, cacheName, createFetcher, purgeStaleCaches
+- `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). 설정(T01) + fetch·디코드 워커 풀(T02) + 서비스·수명주기(T03). | exports: InterestConfig, PriorityConfig, FetchConfig, DecodeConfig, LifecycleConfig, StreamingConfig, CellFetchErrorCode, CellFetchError, CellFetchResult, Fetcher, FetchLike, CacheStorageLike, CacheLike, CellFetcherDeps, DecodeRequest, DecodeErrorCode, DecodeError, DecodeResult, DecodePoolStats, DecodePool, DecodePoolDeps, CellState, ConsumerId, WhenReadyRequest, StreamingStats, StreamingService, StreamingDeps
+- `packages/streaming/src/index.ts` — @sanpo/streaming 공개 엔트리(L2): 셀 로딩/언로딩·우선순위·캐시. api.ts 재수출 + create* 팩토리만. see docs/modules/streaming.md | exports: * from './api.ts', DEFAULT_STREAMING_CONFIG, createDecodePool, cacheName, createFetcher, purgeStaleCaches, createStreaming
+- `packages/streaming/src/internal/cache-lru.ts` — Cache Storage 용량 상한(06 §7, 1.5 GB): URL별 바이트를 사용 순서(Map 삽입 순서)로 추적하고 초과분을 오래된 것부터 고른다. | exports: CacheLru, createCacheLru
+- `packages/streaming/src/internal/cell-cache.ts` — Cache Storage 계층(06 §7): `sanpo-world-<buildId>`에서 셀 읽기(크기 검사)·쓰기(`Response.clone()`)·삭제 + 1.5 GB 상한 LRU(ADR-0023). | exports: CellCache, CellCacheDeps, createCellCache
 - `packages/streaming/src/internal/cell-index.ts` — cells.idx 조회(존재 여부·바이트 수·레벨별 목록·범위). 파싱은 @sanpo/tile-format. see docs/05-tile-format.md §5, docs/06-world-streaming.md §10 | exports: IndexExtent, CellIndex, createCellIndex, parseCellIndex
 - `packages/streaming/src/internal/config.ts` — streaming 기본 설정(06 §3–4, 07 §9 L0 반경 배율, ADR-0021). 오버라이드는 createStreaming deps.config → mergeConfig. | exports: DEFAULT_STREAMING_CONFIG
 - `packages/streaming/src/internal/decode-host.ts` — 디코드 워커 본체(환경 독립): 메시지 처리, 요청별 AbortController, 결과 transfer. decode.worker.ts가 self에 연결한다. see docs/06-world-streaming.md §2, §9 | exports: PostFn, DecodeHost, DecodeHostOptions, createDecodeHost
@@ -101,13 +107,18 @@
 - `packages/streaming/src/internal/decode-util.ts` — 디코드 공용: Result 오류 헬퍼, 취소 확인 함수형, transfer 목록 수집. see docs/06-world-streaming.md §9 | exports: fail, AbortCheck, yieldTask, abortCheck, transferList
 - `packages/streaming/src/internal/decode.ts` — TKC 파일 → CellPayload(워커 전용): hash32·헤더(셀·buildId) 검사 → 섹션별 디코드(glb=meshopt, gzip 해제). see docs/05-tile-format.md §3–4, docs/06-world-streaming.md §9 | exports: DEFAULT_SECTIONS, DECODABLE, DecodeOptions, decodeCell
 - `packages/streaming/src/internal/decode.worker.ts` — 디코드 워커 엔트리(모듈 워커): self ↔ createDecodeHost 연결만. 예외는 WorkerErrorMessage로 보고. see docs/06-world-streaming.md §9, docs/15-conventions.md §5–6
-- `packages/streaming/src/internal/fetcher.ts` — 셀 fetch: Cache Storage(`sanpo-world-<buildId>`) 조회 → 네트워크(AbortController, 지수 백오프 재시도) → 캐시 저장. | exports: CACHE_PREFIX, cacheName, cellUrl, retryableStatus, abortableSleep, purgeStaleCaches, createFetcher
+- `packages/streaming/src/internal/fetcher.ts` — 셀 fetch: Cache Storage(`sanpo-world-<buildId>`) 조회 → 네트워크(AbortController, 지수 백오프 재시도) → 캐시 저장(상한 LRU). | exports: CACHE_PREFIX, cacheName, cellUrl, retryableStatus, abortableSleep, purgeStaleCaches, createFetcher
 - `packages/streaming/src/internal/geometry.ts` — 관심점 전처리(고도·진행 방향)와 셀 AABB 수평 거리·뷰 쐐기 판정. interest/priority 공용 순수 함수. see docs/06-world-streaming.md §3–4 | exports: InterestFrame, PreparedPoint, preparePoints, aabbDistanceM, effectiveDistanceM, inViewWedge
 - `packages/streaming/src/internal/glb.ts` — 셀 glb 섹션 → DecodedMesh(워커 전용). 파이프라인이 쓰는 부분집합만: 노드 1개(이동 + 균일 스케일), EXT_meshopt_compression, | exports: decodeGlb
-- `packages/streaming/src/internal/interest.ts` — 관심점 → 레벨별 원하는 셀 집합(로드/히스테리시스 유지)과 상주 한도 해제 계획. 순수 함수. see docs/06-world-streaming.md §3, ADR-0021 | exports: Zone, LevelRule, DesiredCells, EvictionPlan, l0RadiusM, l1RadiusM, levelRule, computeDesired, nearestDistanceM, planEvictions, countByLevel
+- `packages/streaming/src/internal/ground.ts` — 지면 높이 질의: 상주 L0 셀의 terrain.height(257² u16)를 이중선형 보간. 셀 경계 샘플은 이웃과 비트 일치(ADR-0018)라 이음매 연속. | exports: sampleHeightfield, GroundStore, createGroundStore
+- `packages/streaming/src/internal/interest.ts` — 관심점 → 레벨별 원하는 셀 집합(로드/히스테리시스 유지)과 상주 한도 해제 계획. 순수 함수. see docs/06-world-streaming.md §3, ADR-0021 | exports: Zone, LevelRule, DesiredCells, EvictionPlan, l0RadiusM, l1RadiusM, levelRule, computeDesired, inLoadZone, nearestDistanceM, planEvictions, countByLevel
+- `packages/streaming/src/internal/lifecycle.ts` — 셀 상태기계(06 §2): absent → queued → fetching → decoding → ready ─(render ack)→ live → evicting → absent, 실패 → failed(60 s 후 재요청 가능). | exports: IN_FLIGHT, RESIDENT, Lifecycle, createLifecycle
+- `packages/streaming/src/internal/planner.ts` — 재계산 1회: 원하는 셀 집합 → 범위 밖 진행 중 요청 취소 → 부족한 셀 순위 매겨 요청 → 해제 계획(실행은 서비스가 프레임 예산으로). | exports: PlannerCtx, PlanOutcome, recompute
 - `packages/streaming/src/internal/priority.ts` — 요청 우선순위 점수(낮을수록 먼저): 거리/레벨크기 × 뷰 배율, 발밑 셀 고정 최우선, 부모 선행 클램프. 순수 함수. see docs/06-world-streaming.md §4, ADR-0021 | exports: RankedCell, footCells, scoreCells, rankCells
 - `packages/streaming/src/internal/protocol.ts` — 디코드 워커 메시지(판별 유니온). 메인 ↔ decode.worker. see docs/15-conventions.md §6, docs/06-world-streaming.md §9 | exports: ToDecodeWorker, FromDecodeWorker, isFromDecodeWorker
 - `packages/streaming/src/internal/scheduler.ts` — 셀 로드 큐: 점수 낮은 순으로 fetch(동시 ≤ maxConcurrent) → 디코드 풀(대기 ≤ 풀 용량), 셀별 AbortController로 단계 무관 취소. | exports: LoadStage, LoadError, LoadResult, LoadSchedulerDeps, LoadScheduler, createLoadScheduler
+- `packages/streaming/src/internal/service.ts` — createStreaming: cells.idx + fetcher + 디코드 풀 + 로드 큐 + 수명주기 + ground + whenReady를 phase 50 시스템 하나로 조립. | exports: STREAMING_PHASE, createStreaming
+- `packages/streaming/src/internal/waiters.ts` — whenReady 대기자: 영역 안 셀(cells.idx에 있는 것)이 전부 live 또는 failed가 되면 resolve. 대기 중 대상은 pinned(로드·유지 강제). | exports: Waiters, targetsOf, createWaiters
 
 ## packages/tile-format
 - `packages/tile-format/src/api.ts` — @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md | exports: TKC_MAGIC, FORMAT_VERSION, TKC_ALIGN, TKC_PREAMBLE_BYTES, CELLS_INDEX_MAGIC, JCOL_MAGIC, JCOL_VERSION, LANES_MAGIC, LANES_VERSION, LANE_NO_SIGNAL, HEIGHTFIELD_SIZE, HEIGHTFIELD_STEP_M, HEIGHTFIELD_BASE_M, SectionCodec, SectionSpec, SECTION_REGISTRY, SectionType, TkcErrorCode, TkcError, Vec3Tuple, SectionEntry, CellStats, CellHeader, CellHeaderInput, TkcSectionInput, TkcReader, CELL_FLAG, CellsIndexEntry, CellsIndexRecord, CellsIndex, JCOL_MATERIAL, JCOL_FLAG, JcolKind, JcolTriMesh, JcolConvexHull, JcolBox, JcolRound, JcolShape, LaneGraphChunk, DecodedMesh, MeshSlot, CellPayload, HeightfieldData, PropBatch, TreeBatch, LightRecord, AudioZones, I18nText, MetaBuilding, PoiKind, MetaPoi, MetaPlaceName, MetaSignal, InteractableRecord, CellMeta
@@ -154,10 +165,13 @@
 ## tools/pipeline
 - `tools/pipeline/src/checks/terrain-gsi.ts` — M01-T03 수락 검증: dem_1m.tif 표고 vs 地理院地図 표시값(GSI 표고 API) 비교 + GDAL/@sanpo/geo 투영 일치 확인. 네트워크 필요(CI 제외).
 - `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
+- `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
 - `tools/pipeline/src/lib/gltf.ts` — 셀 glb 섹션 인코드/디코드: gltf-transform 문서 → EXT_meshopt_compression + KHR_mesh_quantization glb. see docs/05-tile-format.md §4 (glb), docs/adr/0018-cell-mesh-build.md | exports: GlbArray, GlbAttribute, GlbPrimitive, GlbMesh, DecodedGlb, encodeGlb, decodeGlb
 - `tools/pipeline/src/lib/ndjson-gz.ts` — 결정론적 ndjson.gz 입출력: 키 정렬된 레코드 → gzip(헤더 mtime=0, OS=255 고정). see docs/04-data-pipeline.md §1(재현성) | exports: writeNdjsonGz, readNdjsonGz
+- `tools/pipeline/src/lib/png.ts` — 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용. 외부 의존 없음(node:zlib). | exports: DecodedPng, decodePng
 - `tools/pipeline/src/lib/polygon.ts` — 폴리곤 유틸: 셀 경계(축정렬 XZ 사각형) 클리핑. 도로·지형처럼 셀 경계에서 자르는 레이어용. see docs/04-data-pipeline.md §4.2, §6 | exports: ringAreaXZ, clipRingsToRect
 - `tools/pipeline/src/lib/raster.ts` — 래스터 유틸: 투영 격자 정의(PRJ 정수 m = 픽셀 중심), Float32 raw 입출력, GDAL VRT 기록, 결측 병합·통계. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: PrjGrid, geoTransformOf, targetExtentOf, readFloat32, writeGridVrt, FillStats, mergeWithFallback, ValueStats, valueStats
+- `tools/pipeline/src/lib/sigv4.ts` — AWS Signature V4(헤더 서명) — R2 S3 호환 API용 최소 구현(node:crypto). see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-create-signed-request.html | exports: SigV4Credentials, SignInput, EMPTY_SHA256, sha256Hex, uriEncode, signV4
 - `tools/pipeline/src/lib/triangulate.ts` — 3D 평면 폴리곤(외곽 + 구멍) 삼각분할: Newell 법선 → 지배 축 투영 → earcut → 법선 방향으로 감기 정렬. see docs/04-data-pipeline.md §4.4-2 | exports: Vec3, Triangulated, newellNormal, triangulateRings
 - `tools/pipeline/src/readers/dem.ts` — GSI 基盤地図情報 数値標高モデル(JPGIS GML, DEM1A/5A 등) 리더: zip 속 3차 메시 xml → Float32 격자 + GDAL용 VRT. see docs/04-data-pipeline.md §4.2(terrain) | exports: DEM_NODATA, DemTile, parseFgdDem, listDemZip, meshOfMember, readZipMember, writeTileVrt
 - `tools/pipeline/src/readers/plateau/citygml-assemble.ts` — SAX 파서가 모은 건물·도로 컨텍스트 → 정규화 레코드(LOD 선택 규칙). see docs/04-data-pipeline.md §4.2 | exports: BuildingCtx, AreaCtx, RoadCtx, finishBuilding, finishRoad
@@ -179,7 +193,21 @@
 - `tools/pipeline/src/stages/build/terrain-rtin.ts` — 지형 단순화: RTIN(직각 이등변 삼각형 이분 계층) + 정확 오차(삼각형 내부 모든 격자 샘플) + 경계 정점 강제. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: rtinTriangulate
 - `tools/pipeline/src/stages/fixture-plateau.ts` — plateau-mini 픽스처: 원천 CityGML에서 셀 1개의 건물 몇 동·도로 몇 개만 잘라 같은 파일 이름으로 기록. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: PlateauMiniOptions, splitCityGml, extractPlateauMini
 - `tools/pipeline/src/stages/fixture.ts` — fixture 단계: tests/fixtures/{world-mini, plateau-mini} 생성(M01-T05 빌드 파이프라인 재사용) + plateau-mini 1셀 빌드 스냅샷. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: WORLD_MINI_AREA, PLATEAU_MINI_CELL, PLATEAU_MINI_SOURCE, PLATEAU_MINI_BUILD_ID, LockSource, fixtureAttribution, FixtureInput, buildWorldMini, buildPlateauMini, PlateauMiniSnapshot, plateauMiniSnapshot, hasPlateauRaw
-- `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
+- `tools/pipeline/src/stages/hlod/boxes.ts` — 원경 건물 기하: 방향 사각형 박스(LOD1 박스, 벽 4 + 지붕, 바닥 없음)와 격자 블록 매스(작은 건물 묶음). 평면 법선·벽 UV는 L0 규칙과 같다. | exports: BOX_SINK_M, addPrism, addFarBox, MassCell, accumulateMasses, MASS_MIN_COVERAGE, addMass
+- `tools/pipeline/src/stages/hlod/child-split.ts` — HLOD 자식 16영역 분할: 자식 인덱스, 자식별 지형 패치(RTIN + 스커트), 머티리얼별 프리미티브 + `_CHILD` 정점 속성 → 한 glb. | exports: CHILDREN, PATCH_N, childKeys, MeshStream, ChildGeometry, emptyChildren, HeightFn, PatchSpec, addTerrainPatch, patchOf, HlodEncoded, encodeHlod
+- `tools/pipeline/src/stages/hlod/dem-far.ts` — 원경 지형(L2/L3·영역 밖 L1): 地理院 標高タイル(dem_png, z14 ≈ DEM10B/5A) 받기 → WF 8 m 격자로 재표본 → 이중선형 조회. | exports: DEM_TILE_Z, DEM_TILE_URL, FAR_DEM_STEP_M, FarDem, tileRange, demPngHeight, fetchDemTiles, resampleFarDem, farDemHeight, writeFarDem, readFarDem
+- `tools/pipeline/src/stages/hlod/far-buildings.ts` — 원경 건물 레코드(FarBuilding): PLATEAU 건물 → 중심점·방향 사각형(OBB)·바닥 높이·높이·바닥 면적·용도. L2/L3·영역 밖 L1 HLOD 입력. | exports: FarBuilding, farBuildingOf, farToLine, farFromRow, floorsOf, nightFlags
+- `tools/pipeline/src/stages/hlod/l1.ts` — L1 HLOD(1024 m = L0 4×4): 영역 안 자식 = L0 정규화 건물(LOD2/3 면) 병합 → meshopt simplify 25% + dem_1m 4 m 지형, | exports: L1_PARAMS, L1Sources, addSimplifiedBuildings, farIn, L1Result, buildL1
+- `tools/pipeline/src/stages/hlod/l2.ts` — L2 HLOD(4096 m = L1 4×4): 건물 = LOD1 박스(방향 사각형, 높이 유지) — 크고 높은 건물 우선 상한까지, 나머지는 64 m 블록 매스. | exports: FarLevelParams, L2_PARAMS, FarLevelResult, splitBoxes, buildFarLevel, buildL2
+- `tools/pipeline/src/stages/hlod/l3.ts` — L3 HLOD(16384 m = L2 4×4): 블록 단위 압출 매스(128 m 격자, 면적 가중 높이) + 초고층(≥ 80 m)만 개별 박스(스카이라인). | exports: L3_PARAMS, buildL3
+- `tools/pipeline/src/stages/hlod/run.ts` — hlod 단계: L1(영역 L0의 부모)·L2/L3(hlodExtentWF 전체) → hlod.mesh 1섹션 TKC, 크기 예산 초과 시 단순화 강화 후 재시도, | exports: FAR_SOURCES, HlodInput, HlodCellStats, runHlod
+- `tools/pipeline/src/stages/hlod/tokyo23-lod1.ts` — 23구 원경 건물 추출: plateau-tokyo23 zip의 udx/bldg/*.gml을 풀지 않고 `unzip -p` 스트림 → SAX 리더 → FarBuilding | exports: FAR_BUILDINGS_DIR, listBldgMembers, extractMember, ExtractInput, extractTokyo23, readFarBuildings
+- `tools/pipeline/src/stages/hlod/tokyo23-lod1.worker.ts` — 워커 스레드: zip 멤버 1개씩 받아 원경 건물 줄을 돌려준다(tokyo23-lod1.ts runPool).
+- `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: PlateauSourceRoot, NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
 - `tools/pipeline/src/stages/normalize-terrain.ts` — normalize 단계(지형): GSI DEM1A(주) + DEM5A(결측 채움) → GDAL 재투영(EPSG:6677, 1 m) → 잔여 결측 보간 → data/normalized/terrain/dem_1m.tif. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: NormalizeTerrainInput, GradeReport, NormalizeTerrainResult, gridOfBounds, normalizeTerrain, writeTerrainMeta, hasDemSources
+- `tools/pipeline/src/stages/publish/publish.ts` — publish: data/build/<buildId> → R2 `world/<buildId>/**`(동시성·재시도) → 매니페스트 → 검증(S3 HEAD 또는 Worker HEAD) → KV 빌드 목록·(선택) 현재 포인터. | exports: CURRENT_KEY, BUILDS_KEY, FILES_KEY, BuildEntry, PublishFile, PublishReport, mapLimit, buildFiles, checkBuildDir, PublishInput, publishBuild, verifyViaWorker, selectGc, GcInput, gcBuilds
+- `tools/pipeline/src/stages/publish/targets.ts` — 퍼블리시 대상(env → R2 버킷·KV 네임스페이스)을 apps/worker/wrangler.jsonc에서 읽는다(바인딩 정의의 단일 출처). | exports: PublishEnv, PublishTarget, stripJsonc, readTargets, Clients, createClients
+- `tools/pipeline/src/stages/publish/uploaders.ts` — 퍼블리시 업로더 2종: `s3`(R2 S3 호환 API, SigV4 — 단일 PUT·멀티파트·HEAD 검증) / `api`(Cloudflare REST, API 토큰 — wrangler와 같은 엔드포인트). | exports: MULTIPART_THRESHOLD, PART_SIZE, ObjectPut, Uploader, S3Options, createS3Uploader, ApiOptions, createApiUploader, KvClient, createKvClient, resolveAccountId
+- `tools/pipeline/src/stages/validate-hlod.ts` — validate(HLOD L1–L3): 레벨별 크기 예산(L1 ≤ 3 MB, L2/L3 ≤ 2 MB), hlod.mesh 자식 그룹(모든 정점 _CHILD ∈ 0..15, | exports: HLOD_BUDGET_BYTES, HlodCellReport, inspectHlodCell, hlodSummary
 - `tools/pipeline/src/stages/validate-seams.ts` — validate: 이웃 셀 지형 경계 완전 일치 검사(terrain.height u16 행·열, terrain.mesh 경계 정점). see docs/04-data-pipeline.md §4.6, §6 | exports: CellTerrain, SeamReport, edgeVertices, checkSeams
 - `tools/pipeline/src/stages/validate.ts` — validate 단계: 스키마(world.json·셀 헤더·meta.json, ajv) + cells.idx 일치 + 섹션 해시 + 예산 + 경계 이음새 → report. see docs/04-data-pipeline.md §4.6 | exports: BUDGET, CellReport, ValidateReport, createValidators, validateBuild, reportMarkdown, writeReport

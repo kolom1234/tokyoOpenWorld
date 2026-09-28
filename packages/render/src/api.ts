@@ -1,4 +1,5 @@
-// @sanpo/render 공개 계약. M01-T06 = 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계). see docs/modules/render.md, docs/07-rendering.md §11
+// @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일.
+// see docs/modules/render.md, docs/07-rendering.md §11
 import type { CameraState, CellKey, DeepPartial, EventBus, Logger, SystemProvider, Vec3d } from '@sanpo/core';
 import type { CellPayload } from '@sanpo/tile-format';
 
@@ -34,6 +35,9 @@ export interface RenderStats {
   /** 세션 동안 원점 재설정 횟수. */
   originRebases: number;
   renderOriginWF: Readonly<Vec3d>;
+  /** 자식 숨김 상태를 가진 HLOD 부모 수·페이드 진행 중인 자식 수. */
+  hlodParents: number;
+  hlodFading: number;
 }
 
 export interface RenderService extends SystemProvider {
@@ -43,6 +47,13 @@ export interface RenderService extends SystemProvider {
   /** 셀 메시 추가(소유권 이전: 배열을 GPU 버퍼로 그대로 사용). 같은 키가 있으면 교체. */
   addCell(p: CellPayload): void;
   removeCell(key: CellKey): void;
+  /**
+   * HLOD 부모(L1–L3)의 자식 영역(0..15, 05 §4) 표시. false = 0.3 s 디더 페이드로 숨김, true = 즉시 보임(자식 제거 전 호출 → 구멍 없음).
+   * 부모가 아직 없어도 기억했다가 붙을 때 적용한다.
+   */
+  setHlodChildVisible(parent: CellKey, child: number, visible: boolean): void;
+  /** 고정 머티리얼(+ HLOD 변형) 셰이더 선컴파일(06 §6) — 스트리밍 중 컴파일 끊김 방지. */
+  precompile(): Promise<void>;
   /** WF float64 카메라. 다음 renderPrep(phase 70)에서 원점 재설정·투영에 반영. */
   setCamera(c: Readonly<CameraState>): void;
   stats(): RenderStats;

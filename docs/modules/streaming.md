@@ -6,8 +6,11 @@ Layer: L2 | Depends: core, geo, tile-format, meshoptimizer(디코더) | Used by:
 상세 스펙: `docs/06-world-streaming.md` (API 전문은 §9).
 
 ## Public API (요약)
-`createStreaming(deps) → StreamingService`:
-`setInterest, ack, whenReady, stateOf, groundHeightAt, onReady, onEvicted, requestSections, stats` (+ `SystemProvider`: phase 50).
+`createStreaming(StreamingDeps{bus, log, world{baseUrl, buildId, cellsIndex}, config?, supervisor?|pool?, fetcher?, clock?, initialMode?, initialTier?}) → StreamingService`:
+`setInterest, ack, whenReady, stateOf, groundHeightAt, onReady(1개만), onEvicted, requestSections, stats, dispose` (+ `SystemProvider`: phase 50, `init` = 옛 buildId 캐시 삭제).
+- **구현됨(M02-T03, ADR-0023)**: `CellState`·`ConsumerId`·`WhenReadyRequest`·`StreamingStats`(states·residentByLevel·queued/fetching/decoding·pendingReady·
+  recompute{count,lastMs,maxMs,totalMs}·evicted·failures·cacheBytes·overLimit)·`StreamingDeps`. `StreamingConfig.lifecycle: LifecycleConfig{retryAfterMs 60 s,
+  recomputeIntervalMs 250, readyPerFrame 2, evictPerFrame 8}`, `FetchConfig.cacheMaxBytes 1.5e9`, `CacheLike.keys?()`, `Fetcher.cacheBytes?()`.
 - **구현됨(M02-T01)**: `api.ts` = `StreamingConfig { interest: InterestConfig; priority: PriorityConfig; residentMax }`(기본값 `internal/config.ts`
   `DEFAULT_STREAMING_CONFIG`, 수치 06 §3–4·ADR-0021). 서비스(`createStreaming`)는 아직 없음(T02–T03).
 - 내부 순수 함수(패키지 밖 비공개): `cell-index.ts` `parseCellIndex/createCellIndex → CellIndex{has,get,byteLength,keysAt,extentAt}`,
@@ -21,11 +24,17 @@ Layer: L2 | Depends: core, geo, tile-format, meshoptimizer(디코더) | Used by:
   `DEFAULT_STREAMING_CONFIG`. 테스트 대역용 `FetchLike`·`CacheStorageLike`.
 - 내부: `scheduler.ts` `createLoadScheduler({index, fetcher, pool, …, onStage, onDone}) → {request(key, score, sections?), cancel, stageOf, stats}`,
   워커 쪽 `decode.ts` `decodeCell`·`glb.ts` `decodeGlb`·`decode-host.ts`·`protocol.ts`.
+  T03: `service.ts`(조립·프레임 update), `planner.ts` `recompute`(원하는 셀 → 취소 → 순위 요청 → 해제 계획), `lifecycle.ts` `createLifecycle`(상태·보류 payload·ack),
+  `ground.ts` `createGroundStore`·`sampleHeightfield`, `waiters.ts`(whenReady·pinned), `cell-cache.ts`(Cache Storage 계층)·`cache-lru.ts`(상한 LRU),
+  `interest.ts` `inLoadZone`(미룬 해제 재확인).
 
 ## Invariants
 - 발밑 L0 셀은 항상 최우선.
 - `onReady` ≤ 2/프레임, 메인 적용 ≤ 2 ms/프레임.
 - 상주 한도(L0 72, **L1 80**, L2 64, L3 16 — ADR-0021)는 소프트 리밋(로드 반경 내 셀은 해제 금지). 해제 반경 = 로드 반경 × 1.25. R0 ≤ 768 m.
+- 로드 반경 안·whenReady 대상 셀은 절대 해제하지 않는다(미룬 해제도 실행 직전 재확인). 해제는 프레임당 ≤ 8.
+- `live` ⇔ onReady로 넘긴 뒤 render ack. onReady 전 해제된 셀은 onEvicted·`cell/evicted` 없음. 셀당 onReady는 적재 1회에 1번.
+- 진행 중 요청은 해제 반경 밖에서만 취소. failed는 60 s 뒤 재요청 가능(whenReady는 failed를 끝으로 본다).
 - 발밑 셀 점수 −1 고정(다른 점수 ≥ 0). 부모가 같은 요청 후보면 자식 점수 ≥ 부모 + 0.001(발밑 면제). `cells.idx`에 없는 셀은 요청 안 함.
 - 모드·품질 티어는 `InterestPoint`가 아닌 `InterestFrame`으로 입력(서비스가 `mode/changed`·`quality/changed` 추적).
 - `live` = render ack. physics 콜라이더는 `requestSections`로 별도 공급.
@@ -37,16 +46,19 @@ Layer: L2 | Depends: core, geo, tile-format, meshoptimizer(디코더) | Used by:
 
 ## Files
 cell-index.ts, interest.ts, priority.ts, geometry.ts, config.ts(순수), scheduler.ts, fetcher.ts, decode-pool.ts, protocol.ts,
-decode.worker.ts(엔트리), decode-host.ts, decode.ts, glb.ts, decode-util.ts(워커 쪽), lifecycle.ts·ground.ts(M02-T03).
+decode.worker.ts(엔트리), decode-host.ts, decode.ts, glb.ts, decode-util.ts(워커 쪽),
+service.ts, planner.ts, lifecycle.ts, ground.ts, waiters.ts, cell-cache.ts, cache-lru.ts(M02-T03).
 
 ## Tests
 priority/interest/cell-index 단위, decode(world-mini ↔ 파이프라인 스냅샷 `tests/fixtures/snapshots/world-mini-decode.json`),
 decode-pool(가짜 워커 + **실제 worker_threads**로 decode.worker.ts 실행 — `test/support/node-worker-shim.ts`), fetcher(재시도·취소·캐시 대역),
 scheduler(순서·동시성·단계별 취소 + HTTP `/fixtures/world-mini` → 캐시 → 워커 스레드 전 경로), e2e `tests/e2e/decode.spec.ts`(Chromium 모듈 워커).
-lifecycle 상태 전이·헤드리스 이동 시뮬은 M02-T03.
+T03: lifecycle(전이·FIFO·failed·정리), service(부팅 순서·onReady ≤ 2/프레임·ack·이벤트·failed 60 s·whenReady pin·취소·재계산 주기·requestSections·dispose),
+**service-sim(10분 무작위 이동 — 로드 반경 해제 0·5 s 수렴·누수 0, 기본/좁은 한도)**, ground(world-mini 경계 연속), cache-lru·fetcher 상한. 대역 `test/support/sim.ts`(가상 시계).
 
 ## Status
-M02-T01 관심·우선순위 완료. M02-T02 fetch·Cache Storage·디코드 워커 풀·로드 큐 완료(ADR-0022). lifecycle·ground·`createStreaming`은 M02-T03.
+M02-T01 관심·우선순위, M02-T02 fetch·디코드 워커 풀·로드 큐(ADR-0022), M02-T03 `createStreaming`·lifecycle·ground·캐시 상한(ADR-0023) 완료.
+게임 배선(render 어댑터·임시 로더 삭제)은 M02-T05.
 
 ## Gotchas
 - `KTX2Loader`는 render 소관(streaming은 텍스처를 다루지 않음 — 셀에는 텍스처 없음).

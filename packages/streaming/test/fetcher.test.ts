@@ -122,6 +122,35 @@ describe('fetcher', () => {
     expect((await none.fetcher.fetchCell(KEY, 1000)).ok).toBe(true);
   });
 
+  it('caps Cache Storage at cacheMaxBytes, evicting the least recently used cells first', async () => {
+    const config = { ...DEFAULT_STREAMING_CONFIG.fetch, cacheMaxBytes: 2500 };
+    const { fetcher, caches } = setup(['body'], { config });
+    const stored = () => [...(caches.stores.get(cacheName('b1'))?.keys() ?? [])].sort();
+    const k = (ix: number) => packCellKey(0, ix, 0);
+    await fetcher.fetchCell(k(1), 1000);
+    await fetcher.fetchCell(k(2), 1000);
+    await expect.poll(() => stored().length).toBe(2);
+    await fetcher.fetchCell(k(1), 1000); // 적중 → k(1)이 최근
+    await fetcher.fetchCell(k(3), 1000); // 3000 B > 2500 → 가장 오래 안 쓴 k(2) 삭제
+    await expect.poll(stored).toEqual([cellUrl(BASE, k(1)), cellUrl(BASE, k(3))].sort());
+    expect(fetcher.cacheBytes?.()).toBe(2000);
+  });
+
+  it('counts entries left by earlier sessions (oldest first) toward the cap', async () => {
+    const caches = createFakeCaches();
+    const old = await caches.open(cacheName('b1'));
+    for (const ix of [5, 6, 7])
+      await old.put(cellUrl(BASE, packCellKey(0, ix, 0)), new Response(new ArrayBuffer(1000)));
+    const config = { ...DEFAULT_STREAMING_CONFIG.fetch, cacheMaxBytes: 2500 };
+    const { fetcher } = setup(['body'], { config, caches });
+    await fetcher.fetchCell(KEY, 1000); // 열면서 기존 3000 B 파악 → 가장 오래된 것부터 정리
+    await expect.poll(() => fetcher.cacheBytes?.()).toBeLessThanOrEqual(2500);
+    await expect
+      .poll(() => [...(caches.stores.get(cacheName('b1'))?.keys() ?? [])])
+      .not.toContain(cellUrl(BASE, packCellKey(0, 5, 0)));
+    expect([...(caches.stores.get(cacheName('b1'))?.keys() ?? [])]).toContain(cellUrl(BASE, KEY));
+  });
+
   it('purgeStaleCaches deletes other builds only', async () => {
     const caches = createFakeCaches();
     for (const n of ['sanpo-world-old', 'sanpo-world-b1', 'other-app']) await caches.open(n);

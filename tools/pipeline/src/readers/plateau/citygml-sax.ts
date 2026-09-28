@@ -10,28 +10,37 @@ const CHUNK_BYTES = 1 << 20;
 export interface CityGmlSaxReader extends PlateauReader {
   /** 마지막 `read` 완료 후 통계(폴리곤 수, 텍스처 연결 수, 버린 링 수). */
   readonly lastStats: SaxStats | null;
+  /** 파일 대신 UTF-8 문자열 청크 스트림(예: `unzip -p` 출력)에서 읽는다. */
+  readChunks(chunks: AsyncIterable<string>, opts: PlateauReadOptions): AsyncIterable<NormalizedFeature>;
 }
 
 export function createCityGmlSaxReader(): CityGmlSaxReader {
   let lastStats: SaxStats | null = null;
+  async function* readChunks(
+    chunks: AsyncIterable<string>,
+    opts: PlateauReadOptions,
+  ): AsyncIterable<NormalizedFeature> {
+    const queue: NormalizedFeature[] = [];
+    const state = new CityGmlState(opts.sourceId, (f) => queue.push(f));
+    const parser = createParser(state);
+    for await (const chunk of chunks) {
+      parser.write(chunk);
+      yield* queue.splice(0);
+    }
+    parser.close();
+    yield* queue.splice(0);
+    lastStats = { ...state.stats };
+  }
   return {
     name: 'citygml-sax',
     get lastStats() {
       return lastStats;
     },
-    async *read(file: string, opts: PlateauReadOptions): AsyncIterable<NormalizedFeature> {
-      const queue: NormalizedFeature[] = [];
-      const state = new CityGmlState(opts.sourceId, (f) => queue.push(f));
-      const parser = createParser(state);
+    read(file: string, opts: PlateauReadOptions): AsyncIterable<NormalizedFeature> {
       const stream = createReadStream(file, { encoding: 'utf8', highWaterMark: CHUNK_BYTES });
-      for await (const chunk of stream) {
-        parser.write(chunk as string);
-        yield* queue.splice(0);
-      }
-      parser.close();
-      yield* queue.splice(0);
-      lastStats = { ...state.stats };
+      return readChunks(stream as AsyncIterable<string>, opts);
     },
+    readChunks,
   };
 }
 

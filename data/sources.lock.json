@@ -15,23 +15,36 @@
     },
     {
       "id": "plateau-shinjuku",
-      "url": "TBD (plateau-13104-shinjuku-ku-<最新年度>)",
-      "resource": "CityGML(v4)",
-      "fiscalYear": null,
-      "sha256": "TBD",
+      "url": "https://assets.cms.plateau.reearth.io/assets/db/2866b9-e3c2-4bc4-83d3-b7b42e9b85a1/13104_shinjuku-ku_pref_2025_citygml_1_op.zip",
+      "dataset": "https://www.geospatial.jp/ckan/dataset/plateau-13104-shinjuku-ku-2025",
+      "resource": "CityGML(v5) 13104_shinjuku-ku_pref_2025_citygml_1_op.zip (772,888,884 B). 都 제공 pref 판은 3차 메시 단위(구 경계로 자르지 않음) — MVP에는 시부야 zip에 없는 메시 53394527·35·36·37만 사용",
+      "fiscalYear": 2025,
+      "sha256": "3a936966bae01051787fd2039319237cedc8d7a0ae838c10d30c222f586a7282",
       "license": "PLATEAU-SitePolicy (CC-BY-4.0 compatible)",
       "attribution": "出典：国土交通省 Project PLATEAU 3D都市モデル（新宿区）を加工して作成",
-      "retrievedAt": null
+      "retrievedAt": "2026-09-29"
+    },
+    {
+      "id": "plateau-meguro",
+      "url": "https://assets.cms.plateau.reearth.io/assets/10/6cc3b4-2f82-4485-b4df-ba21eed697e1/13110_meguro-ku_pref_2025_citygml_1_op.zip",
+      "dataset": "https://www.geospatial.jp/ckan/dataset/plateau-13110-meguro-ku-2025",
+      "resource": "CityGML(v5) 13110_meguro-ku_pref_2025_citygml_1_op.zip (306,600,802 B). MVP 남서 모서리 메시 53393584만 사용(세타가야 zip의 같은 메시와 동일 파일)",
+      "fiscalYear": 2025,
+      "sha256": "165b74076e620e79e6eb5d24a982fdb7a54fe4f9f75ac3e965209cd6a3211088",
+      "license": "PLATEAU-SitePolicy (CC-BY-4.0 compatible)",
+      "attribution": "出典：国土交通省 Project PLATEAU 3D都市モデル（目黒区）を加工して作成",
+      "retrievedAt": "2026-09-29"
     },
     {
       "id": "plateau-tokyo23",
-      "url": "https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku",
-      "resource": "CityGML(v2) 2020年度",
+      "url": "https://assets.cms.plateau.reearth.io/assets/ec/d51c64-a47f-4a56-aa64-340d1d3c720b/13100_tokyo23-ku_2020_citygml_4_2_op.zip",
+      "dataset": "https://www.geospatial.jp/ckan/dataset/plateau-tokyo23ku",
+      "resource": "CityGML(v2) 13100_tokyo23-ku_2020_citygml_4_2_op.zip (5,333,703,547 B), udx/bldg 672 파일(17.3 GB) — 압축 해제 없이 스트림으로 읽음",
       "fiscalYear": 2020,
-      "sha256": "TBD",
+      "sha256": "6a3f4b852435f3f773a484cea82248e4e937d6233914be8d0a909f3323c1e5c9",
       "license": "PLATEAU-SitePolicy (CC-BY-4.0 compatible)",
       "attribution": "出典：国土交通省 Project PLATEAU 3D都市モデル（東京都23区）を加工して作成",
-      "retrievedAt": null
+      "retrievedAt": "2026-09-29"
     },
     {
       "id": "gsi-dem",
@@ -48,6 +61,16 @@
       "license": "GSI-Content-Terms (CC-BY-4.0 compatible)",
       "attribution": "出典：国土地理院（基盤地図情報 数値標高モデル）を加工して作成",
       "retrievedAt": "2026-09-27"
+    },
+    {
+      "id": "gsi-dem-tiles",
+      "url": "https://cyberjapandata.gsi.go.jp/xyz/dem_png/{z}/{x}/{y}.png",
+      "resource": "地理院タイル 標高タイル(基盤地図情報 数値標高モデル) dem_png z14, hlodExtentWF(48 km 정사각형) 676 타일(404 = 해면 76). sha256 = data/raw/gsi-dem-tiles/manifest.json(타일별 sha256 목록)의 해시",
+      "fiscalYear": null,
+      "sha256": "ad9a02abe0648093dbc96da7b1ebf91aca645cd689417891312e59a0a4da3ded",
+      "license": "GSI-Content-Terms (CC-BY-4.0 compatible)",
+      "attribution": "出典：国土地理院（地理院タイル 標高タイル）を加工して作成",
+      "retrievedAt": "2026-09-29"
     },
     {
       "id": "gsi-photo",

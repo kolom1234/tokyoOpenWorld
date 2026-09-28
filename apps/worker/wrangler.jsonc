@@ -1,9 +1,6 @@
 // Cloudflare Worker 설정. see docs/13-deployment.md §2, docs/modules/worker.md
-// R2(WORLD)·KV(CONFIG) 바인딩은 리소스를 만들기 전까지 의도적으로 생략한다.
-// 바인딩이 없으면 /world/*, /api/world/current는 503(world_storage_unconfigured)으로 비활성 — 배포 자체는 성공한다.
-// 리소스 생성 후 아래 주석 블록을 top-level과 env.staging에 각각 추가(바인딩은 env 간 상속되지 않음):
-//   "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-prod" }],   // staging: "sanpo-world-dev"
-//   "kv_namespaces": [{ "binding": "CONFIG", "id": "<kv-namespace-id>" }]
+// R2·KV 리소스(M02-T06, 2026-09-29 생성, 위치 힌트 apac): production = sanpo-world-prod + KV SANPO_CONFIG,
+// staging = sanpo-world-dev + KV SANPO_CONFIG_STAGING(바인딩은 env 간 상속되지 않으므로 양쪽에 둔다). 퍼블리시·포인터 = `pnpm pipeline publish`.
 // env.local은 `pnpm dev`(wrangler dev --env local) 전용 — R2/KV를 miniflare가 .wrangler/state에 시뮬레이션한다.
 // 실제 리소스가 없으므로 배포 불가(배포하지 말 것). 시드: `pnpm --filter @sanpo/worker seed:local` (ADR-0016)
 {
@@ -21,10 +18,14 @@
   },
   "observability": { "enabled": true },
   "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" },
+  "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-prod" }],
+  "kv_namespaces": [{ "binding": "CONFIG", "id": "938aa34bc73f4cce935ab383fbc0a098" }],
   "env": {
     "staging": {
       "name": "tokyo-sanpo-staging",
-      "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" }
+      "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" },
+      "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-dev" }],
+      "kv_namespaces": [{ "binding": "CONFIG", "id": "52e1d2e4354047cda47550e03f0750b4" }]
     },
     "local": {
       "name": "tokyo-sanpo-local",
