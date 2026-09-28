@@ -10,7 +10,14 @@ import {
   type QualityTier,
 } from '@sanpo/core';
 import { cellBoundsWF } from '@sanpo/geo';
-import { type CellPayload, type CellsIndexEntry, tkcHash32, writeCellsIndex } from '@sanpo/tile-format';
+import {
+  type CellPayload,
+  type CellsIndex,
+  type CellsIndexEntry,
+  readCellsIndex,
+  tkcHash32,
+  writeCellsIndex,
+} from '@sanpo/tile-format';
 import { type CellIndex, parseCellIndex } from '../src/internal/cell-index.ts';
 import type { InterestFrame } from '../src/internal/geometry.ts';
 
@@ -37,6 +44,13 @@ export function synthEntries(ranges: readonly [number, number][] = SYNTH_RANGES)
 export function synthIndex(ranges?: readonly [number, number][]): CellIndex {
   const r = parseCellIndex(writeCellsIndex(synthEntries(ranges)));
   if (!r.ok) throw new Error(`synthIndex: ${r.error.code}`);
+  return r.value;
+}
+
+/** createStreaming용 파싱된 cells.idx(Map). */
+export function synthCellsIndex(ranges?: readonly [number, number][]): CellsIndex {
+  const r = readCellsIndex(writeCellsIndex(synthEntries(ranges)));
+  if (!r.ok) throw new Error(`synthCellsIndex: ${r.error.code}`);
   return r.value;
 }
 

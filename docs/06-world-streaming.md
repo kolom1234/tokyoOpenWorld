@@ -13,7 +13,9 @@ failed (3회 재시도 후) → 부모 HLOD 유지, 60 s 후 재시도 가능
 ```
 - `ready`→`live`: **render의 ack만으로** `live`(시각적 존재 기준). sim/audio/ui는 같은 payload를 받아 각자 `ack(key, consumer)`로 기록만 한다(통계·디버그용).
 - **physics는 payload로 콜라이더를 받지 않는다.** 물리 반경(08 §4)에 들어온 `live` 셀에 대해 wiring이 `requestSections(key, ['collision.bin','terrain.height'])`를 호출 → Cache Storage에서 재읽기·해당 섹션만 디코드해 전달. 반경 이탈 시 `physics.removeCell`. (렌더 반경 > 물리 반경이어도 콜라이더 유실 없음)
-- 취소: 관심 범위 밖으로 벗어난 `queued/fetching` 요청은 `AbortController`로 취소.
+- 취소: 해제 반경(× 1.25) 밖으로 벗어난 `queued/fetching/decoding` 요청은 `AbortController`로 취소(해제 반경 안이면 계속 받음).
+- 해제: 재계산이 만든 계획을 프레임당 최대 8개 실행(순간이동 시 분산). 실행 직전 로드 영역·whenReady 대상이면 건너뜀. onReady 전 해제는 이벤트 없음.
+- 재계산(원하는 셀·순위·해제 계획): 관심점 L0 셀·모드·티어 변화 시 즉시, 그 외 250 ms마다(ADR-0023).
 
 ## 3. 관심점과 로딩 반경
 `InterestPoint`는 `@sanpo/core` 타입(`{ posWF, velWF?, forward?, weight, kind: 'camera'|'player'|'lookahead'|'teleport' }`).
@@ -58,12 +60,12 @@ score  = max(score, score(parent) + 0.001)  if parent ∈ 같은 요청 후보 &
 
 ## 6. 적용 예산 (메인 스레드)
 - 프레임당 GPU 업로드/오브젝트 생성 ≤ 2 ms (측정 기반 적응: 초과 시 다음 프레임으로 이월).
-- 한 프레임에 `onReady` 콜백(+ `cell/ready` 키 이벤트) 최대 2개.
+- 한 프레임에 `onReady` 콜백(+ `cell/ready` 키 이벤트) 최대 2개, 해제(`onEvicted` + `cell/evicted`) 최대 8개.
 - 셰이더: 머티리얼 클래스 수가 고정(`07-rendering.md §4`)이므로 부팅 시 `renderer.compileAsync`로 선컴파일 → 스트리밍 중 컴파일 끊김 없음.
 
 ## 7. 캐시 계층
 1. 브라우저 HTTP 캐시 (`Cache-Control: immutable`, URL에 buildId 포함).
-2. Cache Storage `sanpo-world-<buildId>`: 방문한 셀 저장(최대 1.5 GB, LRU — 상한 적용은 M02-T03). 부팅 시 다른 buildId 캐시 삭제(`purgeStaleCaches`).
+2. Cache Storage `sanpo-world-<buildId>`: 방문한 셀 저장(최대 1.5 GB, LRU — 세션 간 순서는 저장 순서 근사, ADR-0023). 부팅 시 다른 buildId 캐시 삭제(`purgeStaleCaches`, `init()`).
    키 = 셀 URL. 저장은 네트워크 응답의 `Response.clone()`(메인 JS 복사 없음), 적중 시 크기가 cells.idx와 다르면 삭제 후 네트워크.
    워커가 hash32·컨테이너 손상(`mismatch`/`corrupt` 등)을 보고하면 스케줄러가 해당 캐시 항목을 지운다(`Fetcher.invalidate`).
 3. 메모리: 디코드 결과는 소비자에게 넘기면 폐기(중복 보관 금지). 재방문·`requestSections`는 2)에서 재읽기·재디코드. Cache Storage 미스(축출) 시 네트워크 재요청.
@@ -84,7 +86,7 @@ export type ConsumerId = 'render' | 'physics' | 'sim' | 'audio' | 'ui';
 export interface StreamingService extends SystemProvider {
   setInterest(points: readonly InterestPoint[]): void;
   ack(key: CellKey, consumer: ConsumerId): void;
-  whenReady(req: { centerWF: Vec3d; radius: number; levels: number[] }): Promise<void>;
+  whenReady(req: { centerWF: Vec3d; radius: number; levels: number[] }): Promise<void>;  // 영역 셀 pinned, 전부 live|failed면 resolve
   stateOf(key: CellKey): CellState;
   groundHeightAt(x: number, z: number): number | undefined;   // L0 heightfield 기반, 없으면 undefined
   onReady(cb: (p: CellPayload) => void): Unsubscribe;          // 콜백은 wiring 1곳만 등록(소유권 단일 이전)
@@ -92,7 +94,10 @@ export interface StreamingService extends SystemProvider {
   onEvicted(cb: (key: CellKey) => void): Unsubscribe;
   stats(): StreamingStats;
 }
-export function createStreaming(deps: { bus: EventBus; log: Logger; config: StreamingConfig; fetcher?: Fetcher }): StreamingService;
+export function createStreaming(deps: {
+  bus: EventBus; log: Logger; world: { baseUrl: string; buildId: string; cellsIndex: CellsIndex };
+  config?: StreamingConfig; supervisor?: WorkerSupervisor; pool?: DecodePool; fetcher?: Fetcher; clock?: () => number;
+}): StreamingService;   // + stats(), dispose(). world.json·cells.idx 로드/검증은 게임 부트(ADR-0023)
 ```
 - `CellPayload`는 워커에서 생성되어 Transferable로 전달된다. 소비자는 배열을 소유권 이전받는다(복사 금지).
 - 물리용 `collision`은 `requestSections` 결과를 wiring이 물리 워커로 transfer — 메인에 남기지 않는다.
@@ -102,7 +107,7 @@ export function createStreaming(deps: { bus: EventBus; log: Logger; config: Stre
   onReady 기본 섹션 = 렌더 메시(`terrain/buildings/roads/decals/overrides/hlod.mesh`) + `terrain.height`. `requestSections`용으로
   `collision.bin`·`lanes.bin`(gunzip된 ArrayBuffer)·`nav.bin`·`meta.json`도 디코드. props/trees/lights/audio는 해당 태스크에서 추가.
 - 재시도: 첫 시도 + **3회**(250 → 500 → 1000 ms), 대상 = 네트워크 오류·408·429·5xx·크기 불일치. 404 등 나머지 4xx·취소는 즉시 실패.
-  3회 실패 후 `failed` → 60 s 재시도 정책은 lifecycle(M02-T03).
+  3회 실패 후 `failed` → 60 s 뒤 다시 요청 대상(원하지 않으면 기록 정리). failed는 whenReady를 막지 않는다.
 - 워커 풀: 워커 수 = `hardwareConcurrency − 2`(1…4), 워커당 동시 2개(대기열은 풀이 FIFO로 보관). 동시 fetch ≤ 8, 디코드 대기 ≤ 워커 수 × 2일 때만 새 fetch.
 - 취소: 셀별 AbortController 하나가 fetch·백오프 대기·디코드를 모두 끊는다. 대기열이면 제거, 워커 안이면 `cancel` 메시지 →
   워커가 다음 단계 경계(섹션·프리미티브, 매크로태스크 양보)에서 중단하고 `cancelled`만 보낸다. 늦게 온 결과는 요청 id로 폐기.

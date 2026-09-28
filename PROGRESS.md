@@ -1,15 +1,27 @@
 # PROGRESS
-Updated: 2026-09-28 (session #13 — M02-T02 완료, PR 리뷰 대기)
+Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 실제 GPU 확인 + M02-T03 완료, 브랜치 `claude/m02-queue`)
 
-## Current Milestone: M02 — Streaming & Deploy (T01–T02 완료 · T03–T07 남음)
-## Current Task: M02-T02 Fetcher & decode workers (done — PR 리뷰 대기)
-- Done in this task: `packages/streaming/src/internal/{fetcher,scheduler,decode-pool,protocol,decode.worker,decode-host,decode,glb,decode-util}.ts` + `api.ts`(FetchConfig·DecodeConfig·Fetcher·DecodePool 등) + index 공개 팩토리(`createFetcher`·`createDecodePool`·`purgeStaleCaches`·`DEFAULT_STREAMING_CONFIG`). fetch(메인, 비동기) → Cache Storage `sanpo-world-<buildId>` → 워커(hash32·readTkc·glb 부분집합 파서 + meshopt·gzip) → Transferable. 재시도 3회(250/500/1000 ms), 셀별 AbortController, 워커 단계 경계 협조 취소. 파이프라인 스냅샷 `tests/fixtures/snapshots/world-mini-decode.json`. 게임 `?probe=decode`(debug/decode-probe.ts) + e2e `decode.spec.ts`. ADR-0022, 06 §7·§9·§10, 05 §4 갱신
+## Current Milestone: M02 — Streaming & Deploy (T01–T03 완료 · T04–T07 남음)
+## Current Task: M02-T04 HLOD pipeline (다음)
+- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03(아래 Recently Completed).
 - In progress: –
-- **임시 코드(삭제 예정)**: `apps/game/src/debug/local-cells.ts`(메인 스레드 glb 파싱 + `LocalGround`) → **M02-T05에서 삭제**(roadmap M02-T05 블록). `decodeLocalCell` 자리에 `createDecodePool().decode()` 결과 payload(형태 동일, ADR-0022). `LoadedCell.tkc`·`world-view.ts showWorld`도 그때 streaming 배선으로 교체.
-- Next step (정확히 한 걸음): PR 병합 → `/sanpo-resume M02-T03`(`### M02-T03` 블록 + `docs/modules/streaming.md`). T03은 `createLoadScheduler`·`createDecodePool`·`computeDesired`·`rankCells`를 `createStreaming`(lifecycle·ack·eviction·ground)으로 조립한다. M01-T06 사람 육안 확인(실제 GPU WebGPU, O 키)도 아직 남음.
+- **임시 코드(삭제 예정)**: `apps/game/src/debug/local-cells.ts`(메인 스레드 glb 파싱 + `LocalGround`) → **M02-T05에서 삭제**. 교체 = `createStreaming`
+  (`onReady` payload·`groundHeightAt`, ADR-0023). `LoadedCell.tkc`·`world-view.ts showWorld`도 그때 streaming 배선으로.
+- Next step (정확히 한 걸음): `### M02-T04` 블록 + `docs/04-data-pipeline.md §4.5`·`docs/05-tile-format.md §4(hlod.mesh)` 읽고 `tools/pipeline/src/stages/hlod/` 작성.
 - Blockers: 없음
 
 ## Recently Completed
+- M02-T03 Lifecycle, ack, eviction, ground — `createStreaming`(service·planner·lifecycle·ground·waiters·cell-cache·cache-lru). 재계산 = L0 셀·모드·티어 변화 즉시 + 250 ms,
+  진행 중 요청은 해제 반경 밖에서만 취소, 해제는 프레임당 ≤ 8(실행 직전 `inLoadZone` 재확인), onReady ≤ 2/프레임·render ack → live,
+  failed → 60 s 뒤 재요청(기록 정리), whenReady = 영역 셀 pin + live|failed면 resolve, Cache Storage 1.5 GB LRU(세션 간 = 저장 순서 근사, 부팅 seed 백그라운드).
+  **수락(10분 무작위 이동 헤드리스, 가상 시계)**: 기본 한도 — 텔레포트 12·fetch 1679·주입 실패 29·해제 1515, 로드 반경 안 해제 0·이중 전달 0·한도 초과 0 ms;
+  좁은 한도(L0 24·L1 30·L2 30) — 최대 480 ms 안 수렴; 둘 다 관심점 제거 후 L3 16개만 live·진행/보류/failed/지면/타이머 0(누수 0).
+  **셀 집합 계산 비용**(T01 이월): 재계산(computeDesired + rankCells + 해제 계획) 평균 0.41 ms, 워밍업 후 최대 ≈ 2 ms, 첫 호출 ≈ 8 ms(JIT 냉간·부팅 중).
+  테스트 +6파일/+23건(streaming 88). ADR-0023, 06 §2·§6·§7·§9 갱신 (2026-09-29)
+- M01-T06 사람 육안 확인(실제 GPU) — 이 PC(RTX 3050 Laptop 4 GB, 드라이버 537.13, Chrome 153 headed, Playwright `channel: 'chrome'`)에서
+  `?world=mini&debug=1`: **백엔드 WebGPU · 깊이 reversed-z**, 어댑터 nvidia/ampere, **60 FPS 고정(16.7 ms, vsync)**, 셀 4·draw 9·tris 230k.
+  **O 키 원점 재설정**: 원점 (0,0,0) → (4096,0,0) → (0,0,0), 재설정 2회, 복귀 후 카메라 WF 동일, 3D 영역 **픽셀 차 0**(떨림 없음).
+  첫 프레임 `render` 53.6 ms 경고 1회(파이프라인 컴파일 — 선컴파일은 M02-T05/M03). 스크린샷 `docs/screenshots/M01-T06-start-webgpu-rtx3050.png` (2026-09-29)
 - M02-T02 Fetcher & decode workers — 워커 디코드 결과가 파이프라인(gltf-transform) 스냅샷과 정점·인덱스 수·속성 레이아웃·내용 해시까지 일치(Node·worker_threads·Chromium). Chromium 모듈 워커(워커 2) 셀당 25–111 ms(1차)/25–76 ms(캐시 2차), 4셀 동시 84–153 ms, 메인 `decode()` 동기 구간 중앙값 ≈ 0.1 ms·긴 작업 0. 취소: 풀 즉시 aborted + 워커는 다음 단계 경계에서 중단(`cancelled`, 실제 스레드 테스트). 테스트 +6파일/+29건(총 383), e2e +1(`decode.spec.ts`). ADR-0022 (2026-09-28)
 - M02-T01 Interest & priority — 06 §3–4 순수 함수. 한 점 기준(셀 내 위치 샘플) 원하는 L0 셀 수: 도보 11–16(해제 16–22), 자전거 16–21, 차량 27–32(42–48), 열차 39–45(57–65, 진행 방향 가중 시 ≈ 35), freecam 고도 0/100/300 m = R0 384/434/534, 300 m 초과 3×3(유지 5×5, 300–375 m는 원형 유지). L1 3 km(고고도 ≤ 3.5 km, 최대 상주 79–80 → 한도 80), L2 12 km, L3 전부. 부팅 순서 = 발밑 → L3 → L2 → L1 → 거리순. `computeDesired` 브루트포스 전수 대조 일치. ADR-0021 (2026-09-28)
 - M01-T06 Minimal render & free camera — three 0.186.1 `WebGPURenderer`(`reversedDepthBuffer` — WebGPU depth32float, WebGL2는 `EXT_clip_control` 필요·SwiftShader에 있음, 없으면 logarithmic; `backend-caps.ts` 사전 판정), AgX, 방향광(방위 200°·고도 50°) + 반구광, 단색 PBR 2종(`terrain_ground`·`facade_default`). 원점 재설정: 카메라 ≥ 2048 m → 256 m 격자 스냅, 같은 renderPrep에서 노드·카메라 재계산(누적 없음). freecam: 관성 감쇠 3/s, 휠 0.5–60 m/s(×1.25/노치), Shift ×4, E/Q, 고도 ≤ 1,000 m, 지면 + 1 m. 시작: WF(−60, 지면+60, −15) → Scramble Square(지붕 TP 245.6 m, 지면 대비 ≈ 231 m). `?debug=1` 오버레이 + O 키(+4096 m → 1 s → 복귀). headless Chromium(SwiftShader WebGL2): 셀 4·draw 9·tris 230k·≈ 7 FPS, 원점 재설정 2회 왕복 전후 픽셀 차 0. 테스트 +7파일/+31건, e2e +2 (2026-09-28)
@@ -27,15 +39,16 @@ Updated: 2026-09-28 (session #13 — M02-T02 완료, PR 리뷰 대기)
 - [pipeline] `normalizePlateau`는 대상 셀 버킷을 메모리에 모두 보유(3×3 ≈ 수십 MB) → MVP 전체 294셀 실행 전 셀별 임시 파일 스필 필요(M02).
 - [pipeline] 건물 셀 배정 중심점 = 모든 면 정점 평균(installation 포함). M01-T05 실측: 셀 밖 돌출 최대 68.2 m(L0_-1_0, 허용 256 m) → 유지. 발자국 기준 전환은 294셀 빌드에서 문제가 보이면.
 - [pipeline] 도로 레코드는 TrafficArea 단위로 매우 잘게 나뉨(3×3에 27.7k) → M03 도로 메시 빌드 시 병합/삼각분할 비용 확인.
-- [ci] e2e = 부트·월드 로드(`boot.spec.ts`) + 렌더 스모크(`render.spec.ts`, WebGL2/SwiftShader 강제) + 디코드 워커(`decode.spec.ts`, `?probe=decode`). WebGPU 경로는 CI에 GPU가 없어 미검증(사람 확인). 걷기·모드 전환은 M04 이후. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
+- [ci] e2e = 부트·월드 로드(`boot.spec.ts`) + 렌더 스모크(`render.spec.ts`, WebGL2/SwiftShader 강제) + 디코드 워커(`decode.spec.ts`, `?probe=decode`). WebGPU 경로는 CI에 GPU가 없어 미검증 → 로컬 실제 GPU(Chrome headed, `channel: 'chrome'`)로 확인(2026-09-29). 걷기·모드 전환은 M04 이후. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
 - [e2e] 클라우드 세션 Chromium은 Playwright 번들 버전과 달라 `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e`로 실행. 실행 전 떠 있는 `vite preview`가 있으면 `reuseExistingServer`로 **옛 빌드**를 테스트하니 먼저 종료할 것.
-- [render] 메인 스레드 예산: SwiftShader에서 `render` 시스템 ≈ 30 ms(> 4 ms 경고)는 CPU 래스터라서 — 실제 GPU 수치는 사람 확인·`pnpm perf`(M02~). 임시 로더의 glb 파싱(부트 1회, 4셀)도 Hard Rule 8 예외 → M02-T05에서 워커로.
+- [render] 메인 스레드 예산: SwiftShader에서 `render` 시스템 ≈ 30 ms는 CPU 래스터라서. 실제 GPU(RTX 3050)에선 60 FPS 고정, 첫 프레임만 53.6 ms(셰이더·파이프라인 컴파일) → `compileAsync` 선컴파일(06 §6). 임시 로더의 glb 파싱(부트 1회, 4셀)도 Hard Rule 8 예외 → M02-T05에서 워커로.
 - [game] 게임 번들(three 포함) ≈ 1.05 MB(gzip 300 KB) → Vite 500 kB 경고. 코드 분할은 M03(후처리·대기 추가 시) 재검토.
 - [fixtures] world-mini·plateau-mini는 생성물 → 셀 포맷·빌드 코드 변경 시 `docker/run.sh node tools/pipeline/src/cli.ts fixture`로 재생성(`fixtures.test.ts`가 불일치를 알려 줌). plateau-mini 건물은 appearance 제거로 UV 없음, 도로는 normalize 테스트용(셀 빌드에 도로 섹션 없음).
 - [game] 부트 상태 화면(src/status-view.ts)은 DOM 임시 구현 → @sanpo/ui(M08) 로딩 화면으로 대체.
-- [streaming] Cache Storage LRU 1.5 GB 상한 미구현(put만, 쿼터 초과는 warn) → M02-T03. 워커 사망 시 진행 중 작업은 `worker` 오류로 끝나며 재요청은 lifecycle(T03) 몫. 워커가 'failed'(재시작 포기)면 풀이 다음 호출/메시지 때 sweep으로 정리.
+- [streaming] 워커 사망 시 진행 중 작업은 `worker` 오류 → lifecycle `failed` → 60 s 뒤 재요청(더 빨리 재시도할지는 T07 실측 후). 워커가 'failed'(재시작 포기)면 풀이 다음 호출/메시지 때 sweep으로 정리.
+- [streaming] Cache Storage 세션 간 LRU는 저장 순서(FIFO) 근사, 기존 항목 크기는 Content-Length(없으면 1 MiB 가정) — ADR-0023. 브라우저에서 seed 시간 미측정(M02-T05/T07).
 - [streaming] 디코드 시간은 클라우드 컨테이너 headless Chromium 값(ADR-0022). 실제 데스크톱 수치는 `?world=mini&probe=decode` → 콘솔 `__SANPO_DECODE_PROBE__`로 확인. e2e는 병렬 SwiftShader 테스트와 CPU 경합 → `postMs`는 중앙값으로 판정.
-- [streaming] `computeDesired`는 관심점당 셀 ≈ 300개를 훑는다(할당 있음, 미측정) → M02-T03 서비스에서 관심점 셀이 바뀌거나 ~250 ms마다만 호출하고 `pnpm perf`로 확인. 고고도 L1 +16셀 메모리는 M02-T04 HLOD 크기로 확인(ADR-0021).
+- [streaming] 재계산은 Node 실측 평균 0.41 ms(ADR-0023). 첫 호출 ≈ 8 ms(JIT) → 부팅 로딩 중이라 허용, 브라우저 수치는 `pnpm perf`(M02-T07~). 고고도 L1 +16셀 메모리는 M02-T04 HLOD 크기로 확인(ADR-0021).
 - [worker] `/world/*` 엣지 캐시(`caches.default`)는 단위 테스트에서 생략됨(Node에 없음) → M02-T06 miniflare 테스트.
 - [ci] Biome `noExcessiveLinesPerFunction`이 일부 함수(예: 객체 반환 팩토리)를 놓침 → `scripts/check-size.ts`가 정본(docs/15 §2).
 - [tile-format] `props.inst`·`trees.inst`·`lights.bin`·`audio.json` 인코더/디코더 미구현(레지스트리·모델 타입만) → 해당 태스크(M04~)에서 추가. 헤더 gzip(flags bit0)은 v1 미지원(ADR-0017).

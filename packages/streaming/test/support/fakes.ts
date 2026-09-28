@@ -17,12 +17,15 @@ export function createFakeCaches(): FakeCaches {
     return {
       match: async (url) => {
         const b = m.get(url);
-        return b ? new Response(b.slice(0)) : undefined;
+        return b ? new Response(b.slice(0), { headers: { 'content-length': String(b.byteLength) } }) : undefined;
       },
       put: async (url, res) => {
-        m.set(url, await res.arrayBuffer());
+        const b = await res.arrayBuffer();
+        m.delete(url); // 실제 Cache처럼 다시 쓰면 저장 순서 끝으로
+        m.set(url, b);
       },
       delete: async (url) => m.delete(url),
+      keys: async () => [...m.keys()],
     };
   };
   return {

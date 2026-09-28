@@ -1,15 +1,8 @@
-// 셀 fetch: Cache Storage(`sanpo-world-<buildId>`) 조회 → 네트워크(AbortController, 지수 백오프 재시도) → 캐시 저장.
-// 메인 스레드에서 돌지만 전부 비동기(파싱 없음). 바이트는 그대로 디코드 워커로 transfer. see docs/06-world-streaming.md §2, §7, ADR-0022
+// 셀 fetch: Cache Storage(`sanpo-world-<buildId>`) 조회 → 네트워크(AbortController, 지수 백오프 재시도) → 캐시 저장(상한 LRU).
+// 메인 스레드에서 돌지만 전부 비동기(파싱 없음). 바이트는 그대로 디코드 워커로 transfer. see docs/06-world-streaming.md §2, §7, ADR-0022·0023
 import { type CellKey, err, ok, type Result, unpackCellKey } from '@sanpo/core';
-import type {
-  CacheLike,
-  CacheStorageLike,
-  CellFetchError,
-  CellFetcherDeps,
-  CellFetchResult,
-  Fetcher,
-  FetchLike,
-} from '../api.ts';
+import type { CacheStorageLike, CellFetchError, CellFetcherDeps, CellFetchResult, Fetcher, FetchLike } from '../api.ts';
+import { type CellCache, createCellCache } from './cell-cache.ts';
 
 /** Cache Storage 이름 접두사(06 §7). 부팅 시 다른 buildId 캐시는 purgeStaleCaches로 삭제. */
 export const CACHE_PREFIX = 'sanpo-world-';
@@ -63,20 +56,6 @@ export async function purgeStaleCaches(caches: CacheStorageLike, buildId: string
   return stale;
 }
 
-async function fromCache(
-  cache: CacheLike | undefined,
-  url: string,
-  expected: number,
-): Promise<ArrayBuffer | undefined> {
-  if (!cache) return undefined;
-  const hit = await cache.match(url);
-  if (!hit) return undefined;
-  const bytes = await hit.arrayBuffer();
-  if (bytes.byteLength === expected) return bytes;
-  await cache.delete(url); // 손상·옛 항목 → 네트워크로
-  return undefined;
-}
-
 async function attempt(f: FetchLike, url: string, expected: number, n: number, signal?: AbortSignal): Promise<Attempt> {
   let res: Response;
   try {
@@ -109,25 +88,9 @@ export function createFetcher(deps: CellFetcherDeps): Fetcher {
   const fetchFn: FetchLike = deps.fetch ?? ((url, init) => fetch(url, init));
   const sleep = deps.sleep ?? abortableSleep;
   const storage = deps.config.cacheStorage ? (deps.caches === undefined ? defaultCaches() : deps.caches) : null;
-  let cacheP: Promise<CacheLike | undefined> | undefined;
-  const openCache = () => {
-    cacheP ??= storage
-      ? storage.open(cacheName(deps.buildId)).catch((e: unknown) => {
-          log.warn('Cache Storage unavailable', e);
-          return undefined;
-        })
-      : Promise.resolve(undefined);
-    return cacheP;
-  };
-
-  async function store(cache: CacheLike | undefined, url: string, copy: Response): Promise<void> {
-    if (!cache) {
-      await copy.body?.cancel();
-      return;
-    }
-    // 쿼터 초과 등은 경고만(다음 방문 때 네트워크). LRU 1.5 GB 상한은 M02-T03(ADR-0022).
-    await cache.put(url, copy).catch((e: unknown) => log.warn('cache put failed', url, e));
-  }
+  const cache: CellCache | null = storage
+    ? createCellCache({ storage, name: cacheName(deps.buildId), maxBytes: deps.config.cacheMaxBytes, log })
+    : null;
 
   async function network(url: string, expected: number, signal?: AbortSignal): Promise<Attempt> {
     for (let n = 1; ; n++) {
@@ -147,8 +110,7 @@ export function createFetcher(deps: CellFetcherDeps): Fetcher {
     async fetchCell(key, expectedBytes, signal) {
       if (signal?.aborted) return err(aborted(0));
       const url = cellUrl(deps.baseUrl, key);
-      const cache = await openCache();
-      const cached = await fromCache(cache, url, expectedBytes).catch(() => undefined);
+      const cached = await cache?.get(url, expectedBytes);
       if (signal?.aborted) return err(aborted(0));
       if (cached) return ok({ bytes: cached, fromCache: true });
       const r = await network(url, expectedBytes, signal);
@@ -156,12 +118,11 @@ export function createFetcher(deps: CellFetcherDeps): Fetcher {
         const { retry: _retry, ...e } = r.error;
         return err(e);
       }
-      void store(cache, url, r.value.cacheCopy);
+      if (cache) void cache.put(url, r.value.cacheCopy, expectedBytes);
+      else void r.value.cacheCopy.body?.cancel();
       return ok({ bytes: r.value.bytes, fromCache: false });
     },
-    async invalidate(key) {
-      const cache = await openCache();
-      await cache?.delete(cellUrl(deps.baseUrl, key)).catch(() => false);
-    },
+    invalidate: async (key) => cache?.delete(cellUrl(deps.baseUrl, key)),
+    cacheBytes: () => cache?.bytes() ?? 0,
   };
 }

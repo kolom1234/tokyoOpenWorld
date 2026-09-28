@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 147개.
+> 파일 154개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스(M01): 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → 셀 표시. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -92,8 +92,10 @@
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts'
 
 ## packages/streaming
-- `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). M02-T01 설정 + M02-T02 fetch·디코드 워커 풀. see docs/modules/streaming.md, docs/06-world-streaming.md §3–4, §7, §9 | exports: InterestConfig, PriorityConfig, FetchConfig, DecodeConfig, StreamingConfig, CellFetchErrorCode, CellFetchError, CellFetchResult, Fetcher, FetchLike, CacheStorageLike, CacheLike, CellFetcherDeps, DecodeRequest, DecodeErrorCode, DecodeError, DecodeResult, DecodePoolStats, DecodePool, DecodePoolDeps
-- `packages/streaming/src/index.ts` — @sanpo/streaming 공개 엔트리(L2): 셀 로딩/언로딩·우선순위·캐시. api.ts 재수출 + create* 팩토리만. see docs/modules/streaming.md | exports: * from './api.ts', DEFAULT_STREAMING_CONFIG, createDecodePool, cacheName, createFetcher, purgeStaleCaches
+- `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). 설정(T01) + fetch·디코드 워커 풀(T02) + 서비스·수명주기(T03). | exports: InterestConfig, PriorityConfig, FetchConfig, DecodeConfig, LifecycleConfig, StreamingConfig, CellFetchErrorCode, CellFetchError, CellFetchResult, Fetcher, FetchLike, CacheStorageLike, CacheLike, CellFetcherDeps, DecodeRequest, DecodeErrorCode, DecodeError, DecodeResult, DecodePoolStats, DecodePool, DecodePoolDeps, CellState, ConsumerId, WhenReadyRequest, StreamingStats, StreamingService, StreamingDeps
+- `packages/streaming/src/index.ts` — @sanpo/streaming 공개 엔트리(L2): 셀 로딩/언로딩·우선순위·캐시. api.ts 재수출 + create* 팩토리만. see docs/modules/streaming.md | exports: * from './api.ts', DEFAULT_STREAMING_CONFIG, createDecodePool, cacheName, createFetcher, purgeStaleCaches, createStreaming
+- `packages/streaming/src/internal/cache-lru.ts` — Cache Storage 용량 상한(06 §7, 1.5 GB): URL별 바이트를 사용 순서(Map 삽입 순서)로 추적하고 초과분을 오래된 것부터 고른다. | exports: CacheLru, createCacheLru
+- `packages/streaming/src/internal/cell-cache.ts` — Cache Storage 계층(06 §7): `sanpo-world-<buildId>`에서 셀 읽기(크기 검사)·쓰기(`Response.clone()`)·삭제 + 1.5 GB 상한 LRU(ADR-0023). | exports: CellCache, CellCacheDeps, createCellCache
 - `packages/streaming/src/internal/cell-index.ts` — cells.idx 조회(존재 여부·바이트 수·레벨별 목록·범위). 파싱은 @sanpo/tile-format. see docs/05-tile-format.md §5, docs/06-world-streaming.md §10 | exports: IndexExtent, CellIndex, createCellIndex, parseCellIndex
 - `packages/streaming/src/internal/config.ts` — streaming 기본 설정(06 §3–4, 07 §9 L0 반경 배율, ADR-0021). 오버라이드는 createStreaming deps.config → mergeConfig. | exports: DEFAULT_STREAMING_CONFIG
 - `packages/streaming/src/internal/decode-host.ts` — 디코드 워커 본체(환경 독립): 메시지 처리, 요청별 AbortController, 결과 transfer. decode.worker.ts가 self에 연결한다. see docs/06-world-streaming.md §2, §9 | exports: PostFn, DecodeHost, DecodeHostOptions, createDecodeHost
@@ -101,13 +103,18 @@
 - `packages/streaming/src/internal/decode-util.ts` — 디코드 공용: Result 오류 헬퍼, 취소 확인 함수형, transfer 목록 수집. see docs/06-world-streaming.md §9 | exports: fail, AbortCheck, yieldTask, abortCheck, transferList
 - `packages/streaming/src/internal/decode.ts` — TKC 파일 → CellPayload(워커 전용): hash32·헤더(셀·buildId) 검사 → 섹션별 디코드(glb=meshopt, gzip 해제). see docs/05-tile-format.md §3–4, docs/06-world-streaming.md §9 | exports: DEFAULT_SECTIONS, DECODABLE, DecodeOptions, decodeCell
 - `packages/streaming/src/internal/decode.worker.ts` — 디코드 워커 엔트리(모듈 워커): self ↔ createDecodeHost 연결만. 예외는 WorkerErrorMessage로 보고. see docs/06-world-streaming.md §9, docs/15-conventions.md §5–6
-- `packages/streaming/src/internal/fetcher.ts` — 셀 fetch: Cache Storage(`sanpo-world-<buildId>`) 조회 → 네트워크(AbortController, 지수 백오프 재시도) → 캐시 저장. | exports: CACHE_PREFIX, cacheName, cellUrl, retryableStatus, abortableSleep, purgeStaleCaches, createFetcher
+- `packages/streaming/src/internal/fetcher.ts` — 셀 fetch: Cache Storage(`sanpo-world-<buildId>`) 조회 → 네트워크(AbortController, 지수 백오프 재시도) → 캐시 저장(상한 LRU). | exports: CACHE_PREFIX, cacheName, cellUrl, retryableStatus, abortableSleep, purgeStaleCaches, createFetcher
 - `packages/streaming/src/internal/geometry.ts` — 관심점 전처리(고도·진행 방향)와 셀 AABB 수평 거리·뷰 쐐기 판정. interest/priority 공용 순수 함수. see docs/06-world-streaming.md §3–4 | exports: InterestFrame, PreparedPoint, preparePoints, aabbDistanceM, effectiveDistanceM, inViewWedge
 - `packages/streaming/src/internal/glb.ts` — 셀 glb 섹션 → DecodedMesh(워커 전용). 파이프라인이 쓰는 부분집합만: 노드 1개(이동 + 균일 스케일), EXT_meshopt_compression, | exports: decodeGlb
-- `packages/streaming/src/internal/interest.ts` — 관심점 → 레벨별 원하는 셀 집합(로드/히스테리시스 유지)과 상주 한도 해제 계획. 순수 함수. see docs/06-world-streaming.md §3, ADR-0021 | exports: Zone, LevelRule, DesiredCells, EvictionPlan, l0RadiusM, l1RadiusM, levelRule, computeDesired, nearestDistanceM, planEvictions, countByLevel
+- `packages/streaming/src/internal/ground.ts` — 지면 높이 질의: 상주 L0 셀의 terrain.height(257² u16)를 이중선형 보간. 셀 경계 샘플은 이웃과 비트 일치(ADR-0018)라 이음매 연속. | exports: sampleHeightfield, GroundStore, createGroundStore
+- `packages/streaming/src/internal/interest.ts` — 관심점 → 레벨별 원하는 셀 집합(로드/히스테리시스 유지)과 상주 한도 해제 계획. 순수 함수. see docs/06-world-streaming.md §3, ADR-0021 | exports: Zone, LevelRule, DesiredCells, EvictionPlan, l0RadiusM, l1RadiusM, levelRule, computeDesired, inLoadZone, nearestDistanceM, planEvictions, countByLevel
+- `packages/streaming/src/internal/lifecycle.ts` — 셀 상태기계(06 §2): absent → queued → fetching → decoding → ready ─(render ack)→ live → evicting → absent, 실패 → failed(60 s 후 재요청 가능). | exports: IN_FLIGHT, RESIDENT, Lifecycle, createLifecycle
+- `packages/streaming/src/internal/planner.ts` — 재계산 1회: 원하는 셀 집합 → 범위 밖 진행 중 요청 취소 → 부족한 셀 순위 매겨 요청 → 해제 계획(실행은 서비스가 프레임 예산으로). | exports: PlannerCtx, PlanOutcome, recompute
 - `packages/streaming/src/internal/priority.ts` — 요청 우선순위 점수(낮을수록 먼저): 거리/레벨크기 × 뷰 배율, 발밑 셀 고정 최우선, 부모 선행 클램프. 순수 함수. see docs/06-world-streaming.md §4, ADR-0021 | exports: RankedCell, footCells, scoreCells, rankCells
 - `packages/streaming/src/internal/protocol.ts` — 디코드 워커 메시지(판별 유니온). 메인 ↔ decode.worker. see docs/15-conventions.md §6, docs/06-world-streaming.md §9 | exports: ToDecodeWorker, FromDecodeWorker, isFromDecodeWorker
 - `packages/streaming/src/internal/scheduler.ts` — 셀 로드 큐: 점수 낮은 순으로 fetch(동시 ≤ maxConcurrent) → 디코드 풀(대기 ≤ 풀 용량), 셀별 AbortController로 단계 무관 취소. | exports: LoadStage, LoadError, LoadResult, LoadSchedulerDeps, LoadScheduler, createLoadScheduler
+- `packages/streaming/src/internal/service.ts` — createStreaming: cells.idx + fetcher + 디코드 풀 + 로드 큐 + 수명주기 + ground + whenReady를 phase 50 시스템 하나로 조립. | exports: STREAMING_PHASE, createStreaming
+- `packages/streaming/src/internal/waiters.ts` — whenReady 대기자: 영역 안 셀(cells.idx에 있는 것)이 전부 live 또는 failed가 되면 resolve. 대기 중 대상은 pinned(로드·유지 강제). | exports: Waiters, targetsOf, createWaiters
 
 ## packages/tile-format
 - `packages/tile-format/src/api.ts` — @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md | exports: TKC_MAGIC, FORMAT_VERSION, TKC_ALIGN, TKC_PREAMBLE_BYTES, CELLS_INDEX_MAGIC, JCOL_MAGIC, JCOL_VERSION, LANES_MAGIC, LANES_VERSION, LANE_NO_SIGNAL, HEIGHTFIELD_SIZE, HEIGHTFIELD_STEP_M, HEIGHTFIELD_BASE_M, SectionCodec, SectionSpec, SECTION_REGISTRY, SectionType, TkcErrorCode, TkcError, Vec3Tuple, SectionEntry, CellStats, CellHeader, CellHeaderInput, TkcSectionInput, TkcReader, CELL_FLAG, CellsIndexEntry, CellsIndexRecord, CellsIndex, JCOL_MATERIAL, JCOL_FLAG, JcolKind, JcolTriMesh, JcolConvexHull, JcolBox, JcolRound, JcolShape, LaneGraphChunk, DecodedMesh, MeshSlot, CellPayload, HeightfieldData, PropBatch, TreeBatch, LightRecord, AudioZones, I18nText, MetaBuilding, PoiKind, MetaPoi, MetaPlaceName, MetaSignal, InteractableRecord, CellMeta

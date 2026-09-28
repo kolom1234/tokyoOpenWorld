@@ -1,6 +1,19 @@
-// @sanpo/streaming 공개 계약(타입·인터페이스). M02-T01 설정 + M02-T02 fetch·디코드 워커 풀. see docs/modules/streaming.md, docs/06-world-streaming.md §3–4, §7, §9
-import type { CellKey, Logger, ModeId, QualityTier, Result, WorkerSupervisor } from '@sanpo/core';
-import type { CellPayload, SectionType, TkcErrorCode } from '@sanpo/tile-format';
+// @sanpo/streaming 공개 계약(타입·인터페이스). 설정(T01) + fetch·디코드 워커 풀(T02) + 서비스·수명주기(T03).
+// see docs/modules/streaming.md, docs/06-world-streaming.md §2–4, §7–9
+import type {
+  CellKey,
+  EventBus,
+  InterestPoint,
+  Logger,
+  ModeId,
+  QualityTier,
+  Result,
+  SystemProvider,
+  Unsubscribe,
+  Vec3d,
+  WorkerSupervisor,
+} from '@sanpo/core';
+import type { CellPayload, CellsIndex, SectionType, TkcErrorCode } from '@sanpo/tile-format';
 
 /** 관심점 → 레벨별 원하는 셀 집합 설정(06 §3, ADR-0021). 반경은 관심점~셀 AABB 수평 최단거리(m). */
 export interface InterestConfig {
@@ -58,6 +71,8 @@ export interface FetchConfig {
   backoffMs: number;
   /** Cache Storage `sanpo-world-<buildId>` 사용(없는 환경이면 자동으로 끔). */
   cacheStorage: boolean;
+  /** Cache Storage 상한(바이트, 06 §7). 초과 시 가장 오래 안 쓴 셀부터 삭제(ADR-0023). */
+  cacheMaxBytes: number;
 }
 
 /** 디코드 워커 풀 설정(06 §4, §9). */
@@ -70,6 +85,18 @@ export interface DecodeConfig {
   verifyHash: boolean;
 }
 
+/** 셀 수명주기·서비스 주기 설정(06 §2, §6, ADR-0023). */
+export interface LifecycleConfig {
+  /** 3회 재시도 후 failed 셀을 다시 요청할 수 있게 되기까지(ms). */
+  retryAfterMs: number;
+  /** 원하는 셀 집합 재계산 최소 주기(ms). 관심점 L0 셀·모드·티어가 바뀌면 즉시. */
+  recomputeIntervalMs: number;
+  /** 프레임당 onReady(+ `cell/ready`) 최대 수. */
+  readyPerFrame: number;
+  /** 프레임당 해제(onEvicted) 최대 수 — 순간이동 때 수십 셀 해제를 여러 프레임으로 나눈다. */
+  evictPerFrame: number;
+}
+
 export interface StreamingConfig {
   interest: InterestConfig;
   priority: PriorityConfig;
@@ -77,6 +104,7 @@ export interface StreamingConfig {
   residentMax: readonly [number, number, number, number];
   fetch: FetchConfig;
   decode: DecodeConfig;
+  lifecycle: LifecycleConfig;
 }
 
 // ── fetch (06 §7) ──
@@ -105,6 +133,8 @@ export interface Fetcher {
   ): Promise<Result<CellFetchResult, CellFetchError>>;
   /** 캐시된 사본 삭제(워커가 hash32·컨테이너 손상을 보고했을 때 → 다음 요청은 네트워크). */
   invalidate(key: CellKey): Promise<void>;
+  /** Cache Storage에 있다고 추적 중인 바이트(상한 LRU 기준, 통계용). */
+  cacheBytes?(): number;
 }
 /** fetch 최소 형태(전역 fetch 또는 테스트 대역). */
 export type FetchLike = (url: string, init?: { signal?: AbortSignal }) => Promise<Response>;
@@ -118,6 +148,8 @@ export interface CacheLike {
   match(url: string): Promise<Response | undefined>;
   put(url: string, res: Response): Promise<void>;
   delete(url: string): Promise<boolean>;
+  /** 저장 순서(오래된 것 먼저). 있으면 부팅 시 상한 계산에 기존 항목을 반영한다. */
+  keys?(): Promise<ReadonlyArray<{ readonly url: string } | string>>;
 }
 export interface CellFetcherDeps {
   /** 월드 루트 URL(끝 `/` 없음). 예: `/world/<buildId>`, `/fixtures/world-mini`. 셀 = `<baseUrl>/L<level>/<ix>/<iz>.tkc`. */
@@ -177,4 +209,72 @@ export interface DecodePoolDeps {
   createWorker?: () => Worker;
   /** 자동 워커 수 계산용(생략 = navigator.hardwareConcurrency). */
   hardwareConcurrency?: number;
+}
+
+// ── 서비스 (06 §2, §8–9) ──
+
+export type CellState = 'absent' | 'queued' | 'fetching' | 'decoding' | 'ready' | 'live' | 'evicting' | 'failed';
+export type ConsumerId = 'render' | 'physics' | 'sim' | 'audio' | 'ui';
+
+/** 이 영역(중심 수평 거리 ≤ radius인 셀 AABB)의 levels 셀이 전부 live(또는 failed)가 되면 resolve. */
+export interface WhenReadyRequest {
+  centerWF: Vec3d;
+  radius: number;
+  levels: readonly number[];
+}
+
+export interface StreamingStats {
+  states: Record<CellState, number>;
+  /** ready + live, 레벨별. */
+  residentByLevel: [number, number, number, number];
+  queued: number;
+  fetching: number;
+  decoding: number;
+  /** 디코드 끝났지만 아직 onReady로 안 넘긴 셀. */
+  pendingReady: number;
+  /** 원하는 셀 집합 재계산(computeDesired + rankCells + 해제 계획) 횟수와 소요(ms). */
+  recompute: { count: number; lastMs: number; maxMs: number; totalMs: number };
+  /** 누적 해제 수·로드 실패 수. */
+  evicted: number;
+  failures: number;
+  /** Cache Storage 추적 바이트(fetcher가 알려 줄 때). */
+  cacheBytes: number;
+  /** 마지막 재계산의 레벨별 한도 초과(로드 반경 안이라 해제 못 함). */
+  overLimit: [number, number, number, number];
+}
+
+export interface StreamingService extends SystemProvider {
+  /** 관심점 교체(매 프레임 호출해도 됨 — 재계산은 L0 셀 변화 또는 recomputeIntervalMs마다). */
+  setInterest(points: readonly InterestPoint[]): void;
+  /** 소비자 수신 기록. 'render' ack만 ready → live. */
+  ack(key: CellKey, consumer: ConsumerId): void;
+  whenReady(req: WhenReadyRequest): Promise<void>;
+  stateOf(key: CellKey): CellState;
+  /** L0 heightfield 이중선형 보간(WF y). 미적재면 undefined. */
+  groundHeightAt(x: number, z: number): number | undefined;
+  /** 콜백은 wiring 1곳만(payload 소유권 단일 이전). 두 번째 등록은 프로그래밍 오류(throw). */
+  onReady(cb: (p: CellPayload) => void): Unsubscribe;
+  /** 캐시(없으면 네트워크)에서 다시 읽어 해당 섹션만 디코드(physics용). 실패 시 reject. */
+  requestSections(key: CellKey, types: readonly SectionType[]): Promise<Partial<CellPayload>>;
+  /** onReady로 넘긴 셀이 해제될 때(해제 직전). */
+  onEvicted(cb: (key: CellKey) => void): Unsubscribe;
+  stats(): StreamingStats;
+  dispose(): void;
+}
+
+export interface StreamingDeps {
+  bus: EventBus;
+  log: Logger;
+  /** 월드 루트(`/world/<buildId>` 등)·buildId·파싱된 cells.idx. */
+  world: { baseUrl: string; buildId: string; cellsIndex: CellsIndex };
+  /** 생략 = DEFAULT_STREAMING_CONFIG. */
+  config?: StreamingConfig;
+  /** 기본 디코드 풀용(pool을 주면 불필요). */
+  supervisor?: WorkerSupervisor;
+  fetcher?: Fetcher;
+  pool?: DecodePool;
+  /** 단조 시계(ms). 생략 = performance.now. */
+  clock?: () => number;
+  initialMode?: ModeId;
+  initialTier?: QualityTier;
 }
