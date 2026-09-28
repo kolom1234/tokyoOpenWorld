@@ -6,6 +6,16 @@ import { parseWorldPath } from '../validate.ts';
 
 /** buildId 경로는 내용이 바뀌지 않는다(새 데이터 = 새 buildId). */
 const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+/** 이 헤더가 있으면 엣지 캐시를 거치지 않고 R2로. */
+const PASSTHROUGH_HEADERS = ['Range', 'If-None-Match', 'If-Match', 'If-Modified-Since', 'If-Unmodified-Since'];
+
+/** 진단 헤더(`X-Sanpo-Cache`: HIT·MISS·BYPASS) — 스모크·perf 확인용. 응답 헤더가 불변이면 복사. */
+function withCacheStatus(res: Response, status: 'HIT' | 'MISS' | 'BYPASS'): Response {
+  const out = new Response(res.body, res);
+  out.headers.set('X-Sanpo-Cache', status);
+  return out;
+}
+
 /** 없는 셀 요청 폭주 완화용 짧은 캐시. */
 const NOT_FOUND_CACHE_CONTROL = 'public, max-age=300';
 
@@ -60,13 +70,15 @@ export async function handleWorldData(request: Request, env: Env, ctx?: WorkerCo
   if (parsed === undefined) return json(400, { error: 'bad_world_path' });
   if (request.method === 'HEAD') return headObject(env.WORLD, parsed.key);
 
-  const cache = edgeCache();
-  const cached = await cache?.match(request);
-  if (cached !== undefined) return cached;
+  // 엣지 캐시는 평범한 GET만(클라이언트 셀 fetch). Range·조건부 요청은 R2가 직접 해석(206/304/412) — 캐시 구현마다 다른 동작을 피한다.
+  const plain = !PASSTHROUGH_HEADERS.some((h) => request.headers.has(h));
+  const cache = plain ? edgeCache() : undefined;
+  const cached = await cache?.match(new Request(request.url));
+  if (cached !== undefined) return withCacheStatus(cached, 'HIT');
   const res = await getObject(env.WORLD, parsed.key, request);
-  // 206·304·404는 캐시하지 않는다(Range 조각이 전체 응답으로 재사용되는 것 방지).
+  // 200 전체 응답만 캐시(206 조각·304·404는 넣지 않는다).
   if (cache !== undefined && ctx !== undefined && res.status === 200) {
     ctx.waitUntil(cache.put(new Request(request.url), res.clone()));
   }
-  return res;
+  return withCacheStatus(res, cache === undefined ? 'BYPASS' : 'MISS');
 }

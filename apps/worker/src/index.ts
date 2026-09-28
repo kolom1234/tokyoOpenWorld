@@ -2,6 +2,7 @@
 import type { Env, WorkerContext } from './env.ts';
 import { json, withSecurityHeaders } from './headers.ts';
 import { handleWorldCurrent } from './routes/current.ts';
+import { handleWeather } from './routes/weather.ts';
 import { handleWorldData } from './routes/world.ts';
 
 const READ_METHODS = new Set(['GET', 'HEAD']);
@@ -18,6 +19,7 @@ async function route(request: Request, env: Env, ctx: WorkerContext | undefined)
     if (!READ_METHODS.has(request.method)) return json(405, { error: 'method_not_allowed' });
     if (pathname === '/api/health') return health(env);
     if (pathname === '/api/world/current') return handleWorldCurrent(request, env);
+    if (pathname === '/api/weather') return handleWeather(request, env, ctx);
     if (isWorld) return handleWorldData(request, env, ctx);
     return json(404, { error: 'not_found' });
   }

@@ -37,7 +37,8 @@ src/lib/{geom2d,png}.ts           볼록 껍질·최소 면적 사각형 / 최�
 materials.ts  interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts   (미구현)
 src/stages/validate.ts validate-seams.ts   스키마(ajv)·해시·예산·이웃 경계 검사 → report.{json,md} (M01-T05)
 src/stages/fixture.ts fixture-plateau.ts   tests/fixtures 생성: world-mini(buildArea 2×2 → validate → 복사 + ATTRIBUTION), plateau-mini(CityGML 원문 발췌·DEM 창·스냅샷), `plateauMiniSnapshot` (M01-T07, ADR-0019)
-src/stages/publish.ts gc.ts
+src/stages/publish/{publish,uploaders,targets}.ts   publish·gc(ADR-0026): 파일 수집·검증 → 업로드(s3 SigV4 / api REST, 동시성 16·재시도) → manifest → HEAD 검증 → KV(CURRENT/BUILDS/BUILD_FILES); 대상 = apps/worker/wrangler.jsonc
+src/lib/sigv4.ts                AWS SigV4(헤더 서명, 테스트 벡터 일치)
 src/lib/{gltf,triangulate,mesh-ops,polygon,spline,raster,hash,parallel,ndjson-gz}.ts   (gltf·triangulate·polygon·ndjson-gz·raster 구현)
 scripts/golden-geo.py
 scripts/repro-build.sh          같은 컨테이너에서 build 2회 → sha256 비교 → validate
@@ -86,6 +87,10 @@ buildL1(key, { l0Buildings, dem1m, farDem, far }, ratio);  buildFarLevel(key, fa
 ```
 - 실행: `docker/run.sh node tools/pipeline/src/cli.ts hlod-prep [--step buildings|dem] [--workers 14]` → `build` → `hlod --build-id <id>` → `validate`.
 - 예산: L1 3e6 B, L2/L3 2e6 B(10진). 초과 시 L1 비율 × 0.6ⁿ, L2/L3 박스 × 0.6ⁿ·매스 격자 × 2(≤ 4회).
+
+## Publish (M02-T06, ADR-0026)
+- `node tools/pipeline/src/cli.ts publish --build-id <id> --env dev|prod [--set-current] [--verify-url https://<worker>/world] [--uploader s3|api]` — 호스트에서(CLOUDFLARE_API_TOKEN, 선택 R2_ACCESS_KEY_ID/SECRET).
+- `… publish --verify-only --verify-url …`(Worker HEAD 전수 검증, `Accept-Encoding: identity`), `… gc --env dev [--apply]`.
 
 ## Invariants
 - 모든 단계 결정론(정렬·시드). 같은 입력 → 같은 바이트.

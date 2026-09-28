@@ -1,16 +1,24 @@
 # PROGRESS
-Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + M02-T03·T04·T05 완료, 브랜치 `claude/m02-queue`, draft PR #14)
+Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + M02-T03–T06 완료, 브랜치 `claude/m02-queue`, draft PR #14)
 
-## Current Milestone: M02 — Streaming & Deploy (T01–T05 완료 · T06–T07 남음)
-## Current Task: M02-T06 Worker routes & publish (다음)
-- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03, M02-T04, M02-T05(아래 Recently Completed).
+## Current Milestone: M02 — Streaming & Deploy (T01–T06 완료 · T07 남음)
+## Current Task: M02-T07 MVP area build & staging deploy (다음)
+- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03, M02-T04, M02-T05, M02-T06(아래 Recently Completed).
 - In progress: –
 - 로컬 빌드(커밋 안 됨, data/build): `20260928-7e215f4-7fb58d45` = MVP L0 294 + L1 24 + L2 144 + L3 9, validate 오류 0. T05 화면 확인·T07 publish에 재사용 가능(코드가 바뀌면 재빌드).
 - 로컬 확인: `pnpm --filter @sanpo/game dev` → `http://localhost:5173/?world=local&debug=1`(dev 전용 `/local-world` = data/build 최신 또는 `SANPO_LOCAL_BUILD`).
-- Next step (정확히 한 걸음): `### M02-T06` 블록 + `docs/13-deployment.md §2–5, §8`·`docs/04 §4.7` 읽고 `apps/worker/src/routes/world.ts`·`cache.ts` 점검 → `tools/pipeline/src/stages/publish.ts`(S3 호환). R2 버킷·KV 생성은 wrangler로 가능(사용자 승인됨), **R2 S3 API 키는 사람이 발급**해야 할 수 있음.
+- R2 dev 버킷에 `20260928-7e215f4-7fb58d45` 퍼블리시됨 + staging KV `CURRENT_BUILD:v1` = 그 빌드(2026-09-29). staging Worker는 아직 이전 배포(바인딩 없음) → T07에서 배포.
+- Next step (정확히 한 걸음): `### M02-T07` 블록 + `docs/14-testing-perf.md §2` 읽고 → 최종 코드로 MVP 재빌드(build → hlod → validate) → `publish --env dev --set-current` → `wrangler deploy --env staging`(게임 빌드 포함) → `publish --verify-only --verify-url https://tokyo-sanpo-staging.kolom1357.workers.dev/world` → 실제 GPU로 staging 자유비행(영역 끝→끝) 측정.
 - Blockers: 없음
 
 ## Recently Completed
+- M02-T06 Worker routes & publish — Cloudflare 리소스 생성(wrangler, apac): R2 `sanpo-world-prod`·`sanpo-world-dev`, KV `SANPO_CONFIG`(938aa34b…)·`SANPO_CONFIG_STAGING`(52e1d2e4…) → wrangler.jsonc 바인딩(prod/staging).
+  Worker: `/world/*` 엣지 캐시 = 평범한 GET만(Range·조건부는 R2 직접) + `X-Sanpo-Cache`, `/api/weather`(LIVE_WEATHER, Open-Meteo → 최소 필드, 10분 캐시).
+  pipeline `publish`/`gc`(`stages/publish/{publish,uploaders,targets}.ts`, `lib/sigv4.ts`): 업로더 s3(SigV4 — AWS 테스트 벡터 일치, 64 MiB 초과 멀티파트, HEAD 검증) / api(Cloudflare REST, 기존 API 토큰),
+  동시성 16·재시도 3, manifest.json, KV `CURRENT_BUILD`/`BUILDS`/`BUILD_FILES`, `--verify-only --verify-url`(Worker HEAD 전수), gc(현재 + 직전 + 7일).
+  **수락**: 로컬 miniflare(`test/miniflare.test.ts`, 실제 `wrangler dev --env local`) current·200 MISS→HIT·206·304·HEAD·404·400 통과;
+  **실제 dev 버킷**: MVP 473 파일 212 MB 업로드 38.7 s → `wrangler dev --env staging --remote`로 current 200·셀 200(MISS→HIT)·Range 206·If-None-Match 304·404·400, HEAD 크기 473/473 일치.
+  테스트 +3파일/+14건. ADR-0026 (2026-09-29)
 - M02-T05 Render cell adapter & HLOD switching — render: `hlod.mesh` → 셀당 draw 2(`_CHILD` u8 → f32 `_child`), HLOD 머티리얼(TSL per-object uniform vec4 × 4 페이드, 원-핫 선택,
   alphaHash 디더, 페이드 0 = 정점 붕괴), `scene/hlod-switch.ts`(숨김 0.3 s·보임 즉시·부모 도착 전 상태 보관), `setHlodChildVisible`·`precompile()`(기본+HLOD compileAsync)·stats.
   game: `wiring/streaming-render.ts`(phase 45 관심점, phase 55 적용 = 2 ms + 업로드 4 MiB/프레임·첫 셀 보장, ack, 부모 숨김/표시 순서), `world-view.showWorld` = precompile → createStreaming(워커)
@@ -65,7 +73,8 @@ Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + M02-T03·T
 - [streaming] Cache Storage 세션 간 LRU는 저장 순서(FIFO) 근사, 기존 항목 크기는 Content-Length(없으면 1 MiB 가정) — ADR-0023. 브라우저에서 seed 시간 미측정(M02-T05/T07).
 - [streaming] 디코드 시간은 클라우드 컨테이너 headless Chromium 값(ADR-0022). 실제 데스크톱 수치는 `?world=mini&probe=decode` → 콘솔 `__SANPO_DECODE_PROBE__`로 확인. e2e는 병렬 SwiftShader 테스트와 CPU 경합 → `postMs`는 중앙값으로 판정.
 - [streaming] 재계산은 Node 실측 평균 0.41 ms(ADR-0023). 첫 호출 ≈ 8 ms(JIT) → 부팅 로딩 중이라 허용, 브라우저 수치는 `pnpm perf`(M02-T07~). 고고도 L1 +16셀 메모리는 M02-T04 HLOD 크기로 확인(ADR-0021).
-- [worker] `/world/*` 엣지 캐시(`caches.default`)는 단위 테스트에서 생략됨(Node에 없음) → M02-T06 miniflare 테스트.
+- [worker] miniflare 통합 테스트는 `wrangler dev`를 띄워 ≈ 15–25 s(CI 포함). 느리면 `SANPO_SKIP_MINIFLARE=1`. 이 PC에 9/26–27부터 떠 있는 workerd 8개는 이번 세션 것이 아님(건드리지 않음).
+- [publish] R2 S3 키가 없어 `api` 업로더(REST) 사용 중 — HEAD 검증은 Worker 경유. S3 키를 발급하면(대시보드 R2 → API 토큰, 두 버킷 Object Read & Write) 자동으로 `s3` 업로더.
 - [ci] Biome `noExcessiveLinesPerFunction`이 일부 함수(예: 객체 반환 팩토리)를 놓침 → `scripts/check-size.ts`가 정본(docs/15 §2).
 - [tile-format] `props.inst`·`trees.inst`·`lights.bin`·`audio.json` 인코더/디코더 미구현(레지스트리·모델 타입만) → 해당 태스크(M04~)에서 추가. 헤더 gzip(flags bit0)은 v1 미지원(ADR-0017).
 - [pipeline] validate 미구현 항목: 랜드마크 20곳 정확도 샘플, report.html(현재 report.json·report.md), world.json·셀 간 교차 검사 일부. 증분 캐시(`data/build/.cache`)도 미구현 → 매 빌드 전체 재생성(3×3 ≈ 5 s).

@@ -105,9 +105,10 @@ data/build/<buildId>/                        (build/hlod/validate)
 - 보고서: `data/build/<buildId>/report.html` (셀별 크기 히트맵, 경고 목록).
 
 ### 4.7 publish
-1. S3 호환 API로 `world/<buildId>/**` 업로드 (Content-Type: `application/octet-stream`/`application/json`/`image/ktx2`, 멀티파트, 동시성 16).
-2. 업로드 완료 검증(개수·크기) 후 KV `CURRENT_BUILD:v<formatVersion> = <buildId>` 설정 → 클라이언트는 다음 세션부터 새 빌드.
-3. 이전 빌드는 7일 유지 후 `pnpm pipeline gc`로 삭제(현재+직전 1개는 항상 유지).
+1. `world/<buildId>/**` 업로드(world.json·cells.idx·L0–L3 .tkc, Content-Type `application/json`/`application/octet-stream`, 동시성 16, 재시도 3회) + `manifest.json`(경로·크기·sha256).
+   업로더: R2 S3 키가 있으면 S3 호환(SigV4, > 64 MiB 멀티파트), 없으면 Cloudflare API 토큰으로 R2 REST(ADR-0026).
+2. 검증(S3 HEAD 또는 `--verify-url` Worker HEAD, 전 파일 크기) 후 KV `BUILDS:v<fv>`·`BUILD_FILES:<id>` 기록, `--set-current`면 `CURRENT_BUILD:v<formatVersion> = <buildId>` → 클라이언트는 다음 세션부터 새 빌드.
+3. 이전 빌드는 7일 유지 후 `pnpm pipeline gc --apply`로 삭제(현재 + 직전 1개 = 현재보다 먼저 퍼블리시된 것 중 가장 최근은 항상 유지).
 
 ## 5. 성능 목표(파이프라인)
 MVP 영역 전체 `all` ≤ 90분(8코어), 셀 1개 증분 빌드 ≤ 30초.
