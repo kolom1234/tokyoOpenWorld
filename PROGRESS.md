@@ -1,17 +1,21 @@
 # PROGRESS
-Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + **M02-T03–T07 완료 = M02 마일스톤 완료**, 브랜치 `claude/m02-queue`, draft PR #14)
+Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜치 `claude/m03-queue`, draft PR)
 
-## Current Milestone: M02 — Streaming & Deploy (T01–T07 완료) → 다음 M03(렌더)·M04(물리) 병렬 가능
-## Current Task: 없음 — PR #14 리뷰·병합 대기
-- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03, T04, T05, T06, T07(아래 Recently Completed).
+## Current Milestone: M03 — Rendering Realism I (진행 순서: T10 → T01 → T02 → T03 → T04 → T06 → T05 → T07 → T08 → T09)
+## Current Task: M03 큐 진행 중
+- Done in this session: M03-T10(골든뷰 인프라, 앞당김).
 - In progress: –
-- 배포 상태: staging Worker `tokyo-sanpo-staging`(버전 cf830e9e) = dev 버킷 + staging KV, 현재 빌드 `20260928-b2d1e36-7fb58d45`(dev 버킷에 이전 `20260928-7e215f4-7fb58d45`도 있음 — 7일 뒤 `pnpm pipeline gc --env dev --apply`).
-  production(`sanpo-world-prod`)은 비어 있음(퍼블리시 안 함). main 병합 시 deploy.yml이 staging 재배포 → 스모크가 world.json·cells.idx까지 확인.
-- 로컬 확인: `pnpm --filter @sanpo/game dev` → `?world=local&debug=1`(data/build 최신) / staging: https://tokyo-sanpo-staging.kolom1357.workers.dev/?debug=1
-- Next step (정확히 한 걸음): PR #14 병합 → `docs/17-roadmap.md`에서 M03 첫 태스크 확인 → `/sanpo-resume M03-T01`.
-- Blockers: 없음(선택: R2 S3 키 발급 시 publish가 s3 업로더로 전환)
+- 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
+- 배포 상태: staging Worker `tokyo-sanpo-staging` = dev 버킷 빌드 `20260928-b2d1e36-7fb58d45`(이전 `20260928-7e215f4-7fb58d45` — 10/5 이후 gc 가능).
+  staging 첫 로딩(GOLDEN_BOOT, 새 컨텍스트) **59.8 MB**·첫 표시 6.9 s(M03 시작 기준).
+- Next step (정확히 한 걸음): M03-T01 머티리얼 라이브러리(ambientCG CC0 → KTX2 배열, 파이프라인 `materials` 단계).
+- Blockers: 없음
 
 ## Recently Completed
+- M03-T10 Golden views infrastructure(앞당김) — `tests/golden/views.json`(7뷰, core 4: 스크램블 지면 + 7 m·서신주쿠 초고층·요요기 상공 300 m·富ヶ谷 저층 주택가 L0 −4,−3 — 주택가는 셀 meta 스캔으로 선정: 건물 288동·중앙 9.6 m·p90 13.4 m),
+  게임 `?view=<id>`(`debug/bookmarks.ts`: 절대/지면 + AGL 포즈, 뷰 중심 부팅 대기, fov, 스트리밍 큐 0·HLOD 페이드 0·추가 조건 1.5 s → `#app[data-golden=ready]`), `pnpm golden`(실제 GPU Chrome 2560×1440, DPR 1, PNG 원본 + 1920×1080 JPEG 저장, SSIM, 부팅 전송 MB).
+  **수락**: RTX 3050 Laptop·Chrome headed, core 4장을 새 컨텍스트로 연속 2회 캡처 → SSIM **1.000 / 1.000 / 1.000 / 1.000**(≥ 0.99), 각 뷰 ready 5.4–5.7 s, 콘솔 오류 0.
+  시각·날씨·시드는 저장만(sim 시계 M03-T03, 군중 M06). 부팅 전송: 로컬 dev 89.5 MB(번들 안 된 JS 포함 — 판정 제외), staging 59.8 MB. 테스트 +2파일/+9건 (2026-09-29)
 - M02-T07 MVP area build & staging deploy — 최종 코드로 재빌드 `20260928-b2d1e36-7fb58d45`: L0 294셀 115 MB(82 s, 최대 903 KiB L0_-1_-1) + HLOD 177셀(67 s) → validate **오류 0**(이음새 553쌍, HLOD 예산·자식 그룹) →
   dev 버킷 473 파일 212 MB(32.8 s) + staging KV 포인터 → `wrangler deploy --env staging`(R2·KV 바인딩) → smoke(world.json·cells.idx 포함) ok → Worker HEAD 473/473 일치, 200 MISS→HIT·206·304·404.
   **수락(실제 GPU, 캐시 없는 새 프로필, API 부팅)**: 첫 표시 **6.4 s**(엣지 콜드)·4.8 s(엣지 웜) ≤ 12 s; 남서→북동 모서리 6.2 km 저공(40 m) 30 m/s(108 km/h) 비행 — 순간이동(whenReady 0.41 s) 뒤

@@ -3,11 +3,12 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 175개.
+> 파일 176개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
 - `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
+- `apps/game/src/debug/bookmarks.ts` — 골든뷰 북마크(`?view=<id>`, M03-T10): tests/golden/views.json의 고정 시점·시각·날씨·시드 → 시작 포즈·부팅 대기 중심, | exports: GoldenWeather, GoldenView, GoldenViewsFile, GOLDEN_SETTLE_MS, findView, loadGoldenView, viewCenterWF, viewPose, isQuiet, GoldenWatchDeps, createGoldenWatch
 - `apps/game/src/debug/decode-probe.ts` — `?probe=decode` 디버그 프로브(렌더 없이 실행): world-mini 셀을 streaming fetch → 디코드 워커로 두 번(네트워크·Cache Storage) 읽어 | exports: ProbeCell, DecodeProbeReport, runDecodeProbe
 - `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeStreaming, describeDebug, createDebugOverlay
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook

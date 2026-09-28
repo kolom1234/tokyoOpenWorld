@@ -27,8 +27,8 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | public/_headers | 정적 에셋 COOP/COEP/CORP/CSP·캐시 헤더(docs/13 §3) — Worker를 거치지 않는 응답용 |
 | src/main.ts | 엔트리, 오류 화면, `?probe=decode`면 부트 대신 `debug/decode-probe.ts` 동적 import |
 | src/caps.ts | 기능 감지 `detectCaps(env?)` → `Caps`(webgpu `available/no-adapter/unsupported`, crossOriginIsolated, `IsolationMode`, decodeWorkers) |
-| src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini|local`, `backend=webgl`, `probe=decode`), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
-| src/world-view.ts | 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: streaming 높이장(프록시) }, freecam 시작)`·카메라 배선 → `providers`·`frameSource`. `showWorld(loaded)` = `render.precompile` → `createStreaming`(디코드 워커) + streaming-render 배선을 스케줄러에 추가 → `whenReady(스폰 384 m, L0)` → 시작 시점 재설정 → 스폰 3×3 live 수(M02-T05) |
+| src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini|local`, `backend=webgl`, `probe=decode`, `view=<id>`), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
+| src/world-view.ts | (`start` 옵션: 골든뷰 시작 포즈·대기 중심·fov) 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: streaming 높이장(프록시) }, freecam 시작)`·카메라 배선 → `providers`·`frameSource`. `showWorld(loaded)` = `render.precompile` → `createStreaming`(디코드 워커) + streaming-render 배선을 스케줄러에 추가 → `whenReady(스폰 384 m, L0)` → 시작 시점 재설정 → 스폰 3×3 live 수(M02-T05) |
 | src/start-view.ts | 시작 시점: 스크램블 교차로 북서 상공(WF −60, −15) 지면 위 60 m → Scramble Square(WF 130.8, 130, 132.5) 바라봄 |
 | src/wiring/camera.ts | phase 65: `render.setCamera(traversal.camera)` |
 | src/debug/overlay.ts | `?debug=1` 오버레이(FPS·백엔드·깊이·카메라 WF·고도·원점·재설정 횟수·draw/tris·스트리밍 레벨별 상주/대기/fetch/디코드/실패·HLOD 부모/페이드, `data-*` e2e용) + **O 키 원점 재설정 테스트**(+4096 m → 1 s → 복귀). `globalThis.__SANPO_DEBUG__ = { world, rebaseTest }`(디버그 모드만) |
@@ -46,7 +46,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/wiring/ui-bridge.ts | UiBridge 구현(시그널) |
 | src/workers/*.worker.ts | 패키지 워커 엔트리 재수출(Vite 워커 번들링용) |
 | src/config/*.json | 기본 설정 오버라이드 |
-| src/debug/bookmarks.ts | 골든뷰 북마크(M03) |
+| src/debug/bookmarks.ts | 골든뷰 북마크(M03-T10): `?view=<id>` → `tests/golden/views.json` 동적 import(별도 청크) → 시작 포즈(절대 또는 지면 + AGL)·부팅 대기 중심·fov, `createGoldenWatch`(스트리밍 큐 0·HLOD 페이드 0·`extra` 1.5 s → `#app[data-golden=ready]`), `__SANPO_GOLDEN__` |
 
 ## Invariants
 - 새 기능은 패키지에 구현하고 여기서는 배선만 추가.
@@ -54,7 +54,8 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 
 ## Tests
 test/caps.test.ts(WebGPU 3상태·격리·워커 수), test/boot.test.ts(루프·훅, 월드 상태 분류, 상태 문구, 플래그), test/world-load.test.ts(커밋된 world-mini를 가짜 fetch로: 4셀 로드, SPA 폴백·원점·포맷·크기 불일치 거부, `?world=mini`는 API 미호출),
-test/start-view.test.ts(시작 시점 = 지면 + 60 m·Scramble Square 조준), test/streaming-render.test.ts(적용 순서·바이트 예산·해제 순서·적용 전 해제·L3), test/overlay.test.ts(오버레이 문구).
+test/start-view.test.ts(시작 시점 = 지면 + 60 m·Scramble Square 조준), test/streaming-render.test.ts(적용 순서·바이트 예산·해제 순서·적용 전 해제·L3), test/overlay.test.ts(오버레이 문구), test/bookmarks.test.ts(뷰 조회·AGL 포즈·안정 판정).
+골든뷰(`pnpm golden`, 실제 GPU, CI 제외): `tests/golden/golden.spec.ts` — README 참조.
 E2E(Playwright, `pnpm test:e2e` — 빌드 + vite preview, Chromium은 `--enable-unsafe-swiftshader`, 로컬 다른 Chromium은 `PW_CHROMIUM_PATH`):
 `tests/e2e/boot.spec.ts`(`?world=mini` → `data-world=loaded`·셀 4·격리·콘솔 오류 없음),
 `tests/e2e/render.spec.ts`(`?world=mini&debug=1&backend=webgl` → 셀 4 렌더, 중앙 타워·하단 건물 픽셀 비율, O 테스트 전후 픽셀 차 0; 스크린샷 `test-results/screenshots/` → CI 아티팩트 `e2e-screenshots`).

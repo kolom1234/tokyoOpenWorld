@@ -8,11 +8,12 @@ import {
   type Logger,
   type Scheduler,
   type SystemProvider,
+  type Vec3d,
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
 import { createRender, type RenderService } from '@sanpo/render';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
-import { createTraversal, type TraversalService } from '@sanpo/traversal';
+import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import { startFreecamPose } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
@@ -42,6 +43,8 @@ export interface WorldViewDeps {
   scheduler: Pick<Scheduler, 'add'>;
   backend: 'auto' | 'webgl';
   now?: () => number;
+  /** 시작 시점 재정의(골든뷰 북마크 `?view=`): 부팅 대기 중심과 지면 확인 뒤 포즈. 없으면 스폰·startFreecamPose. */
+  start?: { centerWF: Vec3d; pose: (ground: GroundQuery) => FreecamParams; fovDeg?: number };
 }
 
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
@@ -51,9 +54,11 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   let streaming: StreamingService | undefined;
   let wiring: StreamingRenderWiring | undefined;
   const ground: GroundQuery = { groundHeightAt: (x, z) => streaming?.groundHeightAt(x, z) };
+  const startPose = deps.start?.pose ?? startFreecamPose;
+  const fov = deps.start?.fovDeg;
   const traversal = createTraversal(
     { input, bus, log, ground },
-    { initial: { mode: 'freecam', params: startFreecamPose(ground) } },
+    { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
   );
   const now = deps.now ?? Date.now;
   const frameSource: FrameSource = {
@@ -93,9 +98,10 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
       for (const sys of s.systems()) await sys.init?.();
       deps.scheduler.add(s);
       deps.scheduler.add({ systems: () => wiring?.systems ?? [] });
-      await s.whenReady({ centerWF: world.spawnWF, radius: SPAWN_READY_RADIUS_M, levels: [0] });
+      const centerWF = deps.start?.centerWF ?? world.spawnWF;
+      await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0] });
       // 지면 높이를 알게 됐으니 "지면 위 60 m"를 정확히 다시 잡는다.
-      traversal.request('freecam', startFreecamPose(ground));
+      traversal.request('freecam', startPose(ground));
       return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
     },
   };

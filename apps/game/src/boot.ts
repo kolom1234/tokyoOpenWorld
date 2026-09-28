@@ -10,6 +10,7 @@ import {
   type Scheduler,
 } from '@sanpo/core';
 import { detectCaps } from './caps.ts';
+import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
 import { createDebugOverlay } from './debug/overlay.ts';
 import { createStatsHook } from './debug/stats.ts';
 import { createLoop, type Loop } from './loop.ts';
@@ -36,7 +37,11 @@ export interface BootFlags {
   backend?: 'webgl';
   /** `?probe=decode` → 부트 대신 world-mini 디코드 워커 프로브(debug/decode-probe.ts, e2e decode.spec.ts). */
   probe?: 'decode';
+  /** `?view=<id>` → 골든뷰 북마크(tests/golden/views.json, debug/bookmarks.ts). */
+  view?: string;
 }
+
+const VIEW_ID = /^[a-z0-9-]{1,64}$/;
 
 export function parseFlags(search: string): BootFlags {
   const q = new URLSearchParams(search);
@@ -45,6 +50,7 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('world') === 'mini' || q.get('world') === 'local' ? { world: q.get('world') as 'mini' | 'local' } : {}),
     ...(q.get('backend') === 'webgl' ? { backend: 'webgl' as const } : {}),
     ...(q.get('probe') === 'decode' ? { probe: 'decode' as const } : {}),
+    ...(VIEW_ID.test(q.get('view') ?? '') ? { view: q.get('view') as string } : {}),
   };
 }
 
@@ -104,6 +110,7 @@ async function setupWorldView(
   scheduler: Scheduler,
   log: Logger,
   view: StatusView,
+  golden: GoldenView | undefined,
 ): Promise<WorldView | undefined> {
   try {
     const world = await createWorldView({
@@ -112,6 +119,9 @@ async function setupWorldView(
       log,
       scheduler,
       backend: flags.backend === 'webgl' ? 'webgl' : 'auto',
+      ...(golden
+        ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
+        : {}),
     });
     for (const p of world.providers) scheduler.add(p);
     scheduler.setFrameSource(world.frameSource);
@@ -141,6 +151,19 @@ async function setupWorldView(
   }
 }
 
+/** 골든뷰: 안정 판정 시스템 등록 + 캡처 스크립트용 핸들(`__SANPO_GOLDEN__`). */
+function addGoldenWatch(scheduler: Scheduler, world: WorldView, golden: GoldenView): { start(): void } {
+  const root = document.getElementById('app') ?? document.body;
+  const watch = createGoldenWatch({
+    root,
+    streaming: () => world.streaming?.stats(),
+    render: () => world.render.stats(),
+  });
+  scheduler.add({ systems: () => [watch.system] });
+  Object.assign(globalThis, { __SANPO_GOLDEN__: { view: golden, render: () => world.render.stats() } });
+  return watch;
+}
+
 export async function boot(view: StatusView, flags: BootFlags = parseFlags(location.search)): Promise<BootResult> {
   const log = createLogger({ level: flags.debug ? 'debug' : 'info' });
   const caps = await detectCaps();
@@ -149,7 +172,10 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
 
   const scheduler = createScheduler({ log, clock: () => performance.now() });
   scheduler.setFrameSource(createIdleFrameSource());
-  const world = await setupWorldView(flags, scheduler, log, view);
+  const golden = flags.view === undefined ? undefined : await loadGoldenView(flags.view);
+  if (flags.view !== undefined && golden === undefined) view.showError(`골든뷰 없음: ${flags.view}`);
+  const world = await setupWorldView(flags, scheduler, log, view, golden);
+  const watch = golden && world ? addGoldenWatch(scheduler, world, golden) : undefined;
   await scheduler.init();
 
   const loop = createLoop({ scheduler });
@@ -164,6 +190,7 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
     if (loaded === undefined || world === undefined) return;
     const shown = await world.showWorld(loaded);
     view.setRendered(shown);
+    watch?.start();
   });
   return { loop, world };
 }
