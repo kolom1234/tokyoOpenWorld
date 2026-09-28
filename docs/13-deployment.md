@@ -86,3 +86,4 @@
 ## 8. 릴리스 호환성
 - 클라이언트 번들은 지원 `formatVersion`을 상수로 가진다. `/api/world/current?fv=<n>`로 해당 포맷의 buildId를 받는다 → 코드와 데이터를 독립 배포 가능.
 - 데이터 롤백 = KV 값을 직전 buildId로 되돌림(즉시).
+- 현재(2026-09-29, M02-T07): staging = `20260928-b2d1e36-7fb58d45`(MVP L0 294 + HLOD 177, 212 MB, dev 버킷). production 데이터 없음(첫 prod 퍼블리시 전까지 `/api/world/current` = no_build → 스모크는 경고만).
