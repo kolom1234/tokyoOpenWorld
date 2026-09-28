@@ -8,7 +8,8 @@ Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + M02-T03–
 - 로컬 빌드(커밋 안 됨, data/build): `20260928-7e215f4-7fb58d45` = MVP L0 294 + L1 24 + L2 144 + L3 9, validate 오류 0. T05 화면 확인·T07 publish에 재사용 가능(코드가 바뀌면 재빌드).
 - 로컬 확인: `pnpm --filter @sanpo/game dev` → `http://localhost:5173/?world=local&debug=1`(dev 전용 `/local-world` = data/build 최신 또는 `SANPO_LOCAL_BUILD`).
 - R2 dev 버킷에 `20260928-7e215f4-7fb58d45` 퍼블리시됨 + staging KV `CURRENT_BUILD:v1` = 그 빌드(2026-09-29). staging Worker는 아직 이전 배포(바인딩 없음) → T07에서 배포.
-- Next step (정확히 한 걸음): `### M02-T07` 블록 + `docs/14-testing-perf.md §2` 읽고 → 최종 코드로 MVP 재빌드(build → hlod → validate) → `publish --env dev --set-current` → `wrangler deploy --env staging`(게임 빌드 포함) → `publish --verify-only --verify-url https://tokyo-sanpo-staging.kolom1357.workers.dev/world` → 실제 GPU로 staging 자유비행(영역 끝→끝) 측정.
+- **M02-T07 진행 중(사용량 한도로 중단, 2026-09-29)**: 최종 코드 MVP 재빌드 `20260928-b2d1e36-7fb58d45` L0 294셀 115 MB(79 s) 완료, hlod·validate는 컨테이너에서 실행 중이었음(결과 미확인 → 재실행). `pnpm build` 완료. `.github/scripts/smoke.sh`에 world.json·cells.idx 확인 추가. 비행 측정 스크립트는 세션 scratchpad `staging-flight.mjs`(미커밋).
+- Next step (정확히 한 걸음): `docker/run.sh node tools/pipeline/src/cli.ts hlod --build-id 20260928-b2d1e36-7fb58d45` → `validate` → 호스트 `publish --build-id … --env dev --set-current` → `pnpm --filter @sanpo/worker deploy:staging` → `smoke.sh https://tokyo-sanpo-staging.kolom1357.workers.dev` → `publish --verify-only --verify-url https://tokyo-sanpo-staging.kolom1357.workers.dev/world` → 실제 GPU로 staging 콜드 캐시 부팅(첫 표시 ≤ 12 s)·남서→북동 저공 비행(발밑 셀 정지 0회) 측정 → PR 본문·스크린샷.
 - Blockers: 없음
 
 ## Recently Completed
