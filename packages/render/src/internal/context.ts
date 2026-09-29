@@ -73,7 +73,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const view = createRenderView(cfg, deps.bus, log);
   renderer.toneMappingExposure = cfg.exposure;
   // 하드웨어(WebGPU·WebGL2) = 후처리(공중원근이 하늘까지) + 환경 프로브 + 그림자, 소프트웨어 WebGL2(SwiftShader — CI) = 직접 렌더 + 하늘 배경(ADR-0028, M03-T09).
-  const post = !software;
+  // `debugForcePost` = CI 정지 떨림 e2e(SwiftShader에서 후처리 체인 검증).
+  const post = !software || cfg.debugForcePost;
   const atmosphere = createAtmosphere(renderer, graph.scene, view.camera, !post);
   graph.roots.light.add(atmosphere.light, atmosphere.light.target);
   atmosphere.setOrigin(view.renderOriginWF);

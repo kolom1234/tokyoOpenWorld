@@ -46,6 +46,7 @@ import {
   type WebGPURenderer,
 } from 'three/webgpu';
 import type { PostEffects } from '../../api.ts';
+import { filterAo } from './ao-filter.ts';
 import { type AutoExposure, createAutoExposure } from './exposure.ts';
 import { createGradeLut, LUT_SIZE } from './lut.ts';
 
@@ -110,6 +111,7 @@ function scenePassOf(scene: Scene, camera: Camera, fx: PostEffects): PassNode {
 interface Scalables {
   rtts: { setResolutionScale(s: number): unknown }[];
   ao?: { resolutionScale: number };
+  aoFilter?: { setResolutionScale(s: number): unknown };
   ssr?: { resolutionScale: number };
 }
 
@@ -150,13 +152,16 @@ function lightingComposite(
   if (fx.ao === 'gtao') {
     const a = gtao(depth, normal, camera);
     a.resolutionScale = fx.aoScale * fx.renderScale;
-    // 도시 규모(미터): 반경 0.5 m(1 m는 +2 ms), 표본 8(TAA가 시간 누적 — 16표본 대비 ≈ 절반 비용).
+    // 도시 규모(미터): 반경 0.5 m(1 m는 +2 ms), 표본 8. 시간 노이즈(useTemporalFiltering)는 TAAU가 다 섞지 못해
+    // 정지 화면이 떨린다 → 고정 노이즈 + 5×5 깊이 인지 블러(ADR-0038).
     a.radius.value = 0.5;
-    a.samples.value = fx.taa ? 8 : 16;
-    a.useTemporalFiltering = fx.taa;
+    a.samples.value = 8;
+    a.useTemporalFiltering = false;
     sc.ao = a;
     nodes.push(a);
-    lit = vec4(color.rgb.mul(a.getTextureNode().sample(screenUV).r), color.a);
+    const f = filterAo(a.getTextureNode(), depth, a.resolutionScale);
+    sc.aoFilter = f;
+    lit = vec4(color.rgb.mul(f.sample(screenUV).r), color.a);
   } else if (fx.ao === 'ssgi') {
     const g = ssgi(color, depth, normal, camera) as unknown as SsgiNode;
     g.sliceCount.value = 2;
@@ -235,6 +240,7 @@ export function createPostPipeline(
       scenePass.setResolutionScale(scale);
       for (const r of sc.rtts) r.setResolutionScale(scale);
       if (sc.ao) sc.ao.resolutionScale = fx.aoScale * scale;
+      sc.aoFilter?.setResolutionScale(fx.aoScale * scale);
       if (sc.ssr) sc.ssr.resolutionScale = 0.5 * scale;
     },
     dispose() {

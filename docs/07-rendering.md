@@ -116,7 +116,7 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 | 보행자(VAT 근거리/총) | 60/200 | 120/500 | 250/1000 | 400/2000 |
 | L0 반경 배율 | 0.75 | 1.0 | 1.0 | 1.25 |
 - **M03-T07 이탈(ADR-0035)**: 1440p RTX 3050 Laptop 실측으로 High의 SSGI(½)를 GTAO로 — r186 SSGINode는 해상도 배율이 없고 +100 ms 이상.
-  High = GTAO(½, 8표본 + 시간 누적) + SSR(½) + Bloom + 자동 노출 + TAAU 0.85 + LUT, Sharpen은 Ultra만(2.2 ms). `RenderConfig.quality`·`post`(`?quality=`·`?post=`).
+  High = GTAO(½, 8표본 — 고정 노이즈 + 5×5 깊이 인지 블러, ADR-0038) + SSR(½) + Bloom + 자동 노출 + TAAU 0.85 + LUT, Sharpen은 Ultra만(2.2 ms). `RenderConfig.quality`·`post`(`?quality=`·`?post=`).
 - 초기 티어: `detect-gpu` 결과 + 60프레임 측정. 실행 중 **동적 해상도**: 목표 프레임 16.6 ms 유지 위해 렌더 스케일 ±0.05(범위 0.5–1.0).
   구현(M03-T08, ADR-0036): 첫 표시 뒤 스트리밍이 조용해지면 `render.detectQuality()`(detect-gpu 벤치마크 JSON 자체 호스팅 `/detect-gpu/`, 0–1 low · 2 medium · 3 high, Ultra는 사용자) →
   저장(localStorage `sanpo.quality.v1`, 다음 부팅은 감지 생략) → 동적 해상도가 0.5 바닥인데 EMA > 20 ms면 한 단계 강등(반복). `?quality=`·골든뷰는 고정.

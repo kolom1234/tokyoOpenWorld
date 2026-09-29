@@ -16,4 +16,9 @@ describe('post flags', () => {
     const f = parseFlags('?quality=low&post=bloom:1');
     expect([f.quality, f.post]).toEqual(['low', { bloom: true }]);
   });
+
+  it('forces the post chain only for ?forcePost=1 (static flicker e2e, ADR-0038)', () => {
+    expect(parseFlags('?forcePost=1').forcePost).toBe(true);
+    expect(parseFlags('?forcePost=0').forcePost).toBeUndefined();
+  });
 });

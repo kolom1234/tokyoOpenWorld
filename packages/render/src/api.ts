@@ -74,6 +74,8 @@ export interface RenderConfig {
   gpuBenchmarksPath: string;
   /** 디버그 GPU 부하(렌더 스케일 해상도에서 픽셀당 반복 수, `?gpuLoad=`) — 동적 해상도 수락 확인용. 0 = 끔. */
   debugGpuLoad: number;
+  /** 소프트웨어 래스터(SwiftShader — CI)에서도 후처리 체인(GTAO·TAAU 등)을 켠다(`?forcePost=1`, 정지 떨림 e2e). 그림자·동적 해상도는 따로 끈다. */
+  debugForcePost: boolean;
 }
 
 /** 공유 머티리얼 라이브러리 상태(M03-T01). 'manifest' = 평균색만, 'ready' = KTX2 배열 적용. */

@@ -1,19 +1,20 @@
 # PROGRESS
-Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜치 `claude/m03-queue`, draft PR)
+Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
 
-## Current Milestone: M03 — Rendering Realism I (진행 순서: T10 → T01 → T02 → T03 → T04 → T06 → T05 → T07 → T08 → T09)
-## Current Task: M03 큐 완료 — PR #15(draft) 사용자 검토 대기
-- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑), M03-T07(후처리 — 성능 기준 미달), M03-T08(품질 티어·동적 해상도), M03-T09(WebGL2 폴백).
+## Current Milestone: M03 보강(5항목) → M04 — Physics & Walking
+## Current Task: M03 보강 ② 성능(고정 비용·파사드) — 큐: ①떨림 ✅ → ②성능 → ③품질 감지 재검증 → ④WebGL2 금속·flaky e2e → ⑤밤 창(Known Issue만) → M04-T01…T06
+- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038).
 - In progress: –
-- 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
-- 배포 상태: staging Worker `tokyo-sanpo-staging` = **75629ce 코드**(M03 전체) + dev 버킷 빌드 **`20260929-b84bfa1-ec1646fc`**(L0 294 + HLOD 177 + shared/materials(실내 큐브맵 포함), 478 파일 248.9 MB, current).
-  dev 버킷 옛 빌드(gc 대기, 7일 규칙): `20260929-c9a28d3-ec1646fc`(T06, 10/6~), `20260928-b2d1e36-7fb58d45`(M02-T07, 10/6~), `20260928-7e215f4-7fb58d45`(10/5~). `pnpm pipeline gc --env dev --apply`(2026-09-29 dry-run = 0).
-  staging 첫 로딩(GOLDEN_BOOT, 최종): **12.68 MB**·첫 표시 11.3 s. 머티리얼(첫 표시 뒤 지연) 18.18 MB. staging 골든 core 4장 = `docs/screenshots/M03/final-staging/`.
-- 로컬 최신 빌드 = staging과 같음(`20260929-b84bfa1-ec1646fc`).
-- Next step (정확히 한 걸음): 사용자가 PR #15를 검토·머지하면 M03 성능 후속 태스크 정리(공중원근 ≈ 6 ms·TAAU ≈ 8 ms 고정 비용, 파사드 ≈ 6 ms 오버드로우 → 깊이 프리패스, WebGL2 금속 파사드 어두움) 후 M04 착수.
+- 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
+  `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost). 방법은 ADR-0038 Context에 기록.
+- 배포 상태: staging = 75629ce 코드(M03 전체) + dev 버킷 빌드 `20260929-b84bfa1-ec1646fc`(변경 없음). 옛 빌드 gc는 10/6 이후(7일 규칙).
+- Next step (정확히 한 걸음): 성능 측정 하네스(scratchpad `perf.mjs`: 무제한 프레임 p50, 1080p Medium·1440p High, 스폰·core 뷰)로 현재 수치 표 작성 → 공중원근 저해상도화부터.
 - Blockers: 없음
 
 ## Recently Completed
+- M03 보강 ① 정지 화면 떨림 — 원인 실측: TAA 끄면 0, GTAO 끄면 1/13 → **GTAO 시간 노이즈(useTemporalFiltering)를 TAAU가 다 못 섞음**(노출·그림자·SSR·Bloom·렌더 스케일·정밀도 무관).
+  수정: GTAO 고정 노이즈 + `post/ao-filter.ts` 5×5 깊이 인지 블러(AO 해상도 RTT). 정지 근경 0.592 → 0.082(|Δ휘도|), 스크램블 원경 0.113 → 0.037, 이동 근경 1.41 → 0.44.
+  e2e `flicker.spec.ts`(`?forcePost=1` — SwiftShader에서 GTAO+TAAU, 수정 전 0.204 실패 / 후 0.115 통과, 임계 0.15). `RenderConfig.debugForcePost`. 테스트 +1건·e2e +1. ADR-0038 (2026-09-30)
 - M03-T09 WebGL2 fallback parity — backend-caps 소프트웨어 래스터 판정(SwiftShader·llvmpipe → 직접 렌더 유지), **하드웨어 WebGL2 = 같은 후처리 + 환경 프로브 + CSM 그림자**,
   Medium 상한(T08), 자동 노출(컴퓨트) 끔 → 고정 1.25, 유리 거칠기 하한 0.16(거울 띠 과다 보정), TSL `packNormalToRGB/unpackRGBToNormal`(r186 이름).
   **수락**: `?backend=webgl` 실제 GPU 골든 5뷰(`docs/screenshots/M03/T09-webgl2/`) 오류·경고 0, tier medium·GTAO 적용. 남은 차이: 일부 금속·커튼월 파사드가 더 어둡다(후속).
@@ -61,15 +62,9 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
   game `?sun=az,el`·`?exposure=`·`?gpuTiming=1`, `three-compat.ts` alias. **three r186 호환 패치**(patches/: struct Proxy `.layout.name`, LUT `requestIdleCallback` 타임아웃 — 없으면 조명·하늘이 검다) + precompile에서 LUT 계산 await.
   **수락**: 요요기 상공 300 m 일출(방위 70°·고도 2°)·정오(180°·70°)·일몰(290°·2°)·황혼(290°·−5°, 노출 40) 4장 — 지평선 붉어짐·정오 원경 청색 연무·황혼 잔광 확인(`docs/screenshots/M03/T02/sky-*.jpg`).
   GPU 프레임 수치는 타이머 버그로 틀렸음(→ T03에서 정정: 그림자 없이 17.2–25.2 ms). 첫 로딩 증가 0(에셋 없음). e2e 5/5(WebGL2). 테스트 +2파일/+6건. ADR-0028 (2026-09-29)
-- M03-T01 Material library & texture arrays — ambientCG CC0 32종(`content/materials/library.json`: 아스팔트 3·보도 4·콘크리트 4·타일 벽 6·금속 3·미장 2·사이딩 2·ALC·벽돌·지붕 2·잔디 2·흙·자갈; 유리는 T05 절차),
-  pipeline `materials`(`stages/materials/{library,fetch,encode,run}.ts`: zip sha256 lock(`ambientcg`, `--update-lock`) → ImageMagick 리사이즈·ORM 패킹 → toktx 4.4.2 KTX2 배열 → 캐시 `data/derived/materials/<hash>` → `--build-id` 설치) + validate(`validate-materials.ts`, `schemas/materials.schema.json`).
-  크기: albedo 1024² ETC1S 6.3 MB · normal 512² UASTC 7.0 MB · ORM 512² UASTC 4.7 MB = **18.0 MB**(1024² 3장은 55.8 MB → ADR-0027). 인코딩 ≈ 2.5 min.
-  render: `materials/library.ts`(자리표시 배열 → manifest 평균색 → KTX2 교체, 재컴파일 없음), `textured.ts`(지형 `_SURF` 그룹·월드 XZ, 파사드 건물 해시 벽 그룹·UV0), `loadMaterials(url)`·`stats().materials`, context/frame/service 분리.
-  game: 첫 표시 뒤 `loadMaterials(world.json files.materials)`, `three`→`three/webgpu` alias, `/basis/*` 트랜스코더 서빙·복사, 오버레이 머티리얼 줄.
-  **수락**: GPU 텍스처 메모리 **67.1 MB**(BC7, ≤ 400 MB), 적재 0.6–1.4 s, 모든 레이어 출처(ATTRIBUTION `ambientcg-<asset>` 32건, sources.lock sha256 32건 — 테스트가 대조). 첫 표시 전송에 머티리얼 0.08 MB(manifest)만 — 텍스처는 첫 표시 뒤.
-  버그 2건 수정: 큰 float 시드 varying 보간 → 픽셀 노이즈(uint 결합으로), 1성분 정수 속성 WebGL2 타입 불일치(`_SURF`·`_BLDG` f32, `_FACADE` unorm8x4). e2e 5/5(WebGL2) 통과. 테스트 +2파일/+10건. ADR-0027 (2026-09-29)
 
 ## Known Issues
+- [render] 정지 화면 원경 수평선 부근 서브픽셀 건물 윤곽의 TAAU 재구성 반짝임 잔존(>12 단계 0.047 % 픽셀, ADR-0038). 대안: TAAU 분산 감마 1.5 패치(−30 %, 고스팅 위험), 원경 윤곽 사전 필터링.
 - [render/webgl2] 하드웨어 WebGL2에서 일부 금속·커튼월 파사드가 WebGPU보다 어둡다(환경 프로브 반사 차이, 원인 미확정 — M03-T09).
 - [e2e] 로컬에서 부하가 있을 때 e2e 1건이 가끔 실패(재실행 통과, 2026-09-29 T07·T08 중 2회) — 어느 스펙인지 미확인. CI에서 재현되면 조사.
 - [render] 그림자 티어화(07 §9 그림자 행: 캐스케이드 수·해상도·거리)는 CSM 재생성이 필요해 미구현 — 모든 티어가 4×2048·600 m.

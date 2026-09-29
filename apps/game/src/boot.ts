@@ -69,6 +69,8 @@ export interface BootFlags {
   noDynres?: boolean;
   /** `?gpuLoad=<n>` → 디버그 GPU 부하(동적 해상도 확인). */
   gpuLoad?: number;
+  /** `?forcePost=1` → 소프트웨어 래스터에서도 후처리 체인(e2e flicker.spec.ts). */
+  forcePost?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -103,6 +105,7 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('post') ? { post: parsePostFlag(q.get('post')) } : {}),
     ...(q.get('dynres') === '0' ? { noDynres: true } : {}),
     ...(Number(q.get('gpuLoad')) > 0 ? { gpuLoad: Math.min(Math.floor(Number(q.get('gpuLoad'))), 4096) } : {}),
+    ...(q.get('forcePost') === '1' ? { forcePost: true } : {}),
   };
 }
 
@@ -178,6 +181,7 @@ function renderConfigOf(flags: BootFlags, golden: GoldenView | undefined): DeepP
     ...(flags.post ? { post: flags.post } : {}),
     ...(flags.noDynres || golden ? { dynamicResolution: false } : {}),
     ...(flags.gpuLoad ? { debugGpuLoad: flags.gpuLoad } : {}),
+    ...(flags.forcePost ? { debugForcePost: true } : {}),
   };
 }
 
