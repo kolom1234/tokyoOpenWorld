@@ -21,6 +21,19 @@ if (flags.probe === 'decode') {
       root.dataset.probe = 'error';
       view.showError(`decode probe: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
     });
+} else if (flags.probe === 'physics') {
+  // 물리 워커 프로브(M04-T01, e2e physics.spec.ts): Jolt 워커 + 상자 낙하. 별도 청크.
+  root.dataset.probe = 'running';
+  void import('./debug/physics-probe.ts')
+    .then((m) => m.runPhysicsProbe(flags.physicsIsolation ?? 'auto'))
+    .then((report) => {
+      Object.assign(globalThis, { __SANPO_PHYSICS_PROBE__: report });
+      root.dataset.probe = 'done';
+    })
+    .catch((e: unknown) => {
+      root.dataset.probe = 'error';
+      view.showError(`physics probe: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
+    });
 } else {
   boot(view, flags).catch((e: unknown) => {
     view.showError(`부트 실패: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);

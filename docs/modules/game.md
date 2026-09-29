@@ -50,6 +50,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/config/*.json | 기본 설정 오버라이드 |
 | src/debug/sun-override.ts | `?sun=az,el` → phase 68 `render.setEnvironment`(태양 고정, 달 반대편) — 조명·대기 확인·T02 수락 캡처 |
 | src/wiring/quality.ts | 품질 티어: `?quality=` > localStorage `sanpo.quality.v1` > 첫 표시 뒤 스트리밍이 2 s 조용해지면 `render.detectQuality()`, `quality/changed`마다 저장. 골든뷰는 고정·동적 해상도 끔(M03-T08) |
+| src/debug/physics-probe.ts | `?probe=physics`(+`&physicsIsolation=degraded`): 렌더 없이 물리 워커 + 상자 낙하 3 s → `__SANPO_PHYSICS_PROBE__`, `#app[data-probe]`(e2e physics.spec.ts, M04-T01) |
 | src/debug/post-flags.ts | `?quality=low\|medium\|high\|ultra`, `?post=ao:gtao,ssr:0,scale:0.85,…` → RenderConfig.quality·post(M03-T07 A/B). `?dynres=0` 동적 해상도 끔, `?gpuLoad=n` 디버그 GPU 부하(M03-T08), `?forcePost=1` 소프트웨어 래스터에서도 후처리(정지 떨림 e2e, ADR-0038). `?post=aerial:full|half,exp:<n>`(ADR-0039·0040) |
 | src/debug/wet-override.ts | `?wet=0..1` → `WeatherOverride`(env 배선·태양 고정이 `weather.wetness`를 덮음) + 왼쪽 아래 슬라이더(골든뷰 제외) — M03-T06 젖음 수동 검증 |
 | src/three-compat.ts | Vite alias `three` 대상: `three/webgpu` + WebGL 전용 이름 2개 대체(ADR-0028) |

@@ -2,16 +2,20 @@
 Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
 
 ## Current Milestone: M04 — Physics & Walking (M03 보강 5항목 완료)
-## Current Task: M04-T01 Physics worker bootstrap — M03 보강 ①–⑤ 완료, 다음 큐: M04-T01 → T02 → T03 → T04 → T05 → T06 → ④WebGL2 금속·flaky e2e → ⑤밤 창(Known Issue만) → M04-T01…T06
-- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03).
+## Current Task: M04-T02 Cell colliders — 큐: M04-T01 ✅ → T02 → T03 → T04 → T05 → T06 → ④WebGL2 금속·flaky e2e → ⑤밤 창(Known Issue만) → M04-T01…T06
+- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041).
 
 - 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
   `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost), `perf.mjs`(무제한 프레임 rAF p50·전력 상한·패스별 GPU, `PROT=1` 회전). 방법은 ADR-0038 Context에 기록.
-- 배포 상태: staging = 75629ce 코드(M03 전체) + dev 버킷 빌드 `20260929-b84bfa1-ec1646fc`(변경 없음). 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): M04-T01 — `pnpm --filter @sanpo/physics add jolt-physics@1.1.0` → `packages/physics/src/api.ts` 계약 → 워커 코어(jolt-init·world·layers·snapshot-writer).
+- 배포 상태: staging = b386e8e 코드(M03 보강 ①–⑤, 2026-09-30) + dev 버킷 빌드 `20260929-b84bfa1-ec1646fc`(변경 없음). 옛 빌드 gc는 10/6 이후(7일 규칙).
+- Next step (정확히 한 걸음): M04-T02 — 05-tile-format §6 JCOL 배치 확인 → tools/pipeline `stages/build/collision.ts`(건물 simplify 0.3 m·프리미티브) → 워커 `cell-colliders.ts`·`heightfield.ts`.
 - Blockers: 없음
 
 ## Recently Completed
+- M04-T01 Physics worker bootstrap — `@sanpo/physics`: jolt-physics 1.1.0 **single-thread**(multithread는 Vite 중첩 pthread 워커 번들 실패·초기화 3 s → 08 §1 이탈),
+  메인 구동 고정 스텝(phase 30 → step(targetS, 명령) → 워커 120 Hz·틱당 ≤ 4), SAB 더블 버퍼 + seqlock / 폴백 postMessage, 보간(지금 − 25 ms, nlerp, 10 m 순간이동 스냅),
+  레이어·충돌 행렬(08 §3), 핸들 = 슬롯 | 세대, `debugSpawnBox`, 게임 `?probe=physics`(+`physicsIsolation=degraded`), vite `worker.format = 'es'`.
+  **수락**: Node 통합(SAB·폴백) 스냅샷 시각 보간 = 워커 값, 사이 = 선형, 바닥 정지 0.48 m. e2e(프로덕션 preview): shared·degraded 초기화 84–90 ms, 3 s 360스텝, 틱 0.03–0.07 ms. 테스트 +9건·e2e +2. ADR-0041 (2026-09-30)
 - M03 보강 ④ WebGL2 파사드 어두움 = **GTAO 위치 복원 오류**(AO 끄면 두 백엔드 동일): three `getViewPosition`이 역-Z(EXT_clip_control 0..1) 깊이를 −1..1로 변환 →
   `patches/three@0.186.1.patch`로 역-Z 분기(서신주쿠 파사드 36.0 → 56.2, WebGPU 56.4). flaky e2e = 원점 재설정: `rebaseTest`가 1 s 시간만 머물러 저 FPS에서 재설정 없음 +
   복귀 직후 재적재·페이드 중 캡처 → 재설정 횟수 대기, 오버레이 `data-settled`, 640×360·180 s. 4 병렬 × 8: 8/8 실패 → 8/8 통과. `?post=exp:`. ADR-0040 (2026-09-30)
@@ -54,7 +58,6 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
   **성능**: 첫 구현 +12 ms(ALU 해시 노이즈 ≈ 160회/픽셀) → 노이즈 텍스처·noiseBank 4표본·법선 1표본으로 지형 순증 ≈ +1.2–1.8 ms. core 4뷰 GPU 23.2/21.9/25.0/28.0 ms(T04 21.3/20.8/24.8/26.0).
   빌드 L0 122.3 → 132.9 MB(+8.6 %). **staging 첫 반영**: publish에 shared/materials 추가, KTX2 트랜스코더 CSP(부트스트랩 워커, ADR-0032), 하늘 별 끔(외부 데이터).
   픽스처·디코드 스냅샷 재생성. 테스트 +2파일/+6건. e2e 5/5. ADR-0031·0032 (2026-09-29)
-- fix(streaming) 부팅 첫 표시 exclusive whenReady — 대기 중 대상만 요청 → staging 초기 다운로드 79.0 → 12.7–13.4 MB(14 §2 ≤ 60 MB 회복). 테스트 +1건. ADR-0033 (2026-09-29)
 
 ## Known Issues
 - [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).
@@ -97,7 +100,6 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
 - [tools] `pnpm pipeline`은 `normalize`·`build`·`validate` 구현. terrain normalize·build는 GDAL 필요 → 컨테이너 전용. 재현성(gzip=zlib 버전)은 컨테이너 기준.
 - [geo] 골든 재생성 `--check`는 pyproj가 필요해 CI 미포함 → 파이프라인 CI(M01-T05 이후)에서 pyproj 설치 후 추가 검토.
 - [geo] build가 world.json `crs`를 `WORLD_ORIGIN`에서 생성(validate로 확인), 게임 부트(`world-load.ts checkManifest`)도 `WORLD_ORIGIN`과 대조(M01-T07). 셀 전체 해시(hash32) 검사는 메인 스레드 예산 때문에 M02 디코드 워커로.
-- [root] 외부 런타임 의존(three, jolt 등)은 아직 미설치 — 각 패키지 태스크에서 02 표 버전으로 정확 고정해 추가.
 
 ## Notes (M00-T03 조사 결과)
 - **세션 종료 시 `pnpm codemap` 자동 실행 훅: 적용 안 함.** Claude Code `SessionEnd`는 clear/logout/입력 종료 등에서 발화하고 공유 1.5 s 예산·차단 불가. 클라우드 세션은 명시적 종료 없이 비활성 VM 회수로 끝나 발화가 보장되지 않고, 발화해도 결과가 커밋·푸시되지 않은 채 컨테이너와 함께 사라진다. 대안: `/handoff` 7단계(수동) + CI `records` 잡(커밋본 ≠ 재생성 결과면 실패)이 누락을 막는다. 필요 시 `Stop` 훅(턴마다 codemap 갱신, `stop_hook_active` 가드)을 별도 검토.

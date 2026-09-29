@@ -1,7 +1,8 @@
 # 08 — Physics (`@sanpo/physics`)
 
 ## 1. 구성
-- 엔진: `jolt-physics` 1.1.0. `crossOriginIsolated`면 `jolt-physics/wasm-compat-multithread`, 아니면 `jolt-physics/wasm-compat`.
+- 엔진: `jolt-physics` 1.1.0 — **`jolt-physics/wasm-compat`(single-thread) 고정**(ADR-0041: multithread 빌드는 Vite 중첩 pthread 워커 번들이 깨지고 초기화 ≈ 3 s). 격리 여부는 스냅샷 전달(SAB/postMessage)만 가른다.
+- 스텝은 메인이 구동(physics 시스템 phase 30이 프레임마다 목표 시각 + 명령 묶음 전송, ADR-0041).
 - **모든 Jolt 객체는 `physics.worker`에만 존재**. 메인은 `PhysicsHost`(명령 큐 + 스냅샷 리더)만 가진다.
 - 고정 스텝 120 Hz (`dt = 1/120`), 누적기 방식. 한 틱에 최대 4스텝, 초과분은 버림(스파이럴 방지).
 - Jolt 메모리 규칙: `new Jolt.X()`로 만든 설정 객체는 사용 후 `Jolt.destroy()` 필수. `internal/jolt-mem.ts`의 `using` 헬퍼로 강제.

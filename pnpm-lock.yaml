@@ -143,6 +143,9 @@ importers:
       '@sanpo/tile-format':
         specifier: workspace:*
         version: link:../tile-format
+      jolt-physics:
+        specifier: 1.1.0
+        version: 1.1.0
 
   packages/render:
     dependencies:
@@ -1138,6 +1141,9 @@ packages:
     resolution: {integrity: sha512-C5ZoVkeqSt0Aje0tzESO+iT/EQpNFNL39GkP7mCACtoZUFD6GcyerFCr6kp0ZtiII4W9HoYkY48Soy5xE/uHKw==}
     peerDependencies:
       react: ^19.0.0
+
+  jolt-physics@1.1.0:
+    resolution: {integrity: sha512-Erl+X0yK2f9/8Wrl55Nb2y9FYS5xDx375EabnHq+TbSDYEuPZBLvpaLV4nbc1M5gyA5Llbug81wSj1zSMRUr7Q==}
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
@@ -2259,6 +2265,8 @@ snapshots:
       react: 19.3.0
     transitivePeerDependencies:
       - '@types/react'
+
+  jolt-physics@1.1.0: {}
 
   json-schema-traverse@1.0.0: {}
 

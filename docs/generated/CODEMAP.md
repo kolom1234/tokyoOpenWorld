@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 224개.
+> 파일 237개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -11,6 +11,7 @@
 - `apps/game/src/debug/bookmarks.ts` — 골든뷰 북마크(`?view=<id>`, M03-T10): tests/golden/views.json의 고정 시점·시각·날씨·시드 → 시작 포즈·부팅 대기 중심, | exports: GoldenWeather, GoldenView, GoldenViewsFile, GOLDEN_SETTLE_MS, findView, loadGoldenView, viewCenterWF, viewPose, isQuiet, GoldenWatchDeps, createGoldenWatch
 - `apps/game/src/debug/decode-probe.ts` — `?probe=decode` 디버그 프로브(렌더 없이 실행): world-mini 셀을 streaming fetch → 디코드 워커로 두 번(네트워크·Cache Storage) 읽어 | exports: ProbeCell, DecodeProbeReport, runDecodeProbe
 - `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeStreaming, describeMaterials, describeDebug, createDebugOverlay
+- `apps/game/src/debug/physics-probe.ts` — `?probe=physics` 디버그 프로브(렌더 없이, M04-T01 수락): 물리 워커(Jolt)를 띄워 바닥 + 떨어지는 상자 → 3 s 동안 60 Hz로 스텝 → | exports: PhysicsProbeReport, runPhysicsProbe
 - `apps/game/src/debug/post-flags.ts` — `?quality=low|medium|high|ultra`·`?post=ssr:0,ao:gtao,aoScale:1,scale:0.85,aerial:full,exp:1.25` → render 품질 티어·후처리 효과 덮어쓰기(M03-T07 A/B 측정). | exports: parseQualityFlag, parsePostFlag
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
 - `apps/game/src/debug/sun-override.ts` — `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다. | exports: parseSunFlag, dirFromAzEl, overrideEnvironment, createSunOverride
@@ -78,8 +79,20 @@
 - `packages/input/src/internal/service.ts` — createInput: 디바이스 부착 + phase 0 시스템(원시 입력 → ActionState 스냅샷). see docs/modules/input.md | exports: INPUT_PHASE, createInput
 
 ## packages/physics
-- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). see docs/modules/physics.md
-- `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 호스트·캐릭터/차량/자전거. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts'
+- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, PhysicsConfig, PhysicsStats, PhysicsService, PhysicsTransport, PhysicsDeps
+- `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 물리. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts', anchorOf, createPhysics, DEFAULT_PHYSICS_CONFIG, PHYSICS_PHASE
+- `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). | exports: CommandQueue, createCommandQueue
+- `packages/physics/src/internal/host/snapshot-reader.ts` — 스냅샷 읽기·보간(08 §9): SAB는 seqlock으로 최신 버퍼를 복사, 폴백은 받은 프레임 그대로. 최근 몇 개를 시뮬레이션 시각 순으로 두고 | exports: SnapshotHistory, createSnapshotHistory, readSab
+- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, isIsolated, SLOT_BITS, slotOf, Command, ToWorker, FromWorker
+- `packages/physics/src/internal/service.ts` — createPhysics(08 §1·§9·§10): 워커(감독자) 또는 주입 전송 → init(앵커·SAB) → ready. 시스템 'physics'(phase 30)가 프레임마다 | exports: PHYSICS_PHASE, DEFAULT_PHYSICS_CONFIG, anchorOf, createPhysics
+- `packages/physics/src/internal/worker/bodies.ts` — 워커 바디 슬롯: 명령(상자·삭제·순간이동) 적용 + 스냅샷 채우기. 슬롯 = 핸들 하위 비트(메인이 발급), 좌표 변환 WF ↔ PHYS는 여기서만. | exports: BodySlots, createBodySlots
+- `packages/physics/src/internal/worker/core.ts` — 물리 워커 코어(08 §1·§9): init → Jolt 로드·월드·스냅샷 싱크, step → 명령 적용 + 고정 스텝(메인 시계 targetS까지, 최대 N, 초과 시간은 버림) → 스냅샷. | exports: Send, PhysicsCore, createPhysicsCore
+- `packages/physics/src/internal/worker/jolt-init.ts` — Jolt 초기화(08 §1, ADR-0041): single-thread wasm-compat 빌드(wasm 내장). multithread 빌드는 pthread 워커를 자기 파일로 띄우는데 | exports: Jolt, JoltBuildName, JoltLoaded, loadJolt
+- `packages/physics/src/internal/worker/jolt-mem.ts` — Jolt 메모리 규칙(08 §1): `new Jolt.X()` 설정 객체는 쓰고 나서 `Jolt.destroy()` 필수 → using()으로 강제. | exports: using, usingAll, Scratch, createScratch
+- `packages/physics/src/internal/worker/layers.ts` — 오브젝트 레이어·브로드페이즈 레이어·충돌 행렬(08 §3). 표(COLLISION_PAIRS)는 순수 데이터 — Jolt 필터는 createLayerFilters가 만든다. | exports: OBJ, ObjectLayer, NUM_OBJECT_LAYERS, BP, NUM_BP_LAYERS, BROADPHASE_OF, COLLISION_PAIRS, collides, LayerFilters, createLayerFilters
+- `packages/physics/src/internal/worker/physics.worker.ts` — 물리 워커 엔트리(08 §1): 메시지 → 코어(순서 보장). 치명적 오류는 감독자 규약(`worker/error`, fatal) → 메인이 재시작.
+- `packages/physics/src/internal/worker/snapshot-writer.ts` — 스냅샷 쓰기(08 §9): SAB 더블 버퍼(비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가) 또는 폴백 postMessage(Transferable). | exports: SnapshotSink, sabViews, createSabSink, createPostSink
+- `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
 - `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, RenderService, RenderDeps
