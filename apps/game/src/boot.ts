@@ -9,10 +9,12 @@ import {
   type PlayerState,
   type Scheduler,
 } from '@sanpo/core';
+import type { PostEffects, QualityTier } from '@sanpo/render';
 import type { ClockMode } from '@sanpo/sim';
 import { detectCaps } from './caps.ts';
 import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
 import { createDebugOverlay } from './debug/overlay.ts';
+import { parsePostFlag, parseQualityFlag } from './debug/post-flags.ts';
 import { createStatsHook } from './debug/stats.ts';
 import { createSunOverride, parseSunFlag } from './debug/sun-override.ts';
 import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-override.ts';
@@ -56,6 +58,10 @@ export interface BootFlags {
   flatFacade?: boolean;
   /** `?wet=<0..1>` → 노면 젖음 고정 + 슬라이더(debug/wet-override.ts). */
   wet?: number;
+  /** `?quality=` → 품질 티어(07 §9, debug/post-flags.ts). */
+  quality?: QualityTier;
+  /** `?post=` → 후처리 효과 덮어쓰기(A/B). */
+  post?: Partial<PostEffects>;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -86,6 +92,8 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('shadows') === '0' ? { noShadows: true } : {}),
     ...(q.get('facade') === 'flat' ? { flatFacade: true } : {}),
     ...(parseWetFlag(q.get('wet')) !== undefined ? { wet: parseWetFlag(q.get('wet')) as number } : {}),
+    ...(parseQualityFlag(q.get('quality')) ? { quality: parseQualityFlag(q.get('quality')) as QualityTier } : {}),
+    ...(q.get('post') ? { post: parsePostFlag(q.get('post')) } : {}),
   };
 }
 
@@ -169,6 +177,8 @@ async function setupWorldView(
         ...(flags.gpuTiming ? { gpuTiming: true } : {}),
         ...(flags.noShadows ? { shadows: false } : {}),
         ...(flags.flatFacade ? { facade: 'flat' as const } : {}),
+        ...(flags.quality ? { quality: flags.quality } : {}),
+        ...(flags.post ? { post: flags.post } : {}),
       },
       ...clockOf(flags, golden),
       ...(weather ? { weather } : {}),

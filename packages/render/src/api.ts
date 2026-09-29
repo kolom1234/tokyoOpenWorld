@@ -20,6 +20,26 @@ export type RenderBackend = 'webgpu' | 'webgl2';
  */
 export type DepthMode = 'reversed-z' | 'logarithmic' | 'standard';
 
+/** 07 §9 품질 티어. 초기 선택·동적 해상도는 M03-T08. */
+export type QualityTier = 'low' | 'medium' | 'high' | 'ultra';
+
+/** 후처리 효과 스위치(07 §7). 티어 표(`post/config.ts`) → 이 값, `RenderConfig.post`(디버그 `?post=`)로 개별 덮어쓰기. */
+export interface PostEffects {
+  /** 앰비언트 차폐·간접광: SSGI는 AO(알파)도 낸다. */
+  ao: 'none' | 'gtao' | 'ssgi';
+  /** AO/GI 해상도 배율(0.5 = 반해상도). */
+  aoScale: number;
+  ssr: boolean;
+  bloom: boolean;
+  autoExposure: boolean;
+  /** 시간 안티에일리어싱: renderScale 1 = TRAA, < 1 = TAAU(업스케일). SSGI·GTAO 시간 필터에 필요. */
+  taa: boolean;
+  /** 씬·후처리 해상도 배율(07 §9 — TAAU로 출력 해상도 복원, taa 필요). 동적 조정은 M03-T08. */
+  renderScale: number;
+  lut: boolean;
+  sharpen: boolean;
+}
+
 export interface RenderConfig {
   /** 'webgl' = WebGL2 강제(`?backend=webgl`). */
   backend: 'auto' | 'webgl';
@@ -41,6 +61,10 @@ export interface RenderConfig {
   shadows: boolean;
   /** 'flat' = 파사드를 단색 PBR로(셰이더 비용 A/B 측정·최저 품질). */
   facade: 'procedural' | 'flat';
+  /** 품질 티어(`?quality=`). 후처리 효과 기본값을 정한다(07 §9). */
+  quality: QualityTier;
+  /** 티어 값 위에 덮어쓸 효과(`?post=ssr:0,ao:gtao` — A/B 측정). */
+  post: Partial<PostEffects>;
 }
 
 /** 공유 머티리얼 라이브러리 상태(M03-T01). 'manifest' = 평균색만, 'ready' = KTX2 배열 적용. */
@@ -71,6 +95,10 @@ export interface RenderStats {
   materials: MaterialLibraryStats;
   /** GPU 프레임 시간(렌더 패스 합, gpuTiming일 때만). */
   gpu: { enabled: boolean; frameMs: number; samples: number };
+  /** 적용 중 후처리 효과(WebGL2 직접 렌더 = null). */
+  post: PostEffects | null;
+  /** 자동 노출(기하 평균 휘도·배율, 약 0.5 s마다 갱신). 끔·WebGL2 = null. */
+  exposure: { lum: number; scale: number } | null;
 }
 
 export interface RenderService extends SystemProvider {

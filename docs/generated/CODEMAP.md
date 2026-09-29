@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 215개.
+> 파일 219개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -11,6 +11,7 @@
 - `apps/game/src/debug/bookmarks.ts` — 골든뷰 북마크(`?view=<id>`, M03-T10): tests/golden/views.json의 고정 시점·시각·날씨·시드 → 시작 포즈·부팅 대기 중심, | exports: GoldenWeather, GoldenView, GoldenViewsFile, GOLDEN_SETTLE_MS, findView, loadGoldenView, viewCenterWF, viewPose, isQuiet, GoldenWatchDeps, createGoldenWatch
 - `apps/game/src/debug/decode-probe.ts` — `?probe=decode` 디버그 프로브(렌더 없이 실행): world-mini 셀을 streaming fetch → 디코드 워커로 두 번(네트워크·Cache Storage) 읽어 | exports: ProbeCell, DecodeProbeReport, runDecodeProbe
 - `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeStreaming, describeMaterials, describeDebug, createDebugOverlay
+- `apps/game/src/debug/post-flags.ts` — `?quality=low|medium|high|ultra`·`?post=ssr:0,ao:gtao,aoScale:1,scale:0.85` → render 품질 티어·후처리 효과 덮어쓰기(M03-T07 A/B 측정). | exports: parseQualityFlag, parsePostFlag
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
 - `apps/game/src/debug/sun-override.ts` — `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다. | exports: parseSunFlag, dirFromAzEl, overrideEnvironment, createSunOverride
 - `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
@@ -80,7 +81,7 @@
 - `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 호스트·캐릭터/차량/자전거. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts'
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, RenderConfig, MaterialLibraryStats, RenderStats, RenderService, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, RenderConfig, MaterialLibraryStats, RenderStats, RenderService, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, createRenderContext
@@ -106,7 +107,10 @@
 - `packages/render/src/internal/materials/road.ts` — M_ROAD 변형(07 §4, M03-T06): 아스팔트 보수 패치·유분 얼룩·바랜 구간, 보도 명암·때, 공통 거시 명암. 추가 표본 없이 noiseBank 채널만. | exports: Variation, NO_VARIATION, macroTint, asphaltVariation, pavingVariation
 - `packages/render/src/internal/materials/terrain.ts` — M_TERRAIN(07 §4, M03-T06): `_SURF` 스플랫 — 정점 원-핫(8클래스, 보간) → 픽셀마다 상위 2클래스 노이즈 경계 혼합. | exports: TerrainOptions, createTerrainMaterial
 - `packages/render/src/internal/materials/textured.ts` — 라이브러리 텍스처 표본 함수(sampleLayer·법선 변환, M03-T01). 지형은 terrain.ts(M03-T06), 파사드는 facade/(M03-T04). | exports: LayerSample, sampleLayer, tsToWorld, worldToView, perturbWorld
-- `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7): 씬 패스(MRT) → 대기 공중원근(aerialPerspective, 깊이 1 = 하늘) → 출력 변환(톤매핑 AgX·sRGB). | exports: PostPipeline, createDirectRender, createPostPipeline
+- `packages/render/src/internal/post/config.ts` — 품질 티어 → 후처리 효과(07 §9 표의 AO/GI/SSR 행 + 07 §7 나머지). 티어 선택·동적 해상도는 M03-T08, 여기는 표와 덮어쓰기만. | exports: POST_TIERS, resolvePost
+- `packages/render/src/internal/post/exposure.ts` — 자동 노출(07 §7): 씬 패스 HDR(하늘·공중원근 전)을 32² 격자로 읽어 로그 휘도 평균 → EMA → 노출 배율. 전부 GPU(컴퓨트 1회/프레임, | exports: REF_LUM, ADAPT, AutoExposure, createAutoExposure
+- `packages/render/src/internal/post/lut.ts` — 3D LUT 그레이딩(07 §7, M03-T07): 톤매핑·sRGB 뒤에 적용. 외부 .cube 대신 결정론 절차 LUT(라이선스 무관) — 약한 S 커브·채도 +6 %, | exports: LUT_SIZE, grade, createGradeLut
+- `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness]) | exports: PostPipeline, createDirectRender, createPostPipeline
 - `packages/render/src/internal/renderer/backend-caps.ts` — 초기화 전 백엔드·깊이 기능 예측: WebGPU 어댑터 유무, WebGL2 EXT_clip_control(reversed-Z 필요조건). see docs/07-rendering.md §1, ADR-0006 | exports: BackendProbe, webgl2HasClipControl, probeBackend
 - `packages/render/src/internal/renderer/gpu-timer.ts` — GPU 타이머(M03 성능 표): WebGPU timestamp-query(three `trackTimestamp`)로 렌더 패스 GPU 시간을 모아 프레임당 평균(ms). | exports: GpuTimerStats, GpuTimer, createGpuTimer
 - `packages/render/src/internal/renderer/init.ts` — WebGPURenderer 초기화(WebGL2 폴백) + 깊이 전략 결정(reversed-Z 우선, 불가 시 logarithmic — ADR-0006). see docs/07-rendering.md §1 | exports: InitializedRenderer, resolveDepthMode, initRenderer

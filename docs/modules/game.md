@@ -48,6 +48,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/workers/*.worker.ts | 패키지 워커 엔트리 재수출(Vite 워커 번들링용) |
 | src/config/*.json | 기본 설정 오버라이드 |
 | src/debug/sun-override.ts | `?sun=az,el` → phase 68 `render.setEnvironment`(태양 고정, 달 반대편) — 조명·대기 확인·T02 수락 캡처 |
+| src/debug/post-flags.ts | `?quality=low\|medium\|high\|ultra`, `?post=ao:gtao,ssr:0,scale:0.85,…` → RenderConfig.quality·post(M03-T07 A/B) |
 | src/debug/wet-override.ts | `?wet=0..1` → `WeatherOverride`(env 배선·태양 고정이 `weather.wetness`를 덮음) + 왼쪽 아래 슬라이더(골든뷰 제외) — M03-T06 젖음 수동 검증 |
 | src/three-compat.ts | Vite alias `three` 대상: `three/webgpu` + WebGL 전용 이름 2개 대체(ADR-0028) |
 | src/debug/bookmarks.ts | 골든뷰 북마크(M03-T10): `?view=<id>` → `tests/golden/views.json` 동적 import(별도 청크) → 시작 포즈(절대 또는 지면 + AGL)·부팅 대기 중심·fov, `createGoldenWatch`(스트리밍 큐 0·HLOD 페이드 0·`extra` 1.5 s → `#app[data-golden=ready]`), `__SANPO_GOLDEN__` |

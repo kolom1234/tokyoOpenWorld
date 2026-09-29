@@ -3,17 +3,23 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 
 ## Current Milestone: M03 — Rendering Realism I (진행 순서: T10 → T01 → T02 → T03 → T04 → T06 → T05 → T07 → T08 → T09)
 ## Current Task: M03 큐 진행 중
-- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑).
+- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑), M03-T07(후처리 — 성능 기준 미달).
 - In progress: –
 - 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
 - 배포 상태: staging Worker `tokyo-sanpo-staging` = b84bfa1 코드 + dev 버킷 빌드 **`20260929-b84bfa1-ec1646fc`**(L0 294 + HLOD 177 + shared/materials(실내 큐브맵 포함), 478 파일 248.9 MB, current).
   dev 버킷 옛 빌드(gc 대기, 7일 규칙): `20260929-c9a28d3-ec1646fc`(T06, 10/6~), `20260928-b2d1e36-7fb58d45`(M02-T07, 10/6~), `20260928-7e215f4-7fb58d45`(10/5~). `pnpm pipeline gc --env dev --apply`(2026-09-29 dry-run = 0).
   staging 첫 로딩(GOLDEN_BOOT): **12.65 MB**·첫 표시 10.2 s(T05 기준). 머티리얼(첫 표시 뒤 지연) 18.18 MB.
 - 로컬 최신 빌드 = staging과 같음(`20260929-b84bfa1-ec1646fc`).
-- Next step (정확히 한 걸음): M03-T07 후처리 파이프라인(07 §7 순서: MRT → GTAO → SSGI → SSR → 대기 합성 → Bloom → 자동노출 → TRAA/TAAU → AgX → LUT → Sharpen, 1440p High ≤ 4 ms) — 깊이 프리패스로 파사드·지면 오버드로우 재측정.
+- Next step (정확히 한 걸음): M03-T08 품질 티어 초기 선택(detect-gpu + 60프레임) + 동적 해상도(0.5–1.0, 16.6 ms 유지) + `quality/changed` — post `renderScale`을 런타임에 바꾸는 경로(파이프라인 재구성 또는 PassNode.setResolutionScale)부터.
 - Blockers: 없음
 
 ## Recently Completed
+- M03-T07 Post pipeline — render `post/{pipeline,config,exposure,lut}.ts`: MRT(output·normal+roughness·velocity·[diffuse+metalness], 24 B) → GTAO/SSGI → SSR(가산) →
+  aerialPerspective → 컴퓨트 자동 노출(부분 적응) → Bloom(¼) → TRAA/TAAU(렌더 스케일) → renderOutput → 절차 3D LUT → Sharpen. API `QualityTier`·`PostEffects`·
+  `RenderConfig.quality/post`·stats `post/exposure`, game `?quality=`·`?post=`(`debug/post-flags.ts`). 티어: Low 0.6 / Medium 0.75 GTAO / High 0.85 GTAO+SSR+Bloom / Ultra 1.0 SSGI+Sharpen.
+  **SSGI는 Ultra만**(r186 해상도 배율 없음, +100 ms↑ — 07 §9 이탈). **성능 미달**: 1440p 3050 Laptop 스크램블 모두 끔 25.9 → High 35.9 ms(3060 환산 순증 ≈ 4.3 ms,
+  공중원근 포함 ≈ 7 ms > 4 ms). 안 빼기: GTAO 3.5·Bloom 3.0·Sharpen 2.2·SSR 1.6·노출 0.6·LUT 0.5, 공중원근 ≈ 6, TRAA ≈ 8.
+  골든 `docs/screenshots/M03/T07/*`(노출 배율 metrics). 테스트 +2파일/+4건. ADR-0035 (2026-09-29)
 - M03-T05 Glass & interior mapping — pipeline `materials/{interior-rooms,interiors}.ts`(방 8종 상자 가구·조명판 → 방 중심 6면 광선 추적 → 256² PNG 48장 →
   `interiors.ktx2` ETC1S 2D 배열 0.14 MB, manifest `interiors`, 스키마·validate), `lib/png.ts` RGB 인코더. render `facade/interior.ts`(베이×층×깊이 방 상자 교차 →
   면·LOD, 창별 방·좌우 반전, 유리 픽셀에서만 `If` 분기), `materials/glass.ts`(실내 발광 × (1−프레넬) × 투과율, 블라인드 확산면), library `maps.interiors`·방 평균색.
@@ -101,6 +107,8 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 - M01-T07 Test fixture world — `tests/fixtures/world-mini`(L0_-1..0 × -1..0, 셀 484–903 KiB, 건물 412동, validate 0 오류·이웃 4쌍 1028 샘플 비트 일치, ATTRIBUTION) + `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1셀 창 + `expected.json` 스냅샷), 합계 3.38 MB. `pipeline fixture`(`stages/fixture{,-plateau}.ts`, 컨테이너), `fixtures.test.ts`(호스트 Windows = 컨테이너 스냅샷 일치). 게임 `?world=mini` → `world-load.ts`(world.json 원점·포맷 검증 → cells.idx → 스폰 ± 1 셀 헤더), Vite 플러그인(dev 서빙·build 복사, production `SANPO_WORLD_MINI=0`), Playwright 1.63.0 `tests/e2e/boot.spec.ts` + CI `e2e` 잡. `.gitignore` 예외 확인(`*.tkc` → `!tests/fixtures/**`), `.gitattributes` 바이너리·GML 보존, Biome 픽스처 제외. ADR-0019 (2026-09-28)
 
 ## Known Issues
+- [perf] 후처리 1440p High ≈ 7 ms(3060 환산, 기준 4 ms) — 공중원근(takram) ≈ 6 ms·TRAA/TAAU ≈ 8 ms(3050 Laptop)가 크다. 파사드 ≈ 6 ms(기준 1.5). T08 동적 해상도로 16.6 ms 유지, 근본 절감은 후속(2026-09-29).
+- [perf] gpu-timer(timestamp 합산)는 패스·컴퓨트가 많으면 값이 튄다 → 후처리 비교는 무제한 프레임 p50(scratch cpu.mjs)로. `pnpm perf`(M02-T07~)에 반영 필요.
 - [perf] 첫 표시 ≈ 11 s(12 s 목표 근접) — 선컴파일 ≈ 5 s·대기 LUT. 첫 표시 직후 HLOD 1–2 s 디졸브(ADR-0033). T07/T08에서 선컴파일 병렬화 검토.
 - [render] 지면 `_SURF` 7(plaza)이 공원·녹지까지 덮음(요요기 콘크리트색), 도로 가장자리 1 m 계단 — M05 토지이용·도로 메시 전까지.
 - [render] 파사드 셰이더 ≈ 4.7 ms @1440p(RTX 3050 L) — 수락 1.5 ms 미달(ADR-0030). T07 깊이 프리패스(오버드로우 제거)·T08 동적 해상도 후 재측정.

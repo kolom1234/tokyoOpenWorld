@@ -87,7 +87,13 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
  → TRAA 또는 TAAU(렌더 스케일 < 1) → 톤매핑(AgX) → LUT 그레이딩(시간·날씨별 3D LUT)
  → Sharpen → 비네팅/필름그레인(약하게) → 출력
 ```
-- 순서의 정확한 조합(TAA 위치, 톤매핑 노드 위치)은 three r186 예제(`webgpu_postprocessing_*`)를 따라 M03-T07에서 확정하고 여기 갱신.
+- **확정 순서(M03-T07, ADR-0035, `post/pipeline.ts`)**: 씬 패스 MRT(output RGBA16F · normal+roughness RGBA8 · velocity · [diffuse+metalness RGBA8] = 24 B/샘플,
+  기본 한도 32 B 안) → GTAO(합성 곱) 또는 SSGI(AO 곱 + diffuse × GI) → SSR(가산, ½ × 렌더 스케일, 비금속 포함) → 공중원근(aerialPerspective, 하늘 포함)
+  → 자동 노출(곱) → Bloom(가산, ¼ 해상도) → TRAA(스케일 1) 또는 TAAU(스케일 < 1 — 앞 단계 전부 렌더 스케일 해상도) → renderOutput(AgX·sRGB) → 3D LUT → Sharpen.
+  비·눈 입자·볼류메트릭 구름·비네팅/필름그레인은 해당 태스크(M06·M08)에서 이 순서에 끼운다.
+- 자동 노출(`post/exposure.ts`): 씬 패스 HDR(하늘 제외)을 32² 격자로 컴퓨트 1회 → 로그 평균 EMA(τ 0.8 s, 스토리지 버퍼) →
+  배율 = (0.12 / 기하 평균)^0.4, [0.5, 4] — **부분 적응**(완전 적응은 골목 뷰를 8배로 밝혔다). CPU 읽기는 통계용으로 30프레임마다.
+- 3D LUT(`post/lut.ts`): 절차 생성 32³(약한 S 커브·채도 +6 %·그림자 차갑게/하이라이트 따뜻하게). 시간·날씨 LUT 전환은 M08.
 - 포토모드: `DepthOfFieldNode`, 렌더 스케일 1.5×(SSAA), 모션블러 옵션, LUT 선택, 노출/화이트밸런스 수동.
 
 ## 8. 날씨·계절 표현
@@ -109,6 +115,8 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 | 구름 | 하늘만 | 2D | 2D | 볼류메트릭 |
 | 보행자(VAT 근거리/총) | 60/200 | 120/500 | 250/1000 | 400/2000 |
 | L0 반경 배율 | 0.75 | 1.0 | 1.0 | 1.25 |
+- **M03-T07 이탈(ADR-0035)**: 1440p RTX 3050 Laptop 실측으로 High의 SSGI(½)를 GTAO로 — r186 SSGINode는 해상도 배율이 없고 +100 ms 이상.
+  High = GTAO(½, 8표본 + 시간 누적) + SSR(½) + Bloom + 자동 노출 + TAAU 0.85 + LUT, Sharpen은 Ultra만(2.2 ms). `RenderConfig.quality`·`post`(`?quality=`·`?post=`).
 - 초기 티어: `detect-gpu` 결과 + 60프레임 측정. 실행 중 **동적 해상도**: 목표 프레임 16.6 ms 유지 위해 렌더 스케일 ±0.05(범위 0.5–1.0).
 - WebGL2 폴백: 최대 Medium, compute 입자 → CPU 입자(개수 1/4), 클러스터 광원은 백엔드 지원 여부 확인 후 미지원 시 64개 고정 포워드.
 

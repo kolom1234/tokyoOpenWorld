@@ -12,4 +12,6 @@ export const DEFAULT_RENDER_CONFIG: RenderConfig = {
   gpuTiming: false,
   shadows: true,
   facade: 'procedural',
+  quality: 'high',
+  post: {},
 };

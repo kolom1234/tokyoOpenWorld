@@ -10,6 +10,7 @@ import { enableSunShadows, type SunShadows } from './lighting/shadows.ts';
 import { DEFAULT_MOON_DIR_WF, DEFAULT_SUN_DIR_WF } from './lighting/sun.ts';
 import { createMaterialLibrary, type MaterialLibrary } from './materials/library.ts';
 import { createMaterialRegistry, type MaterialRegistry } from './materials/registry.ts';
+import { resolvePost } from './post/config.ts';
 import { createDirectRender, createPostPipeline, type PostPipeline } from './post/pipeline.ts';
 import { createGpuTimer, type GpuTimer } from './renderer/gpu-timer.ts';
 import { initRenderer } from './renderer/init.ts';
@@ -78,7 +79,9 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },
     shadows: backend === 'webgpu' && cfg.shadows ? enableSunShadows(renderer, atmosphere.light) : undefined,
-    post: (post ? createPostPipeline : createDirectRender)(renderer, graph.scene, view.camera),
+    post: post
+      ? createPostPipeline(renderer, graph.scene, view.camera, resolvePost(cfg.quality, cfg.post))
+      : createDirectRender(renderer, graph.scene, view.camera),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0 },
   };

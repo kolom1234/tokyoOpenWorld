@@ -21,6 +21,8 @@ function statsOf(ctx: RenderContext): RenderStats {
     hlodFading: ctx.counters.fading,
     materials: ctx.library.stats(),
     gpu: ctx.gpuTimer.stats(),
+    post: ctx.post.effects,
+    exposure: ctx.post.exposure(),
   };
 }
 
