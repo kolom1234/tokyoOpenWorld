@@ -76,13 +76,25 @@ export function describeDebug(
   ];
 }
 
-/** e2e용 `data-*`. */
-function writeDataset(el: HTMLElement, s: RenderStats): void {
+/** e2e용 `data-*`. settled = HLOD 페이드 0 + 스트리밍 대기·받기·디코드·적용 대기 0(화면 비교 전 안정 조건). */
+function writeDataset(el: HTMLElement, s: RenderStats, st: StreamingStats | undefined): void {
   el.dataset.backend = s.backend;
   el.dataset.depth = s.depth;
   el.dataset.cells = String(s.cells);
   el.dataset.frames = String(s.frames);
   el.dataset.rebases = String(s.originRebases);
+  const pending = st ? st.queued + st.fetching + st.decoding + st.pendingReady : 0;
+  el.dataset.settled = String(s.hlodFading === 0 && pending === 0);
+}
+
+/** originRebases가 target에 닿을 때까지(프레임마다 확인, 최대 30 s) + 그 뒤 minMs만큼 더. */
+async function untilRebases(render: DebugOverlayDeps['render'], target: number, minMs: number): Promise<void> {
+  const t0 = performance.now();
+  while (render.stats().originRebases < target && performance.now() - t0 < 30_000) {
+    await new Promise((r) => requestAnimationFrame(r));
+  }
+  const left = minMs - (performance.now() - t0);
+  if (left > 0) await new Promise((r) => setTimeout(r, left));
 }
 
 export function createDebugOverlay(deps: DebugOverlayDeps): DebugOverlay {
@@ -102,7 +114,7 @@ export function createDebugOverlay(deps: DebugOverlayDeps): DebugOverlay {
     const p = traversal.camera.posWF;
     const st = deps.streaming?.stats();
     el.textContent = describeDebug(s, fps, traversal, deps.ground.groundHeightAt(p.x, p.z), st).join('\n');
-    writeDataset(el, s);
+    writeDataset(el, s, st);
   };
 
   const rebaseTest = async (): Promise<void> => {
@@ -110,10 +122,13 @@ export function createDebugOverlay(deps: DebugOverlayDeps): DebugOverlay {
     busy = true;
     const home = { ...traversal.camera.posWF };
     const yaw = traversal.player.yawRad;
+    const start = render.stats().originRebases;
     log.info('rebase test: away', REBASE_TEST_OFFSET_M, 'm');
     await traversal.teleport({ ...home, x: home.x + REBASE_TEST_OFFSET_M }, yaw);
-    await new Promise((r) => setTimeout(r, REBASE_TEST_HOLD_MS));
+    // 시간이 아니라 재설정(= 멀리서 그린 프레임)을 기다린다 — 부하로 1 FPS 아래면 1 s 안에 한 프레임도 안 그려져 재설정이 없었다(e2e flaky).
+    await untilRebases(render, start + 1, REBASE_TEST_HOLD_MS);
     await traversal.teleport(home, yaw);
+    await untilRebases(render, start + 2, 0);
     log.info('rebase test: back', render.stats().originRebases, 'rebases');
     busy = false;
   };

@@ -130,7 +130,7 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 - WebGL2 폴백: 최대 Medium, compute 입자 → CPU 입자(개수 1/4), 클러스터 광원은 백엔드 지원 여부 확인 후 미지원 시 64개 고정 포워드.
   구현(M03-T09, ADR-0037): **하드웨어 WebGL2** = WebGPU와 같은 후처리(Medium: GTAO·Bloom·TAAU 0.75·LUT) + 환경 프로브 + CSM 그림자, 자동 노출(컴퓨트)만 끄고 고정 배율 1.25,
   유리 거칠기 하한 0.16(프로브만 비쳐 거울 띠가 과함). **소프트웨어 WebGL2**(SwiftShader·llvmpipe — CI, WEBGL_debug_renderer_info로 판정) = 직접 렌더(ADR-0028).
-  남은 차이: 일부 금속·커튼월 파사드가 WebGL2에서 더 어둡다(프로브 반사 차이, 후속).
+  WebGL2 파사드 어두움은 GTAO 위치 복원(three `getViewPosition`이 역-Z 0..1 깊이를 −1..1로 변환) → three 패치로 해결(ADR-0040).
 
 ## 10. 렌더 예산 (High, 1440p, 스크램블 교차로 한낮)
 | 항목 | 예산 |

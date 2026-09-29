@@ -1,8 +1,8 @@
 // 정지 카메라 떨림(M03 보강): 카메라가 멈춰 있으면 TAAU가 수렴해 연속 프레임이 거의 같아야 한다.
 // CI(SwiftShader)는 기본으로 후처리를 끄므로 `?forcePost=1`로 GTAO + TAAU 체인을 켜고(480×270 — ≈ 10 FPS), 그림자·동적 해상도는 끈다.
 // 게임 루프 직후(같은 프레임) 캔버스를 복사해 연속 8프레임 휘도 차를 잰다.
-// 기준(ADR-0038 실측, 로컬 SwiftShader): GTAO 시간 노이즈(수정 전) 평균 |Δ| 0.20·>4 단계 0.90 %, 고정 노이즈 + 블러(수정 후) 0.115·0.44 %,
-// AO 끔 0.11·0.44 %(= TAAU 지터 잔여), TAA 끔 0.001. see docs/14-testing-perf.md §1
+// 기준(로컬 SwiftShader, 역-Z GTAO 패치 ADR-0040 뒤): 고정 노이즈 + 블러(현재) 평균 |Δ| 0.095–0.105·>4 단계 0.23–0.32 %,
+// GTAO 시간 노이즈 + 블러 없음(ADR-0038 수정 전) 0.153·0.62 %, 시간 노이즈 + 블러 0.135·0.46 %, TAA 끔 0.001. see docs/14-testing-perf.md §1
 import { expect, type Page, test } from '@playwright/test';
 
 const HIDE_UI = 'body > :not(#view) { visibility: hidden !important; }';
@@ -11,9 +11,9 @@ const QUERY =
 /** TAAU 수렴(현재 프레임 가중 0.025) 대기 프레임. */
 const WARMUP_FRAMES = 40;
 const CAPTURE_FRAMES = 8;
-/** 중앙값 임계(수정 전 값보다 작고 수정 후 값보다 ≈ 30 % 크게). */
-const MAX_MEAN_ABS = 0.15;
-const MAX_PCT_OVER4 = 0.7;
+/** 중앙값 임계(현재 값보다 ≈ 20–25 % 크고 두 회귀 변형보다 작게). */
+const MAX_MEAN_ABS = 0.125;
+const MAX_PCT_OVER4 = 0.4;
 /** 화면 평균 휘도 변화(자동 노출·전역 깜빡임). */
 const MAX_GLOBAL_DELTA = 0.1;
 

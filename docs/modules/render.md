@@ -69,6 +69,7 @@ M01-T06 최소 구현(초기화·reversed-Z·방향광·셀 메시·원점 재�
 ## Gotchas
 - GPU 타이머는 풀 `timestamps` 합산(three 반환값은 마지막 frame id만 — ADR-0029 §6). 그림자는 `renderer.shadowMap.enabled` 필수.
 - WebGPU 경로에 `scene.backgroundNode`를 두지 말 것(환경 프로브와 겹치면 배경 머티리얼 매 프레임 재빌드, ADR-0029 §5).
+- three r186 패치(ADR-0040): `getViewPosition` 역-Z 분기 — 없으면 WebGL2(EXT_clip_control)에서 GTAO·TAAU 히스토리 검증이 틀린 위치를 복원(파사드가 어둡다).
 - takram 0.19.1 × three r186: 패치 필수(struct Proxy, requestIdleCallback 타임아웃). LUT가 0이면 조명·하늘이 **검게** 나온다 — `precompile()`의 LUT prepare 확인.
 - 게임 번들은 `three` → `apps/game/src/three-compat.ts` alias(WebGLCubeRenderTarget·WebGLRenderer 대체). render 패키지 테스트(Node)는 실제 `three`를 쓴다.
 - three r186 명칭: 후처리는 `RenderPipeline`(구 PostProcessing), `PCFSoftShadowMap` 제거됨. addon 이름은 `node_modules/three/examples/jsm/{tsl/display,lighting,lights}`에서 확인.

@@ -15,6 +15,7 @@ describe('post flags', () => {
       aerial: 'full',
     });
     expect(parsePostFlag('aerial:quarter')).toEqual({});
+    expect(parsePostFlag('autoExposure:0,exp:1.25')).toEqual({ autoExposure: false, fixedExposure: 1.25 });
     const f = parseFlags('?quality=low&post=bloom:1');
     expect([f.quality, f.post]).toEqual(['low', { bloom: true }]);
   });
