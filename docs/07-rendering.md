@@ -67,8 +67,8 @@ scene
 | 요소 | 구현 |
 |---|---|
 | 태양/달 | three `SunLight` addon (CSM 캐스케이드 그림자). High: 4 캐스케이드×2048², 그림자 거리 600 m. 방향은 **sim이 계산**(suncalc + 수렴각 보정)해 `EnvironmentState.sunDirWF`로 전달, render는 소비만 |
-| 하늘/대기 | `@takram/three-atmosphere/webgpu` — 하늘, 태양·하늘 조도, 공중원근(aerial perspective) 후처리. 정확한 노드명은 패키지 `types/webgpu` 확인 |
-| 환경 조명 | 하늘에서 동적 큐브맵 생성 → PMREM. 태양 1° 이동 또는 날씨 변경 시 갱신(6프레임 분할 렌더) |
+| 하늘/대기 | `@takram/three-atmosphere/webgpu` 0.19.1(+ r186 호환 패치) — `AtmosphereContext`(WF→ECEF: 원점 위치·NUE·수렴각 γ·지오이드 36.7 m) + `AtmosphereLight`(직사·하늘 간접) + `skyBackground()` + 후처리 `aerialPerspective`(ADR-0028) |
+| 환경 조명 | `SkyEnvironmentNode`(하늘 64² 큐브 → PMREM) = `scene.environmentNode`, 라이트 간접 끔. 갱신 = 카메라 1 km 이동 또는 태양 각도 변화(라이브러리 임계값, 분할 렌더 안 함 — ADR-0028) |
 | 간접광 | `SSGINode`(High+), `GTAONode`(Medium+). 플레이어 주변 `LightProbeGrid`는 M09-T03에서 효용 평가 후 채택 |
 | 야간 광원 | `ClusteredLightsNode` — 반경 300 m 내 최대 1024개(가로등 4000 K LED, 편의점풍 5500 K, 주거 2700 K). 원거리는 발광 스프라이트 + 블룸 |
 | 신호/차량등 | 발광 머티리얼 + 근거리만 실제 광원 |

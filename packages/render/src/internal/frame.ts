@@ -24,13 +24,16 @@ function syncSize(renderer: WebGPURenderer, camera: PerspectiveCamera, canvas: H
 }
 
 export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw: GameSystem } {
-  const { renderer, view, cells, library, hlod, graph, counters } = ctx;
+  const { renderer, view, cells, library, hlod, counters } = ctx;
   const prep: GameSystem = {
     id: 'renderPrep',
     phase: RENDER_PREP_PHASE,
     update(f) {
       syncSize(renderer, view.camera, ctx.canvas, ctx.cfg.maxPixelRatio);
-      view.prepare((origin) => cells.placeAll(origin));
+      view.prepare((origin) => {
+        cells.placeAll(origin);
+        ctx.atmosphere.setOrigin(origin);
+      });
       library.setOrigin(view.renderOriginWF);
       counters.fading = hlod.update(f.dtReal);
     },
@@ -40,11 +43,15 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
     id: 'render',
     phase: RENDER_PHASE,
     update() {
-      renderer.render(graph.scene, view.camera);
+      ctx.post.render();
+      ctx.gpuTimer.afterFrame();
       counters.frames++;
     },
     dispose() {
       cells.dispose();
+      ctx.post.dispose();
+      ctx.env.dispose();
+      ctx.atmosphere.dispose();
       ctx.materials.dispose();
       library.dispose();
       renderer.dispose();

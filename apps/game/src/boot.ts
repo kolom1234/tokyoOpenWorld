@@ -13,6 +13,7 @@ import { detectCaps } from './caps.ts';
 import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
 import { createDebugOverlay } from './debug/overlay.ts';
 import { createStatsHook } from './debug/stats.ts';
+import { createSunOverride, parseSunFlag } from './debug/sun-override.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
 import {
@@ -39,9 +40,20 @@ export interface BootFlags {
   probe?: 'decode';
   /** `?view=<id>` → 골든뷰 북마크(tests/golden/views.json, debug/bookmarks.ts). */
   view?: string;
+  /** `?exposure=<n>` → 톤매핑 노출 고정값(자동 노출 M03-T07 전 조정·비교용). */
+  exposure?: number;
+  /** `?sun=<방위>,<고도>` → 태양 방향 고정(debug/sun-override.ts). */
+  sun?: { azDeg: number; elDeg: number };
+  /** `?gpuTiming=1` → GPU 타이머(render stats().gpu, 골든 metrics). */
+  gpuTiming?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
+
+function sunFlag(v: string | null): Pick<BootFlags, 'sun'> {
+  const sun = parseSunFlag(v);
+  return sun ? { sun } : {};
+}
 
 export function parseFlags(search: string): BootFlags {
   const q = new URLSearchParams(search);
@@ -51,6 +63,9 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('backend') === 'webgl' ? { backend: 'webgl' as const } : {}),
     ...(q.get('probe') === 'decode' ? { probe: 'decode' as const } : {}),
     ...(VIEW_ID.test(q.get('view') ?? '') ? { view: q.get('view') as string } : {}),
+    ...(Number(q.get('exposure')) > 0 ? { exposure: Number(q.get('exposure')) } : {}),
+    ...sunFlag(q.get('sun')),
+    ...(q.get('gpuTiming') === '1' ? { gpuTiming: true } : {}),
   };
 }
 
@@ -119,11 +134,17 @@ async function setupWorldView(
       log,
       scheduler,
       backend: flags.backend === 'webgl' ? 'webgl' : 'auto',
+      renderConfig: {
+        ...(flags.exposure ? { exposure: flags.exposure } : {}),
+        ...(flags.gpuTiming ? { gpuTiming: true } : {}),
+      },
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),
     });
     for (const p of world.providers) scheduler.add(p);
+    if (flags.sun)
+      scheduler.add({ systems: () => [createSunOverride(world.render, flags.sun as NonNullable<BootFlags['sun']>)] });
     scheduler.setFrameSource(world.frameSource);
     document.body.classList.add('rendering');
     view.setRenderer(world.render.backend, world.render.depth);

@@ -7,3 +7,8 @@ packages:
 onlyBuiltDependencies:
   - esbuild
   - workerd
+
+# three r186 호환 패치(struct()가 Proxy를 반환 → takram 0.19.1의 `.layout.name` 접근 실패). takram이 r186을 지원하면 제거. ADR-0028
+patchedDependencies:
+  '@takram/three-atmosphere@0.19.1': patches/@takram__three-atmosphere@0.19.1.patch
+  '@takram/three-geospatial@0.9.1': patches/@takram__three-geospatial@0.9.1.patch

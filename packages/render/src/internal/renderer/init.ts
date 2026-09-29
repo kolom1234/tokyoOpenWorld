@@ -30,6 +30,7 @@ export async function initRenderer(
     forceWebGL,
     reversedDepthBuffer: probe.reversedZ,
     logarithmicDepthBuffer: !probe.reversedZ,
+    trackTimestamp: cfg.gpuTiming,
   });
   await renderer.init();
   renderer.toneMapping = AgXToneMapping;

@@ -4,8 +4,13 @@ import { type Logger, mergeConfig } from '@sanpo/core';
 import type { WebGPURenderer } from 'three/webgpu';
 import type { DepthMode, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
+import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
+import { attachEnvProbe, type EnvProbe } from './lighting/env-probe.ts';
+import { DEFAULT_MOON_DIR_WF, DEFAULT_SUN_DIR_WF } from './lighting/sun.ts';
 import { createMaterialLibrary, type MaterialLibrary } from './materials/library.ts';
 import { createMaterialRegistry, type MaterialRegistry } from './materials/registry.ts';
+import { createDirectRender, createPostPipeline, type PostPipeline } from './post/pipeline.ts';
+import { createGpuTimer, type GpuTimer } from './renderer/gpu-timer.ts';
 import { initRenderer } from './renderer/init.ts';
 import { type CellSet, createCellSet } from './scene/cell-node.ts';
 import { createHlodSwitch, type HlodSwitch } from './scene/hlod-switch.ts';
@@ -25,6 +30,10 @@ export interface RenderContext {
   readonly view: RenderView;
   readonly hlod: HlodSwitch;
   readonly cells: CellSet;
+  readonly atmosphere: AtmosphereRig;
+  readonly env: EnvProbe;
+  readonly post: PostPipeline;
+  readonly gpuTimer: GpuTimer;
   /** 프레임 카운터·마지막 HLOD 페이드 수(stats). */
   readonly counters: { frames: number; fading: number };
 }
@@ -37,6 +46,12 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const library = createMaterialLibrary(cfg.basisPath);
   const materials = createMaterialRegistry(library);
   const hlod = createHlodSwitch();
+  const view = createRenderView(cfg, deps.bus, log);
+  renderer.toneMappingExposure = cfg.exposure;
+  const atmosphere = createAtmosphere(renderer, graph.scene, view.camera);
+  graph.roots.light.add(atmosphere.light, atmosphere.light.target);
+  atmosphere.setOrigin(view.renderOriginWF);
+  atmosphere.setBodies(DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF);
   return {
     cfg,
     log,
@@ -47,9 +62,13 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     graph,
     library,
     materials,
-    view: createRenderView(cfg, deps.bus, log),
+    view,
     hlod,
     cells: createCellSet(materials, graph.roots, hlod),
+    atmosphere,
+    env: attachEnvProbe(graph.scene, atmosphere.light),
+    post: (backend === 'webgpu' ? createPostPipeline : createDirectRender)(renderer, graph.scene, view.camera),
+    gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0 },
   };
 }

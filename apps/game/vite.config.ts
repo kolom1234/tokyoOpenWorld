@@ -125,8 +125,8 @@ function basisTranscoder(): Plugin {
 
 export default defineConfig({
   plugins: [worldMiniFixture(), localBuild(), basisTranscoder()],
-  // three addon(KTX2Loader 등)의 `three` import를 WebGPU 빌드로 — WebGLRenderer 번들 중복 방지(같은 three.core 공유).
-  resolve: { alias: [{ find: /^three$/, replacement: 'three/webgpu' }] },
+  // three addon(KTX2Loader)·takram의 `three` import를 WebGPU 빌드 + 호환 이름(src/three-compat.ts)으로 — WebGL 렌더러 번들 제외.
+  resolve: { alias: [{ find: /^three$/, replacement: resolve(import.meta.dirname, 'src/three-compat.ts') }] },
   server: {
     port: 5173,
     strictPort: true,

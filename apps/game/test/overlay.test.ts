@@ -19,6 +19,7 @@ describe('describeDebug', () => {
       hlodParents: 3,
       hlodFading: 1,
       materials: { state: 'ready', layers: 32, downloadBytes: 20_500_000, gpuBytes: 64_000_000, loadMs: 900 },
+      gpu: { enabled: false, frameMs: 0, samples: 0 },
     };
     const t = { camera: { posWF: { x: -60, y: 75.4, z: -15 } }, hud: { speedKmh: 54 } } as unknown as TraversalService;
     const lines = describeDebug(stats, 59.94, t, 15.4);

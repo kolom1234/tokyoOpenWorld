@@ -137,8 +137,7 @@ export function createFacadeMaterial(lib: MaterialLibrary): Material {
   const tint = mix(vec3(0.92), vec3(1.06), h3);
   m.colorNode = smp.albedo.mul(tint);
   m.roughnessNode = smp.orm.y;
-  // 환경 반사(M03-T02 env-probe) 전에는 금속면이 검게 보인다 → 금속도 상한 0.3(T02에서 해제).
-  m.metalnessNode = smp.orm.z.min(0.3);
+  m.metalnessNode = smp.orm.z;
   m.aoNode = smp.orm.x;
   // 벽: T = 수평(u 증가 방향 = up × n), B = 위. 지붕: T = +X, B = −Z(북, 이미지 위).
   const tWall = normalize(vec3(n.z, 0, n.x.negate()));

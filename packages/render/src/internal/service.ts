@@ -20,6 +20,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     hlodParents: ctx.hlod.size,
     hlodFading: ctx.counters.fading,
     materials: ctx.library.stats(),
+    gpu: ctx.gpuTimer.stats(),
   };
 }
 
@@ -35,8 +36,12 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     removeCell: (key) => cells.remove(key),
     setHlodChildVisible: (parent, child, visible) => hlod.setChildVisible(parent, child, visible),
     loadMaterials: (url) => library.load(url, renderer, log),
-    precompile: () => precompileMaterials(renderer, graph.scene, view.camera, ctx.materials, log),
+    async precompile() {
+      await ctx.atmosphere.prepare();
+      await precompileMaterials(renderer, graph.scene, view.camera, ctx.materials, log);
+    },
     setCamera: (c) => view.setCamera(c),
+    setEnvironment: (e) => ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF),
     stats: () => statsOf(ctx),
     dispose: () => draw.dispose(),
     systems: () => [prep, draw],

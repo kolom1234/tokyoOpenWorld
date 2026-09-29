@@ -2,6 +2,7 @@
 // 지면 질의는 streaming 높이장(월드 로드 전 = 미적재). see docs/modules/game.md §부트 시퀀스, docs/06-world-streaming.md §8
 import {
   createWorkerSupervisor,
+  type DeepPartial,
   type EventBus,
   type FrameSource,
   type GroundQuery,
@@ -11,7 +12,7 @@ import {
   type Vec3d,
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
-import { createRender, type RenderService } from '@sanpo/render';
+import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import { startFreecamPose } from './start-view.ts';
@@ -44,6 +45,8 @@ export interface WorldViewDeps {
   log: Logger;
   scheduler: Pick<Scheduler, 'add'>;
   backend: 'auto' | 'webgl';
+  /** render 설정 덮어쓰기(`?exposure=`·`?gpuTiming=1`). */
+  renderConfig?: DeepPartial<RenderConfig>;
   now?: () => number;
   /** 시작 시점 재정의(골든뷰 북마크 `?view=`): 부팅 대기 중심과 지면 확인 뒤 포즈. 없으면 스폰·startFreecamPose. */
   start?: { centerWF: Vec3d; pose: (ground: GroundQuery) => FreecamParams; fovDeg?: number };
@@ -96,7 +99,8 @@ function loadMaterialsLater(render: RenderService, url: string | undefined, late
 
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
-  const render = await createRender({ canvas, bus, log, config: { backend: deps.backend } });
+  const config = { ...deps.renderConfig, backend: deps.backend };
+  const render = await createRender({ canvas, bus, log, config });
   const input = createInput({ target: canvas, bus, log });
   const late: LateState = { materialsSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };

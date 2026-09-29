@@ -7,8 +7,8 @@
 | 영역 | 선택 | 버전 | 라이선스 | 근거 |
 |---|---|---|---|---|
 | 렌더러 | **three.js `WebGPURenderer`** + TSL | 0.186.1 | MIT | WebGPU 기본 + WebGL2 자동 폴백, TSL 노드 셰이더가 양쪽 백엔드 공통. r186 기준 `SunLight`(CSM), `ClusteredLightsNode`, `SSGINode`, `SSRNode`, `GTAONode`, `TRAANode`, `TAAUNode`, `BloomNode`, `Lut3DNode`, `LightProbeGrid` 등 사실적 렌더링 부품이 addon으로 존재 |
-| 대기/하늘 | `@takram/three-atmosphere` (`/webgpu` export) | 0.19.1 | MIT | Bruneton 정밀 대기 산란, 하늘·태양·공중원근·조도. WebGPU 엔트리 제공 |
-| 지리 유틸 | `@takram/three-geospatial` (`/webgpu`) | (atmosphere와 동일 릴리스 라인) | MIT | 대기 모듈 의존 |
+| 대기/하늘 | `@takram/three-atmosphere` (`/webgpu` export) | 0.19.1 (+ `patches/` three r186 호환, ADR-0028) | MIT | Bruneton 정밀 대기 산란, 하늘·태양·공중원근·조도. WebGPU 엔트리 제공 |
+| 지리 유틸 | `@takram/three-geospatial` (`/webgpu`) | 0.9.1 (+ `patches/`) | MIT | 대기 모듈 의존 |
 | 물리 | **Jolt Physics** `jolt-physics` (wasm, multithread 빌드) | 1.1.0 | MIT | 차량(WheeledVehicle/Motorcycle 컨트롤러: 엔진·변속기·차동·타이어 마찰곡선), CharacterVirtual(계단·경사·이동발판), 대규모 정적 메시 성능. AAA 채택 실적 |
 | 내비/군중 | `recast-navigation` (+ `@recast-navigation/three`) | 0.43.1 | MIT | Recast 내비메시 + DetourCrowd |
 | 메시 가속 | `three-mesh-bvh` | 0.9.15 | MIT | 레이캐스트(카메라 충돌, 픽킹) |

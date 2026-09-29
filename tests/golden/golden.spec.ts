@@ -59,6 +59,8 @@ async function capture(page: Page, id: string): Promise<Capture> {
   await expect(page.locator('#app')).toHaveAttribute('data-golden', 'ready', { timeout: 240_000 });
   await page.addStyleTag({ content: HIDE_UI });
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  // GPU 타이머가 켜져 있으면 안정 상태 표본(≈ 2 s 창)이 쌓이게 기다린 뒤 잰다.
+  if (EXTRA_QUERY.includes('gpuTiming=1')) await page.waitForTimeout(3000);
   const png = await page.screenshot();
   const m = await page.evaluate(() => {
     const g = (globalThis as { __SANPO_GOLDEN__?: { render(): unknown; metrics?(): unknown } }).__SANPO_GOLDEN__;

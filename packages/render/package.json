@@ -10,6 +10,8 @@
     "@sanpo/core": "workspace:*",
     "@sanpo/geo": "workspace:*",
     "@sanpo/tile-format": "workspace:*",
+    "@takram/three-atmosphere": "0.19.1",
+    "@takram/three-geospatial": "0.9.1",
     "meshoptimizer": "1.3.0",
     "three": "0.186.1"
   },
