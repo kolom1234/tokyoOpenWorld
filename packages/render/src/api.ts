@@ -37,6 +37,8 @@ export interface PostEffects {
   taa: boolean;
   /** 씬·후처리 해상도 배율(07 §9 — TAAU로 출력 해상도 복원, taa 필요). 동적 조정은 M03-T08. */
   renderScale: number;
+  /** 자동 노출을 못 쓸 때(WebGL2) 고정 노출 배율. 없으면 1. */
+  fixedExposure?: number;
   lut: boolean;
   sharpen: boolean;
 }

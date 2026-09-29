@@ -8,6 +8,8 @@ export interface InitializedRenderer {
   renderer: WebGPURenderer;
   backend: RenderBackend;
   depth: DepthMode;
+  /** WebGL2 소프트웨어 래스터(SwiftShader 등) — 후처리·그림자·프로브 끔. */
+  software: boolean;
 }
 
 /** 초기화 후 실제 상태에서 깊이 모드를 읽는다(예측과 다르면 three가 폴백한 것). */
@@ -42,6 +44,7 @@ export async function initRenderer(
   if (backend !== probe.backend || (probe.reversedZ && depth !== 'reversed-z')) {
     log.warn('backend/depth differs from probe', { probe, backend, depth });
   }
-  log.info('renderer', { backend, depth });
-  return { renderer, backend, depth };
+  const software = backend === 'webgl2' && probe.software;
+  log.info('renderer', { backend, depth, software });
+  return { renderer, backend, depth, software };
 }

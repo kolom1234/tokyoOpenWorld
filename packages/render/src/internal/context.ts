@@ -2,12 +2,13 @@
 // see docs/modules/render.md
 import { type Logger, mergeConfig, type QualityTier } from '@sanpo/core';
 import type { WebGPURenderer } from 'three/webgpu';
-import type { DepthMode, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
+import type { DepthMode, PostEffects, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
 import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
 import { attachEnvProbe, type EnvProbe } from './lighting/env-probe.ts';
 import { enableSunShadows, type SunShadows } from './lighting/shadows.ts';
 import { DEFAULT_MOON_DIR_WF, DEFAULT_SUN_DIR_WF } from './lighting/sun.ts';
+import { glassRoughness } from './materials/glass.ts';
 import { createMaterialLibrary, type MaterialLibrary } from './materials/library.ts';
 import { createMaterialRegistry, type MaterialRegistry } from './materials/registry.ts';
 import { resolvePost } from './post/config.ts';
@@ -38,7 +39,7 @@ export interface RenderContext {
   readonly env: EnvProbe;
   /** 전역 환경 유니폼(젖음 등, 07 §3). */
   readonly envUniforms: EnvUniforms;
-  /** WebGPU만(WebGL2 폴백은 품질 티어 M03-T09에서 결정). */
+  /** 하드웨어 백엔드만(소프트웨어 WebGL2는 끔, M03-T09). */
   readonly shadows: SunShadows | undefined;
   /** 티어 변경 때 교체된다(quality.ts). */
   post: PostPipeline;
@@ -48,10 +49,22 @@ export interface RenderContext {
   readonly counters: { frames: number; fading: number };
 }
 
+/** WebGL2 고정 노출(WebGPU 자동 노출 골든뷰 배율 0.8–1.9의 기하 중간 ≈ 1.25). */
+const WEBGL2_EXPOSURE = 1.25;
+const WEBGL2_GLASS_ROUGHNESS = 0.16;
+
+/** 티어 → 효과. WebGL2엔 컴퓨트가 없다 → 자동 노출 끔 + 고정 배율(07 §9 폴백 "미지원 기능 자동 비활성"). 유리 거칠기 하한은 context가 올린다("유리 반사 과다 보정"). */
+function postEffectsFor(cfg: RenderConfig, backend: RenderBackend): (tier: QualityTier) => PostEffects {
+  return (tier) => {
+    const fx = resolvePost(tier, cfg.post);
+    return backend === 'webgl2' ? { ...fx, autoExposure: false, fixedExposure: WEBGL2_EXPOSURE } : fx;
+  };
+}
+
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
   const cfg = mergeConfig(DEFAULT_RENDER_CONFIG, deps.config ?? {});
   const log = deps.log.child('render');
-  const { renderer, backend, depth } = await initRenderer(deps.canvas, cfg, log);
+  const { renderer, backend, depth, software } = await initRenderer(deps.canvas, cfg, log);
   const graph = createSceneGraph();
   const library = createMaterialLibrary(cfg.basisPath);
   const envUniforms = createEnvUniforms();
@@ -59,15 +72,17 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const hlod = createHlodSwitch();
   const view = createRenderView(cfg, deps.bus, log);
   renderer.toneMappingExposure = cfg.exposure;
-  // WebGPU = 후처리(공중원근이 하늘까지) + 환경 프로브, WebGL2 = 직접 렌더 + 하늘 배경 + 라이트 간접광(ADR-0028).
-  const post = backend === 'webgpu';
+  // 하드웨어(WebGPU·WebGL2) = 후처리(공중원근이 하늘까지) + 환경 프로브 + 그림자, 소프트웨어 WebGL2(SwiftShader — CI) = 직접 렌더 + 하늘 배경(ADR-0028, M03-T09).
+  const post = !software;
   const atmosphere = createAtmosphere(renderer, graph.scene, view.camera, !post);
   graph.roots.light.add(atmosphere.light, atmosphere.light.target);
   atmosphere.setOrigin(view.renderOriginWF);
   atmosphere.setBodies(DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF);
+  if (backend === 'webgl2') glassRoughness.value = WEBGL2_GLASS_ROUGHNESS;
+  const postFor = postEffectsFor(cfg, backend);
   const makePost = (tier: QualityTier): PostPipeline =>
     post
-      ? createPostPipeline(renderer, graph.scene, view.camera, resolvePost(tier, cfg.post), cfg.debugGpuLoad)
+      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad)
       : createDirectRender(renderer, graph.scene, view.camera);
   const ctx: Omit<RenderContext, 'quality'> & { quality?: QualityManager } = {
     cfg,
@@ -85,7 +100,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     atmosphere,
     envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },
-    shadows: backend === 'webgpu' && cfg.shadows ? enableSunShadows(renderer, atmosphere.light) : undefined,
+    shadows: post && cfg.shadows ? enableSunShadows(renderer, atmosphere.light) : undefined,
     post: makePost(cfg.quality),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0 },
@@ -100,7 +115,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     applyTier(tier) {
       ctx.post.dispose();
       ctx.post = makePost(tier);
-      return resolvePost(tier, cfg.post).renderScale;
+      return postFor(tier).renderScale;
     },
     applyScale: (s) => ctx.post.setRenderScale(s),
   });

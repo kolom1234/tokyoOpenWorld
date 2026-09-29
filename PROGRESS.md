@@ -3,17 +3,21 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 
 ## Current Milestone: M03 — Rendering Realism I (진행 순서: T10 → T01 → T02 → T03 → T04 → T06 → T05 → T07 → T08 → T09)
 ## Current Task: M03 큐 진행 중
-- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑), M03-T07(후처리 — 성능 기준 미달), M03-T08(품질 티어·동적 해상도).
+- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑), M03-T07(후처리 — 성능 기준 미달), M03-T08(품질 티어·동적 해상도), M03-T09(WebGL2 폴백).
 - In progress: –
 - 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
 - 배포 상태: staging Worker `tokyo-sanpo-staging` = b84bfa1 코드 + dev 버킷 빌드 **`20260929-b84bfa1-ec1646fc`**(L0 294 + HLOD 177 + shared/materials(실내 큐브맵 포함), 478 파일 248.9 MB, current).
   dev 버킷 옛 빌드(gc 대기, 7일 규칙): `20260929-c9a28d3-ec1646fc`(T06, 10/6~), `20260928-b2d1e36-7fb58d45`(M02-T07, 10/6~), `20260928-7e215f4-7fb58d45`(10/5~). `pnpm pipeline gc --env dev --apply`(2026-09-29 dry-run = 0).
   staging 첫 로딩(GOLDEN_BOOT): **12.65 MB**·첫 표시 10.2 s(T05 기준). 머티리얼(첫 표시 뒤 지연) 18.18 MB.
 - 로컬 최신 빌드 = staging과 같음(`20260929-b84bfa1-ec1646fc`).
-- Next step (정확히 한 걸음): M03-T09 WebGL2 폴백 동등성(`?backend=webgl`에서 모든 머티리얼 컴파일·오류 0, 미지원 기능 자동 비활성, 유리 반사 과다 보정, Medium 상한) — 현재 WebGL2는 직접 렌더(후처리·그림자·프로브 없음)부터 점검.
+- Next step (정확히 한 걸음): M03 마무리 — PR #15 리뷰·머지(사용자). 이후 M03 성능 후속(공중원근·TAAU 고정 비용, 파사드 오버드로우 — 깊이 프리패스)과 M04 착수.
 - Blockers: 없음
 
 ## Recently Completed
+- M03-T09 WebGL2 fallback parity — backend-caps 소프트웨어 래스터 판정(SwiftShader·llvmpipe → 직접 렌더 유지), **하드웨어 WebGL2 = 같은 후처리 + 환경 프로브 + CSM 그림자**,
+  Medium 상한(T08), 자동 노출(컴퓨트) 끔 → 고정 1.25, 유리 거칠기 하한 0.16(거울 띠 과다 보정), TSL `packNormalToRGB/unpackRGBToNormal`(r186 이름).
+  **수락**: `?backend=webgl` 실제 GPU 골든 5뷰(`docs/screenshots/M03/T09-webgl2/`) 오류·경고 0, tier medium·GTAO 적용. 남은 차이: 일부 금속·커튼월 파사드가 더 어둡다(후속).
+  e2e(SwiftShader) 5/5 불변. 테스트 +1파일/+1건. ADR-0037, ADR-0028 부록 (2026-09-29)
 - M03-T08 Quality tiers & dynamic resolution — render `quality.ts`(detect-gpu 벤치마크 자체 호스팅 `/detect-gpu/` → low/medium/high, WebGL2 상한 medium, 60프레임 측정 뒤
   동적 해상도 바닥에서도 느리면 한 단계씩 강등, 버스 `quality/changed` 양방향), `renderer/dynamic-resolution.ts`(EMA 17.5/17.1 ms, ±0.05, 시도-후퇴 백오프),
   post `setRenderScale`(PassNode·RTT·GTAO·SSR, TAA는 항상 TAAU), API `setQuality`·`detectQuality`·stats `quality`·config `dynamicResolution/gpuBenchmarksPath/debugGpuLoad`.
@@ -113,6 +117,7 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 - M01-T07 Test fixture world — `tests/fixtures/world-mini`(L0_-1..0 × -1..0, 셀 484–903 KiB, 건물 412동, validate 0 오류·이웃 4쌍 1028 샘플 비트 일치, ATTRIBUTION) + `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1셀 창 + `expected.json` 스냅샷), 합계 3.38 MB. `pipeline fixture`(`stages/fixture{,-plateau}.ts`, 컨테이너), `fixtures.test.ts`(호스트 Windows = 컨테이너 스냅샷 일치). 게임 `?world=mini` → `world-load.ts`(world.json 원점·포맷 검증 → cells.idx → 스폰 ± 1 셀 헤더), Vite 플러그인(dev 서빙·build 복사, production `SANPO_WORLD_MINI=0`), Playwright 1.63.0 `tests/e2e/boot.spec.ts` + CI `e2e` 잡. `.gitignore` 예외 확인(`*.tkc` → `!tests/fixtures/**`), `.gitattributes` 바이너리·GML 보존, Biome 픽스처 제외. ADR-0019 (2026-09-28)
 
 ## Known Issues
+- [render/webgl2] 하드웨어 WebGL2에서 일부 금속·커튼월 파사드가 WebGPU보다 어둡다(환경 프로브 반사 차이, 원인 미확정 — M03-T09).
 - [e2e] 로컬에서 부하가 있을 때 e2e 1건이 가끔 실패(재실행 통과, 2026-09-29 T07·T08 중 2회) — 어느 스펙인지 미확인. CI에서 재현되면 조사.
 - [render] 그림자 티어화(07 §9 그림자 행: 캐스케이드 수·해상도·거리)는 CSM 재생성이 필요해 미구현 — 모든 티어가 4×2048·600 m.
 - [perf] 후처리 1440p High ≈ 7 ms(3060 환산, 기준 4 ms) — 공중원근(takram) ≈ 6 ms·TRAA/TAAU ≈ 8 ms(3050 Laptop)가 크다. 파사드 ≈ 6 ms(기준 1.5). T08 동적 해상도로 16.6 ms 유지, 근본 절감은 후속(2026-09-29).

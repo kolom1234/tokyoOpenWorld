@@ -12,11 +12,9 @@ import { ssgi } from 'three/examples/jsm/tsl/display/SSGINode.js';
 import { ssr } from 'three/examples/jsm/tsl/display/SSRNode.js';
 import { taau } from 'three/examples/jsm/tsl/display/TAAUNode.js';
 import {
-  colorToDirection,
   convertToTexture,
   cos,
   diffuseColor,
-  directionToColor,
   Fn,
   float,
   Loop,
@@ -24,6 +22,7 @@ import {
   mrt,
   normalView,
   output,
+  packNormalToRGB,
   pass,
   renderOutput,
   roughness,
@@ -32,6 +31,7 @@ import {
   sin,
   texture3D,
   uniform,
+  unpackRGBToNormal,
   vec4,
   velocity,
 } from 'three/tsl';
@@ -95,7 +95,7 @@ function scenePassOf(scene: Scene, camera: Camera, fx: PostEffects): PassNode {
   scenePass.setMRT(
     mrt({
       output,
-      normal: vec4(directionToColor(normalView), roughness),
+      normal: vec4(packNormalToRGB(normalView), roughness),
       velocity,
       ...(needDiffuse ? { diffuse: vec4(diffuseColor.rgb, metalness) } : {}),
     }),
@@ -144,7 +144,7 @@ function lightingComposite(
   const color = scenePass.getTextureNode('output');
   const depth = scenePass.getTextureNode('depth');
   const normalTex = scenePass.getTextureNode('normal');
-  const normal = sample((uv) => colorToDirection(normalTex.sample(uv).xyz));
+  const normal = sample((uv) => unpackRGBToNormal(normalTex.sample(uv).xyz));
   const nodes: { dispose(): void }[] = [];
   let lit: V4 = color;
   if (fx.ao === 'gtao') {
@@ -201,7 +201,8 @@ export function createPostPipeline(
   const exposure: AutoExposure | undefined = fx.autoExposure
     ? createAutoExposure(scenePass.getTexture('output'))
     : undefined;
-  let hdr: V4 = (ap as unknown as V4).mul(exposure ? exposure.scale : float(1));
+  // 자동 노출이 없으면(WebGL2 — 컴퓨트 없음) 골든뷰 평균 배율(맑은 낮 0.8–1.9의 가운데)로 고정.
+  let hdr: V4 = (ap as unknown as V4).mul(exposure ? exposure.scale : float(fx.fixedExposure ?? 1));
   if (fx.bloom) {
     const b = bloom(hdr, 0.08, 0.35, 1.2);
     // 넓은 흐림이라 ¼ 해상도로 충분(기본 ½ 대비 ≈ −1.5 ms).

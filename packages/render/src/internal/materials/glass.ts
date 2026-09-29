@@ -21,6 +21,11 @@ type V3 = TslNode<'vec3'>;
 
 /** 실내 밝기(발광 배율): 낮 실내는 밖에서 보면 어두운 유리 너머로 희미하게(0.35는 창이 흰색, 0.015–0.02에서 사진과 비슷 — class-office 골든뷰로 맞춤). 야간 점등은 M09. */
 export const interiorExposure = uniform(0.02);
+/**
+ * 유리 거칠기 하한: WebGPU 0.06. WebGL2(M03-T09)는 SSR·SSGI 없이 환경 프로브만 비쳐 저고도 태양·지면이 거울처럼 띠로 과하게 반사된다 → 0.16으로
+ * 흐린다(07 §9 "유리 반사 과다 보정", context가 백엔드에 따라 설정).
+ */
+export const glassRoughness = uniform(0.06);
 /** 투과율: 일반 유리 / 커튼월(반사 코팅·색유리). */
 const TRANSMIT_CLEAR = 0.8;
 const TRANSMIT_CURTAIN = 0.35;
@@ -63,7 +68,7 @@ export function glassShading(i: GlassInput): GlassOutput {
   const seen = float(1).sub(fresnel).mul(transmit).mul(float(1).sub(i.blind)).mul(i.glass);
   return {
     albedo: mix(i.tint, blindAlbedo, i.blind),
-    roughness: mix(float(0.06), float(0.75), i.blind),
+    roughness: mix(glassRoughness, float(0.75), i.blind),
     emissive: i.interior.mul(interiorExposure).mul(seen),
   };
 }
