@@ -1,0 +1,18 @@
+diff --git a/build/webgpu.js b/build/webgpu.js
+index 30408f0..b3635cd 100644
+--- a/build/webgpu.js
++++ b/build/webgpu.js
+@@ -329,10 +329,9 @@ const Tn = (...s) => new Dt(...s), bn = (s) => {
+ function Je(s) {
+   if (typeof s == "string")
+     return s;
+-  if ("layout" in s && s.layout instanceof Os) {
+-    if (s.layout.name == null)
+-      throw new Error("Struct name is required.");
+-    return s.layout.name;
++  const l = s.layout instanceof Os ? s.layout : s;
++  if (l != null && typeof l.name == "string") {
++    return l.name;
+   }
+   throw new Error(`Unsupported layout type: ${s}`);
+ }

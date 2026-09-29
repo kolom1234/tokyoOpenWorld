@@ -39,7 +39,7 @@ export type ModeId = 'walk' | 'drive' | 'cycle' | 'train' | 'freecam' | 'transit
 export type QualityTier = 'low' | 'medium' | 'high' | 'ultra';
 export type I18nKey = string;                      // "area.key" 형식
 export interface InterestPoint { posWF: Vec3d; velWF?: Vec3; forward?: Vec3; weight: number; kind: 'camera' | 'player' | 'lookahead' | 'teleport' }
-export interface WeatherParams { cloudCover: number; rainMmH: number; fog: number; windMs: number; windDirDeg: number; snow: number; temperatureC?: number }
+export interface WeatherParams { cloudCover: number; rainMmH: number; fog: number; windMs: number; windDirDeg: number; snow: number; wetness: number /* 노면 젖음 0..1, M03-T06 */; temperatureC?: number }
 export interface SeasonParams { dayOfYear: number; foliageTint: number; bloom: number; leafDensity: number; outfitPalette: number }
 export interface EnvironmentState { gameTimeMs: number; sunDirWF: Vec3; moonDirWF: Vec3; sunIlluminanceLux: number; moonPhase: number;
   weather: WeatherParams; season: SeasonParams; wind: Vec3 }   // sim이 계산, render/audio가 소비

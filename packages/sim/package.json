@@ -9,6 +9,7 @@
   "dependencies": {
     "@sanpo/core": "workspace:*",
     "@sanpo/geo": "workspace:*",
-    "@sanpo/tile-format": "workspace:*"
+    "@sanpo/tile-format": "workspace:*",
+    "suncalc": "2.0.2"
   }
 }

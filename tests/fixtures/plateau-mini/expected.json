@@ -2,9 +2,9 @@
   "buildings": 5,
   "roadPieces": 8,
   "sections": {
-    "buildings.mesh": "xxh64:3d2c3857c54dd791",
+    "buildings.mesh": "xxh64:4ea4c820fd0f25a7",
     "meta.json": "xxh64:d55b8a7027e2942b",
     "terrain.height": "xxh64:273a335e8dc0a06d",
-    "terrain.mesh": "xxh64:7afafecdeceeacd8"
+    "terrain.mesh": "xxh64:faf671a55cd2dfd9"
   }
 }

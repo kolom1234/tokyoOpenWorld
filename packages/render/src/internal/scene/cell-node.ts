@@ -35,24 +35,29 @@ export function threeAttributeName(gltfName: string): string {
 }
 
 /**
- * `_CHILD`(u8, 1성분) → float32: WebGPU에는 1성분 8비트 정점 형식이 없다(three WebGPUAttributeUtils). 셀당 정점 수만큼 1회 변환.
+ * 1성분 정수 속성(`_CHILD` u8·`_SURF` u8·`_BLDG` u16) → float32: WebGPU 코어에 1성분 8/16비트 정점 형식이 없고,
+ * WebGL2는 정수 입력에 vertexAttribIPointer가 필요해 셰이더·버퍼 타입이 어긋난다. 셀당 정점 수만큼 1회 변환.
  */
-function childAttribute(a: Primitive['attributes'][string]): BufferAttribute {
-  const src = a.array as Uint8Array;
+const F32_ATTRIBUTES: ReadonlySet<string> = new Set(['_CHILD', '_SURF', '_BLDG']);
+
+function floatAttribute(a: Primitive['attributes'][string]): BufferAttribute {
+  const src = a.array as Uint8Array | Uint16Array;
   const f = new Float32Array(src.length);
   for (let i = 0; i < src.length; i++) f[i] = src[i] as number;
-  return new BufferAttribute(f, 1);
+  return new BufferAttribute(f, a.itemSize);
 }
 
-/** 경계는 파이프라인 boundsLocal을 그대로 쓴다(메인 스레드에서 정점 순회 없음 — `_CHILD` 변환만 예외). */
+/** 경계는 파이프라인 boundsLocal을 그대로 쓴다(메인 스레드에서 정점 순회 없음 — 1성분 정수 속성 f32 변환만 예외). */
 export function buildGeometry(p: Primitive): BufferGeometry {
   const g = new BufferGeometry();
   for (const [name, a] of Object.entries(p.attributes)) {
-    if (name === '_CHILD') {
-      g.setAttribute('_child', childAttribute(a));
+    if (F32_ATTRIBUTES.has(name)) {
+      g.setAttribute(threeAttributeName(name), floatAttribute(a));
       continue;
     }
-    g.setAttribute(threeAttributeName(name), new BufferAttribute(a.array as Float32Array, a.itemSize, a.normalized));
+    // `_FACADE`(u8×4): 정규화로 넘겨 unorm8x4(양 백엔드 공통, 복사 없음) → 셰이더에서 ×255.
+    const normalized = name === '_FACADE' ? true : a.normalized;
+    g.setAttribute(threeAttributeName(name), new BufferAttribute(a.array as Float32Array, a.itemSize, normalized));
   }
   if (p.index) g.setIndex(new BufferAttribute(p.index, 1));
   const box = new Box3(new Vector3(...p.boundsLocal.min), new Vector3(...p.boundsLocal.max));
@@ -66,6 +71,14 @@ function triangleCount(g: BufferGeometry): number {
   return Math.floor(n / 3);
 }
 
+/** 셀별 절차 무늬 시드(0..4095, 셰이더 float 정밀도 안) — 같은 `_BLDG` 인덱스라도 셀마다 다른 건물 해시. */
+export function cellSeedOf(key: CellKey): number {
+  let h = Math.imul((key % 0x1_0000_0000) ^ 0x9e3779b9, 0x85ebca6b);
+  h = Math.imul(h ^ Math.floor(key / 0x1_0000_0000) ^ (h >>> 13), 0xc2b2ae35);
+  h ^= h >>> 16;
+  return (h >>> 0) % 4096;
+}
+
 export function createCellNode(
   p: CellPayload,
   materials: MaterialRegistry,
@@ -76,6 +89,7 @@ export function createCellNode(
   const meshes: Mesh[] = [];
   let triangles = 0;
   const hlodFades = p.meshes.hlod ? createHlodFades() : undefined;
+  const cellSeed = cellSeedOf(p.key);
   for (const [slot, mesh] of Object.entries(p.meshes) as [MeshSlot, DecodedMesh | undefined][]) {
     if (mesh === undefined) continue;
     const group = new Group();
@@ -86,7 +100,11 @@ export function createCellNode(
       const m = new Mesh(buildGeometry(prim), material);
       m.name = `${p.id}/${slot}/${prim.materialId}`;
       m.matrixAutoUpdate = false;
+      // 그림자(M03-T03): 건물·랜드마크만 드리우고, HLOD(원경, 그림자 거리 600 m 밖)는 받지도 않는다.
+      m.castShadow = slot === 'buildings' || slot === 'overrides';
+      m.receiveShadow = !hlod;
       if (hlod) m.userData.hlodFade = hlodFades;
+      m.userData.cellSeed = cellSeed;
       triangles += triangleCount(m.geometry);
       meshes.push(m);
       group.add(m);

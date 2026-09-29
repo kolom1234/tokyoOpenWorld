@@ -77,6 +77,8 @@ score  = max(score, score(parent) + 0.001)  if parent ∈ 같은 요청 후보 &
 3. 스폰 L0 3×3 `live` + 발밑·인접 셀 콜라이더가 물리 워커에 적용됨(`physics.hasCell`).
 4. 셰이더 선컴파일 완료 → 플레이 시작. 나머지는 백그라운드.
 - 순간이동(빠른 이동): 페이드아웃 → `whenReady({ centerWF, radius: 256, levels: [0, 1] })` → 페이드인.
+- **부팅 첫 표시는 `exclusive: true`(ADR-0033)**: 대기 중엔 대상(스폰 384 m L0)만 새로 요청하고 L1–L3·나머지 L0 선적재는 첫 표시 뒤.
+  M03 선컴파일·대기 준비로 첫 표시가 늦어진 동안 선적재가 쌓여 초기 다운로드가 79 MB가 됐다(→ 12.7–13.4 MB). 첫 표시 직후 HLOD가 1–2 s 디졸브로 채워진다.
 
 ## 9. 공개 API (계약 — `packages/streaming/src/api.ts`)
 ```ts

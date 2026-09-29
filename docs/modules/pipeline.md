@@ -6,7 +6,7 @@ Layer: — | Depends: core, geo, tile-format, @gltf-transform/*, meshoptimizer, 
 상세: `docs/04-data-pipeline.md`, 포맷: `docs/05-tile-format.md`.
 
 ## CLI
-`pnpm pipeline <fetch|normalize|derive|build|hlod|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
+`pnpm pipeline <fetch|normalize|derive|build|hlod|materials|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
 
 ## Files
 ```
@@ -22,8 +22,11 @@ src/stages/derive/{roads,sidewalks,curbs,terrain-shape,markings/*,props/*,lanes,
 src/stages/build/dem-window.ts   dem_1m.tif 창 읽기(gdal_translate -srcwin, 영역 밖 여유 샘플은 가장자리 복제) + 셀별 259² 창 (M01-T05)
 src/stages/build/heightfield.ts  terrain.height(공통 기준 −100 m·0.01 m) (M01-T05)
 src/stages/build/terrain-rtin.ts RTIN 정확 오차 단순화 + 경계 강제 (M01-T05, ADR-0018)
-src/stages/build/terrain-mesh.ts terrain.mesh(float32 POSITION, int8 NORMAL, _SURF) (M01-T05)
-src/stages/build/buildings-mesh.ts buildings.mesh(u16 POSITION·균일 scale, _BLDG, _FACADE, UV0) + meta.buildings (M01-T05)
+src/stages/build/terrain-mesh.ts terrain.mesh(float32 POSITION, int8 NORMAL, _SURF) (M01-T05; `_SURF` 경계 RTIN 세분 — 차도 1 m·그 밖 4 m, M03-T06)
+src/stages/build/surface-class.ts `_SURF` 분류 격자: 셀+8이웃 정규화 도로(roads/<cellId>.ndjson.gz) → 257² 스캔라인 래스터(M03-T06, ADR-0031)
+src/stages/build/buildings-mesh.ts buildings.mesh(u16 POSITION·균일 scale, _BLDG, _FACADE, UV0, TEXCOORD_1) + meta.buildings (M01-T05, M03-T04)
+src/stages/build/facade-params.ts  용도·높이·층 → `_FACADE`(class·tint·상점·커튼월·창 시드, L0·HLOD 공용, ADR-0030)
+src/stages/build/wall-planes.ts    벽 평면 군집(방향 1°·15 cm → u 원점·폭 공유)·벽과 동일 평면 부속물 판정
 src/stages/build/manifest.ts     buildId·world.json (M01-T05)
 src/stages/build/assemble.ts     셀 TKC 조립 + 영역 빌드(cells.idx·world.json) (M01-T05)
 src/stages/build/{roads-mesh,collision,instances,rail-global}.ts   (미구현)
@@ -34,15 +37,17 @@ src/stages/hlod/child-split.ts    childKeys, 자식 지형 패치(RTIN + 스커�
 src/stages/hlod/boxes.ts          OBB 박스·블록 매스 기하 / l1.ts(용접 + meshopt simplify) / l2.ts(buildFarLevel) / l3.ts / run.ts(예산 재시도·cells.idx 병합)
 src/stages/validate-hlod.ts       HLOD 예산·자식 그룹 검사
 src/lib/{geom2d,png}.ts           볼록 껍질·최소 면적 사각형 / 최소 PNG 디코더
-materials.ts  interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts   (미구현)
+src/stages/materials/{library,fetch,encode,run,interiors,interior-rooms}.ts  `materials`(M03-T01, ADR-0027; 실내 큐브맵 8방 × 6면 광선 추적 → interiors.ktx2 M03-T05, ADR-0034): content/materials/library.json → ambientCG zip(sha256 lock, `--update-lock`) → ImageMagick(리사이즈·ORM 패킹) → toktx KTX2 배열 3장 + manifest → 캐시 data/derived/materials/<hash> → `--build-id` 설치(shared/materials)
+src/stages/validate-materials.ts  manifest 스키마(schemas/materials.schema.json)·파일 크기·KTX2 헤더·그룹 일관성(없으면 건너뜀)
+interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts   (미구현)
 src/stages/validate.ts validate-seams.ts   스키마(ajv)·해시·예산·이웃 경계 검사 → report.{json,md} (M01-T05)
 src/stages/fixture.ts fixture-plateau.ts   tests/fixtures 생성: world-mini(buildArea 2×2 → validate → 복사 + ATTRIBUTION), plateau-mini(CityGML 원문 발췌·DEM 창·스냅샷), `plateauMiniSnapshot` (M01-T07, ADR-0019)
-src/stages/publish/{publish,uploaders,targets}.ts   publish·gc(ADR-0026): 파일 수집·검증 → 업로드(s3 SigV4 / api REST, 동시성 16·재시도) → manifest → HEAD 검증 → KV(CURRENT/BUILDS/BUILD_FILES); 대상 = apps/worker/wrangler.jsonc
+src/stages/publish/{publish,uploaders,targets}.ts   publish·gc(ADR-0026): 파일 수집(tkc·index·world.json·shared/materials, M03-T06)·검증 → 업로드(s3 SigV4 / api REST, 동시성 16·재시도) → manifest → HEAD 검증 → KV(CURRENT/BUILDS/BUILD_FILES); 대상 = apps/worker/wrangler.jsonc
 src/lib/sigv4.ts                AWS SigV4(헤더 서명, 테스트 벡터 일치)
 src/lib/{gltf,triangulate,mesh-ops,polygon,spline,raster,hash,parallel,ndjson-gz}.ts   (gltf·triangulate·polygon·ndjson-gz·raster 구현)
 scripts/golden-geo.py
 scripts/repro-build.sh          같은 컨테이너에서 build 2회 → sha256 비교 → validate
-Dockerfile                      Node 24.21.0 + GDAL 3.13.3 + nusamai 0.1.19 (sha256 고정)
+Dockerfile                      Node 24.21.0 + GDAL 3.13.3 + nusamai 0.1.19 + KTX-Software 4.4.2 (sha256 고정) + ImageMagick
 docker/run.sh                   컨테이너 실행(저장소 → /work, node_modules는 이름 있는 볼륨; `--install` 최초 1회)
 ```
 

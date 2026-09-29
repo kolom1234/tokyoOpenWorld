@@ -8,7 +8,7 @@
 
 ## 2. 월드 시계
 - 내부 시각 `gameTimeMs`(Unix ms). 표시 시간대 Asia/Tokyo(UTC+9, 서머타임 없음).
-- 모드: `realtime`(현실 JST 동기) / `custom`(시작 시각 + 배속 1·2·10·60) / `frozen`(포토모드).
+- 모드: `realtime`(현실 JST 동기) / `custom`(시작 시각 + 배속 1·2·10·60) / `frozen`(포토모드·골든뷰·`?time=`). 부팅 기본 = 오늘 12:00 JST부터 custom 1배속(설정 UI M08 전, ADR-0029).
 - 요일 유형: 평일 / 토요일 / 휴일(일요일 + 일본 공휴일 내장 테이블 `content/sim/holidays-jp.json`, 내각부 공개 CSV 기반 2026–2035).
 - 운행일 경계: 04:00 JST (열차·교통 시간표 기준).
 

@@ -1,43 +1,49 @@
 {
   "L0_-1_-1": {
-    "tris": 67051,
+    "tris": 79127,
     "sections": {
       "buildings.mesh": [
         {
           "materialId": "facade_default",
-          "vertices": 61459,
-          "indices": 98007,
-          "indexHash": 739488061,
+          "vertices": 60237,
+          "indices": 96303,
+          "indexHash": 1892262744,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 862798395
+              "hash": 1884995249
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 3399934311
+              "hash": 3672974704
             },
             "TEXCOORD_0": {
               "itemSize": 2,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 2061129954
+              "hash": 805949590
+            },
+            "TEXCOORD_1": {
+              "itemSize": 2,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 996139954
             },
             "_BLDG": {
               "itemSize": 1,
               "type": "Uint16Array",
               "normalized": false,
-              "hash": 23520387
+              "hash": 4056134233
             },
             "_FACADE": {
               "itemSize": 4,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 794973675
+              "hash": 467916960
             }
           }
         }
@@ -45,27 +51,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 17704,
-          "indices": 103146,
-          "indexHash": 4258414977,
+          "vertices": 24026,
+          "indices": 141078,
+          "indexHash": 2823405878,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3323083368
+              "hash": 3626885985
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 4211999862
+              "hash": 1717790964
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1033423684
+              "hash": 993683551
             }
           }
         }
@@ -73,44 +79,50 @@
     }
   },
   "L0_0_-1": {
-    "tris": 58982,
+    "tris": 66917,
     "sections": {
       "buildings.mesh": [
         {
           "materialId": "facade_default",
-          "vertices": 40314,
-          "indices": 59880,
-          "indexHash": 1431444654,
+          "vertices": 39681,
+          "indices": 59037,
+          "indexHash": 1238808740,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 2588278836
+              "hash": 2840264896
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1872715708
+              "hash": 3759040306
             },
             "TEXCOORD_0": {
               "itemSize": 2,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 1898049053
+              "hash": 3013358721
+            },
+            "TEXCOORD_1": {
+              "itemSize": 2,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1064255813
             },
             "_BLDG": {
               "itemSize": 1,
               "type": "Uint16Array",
               "normalized": false,
-              "hash": 1178869063
+              "hash": 1943881647
             },
             "_FACADE": {
               "itemSize": 4,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 2757667359
+              "hash": 2187924585
             }
           }
         }
@@ -118,27 +130,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 20024,
-          "indices": 117066,
-          "indexHash": 1010512572,
+          "vertices": 24132,
+          "indices": 141714,
+          "indexHash": 1865938063,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 1579233423
+              "hash": 1807496863
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 3577343280
+              "hash": 3511237120
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1501496493
+              "hash": 2866743344
             }
           }
         }
@@ -146,44 +158,50 @@
     }
   },
   "L0_-1_0": {
-    "tris": 61706,
+    "tris": 73164,
     "sections": {
       "buildings.mesh": [
         {
           "materialId": "facade_default",
-          "vertices": 54100,
-          "indices": 79866,
-          "indexHash": 140262363,
+          "vertices": 53312,
+          "indices": 78762,
+          "indexHash": 163132168,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3443902539
+              "hash": 3507379100
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 970051818
+              "hash": 278559825
             },
             "TEXCOORD_0": {
               "itemSize": 2,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 1944247185
+              "hash": 2576981265
+            },
+            "TEXCOORD_1": {
+              "itemSize": 2,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1598085874
             },
             "_BLDG": {
               "itemSize": 1,
               "type": "Uint16Array",
               "normalized": false,
-              "hash": 4238496291
+              "hash": 662494663
             },
             "_FACADE": {
               "itemSize": 4,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 3115302225
+              "hash": 3608044244
             }
           }
         }
@@ -191,27 +209,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 18055,
-          "indices": 105252,
-          "indexHash": 1354509899,
+          "vertices": 23968,
+          "indices": 140730,
+          "indexHash": 82162257,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3449087685
+              "hash": 942913170
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1517422201
+              "hash": 1158149211
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 3014100718
+              "hash": 964933374
             }
           }
         }
@@ -219,44 +237,50 @@
     }
   },
   "L0_0_0": {
-    "tris": 42759,
+    "tris": 50490,
     "sections": {
       "buildings.mesh": [
         {
           "materialId": "facade_default",
-          "vertices": 31615,
-          "indices": 40179,
-          "indexHash": 2499466958,
+          "vertices": 31362,
+          "indices": 39846,
+          "indexHash": 3252109192,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 2811868454
+              "hash": 1512369535
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 736369189
+              "hash": 2590204469
             },
             "TEXCOORD_0": {
               "itemSize": 2,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 1563330417
+              "hash": 4228535673
+            },
+            "TEXCOORD_1": {
+              "itemSize": 2,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1866326506
             },
             "_BLDG": {
               "itemSize": 1,
               "type": "Uint16Array",
               "normalized": false,
-              "hash": 3529830153
+              "hash": 789437020
             },
             "_FACADE": {
               "itemSize": 4,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1465074873
+              "hash": 1822337897
             }
           }
         }
@@ -264,27 +288,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 15196,
-          "indices": 88098,
-          "indexHash": 4286801710,
+          "vertices": 19117,
+          "indices": 111624,
+          "indexHash": 4162318039,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3451079015
+              "hash": 3080395491
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 4108201293
+              "hash": 1772742045
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 2425987547
+              "hash": 3372982976
             }
           }
         }

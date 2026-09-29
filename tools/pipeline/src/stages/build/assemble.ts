@@ -1,7 +1,7 @@
 // L0 셀 조립: terrain.mesh + terrain.height + buildings.mesh + meta.json → TKC, 영역 빌드(cells.idx·world.json). see docs/04-data-pipeline.md §4.4, docs/05-tile-format.md §1–3
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type CellKey, cellIdString, type Logger, unpackCellKey } from '@sanpo/core';
+import { type CellKey, cellIdString, type Logger, packCellKey, unpackCellKey } from '@sanpo/core';
 import { type CellBoundsWF, cellBoundsWF } from '@sanpo/geo';
 import {
   type CellMeta,
@@ -14,11 +14,12 @@ import {
   writeTkc,
 } from '@sanpo/tile-format';
 import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
-import type { BuildingRecord } from '../../readers/plateau/types.ts';
+import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
 import { CELL_SIZE_M, type CellWindow, cellWindow, DEM_MARGIN, type DemWindow, readDemWindow } from './dem-window.ts';
 import { encodeTerrainHeight } from './heightfield.ts';
 import { type AreaDef, worldJson } from './manifest.ts';
+import { surfaceGrid } from './surface-class.ts';
 import { buildTerrainGeometry, encodeTerrainMesh, TERRAIN_MATERIAL } from './terrain-mesh.ts';
 
 const TERRAIN_SOURCE = 'gsi-dem';
@@ -38,6 +39,8 @@ export interface CellBuildInput {
   buildId: string;
   window: CellWindow;
   buildings: readonly BuildingRecord[];
+  /** 이 셀과 8-이웃 셀의 도로 조각(`_SURF` 분류, 경계 샘플을 이웃과 같게). */
+  roads: readonly RoadRecord[];
   /** 건물이 없는 셀의 meta.json sources(영역의 PLATEAU 소스). */
   metaFallbackSources: readonly string[];
 }
@@ -81,7 +84,10 @@ async function encodeMeta(meta: CellMeta): Promise<Uint8Array> {
 export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Array; stats: CellBuildStats }> {
   const { level, ix, iz } = unpackCellKey(input.key);
   const originWF: Vec3Tuple = [ix * CELL_SIZE_M, 0, iz * CELL_SIZE_M];
-  const terrain = await buildTerrainGeometry(input.window);
+  const terrain = await buildTerrainGeometry(
+    input.window,
+    surfaceGrid(input.roads, originWF[0], originWF[2], input.window.size),
+  );
   const bld = await buildBuildings(input.buildings, originWF);
   const [y0, y1] = yRange(terrain.positions);
   const local = outward(union({ min: [0, y0, 0], max: [CELL_SIZE_M, y1, CELL_SIZE_M] }, bld.aabbLocal));
@@ -149,6 +155,19 @@ function readBuildings(normalizedDir: string, key: CellKey): BuildingRecord[] {
   return existsSync(f) ? readNdjsonGz<BuildingRecord>(f) : [];
 }
 
+/** 셀과 8-이웃의 정규화 도로(없는 파일은 건너뜀). */
+function readRoadsAround(normalizedDir: string, key: CellKey): RoadRecord[] {
+  const { level, ix, iz } = unpackCellKey(key);
+  const out: RoadRecord[] = [];
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const f = join(normalizedDir, 'roads', `${cellIdString(packCellKey(level, ix + dx, iz + dz))}.ndjson.gz`);
+      if (existsSync(f)) out.push(...readNdjsonGz<RoadRecord>(f));
+    }
+  }
+  return out;
+}
+
 /** 영역 빌드: 셀 TKC(행 = iz, 열 = ix 순) + cells.idx + world.json. */
 export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]> {
   const { log, outDir } = input;
@@ -166,6 +185,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       buildId: input.buildId,
       window: cellWindow(dem, ix, iz),
       buildings: readBuildings(input.normalizedDir, key),
+      roads: readRoadsAround(input.normalizedDir, key),
       metaFallbackSources: input.plateauSources,
     });
     const dir = join(outDir, 'L0', String(ix));

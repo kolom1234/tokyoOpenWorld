@@ -1,0 +1,45 @@
+diff --git a/build/shared2.js b/build/shared2.js
+index 1f360c0..a25f001 100644
+--- a/build/shared2.js
++++ b/build/shared2.js
+@@ -26,7 +26,7 @@ function G(t, a) {
+     throw new Error(e);
+   }
+ }
+-const H = typeof window < "u" && window.requestIdleCallback != null ? window.requestIdleCallback : function(a, e = {}) {
++const H = typeof window < "u" && window.requestIdleCallback != null ? (a, e = {}) => window.requestIdleCallback(a, { timeout: 50, ...e }) : function(a, e = {}) {
+   const n = e.timeout ?? 1, o = performance.now();
+   return setTimeout(() => {
+     a({
+diff --git a/build/webgpu.js b/build/webgpu.js
+index 1ce7267..9aa5603 100644
+--- a/build/webgpu.js
++++ b/build/webgpu.js
+@@ -16,8 +16,8 @@ const H = "float", Ao = "float", q = "float", Fs = "float", Fo = "float", en = "
+   "DensityProfileLayer"
+ ), te = /* @__PURE__ */ ut(
+   {
+-    layer0: Re.layout.name,
+-    layer1: Re.layout.name
++    layer0: Re.name,
++    layer1: Re.name
+   },
+   "DensityProfile"
+ ), os = {
+@@ -26,13 +26,13 @@ const H = "float", Ao = "float", q = "float", Fs = "float", Fo = "float", en = "
+   sunAngularRadius: Ao,
+   bottomRadius: H,
+   topRadius: H,
+-  rayleighDensity: te.layout.name,
++  rayleighDensity: te.name,
+   rayleighScattering: At,
+-  mieDensity: te.layout.name,
++  mieDensity: te.name,
+   mieScattering: At,
+   mieExtinction: At,
+   miePhaseFunctionG: q,
+-  absorptionDensity: te.layout.name,
++  absorptionDensity: te.name,
+   absorptionExtinction: At,
+   groundAlbedo: qt,
+   minCosLight: q,

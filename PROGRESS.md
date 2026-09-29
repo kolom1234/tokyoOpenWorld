@@ -1,62 +1,87 @@
 # PROGRESS
-Updated: 2026-09-29 (session #14 — 큐 모드: M01-T06 GPU 확인 + **M02-T03–T07 완료 = M02 마일스톤 완료**, 브랜치 `claude/m02-queue`, draft PR #14)
+Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜치 `claude/m03-queue`, draft PR)
 
-## Current Milestone: M02 — Streaming & Deploy (T01–T07 완료) → 다음 M03(렌더)·M04(물리) 병렬 가능
-## Current Task: 없음 — PR #14 리뷰·병합 대기
-- Done in this session: M01-T06 실제 GPU 육안 확인, M02-T03, T04, T05, T06, T07(아래 Recently Completed).
+## Current Milestone: M03 — Rendering Realism I (진행 순서: T10 → T01 → T02 → T03 → T04 → T06 → T05 → T07 → T08 → T09)
+## Current Task: M03 큐 완료 — PR #15(draft) 사용자 검토 대기
+- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑), M03-T07(후처리 — 성능 기준 미달), M03-T08(품질 티어·동적 해상도), M03-T09(WebGL2 폴백).
 - In progress: –
-- 배포 상태: staging Worker `tokyo-sanpo-staging`(버전 cf830e9e) = dev 버킷 + staging KV, 현재 빌드 `20260928-b2d1e36-7fb58d45`(dev 버킷에 이전 `20260928-7e215f4-7fb58d45`도 있음 — 7일 뒤 `pnpm pipeline gc --env dev --apply`).
-  production(`sanpo-world-prod`)은 비어 있음(퍼블리시 안 함). main 병합 시 deploy.yml이 staging 재배포 → 스모크가 world.json·cells.idx까지 확인.
-- 로컬 확인: `pnpm --filter @sanpo/game dev` → `?world=local&debug=1`(data/build 최신) / staging: https://tokyo-sanpo-staging.kolom1357.workers.dev/?debug=1
-- Next step (정확히 한 걸음): PR #14 병합 → `docs/17-roadmap.md`에서 M03 첫 태스크 확인 → `/sanpo-resume M03-T01`.
-- Blockers: 없음(선택: R2 S3 키 발급 시 publish가 s3 업로더로 전환)
+- 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
+- 배포 상태: staging Worker `tokyo-sanpo-staging` = **75629ce 코드**(M03 전체) + dev 버킷 빌드 **`20260929-b84bfa1-ec1646fc`**(L0 294 + HLOD 177 + shared/materials(실내 큐브맵 포함), 478 파일 248.9 MB, current).
+  dev 버킷 옛 빌드(gc 대기, 7일 규칙): `20260929-c9a28d3-ec1646fc`(T06, 10/6~), `20260928-b2d1e36-7fb58d45`(M02-T07, 10/6~), `20260928-7e215f4-7fb58d45`(10/5~). `pnpm pipeline gc --env dev --apply`(2026-09-29 dry-run = 0).
+  staging 첫 로딩(GOLDEN_BOOT, 최종): **12.68 MB**·첫 표시 11.3 s. 머티리얼(첫 표시 뒤 지연) 18.18 MB. staging 골든 core 4장 = `docs/screenshots/M03/final-staging/`.
+- 로컬 최신 빌드 = staging과 같음(`20260929-b84bfa1-ec1646fc`).
+- Next step (정확히 한 걸음): 사용자가 PR #15를 검토·머지하면 M03 성능 후속 태스크 정리(공중원근 ≈ 6 ms·TAAU ≈ 8 ms 고정 비용, 파사드 ≈ 6 ms 오버드로우 → 깊이 프리패스, WebGL2 금속 파사드 어두움) 후 M04 착수.
+- Blockers: 없음
 
 ## Recently Completed
-- M02-T07 MVP area build & staging deploy — 최종 코드로 재빌드 `20260928-b2d1e36-7fb58d45`: L0 294셀 115 MB(82 s, 최대 903 KiB L0_-1_-1) + HLOD 177셀(67 s) → validate **오류 0**(이음새 553쌍, HLOD 예산·자식 그룹) →
-  dev 버킷 473 파일 212 MB(32.8 s) + staging KV 포인터 → `wrangler deploy --env staging`(R2·KV 바인딩) → smoke(world.json·cells.idx 포함) ok → Worker HEAD 473/473 일치, 200 MISS→HIT·206·304·404.
-  **수락(실제 GPU, 캐시 없는 새 프로필, API 부팅)**: 첫 표시 **6.4 s**(엣지 콜드)·4.8 s(엣지 웜) ≤ 12 s; 남서→북동 모서리 6.2 km 저공(40 m) 30 m/s(108 km/h) 비행 — 순간이동(whenReady 0.41 s) 뒤
-  **스트리밍 정지 0회**(발밑 L0 비-live 표본 0/1250), 프레임 p50 16.67·p99 16.85 ms(> 33 ms 2–3회), 실패 0, 해제 121, JS 힙 445 MB, 적용 최대 3.0 ms, 재계산 최대 2.8 ms.
-  (첫 측정은 whenReady 없이 스폰→시작점 1.7 km를 즉시 이동해 0.68 s "정지" 1회 — 순간이동 경로라 제외, 재측정.) validate 경고 = 오류 0.
-  스크린샷 `docs/screenshots/M02-T07-staging-{boot,flight-1..4}.png`. `smoke.sh` 월드 확인 추가 (2026-09-29)
-- M02-T06 Worker routes & publish — Cloudflare 리소스 생성(wrangler, apac): R2 `sanpo-world-prod`·`sanpo-world-dev`, KV `SANPO_CONFIG`(938aa34b…)·`SANPO_CONFIG_STAGING`(52e1d2e4…) → wrangler.jsonc 바인딩(prod/staging).
-  Worker: `/world/*` 엣지 캐시 = 평범한 GET만(Range·조건부는 R2 직접) + `X-Sanpo-Cache`, `/api/weather`(LIVE_WEATHER, Open-Meteo → 최소 필드, 10분 캐시).
-  pipeline `publish`/`gc`(`stages/publish/{publish,uploaders,targets}.ts`, `lib/sigv4.ts`): 업로더 s3(SigV4 — AWS 테스트 벡터 일치, 64 MiB 초과 멀티파트, HEAD 검증) / api(Cloudflare REST, 기존 API 토큰),
-  동시성 16·재시도 3, manifest.json, KV `CURRENT_BUILD`/`BUILDS`/`BUILD_FILES`, `--verify-only --verify-url`(Worker HEAD 전수), gc(현재 + 직전 + 7일).
-  **수락**: 로컬 miniflare(`test/miniflare.test.ts`, 실제 `wrangler dev --env local`) current·200 MISS→HIT·206·304·HEAD·404·400 통과;
-  **실제 dev 버킷**: MVP 473 파일 212 MB 업로드 38.7 s → `wrangler dev --env staging --remote`로 current 200·셀 200(MISS→HIT)·Range 206·If-None-Match 304·404·400, HEAD 크기 473/473 일치.
-  테스트 +3파일/+14건. ADR-0026 (2026-09-29)
-- M02-T05 Render cell adapter & HLOD switching — render: `hlod.mesh` → 셀당 draw 2(`_CHILD` u8 → f32 `_child`), HLOD 머티리얼(TSL per-object uniform vec4 × 4 페이드, 원-핫 선택,
-  alphaHash 디더, 페이드 0 = 정점 붕괴), `scene/hlod-switch.ts`(숨김 0.3 s·보임 즉시·부모 도착 전 상태 보관), `setHlodChildVisible`·`precompile()`(기본+HLOD compileAsync)·stats.
-  game: `wiring/streaming-render.ts`(phase 45 관심점, phase 55 적용 = 2 ms + 업로드 4 MiB/프레임·첫 셀 보장, ack, 부모 숨김/표시 순서), `world-view.showWorld` = precompile → createStreaming(워커)
-  → whenReady(스폰 384 m) → 시작 시점, **임시 로더 `debug/local-cells.ts` 삭제**, `world-load`는 world.json·cells.idx만, 오버레이 스트리밍 줄, dev 전용 `?world=local`(`/local-world` → data/build).
-  **수락(실제 GPU, 로컬 MVP 빌드)**: 신주쿠 서쪽 400 m → 2 m 급강하(8 s): 0.5 s 간격 19 샘플 지평선 아래 구멍(하늘색) 화소 0, 오류 0, 60 FPS, draw 63–74·2.1–2.35M tris,
-  L0 9(> 300 m, 3×3) → 23 → 16(지상). 스크린샷 `docs/screenshots/M02-T05-shinjuku-{400m,dive-327m,dive-177m,dive-52m,ground}.png`.
-  55 s 저공 비행(60 m/s): rAF 간격 p50 16.67·p99 16.85·최대 18.3 ms(> 33 ms 0), render p99 5.7 ms(> 4 ms 48프레임 — 셀 업로드), 적용 최대 3.1–4.5 ms, streaming 최대 0.55 ms.
-  부팅(스크램블) 첫 표시 2.9 s. 테스트 +3파일/+10건, e2e 5 통과(WebGL2 폴백 포함). ADR-0025 (2026-09-29)
-- M02-T04 HLOD pipeline — `stages/hlod/{far-buildings,tokyo23-lod1(+worker),dem-far,child-split,boxes,l1,l2,l3,run}.ts`, `validate-hlod.ts`, `lib/{geom2d,png}.ts`,
-  CLI `hlod-prep`(23구 2020 zip 5.3 GB를 풀지 않고 `unzip -p` 스트림·워커 14개 → 원경 건물 **1,767,804동 / L2 57셀, 543 s**; 標高タイル dem_png z14 676장 → WF 8 m 원경 DEM 26 s)·`hlod`(73 s).
-  L1 = 영역 L0 부모 24셀(L0 정규화 건물 용접 + meshopt simplify 25%·절대 2 m, dem_1m 4 m; 영역 밖 자식 = 원경 박스), L2 = OBB 박스(≥ 20 m·≥ 1000 m², ≤ 12k) + 64 m 블록 매스,
-  L3 = 128 m 매스 + ≥ 80 m 박스, 자식 지형 = 65² RTIN + 스커트, **`hlod.mesh` = 머티리얼별 프리미티브 + `_CHILD` u8**(05 §4 변경: 셀당 draw 2), 야간 `_FACADE.flags`.
-  **수락(MVP 실빌드 20260928-7e215f4-7fb58d45)**: L1 최대 2.42 MiB ≤ 3 MB, L2 최대 1.82 MiB·L3 최대 1.39 MiB ≤ 2 MB(재시도 0), 모든 정점 `_CHILD` ∈ 0..15·지형 자식 16/16·stats 일치 → validate 오류 0(L0 294셀·이음새 553쌍 포함).
-  데이터: PLATEAU 신주쿠·메구로 2025(pref 판 = 3차 메시 단위 → 시부야 zip에 없는 5메시만), 23구 2020, `gsi-dem-tiles` → lock·03·ATTRIBUTION. normalize 다중 소스(같은 메시 파일 1회, 이전엔 덮어씀) → MVP 294셀 건물 44,292·도로 조각 269,140.
-  테스트 +1파일/+9건(pipeline 53). ADR-0024 (2026-09-29)
-- M02-T03 Lifecycle, ack, eviction, ground — `createStreaming`(service·planner·lifecycle·ground·waiters·cell-cache·cache-lru). 재계산 = L0 셀·모드·티어 변화 즉시 + 250 ms,
-  진행 중 요청은 해제 반경 밖에서만 취소, 해제는 프레임당 ≤ 8(실행 직전 `inLoadZone` 재확인), onReady ≤ 2/프레임·render ack → live,
-  failed → 60 s 뒤 재요청(기록 정리), whenReady = 영역 셀 pin + live|failed면 resolve, Cache Storage 1.5 GB LRU(세션 간 = 저장 순서 근사, 부팅 seed 백그라운드).
-  **수락(10분 무작위 이동 헤드리스, 가상 시계)**: 기본 한도 — 텔레포트 12·fetch 1679·주입 실패 29·해제 1515, 로드 반경 안 해제 0·이중 전달 0·한도 초과 0 ms;
-  좁은 한도(L0 24·L1 30·L2 30) — 최대 480 ms 안 수렴; 둘 다 관심점 제거 후 L3 16개만 live·진행/보류/failed/지면/타이머 0(누수 0).
-  **셀 집합 계산 비용**(T01 이월): 재계산(computeDesired + rankCells + 해제 계획) 평균 0.41 ms, 워밍업 후 최대 ≈ 2 ms, 첫 호출 ≈ 8 ms(JIT 냉간·부팅 중).
-  테스트 +6파일/+23건(streaming 88). ADR-0023, 06 §2·§6·§7·§9 갱신 (2026-09-29)
-- M01-T06 사람 육안 확인(실제 GPU) — 이 PC(RTX 3050 Laptop 4 GB, 드라이버 537.13, Chrome 153 headed, Playwright `channel: 'chrome'`)에서
-  `?world=mini&debug=1`: **백엔드 WebGPU · 깊이 reversed-z**, 어댑터 nvidia/ampere, **60 FPS 고정(16.7 ms, vsync)**, 셀 4·draw 9·tris 230k.
-  **O 키 원점 재설정**: 원점 (0,0,0) → (4096,0,0) → (0,0,0), 재설정 2회, 복귀 후 카메라 WF 동일, 3D 영역 **픽셀 차 0**(떨림 없음).
-  첫 프레임 `render` 53.6 ms 경고 1회(파이프라인 컴파일 — 선컴파일은 M02-T05/M03). 스크린샷 `docs/screenshots/M01-T06-start-webgpu-rtx3050.png` (2026-09-29)
-- M02-T02 Fetcher & decode workers — 워커 디코드 결과가 파이프라인(gltf-transform) 스냅샷과 정점·인덱스 수·속성 레이아웃·내용 해시까지 일치(Node·worker_threads·Chromium). Chromium 모듈 워커(워커 2) 셀당 25–111 ms(1차)/25–76 ms(캐시 2차), 4셀 동시 84–153 ms, 메인 `decode()` 동기 구간 중앙값 ≈ 0.1 ms·긴 작업 0. 취소: 풀 즉시 aborted + 워커는 다음 단계 경계에서 중단(`cancelled`, 실제 스레드 테스트). 테스트 +6파일/+29건(총 383), e2e +1(`decode.spec.ts`). ADR-0022 (2026-09-28)
-- M02-T01 Interest & priority — 06 §3–4 순수 함수. 한 점 기준(셀 내 위치 샘플) 원하는 L0 셀 수: 도보 11–16(해제 16–22), 자전거 16–21, 차량 27–32(42–48), 열차 39–45(57–65, 진행 방향 가중 시 ≈ 35), freecam 고도 0/100/300 m = R0 384/434/534, 300 m 초과 3×3(유지 5×5, 300–375 m는 원형 유지). L1 3 km(고고도 ≤ 3.5 km, 최대 상주 79–80 → 한도 80), L2 12 km, L3 전부. 부팅 순서 = 발밑 → L3 → L2 → L1 → 거리순. `computeDesired` 브루트포스 전수 대조 일치. ADR-0021 (2026-09-28)
-- M01-T06 Minimal render & free camera — three 0.186.1 `WebGPURenderer`(`reversedDepthBuffer` — WebGPU depth32float, WebGL2는 `EXT_clip_control` 필요·SwiftShader에 있음, 없으면 logarithmic; `backend-caps.ts` 사전 판정), AgX, 방향광(방위 200°·고도 50°) + 반구광, 단색 PBR 2종(`terrain_ground`·`facade_default`). 원점 재설정: 카메라 ≥ 2048 m → 256 m 격자 스냅, 같은 renderPrep에서 노드·카메라 재계산(누적 없음). freecam: 관성 감쇠 3/s, 휠 0.5–60 m/s(×1.25/노치), Shift ×4, E/Q, 고도 ≤ 1,000 m, 지면 + 1 m. 시작: WF(−60, 지면+60, −15) → Scramble Square(지붕 TP 245.6 m, 지면 대비 ≈ 231 m). `?debug=1` 오버레이 + O 키(+4096 m → 1 s → 복귀). headless Chromium(SwiftShader WebGL2): 셀 4·draw 9·tris 230k·≈ 7 FPS, 원점 재설정 2회 왕복 전후 픽셀 차 0. 테스트 +7파일/+31건, e2e +2 (2026-09-28)
-- M01-T07 Test fixture world — `tests/fixtures/world-mini`(L0_-1..0 × -1..0, 셀 484–903 KiB, 건물 412동, validate 0 오류·이웃 4쌍 1028 샘플 비트 일치, ATTRIBUTION) + `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1셀 창 + `expected.json` 스냅샷), 합계 3.38 MB. `pipeline fixture`(`stages/fixture{,-plateau}.ts`, 컨테이너), `fixtures.test.ts`(호스트 Windows = 컨테이너 스냅샷 일치). 게임 `?world=mini` → `world-load.ts`(world.json 원점·포맷 검증 → cells.idx → 스폰 ± 1 셀 헤더), Vite 플러그인(dev 서빙·build 복사, production `SANPO_WORLD_MINI=0`), Playwright 1.63.0 `tests/e2e/boot.spec.ts` + CI `e2e` 잡. `.gitignore` 예외 확인(`*.tkc` → `!tests/fixtures/**`), `.gitattributes` 바이너리·GML 보존, Biome 픽스처 제외. ADR-0019 (2026-09-28)
+- M03-T09 WebGL2 fallback parity — backend-caps 소프트웨어 래스터 판정(SwiftShader·llvmpipe → 직접 렌더 유지), **하드웨어 WebGL2 = 같은 후처리 + 환경 프로브 + CSM 그림자**,
+  Medium 상한(T08), 자동 노출(컴퓨트) 끔 → 고정 1.25, 유리 거칠기 하한 0.16(거울 띠 과다 보정), TSL `packNormalToRGB/unpackRGBToNormal`(r186 이름).
+  **수락**: `?backend=webgl` 실제 GPU 골든 5뷰(`docs/screenshots/M03/T09-webgl2/`) 오류·경고 0, tier medium·GTAO 적용. 남은 차이: 일부 금속·커튼월 파사드가 더 어둡다(후속).
+  e2e(SwiftShader) 5/5 불변. 테스트 +1파일/+1건. ADR-0037, ADR-0028 부록 (2026-09-29)
+- M03-T08 Quality tiers & dynamic resolution — render `quality.ts`(detect-gpu 벤치마크 자체 호스팅 `/detect-gpu/` → low/medium/high, WebGL2 상한 medium, 60프레임 측정 뒤
+  동적 해상도 바닥에서도 느리면 한 단계씩 강등, 버스 `quality/changed` 양방향), `renderer/dynamic-resolution.ts`(EMA 17.5/17.1 ms, ±0.05, 시도-후퇴 백오프),
+  post `setRenderScale`(PassNode·RTT·GTAO·SSR, TAA는 항상 TAAU), API `setQuality`·`detectQuality`·stats `quality`·config `dynamicResolution/gpuBenchmarksPath/debugGpuLoad`.
+  game `wiring/quality.ts`(localStorage `sanpo.quality.v1`, 첫 표시 뒤 감지), `?dynres=0`·`?gpuLoad=n`, vite `sanpo-gpu-benchmarks`. 골든뷰 = High 고정·동적 해상도 끔.
+  **수락**(3050 Laptop): 1080p Medium + gpuLoad 200 — 고정 0.75 = 22.4 ms → 동적 0.5 ≈ 16.7–18.6 ms(렌더 스케일 하강 ✅, 16.6 ms 완전 유지 ✗ — 해상도 무관 고정 비용).
+  1440p High는 0.5에서도 ≈ 23 ms(TAAU 해석 ≈ 8 ms 고정). detect-gpu: RTX 3050 Laptop → tier 3 → high. 테스트 +3파일/+9건. ADR-0036 (2026-09-29)
+- M03-T07 Post pipeline — render `post/{pipeline,config,exposure,lut}.ts`: MRT(output·normal+roughness·velocity·[diffuse+metalness], 24 B) → GTAO/SSGI → SSR(가산) →
+  aerialPerspective → 컴퓨트 자동 노출(부분 적응) → Bloom(¼) → TRAA/TAAU(렌더 스케일) → renderOutput → 절차 3D LUT → Sharpen. API `QualityTier`·`PostEffects`·
+  `RenderConfig.quality/post`·stats `post/exposure`, game `?quality=`·`?post=`(`debug/post-flags.ts`). 티어: Low 0.6 / Medium 0.75 GTAO / High 0.85 GTAO+SSR+Bloom / Ultra 1.0 SSGI+Sharpen.
+  **SSGI는 Ultra만**(r186 해상도 배율 없음, +100 ms↑ — 07 §9 이탈). **성능 미달**: 1440p 3050 Laptop 스크램블 모두 끔 25.9 → High 35.9 ms(3060 환산 순증 ≈ 4.3 ms,
+  공중원근 포함 ≈ 7 ms > 4 ms). 안 빼기: GTAO 3.5·Bloom 3.0·Sharpen 2.2·SSR 1.6·노출 0.6·LUT 0.5, 공중원근 ≈ 6, TRAA ≈ 8.
+  골든 `docs/screenshots/M03/T07/*`(노출 배율 metrics). 테스트 +2파일/+4건. ADR-0035 (2026-09-29)
+- M03-T05 Glass & interior mapping — pipeline `materials/{interior-rooms,interiors}.ts`(방 8종 상자 가구·조명판 → 방 중심 6면 광선 추적 → 256² PNG 48장 →
+  `interiors.ktx2` ETC1S 2D 배열 0.14 MB, manifest `interiors`, 스키마·validate), `lib/png.ts` RGB 인코더. render `facade/interior.ts`(베이×층×깊이 방 상자 교차 →
+  면·LOD, 창별 방·좌우 반전, 유리 픽셀에서만 `If` 분기), `materials/glass.ts`(실내 발광 × (1−프레넬) × 투과율, 블라인드 확산면), library `maps.interiors`·방 평균색.
+  **수락**: `docs/screenshots/M03/T05/shinjuku-curtainwall-close.jpg`(서신주쿠 초고층 근접 — 창마다 실내·블라인드·소등 방), `class-mansion.jpg`(가구 실루엣 깊이감) — 육안.
+  **성능**: 파사드 단색 대비 ≈ 6.0 ms(T04 4.7 → +1.3, 분기 전 +2.7). core GPU 23.8/22.9/24.9/28.7 ms. 새 골든뷰 `shinjuku-curtainwall-close`. 테스트 +1파일/+4건. ADR-0034 (2026-09-29)
+- M03-T06 Terrain & road base materials — pipeline `surface-class.ts`(셀+8이웃 PLATEAU 도로 폴리곤 → 257² 1 m 래스터: 차도·횡단보도 0, 보도·교통섬 1, 나머지 7),
+  RTIN 분류 경계 세분(차도 경계 1 m·그 밖 4 m, `edgeKeyOf`), HLOD 지형 7 고정. render `materials/{terrain,road,noise}.ts` + `weather/wetness.ts`:
+  `_SURF` 원-핫 보간 → 상위 2클래스 반대칭 노이즈 경계, 주 클래스 회전·축척 2표본 분산 보존 혼합(안티타일링), 아스팔트 패치·유분·바램/보도 명암·때, 거시 명암,
+  젖음(`WeatherParams.wetness` core 계약 추가 → `EnvUniforms.wetness`; 흡수율 어두워짐·수막·물웅덩이), triplanar는 `TerrainOptions.triplanar`(기본 끔, T08 티어).
+  game `?wet=0..1` + 슬라이더(`debug/wet-override.ts`), 골든 `weather: 'rain'` = 0.85, 새 골든뷰 `road-ground-30m`.
+  **수락**: `docs/screenshots/M03/T06/road-ground-30m.jpg` — 눈높이 30 m 차도에서 타일 반복 식별 안 됨(육안), 젖음 `M03/T06/wet/*`.
+  **성능**: 첫 구현 +12 ms(ALU 해시 노이즈 ≈ 160회/픽셀) → 노이즈 텍스처·noiseBank 4표본·법선 1표본으로 지형 순증 ≈ +1.2–1.8 ms. core 4뷰 GPU 23.2/21.9/25.0/28.0 ms(T04 21.3/20.8/24.8/26.0).
+  빌드 L0 122.3 → 132.9 MB(+8.6 %). **staging 첫 반영**: publish에 shared/materials 추가, KTX2 트랜스코더 CSP(부트스트랩 워커, ADR-0032), 하늘 별 끔(외부 데이터).
+  픽스처·디코드 스냅샷 재생성. 테스트 +2파일/+6건. e2e 5/5. ADR-0031·0032 (2026-09-29)
+- fix(streaming) 부팅 첫 표시 exclusive whenReady — 대기 중 대상만 요청 → staging 초기 다운로드 79.0 → 12.7–13.4 MB(14 §2 ≤ 60 MB 회복). 테스트 +1건. ADR-0033 (2026-09-29)
+- M03-T04 Procedural facade — pipeline `facade-params.ts`(용도·높이 → class 6종·상점·커튼월·tint·창 시드, L0+HLOD), 벽 UV0 = (평면 묶음 시작점, 건물 바닥) + TEXCOORD_1(면 폭·건물 높이),
+  `wall-planes.ts`(LOD2 벽 띠 군집, 벽에 붙은 부속물 제외), render `materials/facade/{grid,walls,windows,retail,details,index}.ts`(층·베이, 벽 그룹×틴트, 창 SDF·프레임, 1층 쇼윈도·간판 띠·차양·셔터, 슬래브·빗물·AO).
+  버그: 면 상수 보간 오차로 베이 수가 픽셀마다 뒤집힘 → **flat varying**(ADR-0030 §4).
+  **수락**: 클래스 4종 샘플(`docs/screenshots/M03/T04/classes/class-{office,mansion,house,commercial}.jpg`) — 오피스 띠창·맨션 발코니 문·주택 드문 창·상업 1층 상점 구분됨(육안).
+  **파사드 GPU 비용 ≈ 4.7 ms**(1440p 도청 면 가득, 무제한 프레임 A/B 20.4 vs 15.7 ms, RTX 3050 Laptop) — 기준 1.5 ms(RTX 3060, 환산 ≈ 2.1 ms) **미달** → T07 깊이 프리패스 공유·T08 동적 해상도.
+  core 4뷰 GPU 21.3/20.8/24.8/26.0 ms. 빌드 MVP L0 122.3 MB. e2e 5/5(재설정 허용 0.02% z-파이팅). 픽스처 재생성. 테스트 +3파일/+9건. ADR-0030 (2026-09-29)
+- M03-T03 Sun, shadows, clock — sim: `createSim`(WorldClock realtime/custom/frozen·04:00 운행일 요일, `environment()` = suncalc 2.0.2 → 수렴각 → WF, 관측점 1 km 격자 스냅),
+  game `wiring/env.ts`(phase 66, 기본 시계 = 오늘 12:00 JST 1배속, `?time=`·골든뷰 time = frozen), render CSM(takram CascadedShadowMapsNode, 4 × 2048²·600 m·fade, `?shadows=0`),
+  WebGPU 하늘 배경 제거(환경 프로브와 겹쳐 배경 머티리얼 매 프레임 재빌드 → 30 FPS였음), **GPU 타이머 정정**(three 반환값은 마지막 frame id만 → 풀 합산, 무제한 프레임과 일치).
+  **수락**: 2026-06-21 시부야 남중 **11:43 JST 고도 77.782°·방위 180.05°**, 12:00 **77.237°**(테스트). 캐스케이드 경계: 상공 150 m 사선 시점·태양 25°에서 이음새 없음(fade).
+  GPU(1440p): 스크램블 20.1 · 서신주쿠 18.9 · 요요기 23.6 · 주택가 22.9 ms(그림자 끔 17.6/17.2/25.2/22.5 — 잡음 ±2 ms). e2e 5/5(시각 고정). 테스트 +3파일/+13건. ADR-0029 (2026-09-29)
+- M03-T02 Atmosphere & sky — takram three-atmosphere 0.19.1 WebGPU: `lighting/atmosphere.ts`(AtmosphereContext·AtmosphereLight·skyBackground, WF→ECEF = 원점 타원체 위치(TP + 지오이드 36.7 m)·NUE·수렴각 γ, 원점 재설정마다),
+  `env-probe.ts`(SkyEnvironmentNode 64² → PMREM, 라이트 간접 끔), `post/pipeline.ts`(pass MRT → aerialPerspective → AgX, 노출 3; WebGL2는 직접 렌더), `setEnvironment()`, GPU 타이머(`?gpuTiming=1`, `stats().gpu`),
+  game `?sun=az,el`·`?exposure=`·`?gpuTiming=1`, `three-compat.ts` alias. **three r186 호환 패치**(patches/: struct Proxy `.layout.name`, LUT `requestIdleCallback` 타임아웃 — 없으면 조명·하늘이 검다) + precompile에서 LUT 계산 await.
+  **수락**: 요요기 상공 300 m 일출(방위 70°·고도 2°)·정오(180°·70°)·일몰(290°·2°)·황혼(290°·−5°, 노출 40) 4장 — 지평선 붉어짐·정오 원경 청색 연무·황혼 잔광 확인(`docs/screenshots/M03/T02/sky-*.jpg`).
+  GPU 프레임 수치는 타이머 버그로 틀렸음(→ T03에서 정정: 그림자 없이 17.2–25.2 ms). 첫 로딩 증가 0(에셋 없음). e2e 5/5(WebGL2). 테스트 +2파일/+6건. ADR-0028 (2026-09-29)
+- M03-T01 Material library & texture arrays — ambientCG CC0 32종(`content/materials/library.json`: 아스팔트 3·보도 4·콘크리트 4·타일 벽 6·금속 3·미장 2·사이딩 2·ALC·벽돌·지붕 2·잔디 2·흙·자갈; 유리는 T05 절차),
+  pipeline `materials`(`stages/materials/{library,fetch,encode,run}.ts`: zip sha256 lock(`ambientcg`, `--update-lock`) → ImageMagick 리사이즈·ORM 패킹 → toktx 4.4.2 KTX2 배열 → 캐시 `data/derived/materials/<hash>` → `--build-id` 설치) + validate(`validate-materials.ts`, `schemas/materials.schema.json`).
+  크기: albedo 1024² ETC1S 6.3 MB · normal 512² UASTC 7.0 MB · ORM 512² UASTC 4.7 MB = **18.0 MB**(1024² 3장은 55.8 MB → ADR-0027). 인코딩 ≈ 2.5 min.
+  render: `materials/library.ts`(자리표시 배열 → manifest 평균색 → KTX2 교체, 재컴파일 없음), `textured.ts`(지형 `_SURF` 그룹·월드 XZ, 파사드 건물 해시 벽 그룹·UV0), `loadMaterials(url)`·`stats().materials`, context/frame/service 분리.
+  game: 첫 표시 뒤 `loadMaterials(world.json files.materials)`, `three`→`three/webgpu` alias, `/basis/*` 트랜스코더 서빙·복사, 오버레이 머티리얼 줄.
+  **수락**: GPU 텍스처 메모리 **67.1 MB**(BC7, ≤ 400 MB), 적재 0.6–1.4 s, 모든 레이어 출처(ATTRIBUTION `ambientcg-<asset>` 32건, sources.lock sha256 32건 — 테스트가 대조). 첫 표시 전송에 머티리얼 0.08 MB(manifest)만 — 텍스처는 첫 표시 뒤.
+  버그 2건 수정: 큰 float 시드 varying 보간 → 픽셀 노이즈(uint 결합으로), 1성분 정수 속성 WebGL2 타입 불일치(`_SURF`·`_BLDG` f32, `_FACADE` unorm8x4). e2e 5/5(WebGL2) 통과. 테스트 +2파일/+10건. ADR-0027 (2026-09-29)
 
 ## Known Issues
+- [render/webgl2] 하드웨어 WebGL2에서 일부 금속·커튼월 파사드가 WebGPU보다 어둡다(환경 프로브 반사 차이, 원인 미확정 — M03-T09).
+- [e2e] 로컬에서 부하가 있을 때 e2e 1건이 가끔 실패(재실행 통과, 2026-09-29 T07·T08 중 2회) — 어느 스펙인지 미확인. CI에서 재현되면 조사.
+- [render] 그림자 티어화(07 §9 그림자 행: 캐스케이드 수·해상도·거리)는 CSM 재생성이 필요해 미구현 — 모든 티어가 4×2048·600 m.
+- [perf] 후처리 1440p High ≈ 7 ms(3060 환산, 기준 4 ms) — 공중원근(takram) ≈ 6 ms·TRAA/TAAU ≈ 8 ms(3050 Laptop)가 크다. 파사드 ≈ 6 ms(기준 1.5). T08 동적 해상도로 16.6 ms 유지, 근본 절감은 후속(2026-09-29).
+- [perf] gpu-timer(timestamp 합산)는 패스·컴퓨트가 많으면 값이 튄다 → 후처리 비교는 무제한 프레임 p50(scratch cpu.mjs)로. `pnpm perf`(M02-T07~)에 반영 필요.
+- [perf] 첫 표시 ≈ 11 s(12 s 목표 근접) — 선컴파일 ≈ 5 s·대기 LUT. 첫 표시 직후 HLOD 1–2 s 디졸브(ADR-0033). T07/T08에서 선컴파일 병렬화 검토.
+- [render] 지면 `_SURF` 7(plaza)이 공원·녹지까지 덮음(요요기 콘크리트색), 도로 가장자리 1 m 계단 — M05 토지이용·도로 메시 전까지.
+- [render] 파사드 셰이더 ≈ 4.7 ms @1440p(RTX 3050 L) — 수락 1.5 ms 미달(ADR-0030). T07 깊이 프리패스(오버드로우 제거)·T08 동적 해상도 후 재측정.
+- [pipeline] PLATEAU 동일 평면 중복 면 z-파이팅 잔존(WebGL2 원점 재설정 e2e ≈ 70 px). 벽–벽 중복 제거는 필요 시 M05-T07.
+- [perf] 1440p GPU 17–25 ms(RTX 3050 Laptop): 씬 패스 12–17 ms + 공중원근 쿼드 5–10 ms. 07 §10(RTX 3060 ≤ 12 ms) 빠듯 → T07(후처리)·T08(동적 해상도)에서 줄일 것.
+- [render] 고정 노출 3(자동 노출 T07 전) → 황혼·밤은 매우 어둡다. WebGL2 폴백은 공중원근 없이 직접 렌더(SwiftShader 1.4 FPS 회피) — T08/T09 품질 티어에서 재결정(ADR-0028).
+- [render] takram 패치(patches/)는 three r186 전용 — three/takram 버전을 올리면 패치 재확인.
 - [pipeline] GSI DEM 2025판 표고는 JGD2024(2025 개정) 기준, PLATEAU는 JGD2011 → LOD3 차도 정점 vs dem_1m 차 중앙값 +0.05 m(IQR −0.03~+0.18, p95 +8.2 m = 고가도로). M01-T05는 도로 메시 없음 → M03 도로 빌드 때 도로면 우선 스냅 여부 결정.
 - [pipeline] `fetch` 미구현 → zip에서 필요한 것만 수동 해제(`data/raw/plateau-{shibuya,shinjuku,meguro}/extracted/`: MVP 24메시 udx/bldg·tran + codelists + schemas, 2026-09-29). 23구 zip은 풀지 않음(hlod-prep 스트림). 標高タイル은 hlod-prep이 받음. fetch 구현 시 lock sha256 검증.
 - [pipeline] `normalizePlateau`는 대상 셀 버킷을 메모리에 모두 보유 → MVP 294셀은 `NODE_OPTIONS=--max-old-space-size=12288`로 통과(2026-09-29). 23구 전체 L0로 넓힐 때 셀별 스필 필요.

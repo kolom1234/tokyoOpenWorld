@@ -1,9 +1,8 @@
 // 씬 그래프 골격: scene → worldRoot(원점 고정) → 레이어 루트, skyRoot(카메라 상대). see docs/07-rendering.md §2
 import type { MeshSlot } from '@sanpo/tile-format';
 import { Color, Group, Scene } from 'three/webgpu';
-import { createSunRig, type SunRig } from '../lighting/sun.ts';
 
-/** 대기 산란(M03) 전 임시 하늘색(sRGB). */
+/** 대기 하늘(`scene.backgroundNode`, M03-T02)이 없을 때의 배경색(sRGB). */
 const SKY_BACKGROUND = 0x9ec5ec;
 
 export type LayerRoot = 'terrain' | 'road' | 'building' | 'override' | 'prop' | 'vegetation' | 'dynamic' | 'light';
@@ -23,7 +22,6 @@ export interface SceneGraph {
   readonly worldRoot: Group;
   readonly roots: Readonly<Record<LayerRoot, Group>>;
   readonly skyRoot: Group;
-  readonly sun: SunRig;
 }
 
 export function createSceneGraph(): SceneGraph {
@@ -42,8 +40,6 @@ export function createSceneGraph(): SceneGraph {
   }
   const skyRoot = new Group();
   skyRoot.name = 'skyRoot';
-  const sun = createSunRig();
-  roots.light.add(...sun.objects);
   scene.add(worldRoot, skyRoot);
-  return { scene, worldRoot, roots, skyRoot, sun };
+  return { scene, worldRoot, roots, skyRoot };
 }

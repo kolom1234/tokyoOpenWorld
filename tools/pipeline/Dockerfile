@@ -2,7 +2,7 @@
 # see docs/04-data-pipeline.md §1, docs/02-tech-stack.md §3, docs/modules/pipeline.md
 # 빌드: docker build -t sanpo-pipeline:local tools/pipeline
 # 실행: tools/pipeline/docker/run.sh <cmd…> (저장소를 /work에 마운트, node_modules는 컨테이너 전용 볼륨)
-# TODO(M03+): osmium-tool, toktx는 해당 단계를 구현하는 태스크에서 고정 버전으로 추가.
+# M03-T01: KTX-Software(toktx, 머티리얼 KTX2 배열) + ImageMagick(ORM 채널 패킹·리사이즈). TODO(M05+): osmium-tool.
 
 ARG NODE_IMAGE=node:24.21.0-bookworm-slim
 ARG GDAL_IMAGE=ghcr.io/osgeo/gdal:ubuntu-small-3.13.3
@@ -14,11 +14,18 @@ FROM ${GDAL_IMAGE}
 ARG NUSAMAI_VERSION=v0.1.19
 ARG NUSAMAI_SHA256=6bebc9c42830bdbae46ed5573d93a55ff3c8897f89068214d50317c8cb9df14e
 ARG PNPM_VERSION=10.34.5
+ARG KTX_VERSION=4.4.2
+ARG KTX_SHA256=ca635ed489d8bf54fac8d7687056c651193de0740830a7738cc034adc63e3027
 
 # /usr/bin/time: 스파이크·벤치에서 최대 RSS 측정용. unzip: fetch 단계 압축 해제.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl time unzip \
- && rm -rf /var/lib/apt/lists/*
+ && apt-get install -y --no-install-recommends ca-certificates curl time unzip imagemagick \
+ && curl -fsSL -o /tmp/ktx.deb \
+      "https://github.com/KhronosGroup/KTX-Software/releases/download/v${KTX_VERSION}/KTX-Software-${KTX_VERSION}-Linux-x86_64.deb" \
+ && echo "${KTX_SHA256}  /tmp/ktx.deb" | sha256sum -c - \
+ && apt-get install -y --no-install-recommends /tmp/ktx.deb \
+ && rm -rf /tmp/ktx.deb /var/lib/apt/lists/* \
+ && toktx --version && convert -version | head -1
 
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules

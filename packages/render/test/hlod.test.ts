@@ -64,4 +64,24 @@ describe('hlod geometry', () => {
     expect([...a.array]).toEqual([0, 7, 15]);
     expect(g.getAttribute('_CHILD')).toBeUndefined();
   });
+
+  it('converts _SURF/_BLDG to float32 and passes _FACADE as normalized u8×4 (WebGL2 integer inputs, M03-T01)', () => {
+    const g = buildGeometry({
+      materialId: 'facade_default',
+      attributes: {
+        POSITION: { array: new Float32Array(9), itemSize: 3, normalized: false },
+        _SURF: { array: new Uint8Array([7, 0, 2]), itemSize: 1, normalized: false },
+        _BLDG: { array: new Uint16Array([0, 1000, 65535]), itemSize: 1, normalized: false },
+        _FACADE: { array: new Uint8Array(12).fill(3), itemSize: 4, normalized: false },
+      },
+      index: new Uint16Array([0, 1, 2]),
+      boundsLocal: { min: [0, 0, 0], max: [1, 1, 1] },
+    });
+    expect([...g.getAttribute('_surf').array]).toEqual([7, 0, 2]);
+    expect(g.getAttribute('_bldg').array).toBeInstanceOf(Float32Array);
+    expect([...g.getAttribute('_bldg').array]).toEqual([0, 1000, 65535]);
+    const f = g.getAttribute('_facade');
+    expect(f.array).toBeInstanceOf(Uint8Array);
+    expect(f.normalized).toBe(true);
+  });
 });

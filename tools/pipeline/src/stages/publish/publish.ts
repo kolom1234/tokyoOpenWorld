@@ -66,18 +66,28 @@ async function withRetry<T>(what: string, fn: () => Promise<T>, log: Logger): Pr
   }
 }
 
-/** 퍼블리시 대상: world.json, cells.idx, L<n>/**.tkc(보고서·작업 파일 제외). 정렬된 상대 경로. */
+/** 공유 에셋: 머티리얼 KTX2 배열·manifest(M03-T01, materials --build-id가 설치). */
+const SHARED_FILE_RE = /^shared\/materials\/[A-Za-z0-9_-]+\.(json|ktx2)$/;
+
+/** 퍼블리시 대상: world.json, cells.idx, L<n>/**.tkc, shared/materials/*(보고서·작업 파일 제외). 정렬된 상대 경로. */
 export function buildFiles(dir: string): string[] {
   const out: string[] = [];
   const walk = (d: string): void => {
     for (const name of readdirSync(d)) {
       const p = join(d, name);
       if (statSync(p).isDirectory()) {
-        if (/^L[0-3]$|^-?\d+$/.test(name)) walk(p);
+        const relDir = relative(dir, p).replaceAll('\\', '/');
+        if (/^L[0-3]$|^-?\d+$/.test(name) || relDir === 'shared' || relDir === 'shared/materials') walk(p);
         continue;
       }
       const rel = relative(dir, p).replaceAll('\\', '/');
-      if (rel === 'world.json' || rel === 'cells.idx' || /^L[0-3]\/-?\d+\/-?\d+\.tkc$/.test(rel)) out.push(rel);
+      if (
+        rel === 'world.json' ||
+        rel === 'cells.idx' ||
+        /^L[0-3]\/-?\d+\/-?\d+\.tkc$/.test(rel) ||
+        SHARED_FILE_RE.test(rel)
+      )
+        out.push(rel);
     }
   };
   walk(dir);
@@ -95,7 +105,8 @@ export function checkBuildDir(dir: string, buildId: string, files: readonly stri
 }
 
 function contentType(path: string): string {
-  return path.endsWith('.json') ? 'application/json' : 'application/octet-stream';
+  if (path.endsWith('.json')) return 'application/json';
+  return path.endsWith('.ktx2') ? 'image/ktx2' : 'application/octet-stream';
 }
 
 export interface PublishInput {

@@ -6,7 +6,8 @@ import type { Vec3Tuple } from '@sanpo/tile-format';
 import { MeshoptEncoder } from 'meshoptimizer';
 import { encodeGlb, type GlbPrimitive } from '../../lib/gltf.ts';
 import { BUILDING_MATERIAL, quantizePositions } from '../build/buildings-mesh.ts';
-import { remapVertices, SURF_DEFAULT, TERRAIN_MATERIAL } from '../build/terrain-mesh.ts';
+import { SURF } from '../build/surface-class.ts';
+import { remapVertices, TERRAIN_MATERIAL } from '../build/terrain-mesh.ts';
 import { rtinTriangulate } from '../build/terrain-rtin.ts';
 
 export const CHILDREN = 16;
@@ -169,7 +170,7 @@ function primitive(
     POSITION: { array: re(q, 3), itemSize: 3 },
     NORMAL: { array: re(Int8Array.from(s.nrm), 3), itemSize: 3, normalized: true },
   };
-  if (kind === 'terrain') attributes._SURF = { array: new Uint8Array(unique).fill(SURF_DEFAULT), itemSize: 1 };
+  if (kind === 'terrain') attributes._SURF = { array: new Uint8Array(unique).fill(SURF.plaza), itemSize: 1 };
   else {
     attributes.TEXCOORD_0 = { array: re(Float32Array.from(s.uv), 2), itemSize: 2 };
     attributes._FACADE = { array: re(Uint8Array.from(s.facade), 4), itemSize: 4 };

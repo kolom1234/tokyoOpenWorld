@@ -1,6 +1,8 @@
 // publish(M02-T06): SigV4(AWS 테스트 벡터), S3 업로더(단일 PUT·멀티파트·HEAD), 퍼블리시 흐름(world-mini → 키·타입·매니페스트·검증·KV),
 // 재시도, gc 선택, wrangler.jsonc 대상. 네트워크 없음(가짜 fetch/업로더). see docs/04-data-pipeline.md §4.7
-import { resolve } from 'node:path';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { createLogger } from '@sanpo/core';
 import { describe, expect, it } from 'vitest';
 import { EMPTY_SHA256, signV4 } from '../src/lib/sigv4.ts';
@@ -126,6 +128,22 @@ describe('s3 uploader', () => {
 });
 
 describe('publish', () => {
+  it('lists shared/materials manifest and KTX2 arrays but no other shared files', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sanpo-publish-'));
+    try {
+      mkdirSync(join(dir, 'shared', 'materials'), { recursive: true });
+      mkdirSync(join(dir, '.work'), { recursive: true });
+      for (const f of ['manifest.json', 'albedo.ktx2', 'notes.txt'])
+        writeFileSync(join(dir, 'shared', 'materials', f), 'x');
+      writeFileSync(join(dir, 'shared', 'readme.json'), 'x');
+      writeFileSync(join(dir, '.work', 'dem.tif'), 'x');
+      writeFileSync(join(dir, 'world.json'), '{}');
+      expect(buildFiles(dir)).toEqual(['shared/materials/albedo.ktx2', 'shared/materials/manifest.json', 'world.json']);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   const BUILD_ID = (
     JSON.parse(require('node:fs').readFileSync(resolve(WORLD_MINI, 'world.json'), 'utf8')) as { buildId: string }
   ).buildId;

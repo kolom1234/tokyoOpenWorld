@@ -28,12 +28,17 @@
 ## 3. 골든뷰 북마크 (`tests/golden/views.json`)
 | ID | 위치 | 시각/날씨 | 목적 |
 |---|---|---|---|
-| `shibuya-scramble-noon` | 스크램블 교차로 2층 높이 | 12:00 맑음 | 건물·노면표시·군중 밀도 |
-| `shibuya-scramble-night-rain` | 동상 | 21:00 비 | 젖은 노면 반사·간판·광원 |
-| `omotesando-zelkova-autumn` | 오모테산도 느티나무길 | 11월 15:00 맑음 | 식생·계절·그림자 |
-| `shinjuku-west-dusk` | 도청 앞 광장 | 18:00 맑음 | 초고층 커튼월·대기 산란 |
-| `yamanote-front-view` | 하라주쿠→요요기 전면 전망 | 10:00 흐림 | 철도 스플라인·선로 주변 |
-| `aerial-shinjuku-400m` | 신주쿠 상공 400 m | 16:00 맑음 | HLOD 전환·원경 스카이라인 |
+| `shibuya-scramble-noon` ★ | 스크램블 교차로 북서 모서리, 지면 + 7 m | 5/15 12:00 맑음 | 건물·노면표시·군중 밀도 |
+| `shinjuku-west-highrise` ★ | 서신주쿠 초고층가 동쪽 가로 → 도청 | 6/21 17:30 맑음 | 초고층 커튼월·반사·대기 산란 (구 `shinjuku-west-dusk`) |
+| `yoyogi-aerial-300m` ★ | 요요기 공원 상공 300 m → 신주쿠 | 5/15 10:00 맑음 | HLOD 원경·공중원근·스카이라인 |
+| `shibuya-residential-lowrise` ★ | 富ヶ谷 저층 주택가(L0 −4,−3), 지면 + 11 m | 5/15 14:00 맑음 | 주택·맨션 파사드·지붕·지면 |
+| `shibuya-scramble-night-rain` | 스크램블과 동일 | 5/15 21:00 비 | 젖은 노면 반사·간판·광원 |
+| `omotesando-zelkova-autumn` | 오모테산도 느티나무길 | 11/15 15:00 맑음 | 식생·계절·그림자 |
+| `aerial-shinjuku-400m` | 신주쿠 상공 400 m | 5/15 16:00 맑음 | HLOD 전환·원경 스카이라인 |
+| `yamanote-front-view` (M07에서 추가) | 하라주쿠→요요기 전면 전망 | 10:00 흐림 | 철도 스플라인·선로 주변 |
+- ★ = core 4장: M03부터 렌더 태스크마다 before/after를 `docs/screenshots/M03/<task>/<id>.jpg`(1920×1080 JPEG)로 남긴다.
+- 실행·환경 변수: `tests/golden/README.md`. 실제 GPU Chrome 2560×1440, `#app[data-golden=ready]`(스트리밍 큐 0·HLOD 페이드 0·추가 조건 1.5 s 유지) 뒤 캡처.
+- 재현성 기준: 동일 머신 연속 2회(새 브라우저 컨텍스트) SSIM ≥ 0.99(`GOLDEN_REPEAT=1`).
 
 ## 4. 실측 정확도 검증
 - 랜드마크 20곳 높이: 파이프라인 validate 단계(04 §4.6).

@@ -2,8 +2,10 @@
 import { gunzip, parseHeightfield } from '@sanpo/tile-format';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { decodeGlb } from '../src/lib/gltf.ts';
+import type { RoadRecord } from '../src/readers/plateau/types.ts';
 import { CELL_SIZE_M, type CellWindow, cellWindow, type DemWindow } from '../src/stages/build/dem-window.ts';
 import { cellHeightfield, encodeTerrainHeight } from '../src/stages/build/heightfield.ts';
+import { SURF, surfaceGrid } from '../src/stages/build/surface-class.ts';
 import {
   buildTerrainGeometry,
   encodeTerrainMesh,
@@ -18,13 +20,30 @@ import { syntheticDem } from './build-fixtures.ts';
 const DEM: DemWindow = syntheticDem({ minX: -256, minZ: -256, maxX: 256, maxZ: 256 }, 1);
 const CELLS = { nw: [-1, -1], ne: [0, -1], sw: [-1, 0] } as const;
 
+/** 셀 경계(x = 0)를 가로지르는 차도 + 북쪽 보도(전체 폴리곤을 모든 셀에 준다 = 이웃 조각 포함과 같다). */
+const road = (id: string, fn: RoadRecord['function'], x0: number, z0: number, x1: number, z1: number): RoadRecord => ({
+  layer: 'roads',
+  id,
+  roadId: 'r',
+  lod: 2,
+  function: fn,
+  functionCode: '',
+  polygonWF: [[x0, 0, z0, x1, 0, z0, x1, 0, z1, x0, 0, z1]],
+  source: 'test',
+});
+const ROADS = [
+  road('c', 'carriageway', -40.5, -120.5, 60.5, -100.2),
+  road('s', 'sidewalk', -40.5, -103.7, 60.5, -99.4),
+];
+const surfOf = (ix: number, iz: number): Uint8Array => surfaceGrid(ROADS, ix * CELL_SIZE_M, iz * CELL_SIZE_M);
+
 const windows = {} as Record<keyof typeof CELLS, CellWindow>;
 const geoms = {} as Record<keyof typeof CELLS, TerrainGeometry>;
 const glbs = {} as Record<keyof typeof CELLS, Uint8Array>;
 beforeAll(async () => {
   for (const [k, [ix, iz]] of Object.entries(CELLS) as [keyof typeof CELLS, readonly [number, number]][]) {
     windows[k] = cellWindow(DEM, ix, iz);
-    geoms[k] = await buildTerrainGeometry(windows[k]);
+    geoms[k] = await buildTerrainGeometry(windows[k], surfOf(ix, iz));
     glbs[k] = await encodeTerrainMesh(geoms[k]);
   }
 });
@@ -138,7 +157,47 @@ describe('terrain.mesh', () => {
   });
 
   it('is byte-identical across runs', async () => {
-    const again = await encodeTerrainMesh(await buildTerrainGeometry(windows.nw));
+    const again = await encodeTerrainMesh(await buildTerrainGeometry(windows.nw, surfOf(-1, -1)));
     expect(again).toEqual(glbs.nw);
+  });
+});
+
+describe('_SURF surface classes', () => {
+  it('rasterises roads with sidewalk over carriageway, plaza elsewhere', () => {
+    const g = surfOf(-1, -1);
+    const at = (x: number, z: number): number => g[(z + 256) * 257 + (x + 256)] as number;
+    expect([at(-30, -110), at(-30, -101), at(-30, -99), at(-30, -121), at(-41, -110)]).toEqual([
+      SURF.asphalt,
+      SURF.sidewalk,
+      SURF.plaza,
+      SURF.plaza,
+      SURF.plaza,
+    ]);
+    expect(at(0, -110)).toBe(SURF.asphalt); // 동쪽 경계 열
+  });
+
+  it('refines asphalt edges to 1 m and other class edges to 4 m triangles and matches classes across the seam', () => {
+    const g = geoms.nw;
+    const cls = (v: number): number => g.surf[v] as number;
+    const px = (v: number, k: number): number => g.positions[v * 3 + k] as number;
+    for (let t = 0; t < g.indices.length; t += 3) {
+      const [a, b, c] = [g.indices[t], g.indices[t + 1], g.indices[t + 2]] as number[] as [number, number, number];
+      if (cls(a) === cls(b) && cls(b) === cls(c)) continue;
+      const road = [a, b, c].filter((v) => cls(v) === SURF.asphalt).length;
+      const limit = road > 0 && road < 3 ? 1 : 4;
+      for (const k of [0, 2])
+        expect(Math.max(px(a, k), px(b, k), px(c, k)) - Math.min(px(a, k), px(b, k), px(c, k))).toBeLessThanOrEqual(
+          limit,
+        );
+    }
+    const edge = (geo: TerrainGeometry, at: number): number[][] => {
+      const out: number[][] = [];
+      for (let v = 0; v < geo.surf.length; v++)
+        if (geo.positions[v * 3] === at) out.push([geo.positions[v * 3 + 2] as number, geo.surf[v] as number]);
+      return out.sort((p, q) => (p[0] as number) - (q[0] as number));
+    };
+    const east = edge(geoms.nw, CELL_SIZE_M);
+    expect(east.some(([, s]) => s === SURF.asphalt)).toBe(true);
+    expect(edge(geoms.ne, 0)).toEqual(east);
   });
 });

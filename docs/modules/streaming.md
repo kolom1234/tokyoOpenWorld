@@ -25,7 +25,7 @@ Layer: L2 | Depends: core, geo, tile-format, meshoptimizer(디코더) | Used by:
 - 내부: `scheduler.ts` `createLoadScheduler({index, fetcher, pool, …, onStage, onDone}) → {request(key, score, sections?), cancel, stageOf, stats}`,
   워커 쪽 `decode.ts` `decodeCell`·`glb.ts` `decodeGlb`·`decode-host.ts`·`protocol.ts`.
   T03: `service.ts`(조립·프레임 update), `planner.ts` `recompute`(원하는 셀 → 취소 → 순위 요청 → 해제 계획), `lifecycle.ts` `createLifecycle`(상태·보류 payload·ack),
-  `ground.ts` `createGroundStore`·`sampleHeightfield`, `waiters.ts`(whenReady·pinned), `cell-cache.ts`(Cache Storage 계층)·`cache-lru.ts`(상한 LRU),
+  `ground.ts` `createGroundStore`·`sampleHeightfield`, `waiters.ts`(whenReady·pinned·exclusive), `cell-cache.ts`(Cache Storage 계층)·`cache-lru.ts`(상한 LRU),
   `interest.ts` `inLoadZone`(미룬 해제 재확인).
 
 ## Invariants
@@ -34,6 +34,7 @@ Layer: L2 | Depends: core, geo, tile-format, meshoptimizer(디코더) | Used by:
 - 상주 한도(L0 72, **L1 80**, L2 64, L3 16 — ADR-0021)는 소프트 리밋(로드 반경 내 셀은 해제 금지). 해제 반경 = 로드 반경 × 1.25. R0 ≤ 768 m.
 - 로드 반경 안·whenReady 대상 셀은 절대 해제하지 않는다(미룬 해제도 실행 직전 재확인). 해제는 프레임당 ≤ 8.
 - `live` ⇔ onReady로 넘긴 뒤 render ack. onReady 전 해제된 셀은 onEvicted·`cell/evicted` 없음. 셀당 onReady는 적재 1회에 1번.
+- `whenReady({ …, exclusive: true })` 대기 중엔 대상 셀만 새로 요청, 대상 밖 `queued`는 내린다(fetch 중인 것은 유지) — 부팅 첫 표시(ADR-0033).
 - 진행 중 요청은 해제 반경 밖에서만 취소. failed는 60 s 뒤 재요청 가능(whenReady는 failed를 끝으로 본다).
 - 발밑 셀 점수 −1 고정(다른 점수 ≥ 0). 부모가 같은 요청 후보면 자식 점수 ≥ 부모 + 0.001(발밑 면제). `cells.idx`에 없는 셀은 요청 안 함.
 - 모드·품질 티어는 `InterestPoint`가 아닌 `InterestFrame`으로 입력(서비스가 `mode/changed`·`quality/changed` 추적).

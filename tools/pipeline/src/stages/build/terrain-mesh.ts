@@ -1,4 +1,4 @@
-// terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md
+// terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금, `_SURF` 경계 ≤ 2 m 세분) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md
 import { MeshoptEncoder } from 'meshoptimizer';
 import { encodeGlb } from '../../lib/gltf.ts';
 import { type CellWindow, sampleAt } from './dem-window.ts';
@@ -7,8 +7,6 @@ import { rtinTriangulate } from './terrain-rtin.ts';
 /** 단순화 허용 오차(m): 모든 1 m 격자 샘플에서 메시 수직 오차 상한. docs/04 §4.4-1. */
 export const TERRAIN_SIMPLIFY_ERROR_M = 0.05;
 export const TERRAIN_MATERIAL = 'terrain_ground';
-/** `_SURF` 기본값 7 = plaza(포장 지면). TODO(M03): 도로·녹지 레이어로 면 분류. */
-export const SURF_DEFAULT = 7;
 const INT8_MAX = 127;
 
 /**
@@ -74,14 +72,18 @@ function gridHeights(w: CellWindow): Float64Array {
   return h;
 }
 
-/** 셀 창 → RTIN 단순화·정점 캐시 재정렬된 지형 기하. 결정론(입력만으로 결과가 정해진다). */
-export async function buildTerrainGeometry(w: CellWindow): Promise<TerrainGeometry> {
+/**
+ * 셀 창 + 표면 분류 격자(surface-class, 257², 행 = z) → RTIN 단순화(분류 경계 세분)·정점 캐시 재정렬된 지형 기하.
+ * 결정론(입력만으로 결과가 정해진다).
+ */
+export async function buildTerrainGeometry(w: CellWindow, surf: Uint8Array): Promise<TerrainGeometry> {
   await MeshoptEncoder.ready;
-  const indices = rtinTriangulate(gridHeights(w), w.size, TERRAIN_SIMPLIFY_ERROR_M);
+  if (surf.length !== w.size * w.size) throw new RangeError('buildTerrainGeometry: surf grid size mismatch');
+  const indices = rtinTriangulate(gridHeights(w), w.size, TERRAIN_SIMPLIFY_ERROR_M, surf);
   const [remap, unique] = MeshoptEncoder.reorderMesh(indices, true, false);
   const positions = remapVertices(gridPositions(w), 3, remap, unique);
   const normals = remapVertices(gridNormals(w), 3, remap, unique);
-  return { positions, normals, surf: new Uint8Array(unique).fill(SURF_DEFAULT), indices };
+  return { positions, normals, surf: remapVertices(surf, 1, remap, unique), indices };
 }
 
 /** 지형 기하 → terrain.mesh glb(노드 항등 변환). */

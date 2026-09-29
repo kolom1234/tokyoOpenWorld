@@ -1,6 +1,7 @@
 // 게임 번들 설정(Vite): dev 서버 격리 헤더 + /api·/world → wrangler dev 프록시 + world-mini 픽스처 서빙·복사 + 로컬 빌드(dev 전용). see docs/13-deployment.md §2–3, docs/modules/game.md
 import { cpSync, createReadStream, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, normalize, resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, join, normalize, resolve } from 'node:path';
 import { type Connect, defineConfig, type Plugin } from 'vite';
 
 /** dev/preview 서버에서도 crossOriginIsolated가 되도록 정적 에셋용 `public/_headers`와 같은 격리 헤더를 붙인다. */
@@ -17,6 +18,15 @@ const WORKER_DEV_ORIGIN = 'http://localhost:8787';
 const WORLD_MINI_REL = '../../tests/fixtures/world-mini';
 const WORLD_MINI_ROUTE = '/fixtures/world-mini';
 
+const CONTENT_TYPES: Readonly<Record<string, string>> = {
+  json: 'application/json',
+  js: 'text/javascript',
+  wasm: 'application/wasm',
+  ktx2: 'image/ktx2',
+};
+const contentTypeOf = (file: string): string =>
+  CONTENT_TYPES[file.split('.').pop() ?? ''] ?? 'application/octet-stream';
+
 /** `dir` 아래 파일을 그대로 서빙하는 미들웨어(경로 탈출 방지, 없으면 next). */
 function serveDir(dir: () => string | undefined): Connect.NextHandleFunction {
   return (req, res, next) => {
@@ -25,7 +35,7 @@ function serveDir(dir: () => string | undefined): Connect.NextHandleFunction {
     const rel = normalize(decodeURIComponent((req.url ?? '/').split('?')[0] ?? '/'));
     const file = join(root, rel);
     if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()) return next();
-    res.setHeader('Content-Type', file.endsWith('.json') ? 'application/json' : 'application/octet-stream');
+    res.setHeader('Content-Type', contentTypeOf(file));
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     createReadStream(file).pipe(res);
@@ -89,8 +99,60 @@ function worldMiniFixture(): Plugin {
   };
 }
 
+/** KTX2 Basis 트랜스코더(three examples/jsm/libs/basis) → `/basis/*`(dev 서빙, build 복사). render `basisPath` 기본값과 짝. */
+const BASIS_ROUTE = '/basis';
+function basisTranscoder(): Plugin {
+  const src = join(dirname(createRequire(import.meta.url).resolve('three')), '../examples/jsm/libs/basis');
+  let outDir = 'dist';
+  return {
+    name: 'sanpo-basis-transcoder',
+    configResolved(c) {
+      outDir = resolve(c.root, c.build.outDir);
+    },
+    configureServer(server) {
+      server.middlewares.use(
+        BASIS_ROUTE,
+        serveDir(() => src),
+      );
+    },
+    writeBundle() {
+      for (const f of ['basis_transcoder.js', 'basis_transcoder.wasm']) {
+        cpSync(join(src, f), join(outDir, BASIS_ROUTE, f));
+      }
+    },
+  };
+}
+
+/**
+ * detect-gpu 벤치마크 JSON(@pmndrs/detect-gpu dist/benchmarks, MIT) → `/detect-gpu/*`(dev 서빙, build 복사). render `gpuBenchmarksPath`와 짝.
+ * 기본값(unpkg CDN)은 CSP connect-src 'self'에 막히고 외부 런타임 의존이라 자체 호스팅(M03-T08). 첫 표시 뒤 한 파일(≤ 155 KB)만 받는다.
+ */
+const GPU_BENCH_ROUTE = '/detect-gpu';
+function gpuBenchmarks(): Plugin {
+  // ESM 전용 exports라 require.resolve가 안 된다 → render 패키지의 pnpm 링크 경로.
+  const src = resolve(import.meta.dirname, '../../packages/render/node_modules/@pmndrs/detect-gpu/dist/benchmarks');
+  let outDir = 'dist';
+  return {
+    name: 'sanpo-gpu-benchmarks',
+    configResolved(c) {
+      outDir = resolve(c.root, c.build.outDir);
+    },
+    configureServer(server) {
+      server.middlewares.use(
+        GPU_BENCH_ROUTE,
+        serveDir(() => src),
+      );
+    },
+    writeBundle() {
+      cpSync(src, join(outDir, GPU_BENCH_ROUTE), { recursive: true });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [worldMiniFixture(), localBuild()],
+  plugins: [worldMiniFixture(), localBuild(), basisTranscoder(), gpuBenchmarks()],
+  // three addon(KTX2Loader)·takram의 `three` import를 WebGPU 빌드 + 호환 이름(src/three-compat.ts)으로 — WebGL 렌더러 번들 제외.
+  resolve: { alias: [{ find: /^three$/, replacement: resolve(import.meta.dirname, 'src/three-compat.ts') }] },
   server: {
     port: 5173,
     strictPort: true,

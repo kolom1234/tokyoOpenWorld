@@ -47,6 +47,12 @@ export function describeStreaming(st: StreamingStats | undefined, r: RenderStats
   );
 }
 
+/** 머티리얼 라이브러리 한 줄(M03-T01). */
+export function describeMaterials(m: RenderStats['materials']): string {
+  if (m.state === 'none' || m.state === 'failed') return `머티리얼 ${m.state}`;
+  return `머티리얼 ${m.state} · ${m.layers}층 · ${fmt(m.downloadBytes / 1e6)} MB → GPU ${fmt(m.gpuBytes / 1e6)} MB · ${m.loadMs} ms`;
+}
+
 export function describeDebug(
   s: RenderStats,
   fps: number,
@@ -65,6 +71,7 @@ export function describeDebug(
     `원점 (${o.x}, ${o.y}, ${o.z}) · 재설정 ${s.originRebases}회`,
     `셀 ${s.cells} · draw ${s.drawCalls} · tris ${s.triangles.toLocaleString('en-US')}`,
     describeStreaming(st, s),
+    describeMaterials(s.materials),
     `[클릭] 마우스 잠금 · WASD 이동 · E/Q 상승/하강 · 휠 속도 · Shift ×4 · [O] 원점 재설정 테스트`,
   ];
 }

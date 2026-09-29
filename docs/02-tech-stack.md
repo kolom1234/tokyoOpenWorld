@@ -7,8 +7,8 @@
 | 영역 | 선택 | 버전 | 라이선스 | 근거 |
 |---|---|---|---|---|
 | 렌더러 | **three.js `WebGPURenderer`** + TSL | 0.186.1 | MIT | WebGPU 기본 + WebGL2 자동 폴백, TSL 노드 셰이더가 양쪽 백엔드 공통. r186 기준 `SunLight`(CSM), `ClusteredLightsNode`, `SSGINode`, `SSRNode`, `GTAONode`, `TRAANode`, `TAAUNode`, `BloomNode`, `Lut3DNode`, `LightProbeGrid` 등 사실적 렌더링 부품이 addon으로 존재 |
-| 대기/하늘 | `@takram/three-atmosphere` (`/webgpu` export) | 0.19.1 | MIT | Bruneton 정밀 대기 산란, 하늘·태양·공중원근·조도. WebGPU 엔트리 제공 |
-| 지리 유틸 | `@takram/three-geospatial` (`/webgpu`) | (atmosphere와 동일 릴리스 라인) | MIT | 대기 모듈 의존 |
+| 대기/하늘 | `@takram/three-atmosphere` (`/webgpu` export) | 0.19.1 (+ `patches/` three r186 호환, ADR-0028) | MIT | Bruneton 정밀 대기 산란, 하늘·태양·공중원근·조도. WebGPU 엔트리 제공 |
+| 지리 유틸 | `@takram/three-geospatial` (`/webgpu`) | 0.9.1 (+ `patches/`) | MIT | 대기 모듈 의존 |
 | 물리 | **Jolt Physics** `jolt-physics` (wasm, multithread 빌드) | 1.1.0 | MIT | 차량(WheeledVehicle/Motorcycle 컨트롤러: 엔진·변속기·차동·타이어 마찰곡선), CharacterVirtual(계단·경사·이동발판), 대규모 정적 메시 성능. AAA 채택 실적 |
 | 내비/군중 | `recast-navigation` (+ `@recast-navigation/three`) | 0.43.1 | MIT | Recast 내비메시 + DetourCrowd |
 | 메시 가속 | `three-mesh-bvh` | 0.9.15 | MIT | 레이캐스트(카메라 충돌, 픽킹) |
@@ -18,7 +18,7 @@
 | UI | `preact` + `@preact/signals` | 10.29.8 / 2.11.2 | MIT | 작은 번들, 시그널로 HUD 갱신 최소화 |
 | 로컬 저장 | `idb-keyval` | 6.3.0 | Apache-2.0 | IndexedDB 간단 래퍼(세이브/설정) |
 | 워커 RPC | `comlink` | 4.4.2 | Apache-2.0 | 타입 안전 워커 명령 채널 (대용량은 SAB 직접) |
-| GPU 티어 | `@pmndrs/detect-gpu` | 6.0.23 | MIT | 초기 품질 티어 추정 |
+| GPU 티어 | `@pmndrs/detect-gpu` | 6.0.23 | MIT | 초기 품질 티어 추정(render, M03-T08) — 벤치마크 JSON은 apps/game이 `/detect-gpu/`로 자체 호스팅(기본 unpkg는 CSP·외부 의존) |
 | 디버그 | `stats-gl`, `lil-gui` | 4.2.3 / 0.21.0 | MIT | `?debug=1`에서만 동적 import |
 
 ## 2. 빌드·품질 도구
@@ -50,7 +50,7 @@
 | `meshoptimizer` 1.3.0 (encode, reorder, simplify) | 압축·정점 캐시 재정렬, LOD 단순화(지형은 RTIN, ADR-0018) | MIT |
 | `earcut` 3.0.2 (+ `@types/earcut` 3.0.0) | 건물 면 폴리곤 삼각분할 | ISC |
 | `ajv` 8.20.0 | validate 단계 JSON Schema 검사 | MIT |
-| KTX-Software `toktx` ≥ 4.3 | KTX2(ETC1S/UASTC) 인코딩 | Apache-2.0 |
+| KTX-Software `toktx` 4.4.2 (+ ImageMagick 7, 채널 패킹) | KTX2(ETC1S/UASTC) 인코딩 — 파이프라인 이미지(ADR-0027) | Apache-2.0 / ImageMagick |
 | `proj4` 2.22.0 (JS) / pyproj (검증용) | 좌표 변환 (EPSG 정의 고정 문자열 사용) | MIT |
 | `recast-navigation` (Node) | 셀별 내비메시 타일 굽기 | MIT |
 | `@aws-sdk/client-s3` 3.x | R2(S3 호환 API) 업로드 | Apache-2.0 |

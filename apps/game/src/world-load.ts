@@ -17,7 +17,7 @@ interface WorldManifest {
   buildId: string;
   crs: { projected: string; E0: number; N0: number };
   spawn: { posWF: [number, number, number] };
-  files: { cellsIndex: string };
+  files: { cellsIndex: string; materials?: string };
 }
 
 export interface LoadedWorld {
@@ -32,6 +32,8 @@ export interface LoadedWorld {
   cellsIndex: CellsIndex;
   /** 스폰 셀 ± 1 중 색인에 있는 L0 셀(부팅 whenReady 대상). */
   spawnCells: CellKey[];
+  /** 공유 머티리얼 매니페스트(world.json files.materials). 픽스처(world-mini)는 텍스처가 없어 생략. */
+  materialsUrl?: string;
 }
 
 type FetchLike = (input: string) => Promise<Response>;
@@ -99,5 +101,8 @@ export async function loadWorld(
     indexed: index.value.size,
     cellsIndex: index.value,
     spawnCells,
+    ...(source !== 'fixture' && m.value.files.materials
+      ? { materialsUrl: `${baseUrl}/${m.value.files.materials}` }
+      : {}),
   });
 }

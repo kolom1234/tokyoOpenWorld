@@ -16,6 +16,8 @@ export interface PlannerCtx {
   sched: LoadScheduler;
   /** whenReady 대상(로드 반경과 무관하게 로드·유지). */
   pinned: ReadonlySet<CellKey>;
+  /** exclusive whenReady 대상 — null이 아니면 이 셀만 새로 요청. */
+  exclusive?: ReadonlySet<CellKey> | null;
 }
 
 export interface PlanOutcome {
@@ -44,13 +46,16 @@ export function recompute(c: PlannerCtx, frame: InterestFrame, now: number): Pla
   const desired = withPinned(computeDesired(c.index, frame, held, c.cfg.interest), c);
   let cancelled = 0;
   for (const key of inFlight) {
-    if (desired.load.has(key) || desired.keep.has(key)) continue;
+    // exclusive 중엔 대상 밖 대기열(아직 fetch 전) 요청도 내린다 — 대상이 끝나면 다음 재계산이 다시 요청.
+    const parked = c.exclusive && !c.exclusive.has(key) && c.life.stateOf(key) === 'queued';
+    if (!parked && (desired.load.has(key) || desired.keep.has(key))) continue;
     c.sched.cancel(key);
     c.life.cancelled(key);
     cancelled++;
   }
   const candidates: CellKey[] = [];
   for (const key of desired.load) {
+    if (c.exclusive && !c.exclusive.has(key)) continue;
     if (c.life.requestable(key, now) || c.life.stateOf(key) === 'queued') candidates.push(key);
   }
   let requested = 0;

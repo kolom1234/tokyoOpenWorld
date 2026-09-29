@@ -16,6 +16,7 @@
     "depcruise": "depcruise packages apps tools",
     "test": "vitest run",
     "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
+    "golden": "playwright test -c tests/golden/playwright.config.ts",
     "build": "pnpm --filter @sanpo/game build && pnpm --filter @sanpo/worker build",
     "check:size": "node scripts/check-size.ts",
     "check:assets": "node scripts/check-asset-size.ts",
