@@ -82,7 +82,14 @@ function evict(s: Svc, key: CellKey): void {
 function runRecompute(s: Svc, now: number): void {
   const t0 = perfNow();
   const out = recompute(
-    { index: s.index, cfg: s.cfg, life: s.life, sched: s.sched, pinned: s.waiters.pinned },
+    {
+      index: s.index,
+      cfg: s.cfg,
+      life: s.life,
+      sched: s.sched,
+      pinned: s.waiters.pinned,
+      exclusive: s.waiters.exclusive,
+    },
     frameOf(s),
     now,
   );

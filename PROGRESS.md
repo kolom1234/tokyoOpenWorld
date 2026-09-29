@@ -8,10 +8,10 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 - 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
 - 배포 상태: staging Worker `tokyo-sanpo-staging` = 이 브랜치(T06) 코드 + dev 버킷 빌드 **`20260929-c9a28d3-ec1646fc`**(L0 294 + HLOD 177 + shared/materials, 477 파일 248.7 MB, current).
   dev 버킷 옛 빌드: `20260928-b2d1e36-7fb58d45`(M02-T07, 측정용 재업로드 2026-09-29 — 10/6 이후 gc), `20260928-7e215f4-7fb58d45`(10/5 이후 gc). `pnpm pipeline gc --env dev --apply`.
-  staging 첫 로딩(GOLDEN_BOOT): **79.0 MB**(world 78.6)·첫 표시 10.7 s. 같은 클라이언트 + M02 데이터 = 77.0 MB·8.6 s → 데이터 증가(T04+T06) ≈ +2.0 MB,
-  M03 전 59.8 MB와의 차이는 첫 표시 지연(선컴파일 ≈ 5 s·대기 LUT) 동안의 선적재 → 아래 Next step 후보·Known Issues.
+  staging 첫 로딩(GOLDEN_BOOT): **12.7–13.4 MB**·첫 표시 10.6–11.2 s(부팅 exclusive whenReady, ADR-0033). 수정 전 79.0 MB — 같은 클라이언트 + M02 데이터 77.0 MB →
+  데이터 증가(T04+T06)는 +2.0 MB, 나머지는 첫 표시 지연 동안의 선적재였다.
 - 로컬 최신 빌드 = staging과 같음(`20260929-c9a28d3-ec1646fc`).
-- Next step (정확히 한 걸음): M03-T05 유리·실내 매핑(파이프라인 실내 큐브맵 8종 → 창별 해시·블라인드·프레넬+프로브). 그 전에(또는 T07/T08에서) **첫 표시 전 선적재 범위 제한**(첫 로드 60 MB 예산 초과 원인).
+- Next step (정확히 한 걸음): M03-T05 유리·실내 매핑(파이프라인 실내 큐브맵 8종 → 창별 해시·블라인드·프레넬+프로브).
 - Blockers: 없음
 
 ## Recently Completed
@@ -24,6 +24,7 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
   **성능**: 첫 구현 +12 ms(ALU 해시 노이즈 ≈ 160회/픽셀) → 노이즈 텍스처·noiseBank 4표본·법선 1표본으로 지형 순증 ≈ +1.2–1.8 ms. core 4뷰 GPU 23.2/21.9/25.0/28.0 ms(T04 21.3/20.8/24.8/26.0).
   빌드 L0 122.3 → 132.9 MB(+8.6 %). **staging 첫 반영**: publish에 shared/materials 추가, KTX2 트랜스코더 CSP(부트스트랩 워커, ADR-0032), 하늘 별 끔(외부 데이터).
   픽스처·디코드 스냅샷 재생성. 테스트 +2파일/+6건. e2e 5/5. ADR-0031·0032 (2026-09-29)
+- fix(streaming) 부팅 첫 표시 exclusive whenReady — 대기 중 대상만 요청 → staging 초기 다운로드 79.0 → 12.7–13.4 MB(14 §2 ≤ 60 MB 회복). 테스트 +1건. ADR-0033 (2026-09-29)
 - M03-T04 Procedural facade — pipeline `facade-params.ts`(용도·높이 → class 6종·상점·커튼월·tint·창 시드, L0+HLOD), 벽 UV0 = (평면 묶음 시작점, 건물 바닥) + TEXCOORD_1(면 폭·건물 높이),
   `wall-planes.ts`(LOD2 벽 띠 군집, 벽에 붙은 부속물 제외), render `materials/facade/{grid,walls,windows,retail,details,index}.ts`(층·베이, 벽 그룹×틴트, 창 SDF·프레임, 1층 쇼윈도·간판 띠·차양·셔터, 슬래브·빗물·AO).
   버그: 면 상수 보간 오차로 베이 수가 픽셀마다 뒤집힘 → **flat varying**(ADR-0030 §4).
@@ -96,7 +97,7 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 - M01-T07 Test fixture world — `tests/fixtures/world-mini`(L0_-1..0 × -1..0, 셀 484–903 KiB, 건물 412동, validate 0 오류·이웃 4쌍 1028 샘플 비트 일치, ATTRIBUTION) + `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1셀 창 + `expected.json` 스냅샷), 합계 3.38 MB. `pipeline fixture`(`stages/fixture{,-plateau}.ts`, 컨테이너), `fixtures.test.ts`(호스트 Windows = 컨테이너 스냅샷 일치). 게임 `?world=mini` → `world-load.ts`(world.json 원점·포맷 검증 → cells.idx → 스폰 ± 1 셀 헤더), Vite 플러그인(dev 서빙·build 복사, production `SANPO_WORLD_MINI=0`), Playwright 1.63.0 `tests/e2e/boot.spec.ts` + CI `e2e` 잡. `.gitignore` 예외 확인(`*.tkc` → `!tests/fixtures/**`), `.gitattributes` 바이너리·GML 보존, Biome 픽스처 제외. ADR-0019 (2026-09-28)
 
 ## Known Issues
-- [perf/budget] staging 첫 로드 79.0 MB > 60 MB 예산 — 첫 표시가 10.7 s로 늦어진 동안(M03 선컴파일 ≈ 5 s·대기 LUT prepare) 스트리밍이 계속 선적재. 첫 표시 전 적재를 준비 집합으로 제한하거나 선컴파일 병렬화 필요(2026-09-29, M03-T06 측정).
+- [perf] 첫 표시 ≈ 11 s(12 s 목표 근접) — 선컴파일 ≈ 5 s·대기 LUT. 첫 표시 직후 HLOD 1–2 s 디졸브(ADR-0033). T07/T08에서 선컴파일 병렬화 검토.
 - [render] 지면 `_SURF` 7(plaza)이 공원·녹지까지 덮음(요요기 콘크리트색), 도로 가장자리 1 m 계단 — M05 토지이용·도로 메시 전까지.
 - [render] 파사드 셰이더 ≈ 4.7 ms @1440p(RTX 3050 L) — 수락 1.5 ms 미달(ADR-0030). T07 깊이 프리패스(오버드로우 제거)·T08 동적 해상도 후 재측정.
 - [pipeline] PLATEAU 동일 평면 중복 면 z-파이팅 잔존(WebGL2 원점 재설정 e2e ≈ 70 px). 벽–벽 중복 제거는 필요 시 M05-T07.

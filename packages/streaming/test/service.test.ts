@@ -155,6 +155,25 @@ describe('createStreaming', () => {
     expect(r.svc.stateOf(K0(3, 3))).toBe('failed');
   });
 
+  it('exclusive whenReady fetches only its targets until settled, then resumes the interest set', async () => {
+    const r = rig(FAST);
+    r.svc.setInterest([point('player', 10, 0, 10)]);
+    let done = false;
+    let deliveredAtDone: CellKey[] = [];
+    void r.svc.whenReady({ centerWF: { x: 10, y: 0, z: 10 }, radius: 10, levels: [0], exclusive: true }).then(() => {
+      done = true;
+      deliveredAtDone = [...r.delivered];
+    });
+    while (!done) await r.run(1);
+    // 대상 = (10, 10)에서 10 m 안의 L0 셀 AABB 4개.
+    const targets = new Set([K0(0, 0), K0(-1, 0), K0(0, -1), K0(-1, -1)]);
+    expect(deliveredAtDone).toContain(K0(0, 0));
+    expect(deliveredAtDone.every((k) => targets.has(k))).toBe(true);
+    expect(r.io.counters.fetches).toBe(deliveredAtDone.length);
+    await r.run(120);
+    expect(r.delivered.length).toBeGreaterThan(deliveredAtDone.length + 4);
+  });
+
   it('cancels in-flight requests that leave the keep radius and never delivers them', async () => {
     const r = rig({ fetchMs: [400, 500], decodeMs: [5, 6] });
     r.svc.setInterest([point('player', 900, 0, 900)]);

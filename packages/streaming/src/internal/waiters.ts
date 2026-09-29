@@ -1,4 +1,5 @@
-// whenReady 대기자: 영역 안 셀(cells.idx에 있는 것)이 전부 live 또는 failed가 되면 resolve. 대기 중 대상은 pinned(로드·유지 강제).
+// whenReady 대기자: 영역 안 셀(cells.idx에 있는 것)이 전부 live 또는 failed가 되면 resolve. 대기 중 대상은 pinned(로드·유지 강제),
+// exclusive 대기자가 있으면 그 대상만 새로 요청(부팅 첫 표시 전 선적재 보류).
 // see docs/06-world-streaming.md §8
 import type { CellKey, CellLevel } from '@sanpo/core';
 import { cellBoundsWF } from '@sanpo/geo';
@@ -10,6 +11,7 @@ const SETTLED: ReadonlySet<CellState> = new Set(['live', 'failed']);
 
 interface Waiter {
   targets: CellKey[];
+  exclusive: boolean;
   resolve: () => void;
 }
 
@@ -18,6 +20,8 @@ export interface Waiters {
   /** 끝난 대기자 resolve. 대상 집합이 바뀌었으면 true(재계산 필요). */
   settle(stateOf: (key: CellKey) => CellState): boolean;
   readonly pinned: ReadonlySet<CellKey>;
+  /** exclusive 대기자가 있으면 그 대상들(이것만 새로 요청), 없으면 null. */
+  readonly exclusive: ReadonlySet<CellKey> | null;
   readonly size: number;
   /** 남은 대기자 모두 resolve(dispose). */
   flush(): void;
@@ -38,14 +42,17 @@ export function targetsOf(index: CellIndex, req: WhenReadyRequest): CellKey[] {
 export function createWaiters(index: CellIndex): Waiters {
   let list: Waiter[] = [];
   let pinned = new Set<CellKey>();
+  let exclusive: Set<CellKey> | null = null;
   const rebuild = (): void => {
     pinned = new Set(list.flatMap((w) => w.targets));
+    const ex = list.filter((w) => w.exclusive);
+    exclusive = ex.length > 0 ? new Set(ex.flatMap((w) => w.targets)) : null;
   };
   return {
     add(req) {
       const targets = targetsOf(index, req);
       return new Promise<void>((resolve) => {
-        list.push({ targets, resolve });
+        list.push({ targets, exclusive: req.exclusive === true, resolve });
         rebuild();
       });
     },
@@ -62,6 +69,9 @@ export function createWaiters(index: CellIndex): Waiters {
     },
     get pinned() {
       return pinned;
+    },
+    get exclusive() {
+      return exclusive;
     },
     get size() {
       return list.length;

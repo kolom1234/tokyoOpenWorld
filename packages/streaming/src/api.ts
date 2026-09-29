@@ -221,6 +221,11 @@ export interface WhenReadyRequest {
   centerWF: Vec3d;
   radius: number;
   levels: readonly number[];
+  /**
+   * true면 이 대기자가 끝날 때까지 **대상 셀만 새로 요청**(다른 관심 셀 선적재 보류). 부팅 첫 표시용 — 첫 표시 전 전송량을
+   * 준비 집합으로 묶는다(14 §2 초기 다운로드 ≤ 60 MB, M03-T06 측정). 이미 진행 중인 요청은 취소하지 않는다.
+   */
+  exclusive?: boolean;
 }
 
 export interface StreamingStats {

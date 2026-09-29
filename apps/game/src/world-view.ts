@@ -150,7 +150,8 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
       await render.precompile().catch((e: unknown) => wlog.warn('precompile', e));
       const s = await startStreaming(deps, render, traversal, world, late);
       const centerWF = deps.start?.centerWF ?? world.spawnWF;
-      await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0] });
+      // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
+      await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true });
       // 지면 높이를 알게 됐으니 "지면 위 60 m"를 정확히 다시 잡는다.
       traversal.request('freecam', startPose(ground));
       loadMaterialsLater(render, world.materialsUrl, late, wlog);
