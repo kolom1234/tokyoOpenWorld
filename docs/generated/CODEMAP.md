@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 242개.
+> 파일 248개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -28,7 +28,7 @@
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
-- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(freecam) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
+- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(freecam, 월드 로드 뒤 walk) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
@@ -73,21 +73,23 @@
 - `packages/input/src/api.ts` — @sanpo/input 공개 계약: 액션·바인딩·ActionState·InputService. 구현은 internal/*. see docs/modules/input.md, docs/09-traversal.md §4 | exports: InputContext, ButtonAction, AxisAction, Action, MouseAxis, Binding, ContextBindings, BindingMap, ActionState, InputService, InputDeps
 - `packages/input/src/index.ts` — @sanpo/input 공개 엔트리(L2): 액션 맵(키보드/마우스; 게임패드는 M04-T03). api.ts 재수출 + create* 팩토리만. see docs/modules/input.md | exports: * from './api.ts', DEFAULT_BINDINGS, createInput
 - `packages/input/src/internal/action-map.ts` — 원시 입력 + 컨텍스트 바인딩 → 불변 ActionState 스냅샷(phase 0). see docs/09-traversal.md §4 | exports: EMPTY_STATE, snapshotActions
-- `packages/input/src/internal/default-bindings.ts` — 기본 바인딩(09 §4 표, 키보드·마우스만 — 게임패드는 M04-T03). 설정 재바인딩은 이 맵을 복사해 수정한다. | exports: DEFAULT_BINDINGS, cloneBindings
+- `packages/input/src/internal/default-bindings.ts` — 기본 바인딩(09 §4 표 — 키보드·마우스 + 게임패드 표준 매핑). 설정 재바인딩은 이 맵을 복사해 수정한다. | exports: PAD_LOOK_PX_PER_S, DEFAULT_BINDINGS, cloneBindings
+- `packages/input/src/internal/devices/gamepad.ts` — 게임패드 디바이스(Gamepad API — 이벤트 없이 프레임마다 폴링): 첫 연결 패드(표준 매핑 우선) → RawInput.pad. | exports: STICK_DEADZONE, PAD_PRESS, PadLike, deadzone, readPad, GamepadDevice, attachGamepad
 - `packages/input/src/internal/devices/keyboard.ts` — 키보드 디바이스: window keydown/keyup → RawInput. 텍스트 입력 포커스 중·창 포커스 상실 시 게임 입력 차단. see docs/modules/input.md | exports: isEditableTarget, attachKeyboard
 - `packages/input/src/internal/devices/mouse.ts` — 마우스 디바이스: 클릭 → Pointer Lock, 이동(잠금 중 또는 버튼 드래그 중)·버튼·휠 → RawInput. see docs/09-traversal.md §4 | exports: MouseDevice, attachMouse
-- `packages/input/src/internal/raw-input.ts` — 디바이스 원시 상태(프레임 사이 누적): 눌린 키·버튼, 이번 프레임 새 눌림, 마우스·휠 누적. 순수 함수로 갱신. see docs/09-traversal.md §4 | exports: RawInput, createRawInput, keyDown, keyUp, buttonDown, buttonUp, mouseMove, wheel, releaseAll, endFrame
+- `packages/input/src/internal/raw-input.ts` — 디바이스 원시 상태(프레임 사이 누적): 눌린 키·버튼, 이번 프레임 새 눌림, 마우스·휠 누적. 순수 함수로 갱신. see docs/09-traversal.md §4 | exports: PadRaw, PAD_AXES, PAD_BUTTONS, RawInput, createRawInput, keyDown, keyUp, buttonDown, buttonUp, mouseMove, wheel, releaseAll, endFrame
 - `packages/input/src/internal/service.ts` — createInput: 디바이스 부착 + phase 0 시스템(원시 입력 → ActionState 스냅샷). see docs/modules/input.md | exports: INPUT_PHASE, createInput
 
 ## packages/physics
-- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, PhysicsTransport, PhysicsDeps
+- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, CharacterInput, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, PhysicsTransport, PhysicsDeps
 - `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 물리. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts', anchorOf, createPhysics, DEFAULT_PHYSICS_CONFIG, PHYSICS_PHASE
-- `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). | exports: CommandQueue, createCommandQueue
+- `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). 캐릭터 입력은 핸들당 마지막 것만(같은 프레임 덮어쓰기). | exports: CommandQueue, createCommandQueue
 - `packages/physics/src/internal/host/snapshot-reader.ts` — 스냅샷 읽기·보간(08 §9): SAB는 seqlock으로 최신 버퍼를 복사, 폴백은 받은 프레임 그대로. 최근 몇 개를 시뮬레이션 시각 순으로 두고 | exports: SnapshotHistory, createSnapshotHistory, readSab
 - `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, isIsolated, SLOT_BITS, slotOf, Command, RayHitMsg, ToWorker, FromWorker
 - `packages/physics/src/internal/service.ts` — createPhysics(08 §1·§9·§10): 워커(감독자) 또는 주입 전송 → init(앵커·SAB) → ready. 시스템 'physics'(phase 30)가 프레임마다 | exports: PHYSICS_PHASE, DEFAULT_PHYSICS_CONFIG, anchorOf, createPhysics
-- `packages/physics/src/internal/worker/bodies.ts` — 워커 바디 슬롯: 명령(상자·삭제·순간이동) 적용 + 스냅샷 채우기. 슬롯 = 핸들 하위 비트(메인이 발급), 좌표 변환 WF ↔ PHYS는 여기서만. | exports: BodySlots, createBodySlots
+- `packages/physics/src/internal/worker/bodies.ts` — 워커 바디 슬롯: 명령(상자·캐릭터·입력·삭제·순간이동) 적용 + 스냅샷 채우기. 슬롯 = 핸들 하위 비트(메인이 발급), 좌표 변환 WF ↔ PHYS는 여기서만. | exports: BodyCommand, BodySlots, createBodySlots
 - `packages/physics/src/internal/worker/cell-colliders.ts` — 셀 콜라이더 적재(08 §4): 셀마다 [높이장, JCOL 셰이프들] 작업 → 적재 큐(도착 순서, 가까운 셀부터 보내는 건 메인 배선). | exports: CellColliders, createCellColliders
+- `packages/physics/src/internal/worker/character.ts` — 도보 캐릭터(08 §5): Jolt CharacterVirtual 캡슐(반경 0.25, 전체 키 1.70 — 위치 = 발, mShapeOffset으로 캡슐을 위로), 경사 50°, 계단 0.40 m, | exports: CHARACTER, CharacterBody, Characters, approach, createCharacters
 - `packages/physics/src/internal/worker/core.ts` — 물리 워커 코어(08 §1·§9): init → Jolt 로드·월드·스냅샷 싱크, step → 명령 적용 + 고정 스텝(메인 시계 targetS까지, 최대 N, 초과 시간은 버림) → 스냅샷. | exports: Send, PhysicsCore, createPhysicsCore
 - `packages/physics/src/internal/worker/heightfield.ts` — 지형 높이장(08 §4, 05 §4 terrain.height): u16 257² → Jolt HeightFieldShape(1 m 간격, 블록 4). 샘플 [iz·size + ix] = 셀 로컬 (ix, h, iz), | exports: createHeightfieldShape, createMeshShape, warmUpShapes
 - `packages/physics/src/internal/worker/jolt-init.ts` — Jolt 초기화(08 §1, ADR-0041): single-thread wasm-compat 빌드(wasm 내장). multithread 빌드는 pthread 워커를 자기 파일로 띄우는데 | exports: Jolt, JoltBuildName, JoltLoaded, loadJolt
@@ -192,13 +194,17 @@
 - `packages/tile-format/src/internal/xxh64.ts` — XXH64(seed 0) — 섹션 해시·cells.idx hash32. BigInt 없이 u32 hi/lo 쌍 연산(파이프라인 처리량). see docs/05-tile-format.md §3, §5 | exports: xxh64Hex, xxh64Low32
 
 ## packages/traversal
-- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. M01-T06 = freecam만(physics 없음). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, HudHints, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, TraversalSettings, TraversalOptions, TraversalService
+- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
 - `packages/traversal/src/index.ts` — @sanpo/traversal 공개 엔트리(L3): 이동 모드 상태기계·카메라 리그. api.ts 재수출 + create* 팩토리만. see docs/modules/traversal.md | exports: * from './api.ts', forwardOf, lookAtAngles, createTraversal, DEFAULT_TRAVERSAL_SETTINGS
+- `packages/traversal/src/internal/camera/first-person-rig.ts` — FirstPersonRig(09 §3): 눈 = 발 + 눈높이(연석·계단 높이 변화는 스무딩) + 헤드밥(걸음 주기 수직·반주기 측면), 시선 스무딩. 순수 계산. see docs/09-traversal.md §3 | exports: LookState, FirstPersonState, createLookState, createFirstPersonState, stepLook, followFeet, headBob, firstPersonCamera
 - `packages/traversal/src/internal/camera/free-rig.ts` — FreeRig: 6DOF 관성 자유비행(요·피치, 롤 잠금) 순수 계산. WF float64. see docs/09-traversal.md §2 freecam, §3 | exports: FreeRigState, FreeRigIntent, createFreeRigState, clampPitch, forwardOf, rigQuat, lookAtAngles, stepFreeRig
+- `packages/traversal/src/internal/camera/third-person-rig.ts` — ThirdPersonRig(09 §3): 피벗 = 발 + 어깨 높이, 오른쪽 어깨 오프셋 0.4 m, 시선 반대쪽으로 거리 3.5 m(휠 1.5–6). | exports: zoomDistance, thirdPersonCamera
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → CameraState. physics 불필요. see docs/09-traversal.md §2 freecam | exports: createFreecamMode
-- `packages/traversal/src/internal/service.ts` — createTraversal: FSM + 기본 모드 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD). see docs/modules/traversal.md | exports: TRAVERSAL_PHASE, createTraversal
+- `packages/traversal/src/internal/modes/walk.ts` — walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도 | exports: isWalkParams, moveVelocity, WalkMode, createWalkMode
+- `packages/traversal/src/internal/service.ts` — createTraversal: FSM + 기본 모드(freecam·walk) 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD·플레이어). see docs/modules/traversal.md | exports: TRAVERSAL_PHASE, createTraversal
 - `packages/traversal/src/internal/settings.ts` — traversal 기본 설정(09 §2 freecam, §3 리그). 오버라이드는 createTraversal 옵션 → mergeConfig. see docs/09-traversal.md | exports: DEFAULT_TRAVERSAL_SETTINGS
+- `packages/traversal/src/internal/walk-placement.ts` — walk 착지점: 후보(기준점 → 6·12·24·48 m 링 × 8방위)마다 하늘(1,200 m)에서 수직 레이 → 첫 충돌이 TERRAIN(지면)인 가장 앞 후보. | exports: TERRAIN_LAYER, spotCandidates, findStreetSpot
 
 ## packages/ui
 - `packages/ui/src/api.ts` — @sanpo/ui 공개 계약(타입·인터페이스). see docs/modules/ui.md

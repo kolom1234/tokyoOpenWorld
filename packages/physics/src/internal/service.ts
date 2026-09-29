@@ -189,7 +189,10 @@ function createTracking() {
   };
 }
 
-type BodyApi = Pick<PhysicsService, 'debugSpawnBox' | 'despawn' | 'teleport' | 'pose'>;
+type BodyApi = Pick<
+  PhysicsService,
+  'debugSpawnBox' | 'spawnCharacter' | 'setCharacterInput' | 'despawn' | 'teleport' | 'pose'
+>;
 type CellApi = Pick<PhysicsService, 'addCell' | 'removeCell' | 'hasCell' | 'raycast'>;
 
 function bodyApi(
@@ -204,6 +207,15 @@ function bodyApi(
       const h = handles.alloc();
       queue.push({ c: 'box', h, posWF: { ...posWF }, half: { ...half }, dynamic });
       return h;
+    },
+    spawnCharacter(posWF, yaw) {
+      const h = handles.alloc();
+      queue.push({ c: 'character', h, posWF: { ...posWF }, yaw });
+      return h;
+    },
+    setCharacterInput(h, i) {
+      const moveWF = { x: i.moveWF.x, y: 0, z: i.moveWF.z };
+      queue.push(i.yawRad === undefined ? { c: 'charInput', h, moveWF } : { c: 'charInput', h, moveWF, yaw: i.yawRad });
     },
     despawn(h) {
       handles.free(h);

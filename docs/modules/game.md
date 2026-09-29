@@ -67,8 +67,10 @@ test/start-view.test.ts(시작 시점 = 지면 + 60 m·Scramble Square 조준), 
 E2E(Playwright, `pnpm test:e2e` — 빌드 + vite preview, Chromium은 `--enable-unsafe-swiftshader`, 로컬 다른 Chromium은 `PW_CHROMIUM_PATH`):
 `tests/e2e/boot.spec.ts`(`?world=mini` → `data-world=loaded`·셀 4·격리·콘솔 오류 없음),
 `tests/e2e/render.spec.ts`(`?world=mini&debug=1&backend=webgl` → 셀 4 렌더, 중앙 타워·하단 건물 픽셀 비율, O 테스트 전후 픽셀 차 0; 스크린샷 `test-results/screenshots/` → CI 아티팩트 `e2e-screenshots`).
-`tests/e2e/decode.spec.ts`(`?world=mini&probe=decode` → 4셀 정점·인덱스 수 = 파이프라인 스냅샷, 2차 Cache Storage, 취소, 긴 작업 0, 셀당 시간 첨부 `decode-probe.json`).
+`tests/e2e/decode.spec.ts`(`?world=mini&probe=decode` → 4셀 정점·인덱스 수 = 파이프라인 스냅샷, 2차 Cache Storage, 취소, 긴 작업 0, 셀당 시간 첨부 `decode-probe.json`),
+`tests/e2e/physics.spec.ts`(물리 워커 shared·degraded 낙하, world-mini 셀 콜라이더·레이), `tests/e2e/walk.spec.ts`(C → 지면 착지·눈높이, W 물리 속도 1.35 m/s·발 = 지면, V 3인칭 거리, C 왕복 = 바디 유지).
 
 ## Status
 M00-T04 부트 골격: 기능 감지 표시 + 빈 스케줄러 루프 + `/api/world/current` 조회 + `?debug=1` stats-gl. M01-T07: 4단계 데이터 로드 + `?world=mini`. M01-T06: render·input·traversal(freecam) 조립, 디버그 오버레이.
 M02-T05: streaming(6단계)·streaming→render 배선(9단계 일부)·whenReady·precompile(10단계 일부), 임시 셀 로더 삭제, `?world=local`. 나머지 5·9–11단계는 각 패키지 태스크에서.
+M04-T01–T03: physics(월드 로드 뒤 스폰 앵커로 생성)·streaming→physics 배선, traversal 컨텍스트 `physics` = getter(월드 로드 뒤 walk 가능). 시작은 freecam, C = 걷기(ADR-0043).

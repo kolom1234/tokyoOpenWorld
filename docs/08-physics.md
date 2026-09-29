@@ -48,6 +48,7 @@
 - **에스컬레이터**: SENSOR 구간 진입 시 `EscalatorMode`: 경로 스플라인을 0.5 m/s로 이동(일본 기준 분속 30 m), 걸어서 오르기 허용(+0.6 m/s).
 - **이동 발판(열차)**: 키네마틱 TRAIN 바디 위에서는 `GetGroundVelocity()`를 캐릭터 속도에 합산 → 달리는 열차 안에서 걷기 가능.
 - 지면 재질 → 발소리(audio)로 전달 (`groundMaterial`).
+- 구현(M04-T03, ADR-0043): 위치 = 발(캡슐 `mShapeOffset`), 스텝마다 가감속 → `ExtendedUpdate`(계단·바닥 붙기) → 물리 스텝. 스냅샷은 강체와 같은 슬롯 배치(flags GROUNDED, groundMat = 지면 바디 userData).
 
 ## 6. 차량 (승용차)
 Jolt `WheeledVehicleController`. 일반 소형 세단(가상 모델) 기본값 — `content/vehicles/sedan.json`에 외부화:

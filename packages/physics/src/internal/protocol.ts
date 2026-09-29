@@ -38,6 +38,10 @@ export type Command =
   | { c: 'box'; h: number; posWF: Vec3d; half: Vec3; dynamic: boolean }
   | { c: 'despawn'; h: number }
   | { c: 'teleport'; h: number; posWF: Vec3d; yaw: number }
+  /** 도보 캐릭터(08 §5) 생성 — 위치 = 발(WF). */
+  | { c: 'character'; h: number; posWF: Vec3d; yaw: number }
+  /** 원하는 수평 속도(m/s, WF)·방향(yaw — 아바타). */
+  | { c: 'charInput'; h: number; moveWF: Vec3; yaw?: number }
   | { c: 'removeCell'; key: CellKey };
 
 /** 레이캐스트 결과(WF). */

@@ -1,4 +1,4 @@
-// 부트 7–9단계 조립: render + input + traversal(freecam) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render 배선.
+// 부트 7–9단계 조립: render + input + traversal(freecam, 월드 로드 뒤 walk) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선.
 // 지면 질의는 streaming 높이장(월드 로드 전 = 미적재). see docs/modules/game.md §부트 시퀀스, docs/06-world-streaming.md §8
 import {
   createWorkerSupervisor,
@@ -126,6 +126,29 @@ function loadMaterialsLater(render: RenderService, url: string | undefined, late
     });
 }
 
+/** traversal: 시작 = freecam(시작 시점). physics는 월드 로드 뒤 생긴다 → getter(전환 요청 때마다 요구조건을 본다 — walk는 그때부터). */
+function createTraversalFor(
+  deps: WorldViewDeps,
+  input: InputService,
+  ground: GroundQuery,
+  late: LateState,
+): TraversalService {
+  const startPose = deps.start?.pose ?? startFreecamPose;
+  const fov = deps.start?.fovDeg;
+  return createTraversal(
+    {
+      input,
+      bus: deps.bus,
+      log: deps.log,
+      ground,
+      get physics() {
+        return late.physics;
+      },
+    },
+    { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
+  );
+}
+
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
   const config = { ...deps.renderConfig, backend: deps.backend };
@@ -133,12 +156,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const input = createInput({ target: canvas, bus, log });
   const late: LateState = { materialsSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
-  const startPose = deps.start?.pose ?? startFreecamPose;
-  const fov = deps.start?.fovDeg;
-  const traversal = createTraversal(
-    { input, bus, log, ground },
-    { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
-  );
+  const traversal = createTraversalFor(deps, input, ground, late);
   const now = deps.now ?? Date.now;
   const sim = createSim({ bus, log, now, initialClock: deps.clock ?? defaultClock(now()) });
   const frameSource: FrameSource = {
@@ -180,7 +198,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
       // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
       await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true });
       // 지면 높이를 알게 됐으니 "지면 위 60 m"를 정확히 다시 잡는다.
-      traversal.request('freecam', startPose(ground));
+      traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
       loadMaterialsLater(render, world.materialsUrl, late, wlog);
       return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
     },

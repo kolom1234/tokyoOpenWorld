@@ -21,6 +21,16 @@ export interface Pose {
   groundMaterial: number;
 }
 
+/** 도보 캐릭터 입력(08 §5·§10): 원하는 수평 속도 — 가속 8·감속 10 m/s²은 워커가. */
+export interface CharacterInput {
+  /** 원하는 수평 속도(m/s, WF — y 무시). */
+  moveWF: Vec3;
+  /** 점프(08 §5 기본 OFF — 아직 무시). */
+  jump?: boolean;
+  /** 아바타 방향(yaw, rad). 없으면 그대로. */
+  yawRad?: number;
+}
+
 export interface PhysicsConfig {
   /** 고정 스텝(Hz). 08 §1 = 120. */
   stepHz: number;
@@ -79,6 +89,13 @@ export interface PhysicsService extends SystemProvider {
    */
   debugSpawnBox(posWF: Vec3d, halfExtentM: Vec3, dynamic: boolean): BodyHandle;
   despawn(h: BodyHandle): void;
+  /**
+   * 도보 캐릭터(08 §5, CharacterVirtual 캡슐 r 0.25·키 1.70, 경사 50°, 계단 0.40 m, 바닥 붙기 0.5 m, 삼각형 양면).
+   * posWF = 발 위치. pose().posWF도 발, grounded·groundMaterial 포함.
+   */
+  spawnCharacter(posWF: Vec3d, yawRad: number): BodyHandle;
+  /** 다음 step에 전달(같은 프레임 여러 번이면 마지막 것). */
+  setCharacterInput(h: BodyHandle, i: CharacterInput): void;
   /**
    * 셀 콜라이더(08 §4): jcol = collision.bin(gzip 해제), hf = terrain.height. 버퍼 소유권은 워커로 넘어간다(Transferable).
    * 같은 키면 교체. 워커가 틱당 예산 안에서 적재 → 끝나면 hasCell = true.

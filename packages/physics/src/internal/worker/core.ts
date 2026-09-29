@@ -4,6 +4,7 @@ import type { Vec3d } from '@sanpo/core';
 import type { FromWorker, ToWorker } from '../protocol.ts';
 import { type BodySlots, createBodySlots } from './bodies.ts';
 import { type CellColliders, createCellColliders } from './cell-colliders.ts';
+import { type Characters, createCharacters } from './character.ts';
 import { warmUpShapes } from './heightfield.ts';
 import { loadJolt } from './jolt-init.ts';
 import { createQueries, type Queries } from './queries.ts';
@@ -18,6 +19,7 @@ const LOAD_TICK_LIMIT_MS = 8;
 interface State {
   world: PhysicsWorld;
   bodies: BodySlots;
+  characters: Characters;
   colliders: CellColliders;
   queries: Queries;
   cellBudgetMs: number;
@@ -47,6 +49,7 @@ function step(st: State, targetS: number): void {
   if (st.simT === null) st.simT = targetS - st.dt;
   let n = 0;
   while (st.simT + st.dt <= targetS + 1e-9 && n < st.maxSteps) {
+    st.characters.update(st.dt);
     st.world.step(st.dt);
     st.simT += st.dt;
     st.steps++;
@@ -73,9 +76,11 @@ async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<
   warmUpShapes(loaded.Jolt);
   const world = createWorld(loaded.Jolt, 0);
   const anchor: Vec3d = { ...msg.anchorWF };
+  const characters = createCharacters(world);
   const st: State = {
     world,
-    bodies: createBodySlots(world, anchor),
+    characters,
+    bodies: createBodySlots(world, anchor, characters),
     colliders: createCellColliders(
       world,
       anchor,
@@ -120,6 +125,7 @@ export function createPhysicsCore(send: Send): PhysicsCore {
       st.colliders.dispose();
       st.queries.dispose();
       st.bodies.dispose();
+      st.characters.dispose();
       st.world.dispose();
       st = undefined;
     }
