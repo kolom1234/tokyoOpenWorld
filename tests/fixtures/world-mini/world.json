@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "formatVersion": 1,
-  "buildId": "20260927-bbc0262-89260415",
+  "buildId": "20260929-f20a345-ec1646fc",
   "crs": {
     "projected": "EPSG:6677",
     "E0": -12000,
@@ -40,5 +40,5 @@
     "rail": "global/rail.bin",
     "map": "global/map.pmtiles"
   },
-  "createdAt": "2026-09-27T00:00:00Z"
+  "createdAt": "2026-09-29T00:00:00Z"
 }

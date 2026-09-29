@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 196개.
+> 파일 204개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -88,11 +88,17 @@
 - `packages/render/src/internal/lighting/env-probe.ts` — 환경 조명(07 §6): 하늘에서 동적 큐브맵 → PMREM(`SkyEnvironmentNode`) → scene.environmentNode. | exports: ENV_CUBE_SIZE, EnvProbe, attachEnvProbe
 - `packages/render/src/internal/lighting/shadows.ts` — 태양 그림자(07 §6·§9): 대기 라이트(DirectionalLight)에 CSM(takram `CascadedShadowMapsNode` ⊃ three CSMShadowNode) — High = 4 캐스케이드 × 2048², 거리 600 m, 캐스케이드 경계 페이드. | exports: ShadowSettings, SHADOWS_HIGH, SunShadows, enableSunShadows
 - `packages/render/src/internal/lighting/sun.ts` — 태양 방향 규약(WF: +X 동, +Y 위, −Z 도북) + 기본값. 방향은 계산하지 않고 sim(EnvironmentState.sunDirWF)에서 받는다 — 연결 전 기본 방향만 여기. | exports: DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF, sunDirFromAzEl
+- `packages/render/src/internal/materials/facade/details.ts` — 절차 파사드 ⑤ 디테일(07 §5-8): 층간 줄눈(슬래브 띠), 빗물 얼룩(상단→하단 그라디언트 × 가로 저주파 노이즈), 지면 AO, 모서리 AO, 옥상 두겁 띠. | exports: FacadeDetails, facadeDetails
+- `packages/render/src/internal/materials/facade/grid.ts` — 절차 파사드 ① 입력·층/베이 격자(07 §5-1·2): `_FACADE`(unorm8×4 → class·floors·tint·flags), UV0 = (면 시작점부터 m, 건물 바닥부터 m), | exports: F, I, B, V3, FACADE_CLASS, FACADE_CLASS_COUNT, FACADE_FLAG, RETAIL_FLOOR_M, FacadeInputs, facadeInputs, FacadeGrid, facadeGrid
+- `packages/render/src/internal/materials/facade/index.ts` — 절차 파사드 머티리얼(M_FACADE, 07 §5): 격자(grid) → 벽 재질(walls) + 창(windows) + 1층 상점(retail) + 디테일(details) → PBR. | exports: createFacadeMaterial
+- `packages/render/src/internal/materials/facade/retail.ts` — 절차 파사드 ④ 1층 상점(07 §5-6, flags.retail): 쇼윈도(0.3–3.2 m, 베이마다 멀리언), 간판 띠(3.4–4.2 m, 가상 브랜드 아틀라스는 M05-T06 — | exports: RetailSample, facadeRetail
+- `packages/render/src/internal/materials/facade/walls.ts` — 절차 파사드 ③ 벽 재질(07 §5-3): 클래스 + 건물 해시(tintIdx)로 텍스처 배열 그룹·레이어 선택 × 클래스 팔레트 틴트. 지붕은 평지붕 콘크리트/경사 기와. | exports: WallSample, facadeWall, wallFloor
+- `packages/render/src/internal/materials/facade/windows.ts` — 절차 파사드 ② 창(07 §5-2·4 일부): 베이 안 사각 SDF(프레임 두께·화면 공간 안티에일리어싱) + 클래스별 배치(오피스 띠창, 맨션 발코니 문, | exports: WindowMasks, facadeWindows
 - `packages/render/src/internal/materials/hlod.ts` — HLOD 머티리얼: 기본 단색 PBR + 자식 16영역 표시·디더 페이드. 셀별 페이드 16개는 per-object uniform(vec4 × 4, objectGroup)으로, | exports: HlodFadeData, createHlodFades, createHlodMaterial
 - `packages/render/src/internal/materials/library.ts` — 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + manifest(그룹·타일 크기·평균색). | exports: MATERIAL_GROUPS, MaterialGroup, MAX_LAYERS, MaterialsManifest, LibraryState, LibraryStats, MaterialLibrary, createMaterialLibrary
 - `packages/render/src/internal/materials/precompile.ts` — 셰이더 선컴파일(06 §6): 고정 머티리얼 ID별 기본·HLOD 변형을 작은 더미 메시로 씬에 잠깐 붙여 `compileAsync` → 스트리밍 중 첫 사용 끊김 제거. | exports: precompileMaterials
 - `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼 + HLOD 변형(자식 페이드, M02-T05). 셀 머티리얼은 라이브러리 텍스처 배열을 쓴다(M03-T01, 적재 전 평균색). | exports: MaterialRegistry, PRECOMPILE_IDS, createMaterialRegistry
-- `packages/render/src/internal/materials/textured.ts` — 라이브러리 텍스처를 쓰는 기본 머티리얼(M03-T01): 지형(`_SURF` 그룹, 월드 XZ 평면 투영) · 파사드(건물 해시로 벽 그룹·레이어, UV0 = 벽 미터). | exports: LayerSample, sampleLayer, perturbWorld, createTerrainMaterial, buildingHashes, createFacadeMaterial
+- `packages/render/src/internal/materials/textured.ts` — 라이브러리 텍스처 표본 함수(sampleLayer·perturbWorld) + 지형 기본 머티리얼(`_SURF` 그룹, 월드 XZ 평면 투영, M03-T01). | exports: LayerSample, sampleLayer, perturbWorld, createTerrainMaterial
 - `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7): 씬 패스(MRT) → 대기 공중원근(aerialPerspective, 깊이 1 = 하늘) → 출력 변환(톤매핑 AgX·sRGB). | exports: PostPipeline, createDirectRender, createPostPipeline
 - `packages/render/src/internal/renderer/backend-caps.ts` — 초기화 전 백엔드·깊이 기능 예측: WebGPU 어댑터 유무, WebGL2 EXT_clip_control(reversed-Z 필요조건). see docs/07-rendering.md §1, ADR-0006 | exports: BackendProbe, webgl2HasClipControl, probeBackend
 - `packages/render/src/internal/renderer/gpu-timer.ts` — GPU 타이머(M03 성능 표): WebGPU timestamp-query(three `trackTimestamp`)로 렌더 패스 GPU 시간을 모아 프레임당 평균(ms). | exports: GpuTimerStats, GpuTimer, createGpuTimer
@@ -203,10 +209,12 @@
 - `tools/pipeline/src/stages/build/assemble.ts` — L0 셀 조립: terrain.mesh + terrain.height + buildings.mesh + meta.json → TKC, 영역 빌드(cells.idx·world.json). see docs/04-data-pipeline.md §4.4, docs/05-tile-format.md §1–3 | exports: CellBuildStats, CellBuildInput, buildCell, AreaBuildInput, unionBounds, buildArea
 - `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, quantizePositions, buildBuildings
 - `tools/pipeline/src/stages/build/dem-window.ts` — dem_1m.tif에서 셀 빌드용 높이 창 읽기(GDAL) + 셀별 (257+2m)² 부분 창 추출. see docs/04-data-pipeline.md §4.4, §6 | exports: CELL_SIZE_M, DEM_MARGIN, DemWindow, CellWindow, readDemWindow, cellWindow, sampleAt, DemWindowMeta, writeDemWindowFiles, readDemWindowFiles
+- `tools/pipeline/src/stages/build/facade-params.ts` — 절차 파사드 파라미터(M03-T04, 07 §5): PLATEAU 건물 용도 코드·높이·층수 → `_FACADE`(u8×4: class, floors, tintIdx, flags). | exports: FACADE_CLASS, FacadeClass, FACADE_FLAG, FacadeInput, facadeParams
 - `tools/pipeline/src/stages/build/heightfield.ts` — terrain.height 섹션: 셀 창(257²) → 공통 기준·스텝 양자화 → writeHeightfield → gzip. see docs/05-tile-format.md §4 (terrain.height), docs/adr/0018-cell-mesh-build.md | exports: cellHeightfield, encodeTerrainHeight
 - `tools/pipeline/src/stages/build/manifest.ts` — 빌드 식별·매니페스트: buildId(YYYYMMDD-<git7>-<lock8>), world.json 직렬화. see docs/04-data-pipeline.md §2, docs/05-tile-format.md §2 | exports: AreaDef, gitShort, lockHash8, buildDate, makeBuildId, createdAtOf, worldJson
 - `tools/pipeline/src/stages/build/terrain-mesh.ts` — terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: TERRAIN_SIMPLIFY_ERROR_M, TERRAIN_MATERIAL, SURF_DEFAULT, TerrainGeometry, remapVertices, buildTerrainGeometry, encodeTerrainMesh
 - `tools/pipeline/src/stages/build/terrain-rtin.ts` — 지형 단순화: RTIN(직각 이등변 삼각형 이분 계층) + 정확 오차(삼각형 내부 모든 격자 샘플) + 경계 정점 강제. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: rtinTriangulate
+- `tools/pipeline/src/stages/build/wall-planes.ts` — 벽 평면 묶기(M03-T04): 같은 건물에서 같은 평면(수평 법선 방향·평면 위치)에 있는 벽 면들은 u 원점·폭을 공유한다. | exports: WallFace, WallSpan, wallSpans, coplanarWithAny
 - `tools/pipeline/src/stages/fixture-plateau.ts` — plateau-mini 픽스처: 원천 CityGML에서 셀 1개의 건물 몇 동·도로 몇 개만 잘라 같은 파일 이름으로 기록. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: PlateauMiniOptions, splitCityGml, extractPlateauMini
 - `tools/pipeline/src/stages/fixture.ts` — fixture 단계: tests/fixtures/{world-mini, plateau-mini} 생성(M01-T05 빌드 파이프라인 재사용) + plateau-mini 1셀 빌드 스냅샷. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: WORLD_MINI_AREA, PLATEAU_MINI_CELL, PLATEAU_MINI_SOURCE, PLATEAU_MINI_BUILD_ID, LockSource, fixtureAttribution, FixtureInput, buildWorldMini, buildPlateauMini, PlateauMiniSnapshot, plateauMiniSnapshot, hasPlateauRaw
 - `tools/pipeline/src/stages/hlod/boxes.ts` — 원경 건물 기하: 방향 사각형 박스(LOD1 박스, 벽 4 + 지붕, 바닥 없음)와 격자 블록 매스(작은 건물 묶음). 평면 법선·벽 UV는 L0 규칙과 같다. | exports: BOX_SINK_M, addPrism, addFarBox, MassCell, accumulateMasses, MASS_MIN_COVERAGE, addMass

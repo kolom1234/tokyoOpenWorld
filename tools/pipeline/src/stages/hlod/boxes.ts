@@ -1,6 +1,7 @@
 // 원경 건물 기하: 방향 사각형 박스(LOD1 박스, 벽 4 + 지붕, 바닥 없음)와 격자 블록 매스(작은 건물 묶음). 평면 법선·벽 UV는 L0 규칙과 같다.
 // see docs/04-data-pipeline.md §4.5 (L2 LOD1 박스, L3 블록 매스)
 import { type Obb, obbCorners, type P2 } from '../../lib/geom2d.ts';
+import { facadeParams } from '../build/facade-params.ts';
 import type { MeshStream } from './child-split.ts';
 import { type FarBuilding, floorsOf, nightFlags } from './far-buildings.ts';
 
@@ -77,8 +78,14 @@ export function addPrism(
 
 /** 원경 건물 1동 → OBB 박스. */
 export function addFarBox(s: MeshStream, b: FarBuilding, ox: number, oz: number): void {
-  const facade = [0, floorsOf(b.storeys, b.h), 0, nightFlags(b.usage, b.id)];
-  addPrism(s, obbCorners(b.obb), b.y0 - BOX_SINK_M, b.y0 + b.h, ox, oz, facade);
+  const floors = floorsOf(b.storeys, b.h);
+  const f = facadeParams({ id: b.id, usage: b.usage, heightM: b.h, floors });
+  addPrism(s, obbCorners(b.obb), b.y0 - BOX_SINK_M, b.y0 + b.h, ox, oz, [
+    f[0],
+    floors,
+    f[2],
+    nightFlags(b.usage, b.id),
+  ]);
 }
 
 export interface MassCell {

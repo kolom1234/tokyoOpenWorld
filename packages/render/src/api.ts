@@ -39,6 +39,8 @@ export interface RenderConfig {
   gpuTiming: boolean;
   /** 태양 CSM 그림자(WebGPU만, 품질 티어 T08이 조정). */
   shadows: boolean;
+  /** 'flat' = 파사드를 단색 PBR로(셰이더 비용 A/B 측정·최저 품질). */
+  facade: 'procedural' | 'flat';
 }
 
 /** 공유 머티리얼 라이브러리 상태(M03-T01). 'manifest' = 평균색만, 'ready' = KTX2 배열 적용. */

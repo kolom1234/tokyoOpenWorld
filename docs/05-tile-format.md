@@ -74,7 +74,7 @@ credits.json                  출처 표기
 |---|---|---|---|---|
 | `terrain.mesh` | glb | 지면 메시. 속성: POSITION, NORMAL, `_SURF`(u8: 0 asphalt,1 sidewalk,2 grass,3 soil,4 gravel,5 water,6 rail_ballast,7 plaza) | render | L0–L3 |
 | `terrain.height` | bin+gzip | `{u16 size=257, f32 minH, f32 step=0.01}` + `u16[size*size]` (h = minH + v*step), **minH = 모든 셀 공통 −100**(ADR-0018, 이웃 경계 u16 비트 일치), 1 m 간격, 행 우선 `[iz*size + ix]`(iz=0 북쪽 가장자리, ix=0 서쪽) | physics, 지면 질의 | L0 |
-| `buildings.mesh` | glb | 파사드 클래스별 프리미티브. 속성: `_BLDG`(u16 셀내 건물 인덱스), `_FACADE`(u8×4: class, floors, tintIdx, flags), UV0 = 벽면 미터 좌표(u=벽 길이, v=높이) | render | L0–L1 |
+| `buildings.mesh` | glb | 파사드 클래스별 프리미티브. 속성: `_BLDG`(u16 셀내 건물 인덱스), `_FACADE`(u8×4: class 0 오피스·1 맨션·2 주택·3 상업·4 공공·5 공업, floors, tintIdx = 건물 해시, flags bit0 상점 1층·bit1 커튼월·상위 4비트 창 시드), UV0 = 벽: (같은 평면 묶음 시작점부터 m, 건물 최저점부터 m) / 지붕: 셀 로컬 (x, z), **TEXCOORD_1 = (벽 평면 묶음 폭 m, 건물 높이 m)**(지붕·부속물 = (0, 높이)). 벽과 동일 평면인 부속물 면은 제외(ADR-0030) | render | L0–L1 |
 | `roads.mesh` | glb | 차도·보도·연석·광장 | render | L0 |
 | `decals.mesh` | glb | 노면 표시 (별도 폴리곤 오프셋) | render | L0 |
 | `overrides.mesh` | glb | 랜드마크 수작업 모델 (PBR, 텍스처 참조는 shared) | render | L0 |

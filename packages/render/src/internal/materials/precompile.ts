@@ -24,6 +24,7 @@ function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
   else if (id === 'terrain_ground') g.setAttribute('_surf', new BufferAttribute(new Float32Array(3), 1));
   else if (id === 'facade_default') {
     g.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
+    g.setAttribute('uv1', new BufferAttribute(new Float32Array(6), 2));
     g.setAttribute('_bldg', new BufferAttribute(new Float32Array(3), 1));
     g.setAttribute('_facade', new BufferAttribute(new Uint8Array(12), 4, true));
   }

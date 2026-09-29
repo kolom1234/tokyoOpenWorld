@@ -1,10 +1,13 @@
 // buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4
+// 벽 UV0 = (면 시작점부터 수평 거리, 건물 바닥부터 높이), TEXCOORD_1 = (면 폭, 건물 높이), `_FACADE` = facade-params(M03-T04).
 import type { MetaBuilding, Vec3Tuple } from '@sanpo/tile-format';
 import { MeshoptEncoder } from 'meshoptimizer';
 import { encodeGlb } from '../../lib/gltf.ts';
 import { triangulateRings, type Vec3 } from '../../lib/triangulate.ts';
 import type { BuildingRecord, SurfaceKind } from '../../readers/plateau/types.ts';
+import { facadeParams } from './facade-params.ts';
 import { remapVertices } from './terrain-mesh.ts';
+import { coplanarWithAny, type WallSpan, wallSpans } from './wall-planes.ts';
 
 export const BUILDING_MATERIAL = 'facade_default';
 /** 렌더 대상 면. ground(바닥)·closure(가상 폐합면)는 보이지 않으므로 제외. */
@@ -38,6 +41,8 @@ class Stream {
   pos: number[] = [];
   nrm: number[] = [];
   uv: number[] = [];
+  /** TEXCOORD_1 = (면 폭 m, 건물 높이 m). 지붕은 (0, 건물 높이). */
+  uv1: number[] = [];
   bldg: number[] = [];
   facade: number[] = [];
   idx: number[] = [];
@@ -55,26 +60,80 @@ function localRings(rings: readonly (readonly number[])[], o: Vec3Tuple): number
   return rings.map((r) => r.map((v, i) => v - (o[i % 3] as number)));
 }
 
-/** 면 1개를 스트림에 추가. 반환 = 추가 삼각형 수. */
-function addSurface(s: Stream, rings: number[][], bIndex: number, facade: number[]): number {
-  const t = triangulateRings(rings);
-  if (!t) return 0;
+/** 건물 한 동의 면 공통 값. */
+interface BuildingCtx {
+  index: number;
+  facade: number[];
+  /** 건물 최저 정점 y(셀 로컬) — 벽 v 기준. */
+  baseY: number;
+  heightM: number;
+}
+
+type Tri = NonNullable<ReturnType<typeof triangulateRings>>;
+
+/**
+ * 삼각분할된 면 1개를 스트림에 추가. 반환 = 추가 삼각형 수.
+ * 벽: UV0 = (공유 u 원점부터, 건물 바닥부터), UV1.x = 공유 면 폭(wall-planes). `span` 없음 = 부속물(간판·핀·발코니 등) → 폭 0 = 창 없음.
+ */
+function addSurface(s: Stream, t: Tri, b: BuildingCtx, span: WallSpan | undefined): number {
   const n: Vec3 = t.normal;
   const base = s.count;
   const wall = Math.abs(n[1]) < WALL_NY;
   const th = Math.hypot(n[2], n[0]) || 1;
-  const [tx, tz] = [n[2] / th, -n[0] / th]; // 수평 접선 = up × n
+  const [tx, tz] = span ? [span.tx, span.tz] : [n[2] / th, -n[0] / th];
+  let u0 = span?.u0 ?? Number.POSITIVE_INFINITY;
+  if (!span)
+    for (let i = 0; i < t.vertices.length; i += 3)
+      u0 = Math.min(u0, (t.vertices[i] as number) * tx + (t.vertices[i + 2] as number) * tz);
+  const width = wall && span ? span.u1 - span.u0 : 0;
   for (let i = 0; i < t.vertices.length; i += 3) {
     const [x, y, z] = [t.vertices[i], t.vertices[i + 1], t.vertices[i + 2]] as number[];
     s.pos.push(x as number, y as number, z as number);
     s.nrm.push(...n.map((c) => Math.round(c * INT8_MAX)));
-    if (wall) s.uv.push((x as number) * tx + (z as number) * tz, y as number);
+    if (wall) s.uv.push((x as number) * tx + (z as number) * tz - u0, (y as number) - b.baseY);
     else s.uv.push(x as number, z as number);
-    s.bldg.push(bIndex);
-    s.facade.push(...facade);
+    s.uv1.push(width, b.heightM);
+    s.bldg.push(b.index);
+    s.facade.push(...b.facade);
   }
   for (const k of t.triangles) s.idx.push(base + k);
   return t.triangles.length / 3;
+}
+
+/** 건물 한 동: 렌더 면 삼각분할 → (부속물 제외) 벽 평면 묶기 → 스트림. 반환 = 삼각형 수. */
+function addBuilding(s: Stream, b: BuildingRecord, ctx: BuildingCtx, originWF: Vec3Tuple): number {
+  const faces: { t: Tri; plainOrRoof: boolean }[] = [];
+  for (const surf of b.surfaces) {
+    if (!RENDER_KINDS.has(surf.kind)) continue;
+    const t = triangulateRings(localRings(surf.ringsWF, originWF));
+    if (!t) continue;
+    faces.push({ t, plainOrRoof: surf.kind === 'installation' || Math.abs(t.normal[1]) >= WALL_NY });
+  }
+  const walls = faces.filter((f) => !f.plainOrRoof);
+  const wallFaces = walls.map((f) => ({ normal: f.t.normal, vertices: f.t.vertices }));
+  const spans = wallSpans(wallFaces);
+  let tris = 0;
+  let w = 0;
+  for (const f of faces) {
+    if (!f.plainOrRoof) tris += addSurface(s, f.t, ctx, spans[w++]);
+    // 벽과 동일 평면인 부속물(벽에 붙은 간판판 등)은 z-파이팅만 만든다 → 제외.
+    else if (
+      Math.abs(f.t.normal[1]) >= WALL_NY ||
+      !coplanarWithAny({ normal: f.t.normal, vertices: f.t.vertices }, wallFaces)
+    )
+      tris += addSurface(s, f.t, ctx, undefined);
+  }
+  return tris;
+}
+
+/** 건물 렌더 면 최저 y(WF). */
+function minY(b: BuildingRecord): number {
+  let lo = Number.POSITIVE_INFINITY;
+  for (const s of b.surfaces) {
+    if (!RENDER_KINDS.has(s.kind) && s.kind !== 'ground') continue;
+    for (const r of s.ringsWF) for (let i = 1; i < r.length; i += 3) lo = Math.min(lo, r[i] as number);
+  }
+  return Number.isFinite(lo) ? lo : 0;
 }
 
 function heightOf(b: BuildingRecord): number {
@@ -130,10 +189,9 @@ export async function buildBuildings(records: readonly BuildingRecord[], originW
   for (const [i, b] of sorted.entries()) {
     const h = heightOf(b);
     meta.push(metaOf(b, h));
-    const facade = [0, floorsOf(b, h), 0, 0]; // class, floors, tintIdx, flags — M05 파사드 파라미터 전 기본값
-    for (const surf of b.surfaces) {
-      if (RENDER_KINDS.has(surf.kind)) tris += addSurface(s, localRings(surf.ringsWF, originWF), i, facade);
-    }
+    const facade = facadeParams({ id: b.gmlId, usage: b.usage, heightM: h, floors: floorsOf(b, h) });
+    const ctx: BuildingCtx = { index: i, facade, baseY: minY(b) - originWF[1], heightM: h };
+    tris += addBuilding(s, b, ctx, originWF);
   }
   const sources = [...new Set(sorted.map((b) => b.source))].sort();
   if (s.count === 0) return { glb: null, meta, aabbLocal: null, vertices: 0, tris: 0, sources };
@@ -160,6 +218,7 @@ async function encodeBuildings(s: Stream, b: Aabb): Promise<Uint8Array> {
           POSITION: { array: re(q, 3), itemSize: 3 },
           NORMAL: { array: re(Int8Array.from(s.nrm), 3), itemSize: 3, normalized: true },
           TEXCOORD_0: { array: re(Float32Array.from(s.uv), 2), itemSize: 2 },
+          TEXCOORD_1: { array: re(Float32Array.from(s.uv1), 2), itemSize: 2 },
           _BLDG: { array: re(Uint16Array.from(s.bldg), 1), itemSize: 1 },
           _FACADE: { array: re(Uint8Array.from(s.facade), 4), itemSize: 4 },
         },

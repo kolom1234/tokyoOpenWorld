@@ -88,7 +88,7 @@ export interface MaterialLibrary {
 }
 
 /** 샘플러는 부팅 때 자리표시 텍스처 기준으로 만들어진다 → 최종 KTX2와 같은 필터(밉맵 선형·이방성)를 미리 준다(아니면 LOD 0 고정 에일리어싱). */
-const ANISOTROPY = 8;
+const ANISOTROPY = 4;
 
 function placeholder(rgba: [number, number, number, number], srgb: boolean): DataArrayTexture {
   const t = new DataArrayTexture(new Uint8Array(rgba), 1, 1, 1);

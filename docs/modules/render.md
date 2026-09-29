@@ -8,7 +8,7 @@ WebGPU(폴백 WebGL2) 렌더링 전부: 씬 그래프·원점 재설정, 셀 메
 ## Public API (M01-T06 구현분 — 07 §11의 부분집합)
 ```ts
 createRender(deps: { canvas: HTMLCanvasElement; bus: EventBus; log: Logger; config?: DeepPartial<RenderConfig> }): Promise<RenderService>
-RenderConfig { backend: 'auto' | 'webgl'; farM (60 km); maxPixelRatio (2); rebaseDistanceM (2048); rebaseGridM (256); basisPath ('/basis/'); exposure (3); gpuTiming (false); shadows (true) }
+RenderConfig { backend: 'auto' | 'webgl'; farM (60 km); maxPixelRatio (2); rebaseDistanceM (2048); rebaseGridM (256); basisPath ('/basis/'); exposure (3); gpuTiming (false); shadows (true); facade ('procedural' | 'flat') }
 RenderService extends SystemProvider {            // systems: renderPrep(70), render(80)
   readonly renderOriginWF: Readonly<Vec3d>;
   readonly backend: 'webgpu' | 'webgl2';           // 초기화 후 실제 백엔드
@@ -33,6 +33,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
 - `DecodedMesh` 속성 이름은 glTF 의미 이름 → render가 three 이름으로 변환(ADR-0020). 경계는 `boundsLocal` 사용(정점 순회 없음).
 - 셀 텍스처 없음: 모든 텍스처는 shared 머티리얼 배열(ADR-0027). 그룹 이름 `MATERIAL_GROUPS`는 파이프라인 library.json group과 1:1(추가는 끝에만).
 - 셰이더 해시 입력은 작은 정수만 varying으로(`_bldg` → 반올림 → uint 결합). 큰 float varying 보간 = 픽셀 노이즈(ADR-0027 §5).
+- 면·건물 상수 속성(`_facade`, UV1)은 **flat varying**(ADR-0030 §4) — 보간 오차가 정수 경계에서 격자를 뒤집는다.
 - 텍스처 교체 대상(자리표시)은 최종 텍스처와 같은 샘플러 필터를 가진다(밉맵 선형·이방성 8).
 - 메인 스레드 GPU 업로드는 streaming 적용 예산(2 ms + 4 MiB/프레임, apps/game 배선) 안에서만.
 - HLOD 머티리얼은 머티리얼 ID당 1개(셀별 페이드는 per-object uniform `userData.hlodFade` Vector4 × 4) → 셀이 늘어도 파이프라인 불변. 페이드 0 = 정점 붕괴(ADR-0025).
@@ -43,7 +44,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
 - 실존 상표·로고 텍스처 금지(M_SIGN은 가상 브랜드 아틀라스만).
 
 ## Files
-context(초기화·씬·머티리얼·대기·후처리 묶음), frame(renderPrep 70·render 80), renderer/(init — WebGPURenderer·깊이 전략·trackTimestamp, backend-caps — WebGPU 어댑터·EXT_clip_control 예측, gpu-timer — timestamp 평균), lighting/(atmosphere — Context·Light·(WebGL2만)하늘 배경·WF→ECEF·LUT prepare, env-probe — SkyEnvironmentNode(WebGPU만), shadows — CSM(takram CascadedShadowMapsNode, WebGPU만), sun — 방향 규약·기본값), post/(pipeline — 씬 패스 MRT → aerialPerspective / 직접 렌더), scene/(scene-graph, cell-node — DecodedMesh→Mesh·CellSet·`_CHILD` 변환, origin — 재설정 순수 계산, render-view — WF 카메라·재설정 실행, hlod-switch — 자식 표시·페이드 상태), materials/(registry — 기본·HLOD, library — KTX2 배열·manifest·평균색·그룹 uniform, textured — 지형(`_SURF` 그룹·월드 XZ)·파사드(건물 해시 벽 그룹, UV0 벽 미터)·sampleLayer·perturbWorld·buildingHashes, hlod — TSL 자식 페이드·붕괴, precompile — 셀과 같은 속성 형식 더미), lighting/sun, config.ts, service.ts.
+context(초기화·씬·머티리얼·대기·후처리 묶음), frame(renderPrep 70·render 80), renderer/(init — WebGPURenderer·깊이 전략·trackTimestamp, backend-caps — WebGPU 어댑터·EXT_clip_control 예측, gpu-timer — timestamp 평균), lighting/(atmosphere — Context·Light·(WebGL2만)하늘 배경·WF→ECEF·LUT prepare, env-probe — SkyEnvironmentNode(WebGPU만), shadows — CSM(takram CascadedShadowMapsNode, WebGPU만), sun — 방향 규약·기본값), post/(pipeline — 씬 패스 MRT → aerialPerspective / 직접 렌더), scene/(scene-graph, cell-node — DecodedMesh→Mesh·CellSet·`_CHILD` 변환, origin — 재설정 순수 계산, render-view — WF 카메라·재설정 실행, hlod-switch — 자식 표시·페이드 상태), materials/(facade/ — 절차 파사드 grid·walls·windows·retail·details·index(ADR-0030), registry — 기본·HLOD(`facade: 'flat'` 비교 모드), library — KTX2 배열·manifest·평균색·그룹 uniform, textured — 지형(`_SURF` 그룹·월드 XZ)·파사드(건물 해시 벽 그룹, UV0 벽 미터)·sampleLayer·perturbWorld·buildingHashes, hlod — TSL 자식 페이드·붕괴, precompile — 셀과 같은 속성 형식 더미), lighting/sun, config.ts, service.ts.
 컬링은 three 메시별 프러스텀 컬링(boundsLocal 구) — 별도 culling.ts 없음(필요 시 perf 후).
 예정: renderer/dynamic-resolution, scene/(culling, hlod-switch), materials/(terrain, road, decal, facade/*, glass, …), lighting/(atmosphere, env-probe, clustered, night-lights), post/*, weather/*, instances/*, debug/overlay.
 

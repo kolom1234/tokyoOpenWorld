@@ -6,6 +6,7 @@ import { MeshoptSimplifier } from 'meshoptimizer';
 import { triangulateRings } from '../../lib/triangulate.ts';
 import type { BuildingRecord, SurfaceKind } from '../../readers/plateau/types.ts';
 import type { DemWindow } from '../build/dem-window.ts';
+import { facadeParams } from '../build/facade-params.ts';
 import { addFarBox } from './boxes.ts';
 import {
   addTerrainPatch,
@@ -121,7 +122,9 @@ export function addSimplifiedBuildings(
   ]);
   const facades = sorted.map((b) => {
     const h = b.measuredHeightM ?? 10;
-    return [0, floorsOf(b.storeys, h), 0, nightFlags(b.usage, b.gmlId)];
+    const floors = floorsOf(b.storeys, h);
+    const f = facadeParams({ id: b.gmlId, usage: b.usage, heightM: h, floors });
+    return [f[0], floors, f[2], nightFlags(b.usage, b.gmlId)];
   });
   const at = (v: number): [number, number, number] => [
     w.pos[v * 3] as number,

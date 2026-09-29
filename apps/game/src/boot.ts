@@ -51,6 +51,8 @@ export interface BootFlags {
   timeMs?: number;
   /** `?shadows=0` → 태양 그림자 끔(A/B 성능 비교). */
   noShadows?: boolean;
+  /** `?facade=flat` → 파사드 단색(셰이더 비용 A/B). */
+  flatFacade?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -79,6 +81,7 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('gpuTiming') === '1' ? { gpuTiming: true } : {}),
     ...(Number.isFinite(Date.parse(q.get('time') ?? '')) ? { timeMs: Date.parse(q.get('time') ?? '') } : {}),
     ...(q.get('shadows') === '0' ? { noShadows: true } : {}),
+    ...(q.get('facade') === 'flat' ? { flatFacade: true } : {}),
   };
 }
 
@@ -151,6 +154,7 @@ async function setupWorldView(
         ...(flags.exposure ? { exposure: flags.exposure } : {}),
         ...(flags.gpuTiming ? { gpuTiming: true } : {}),
         ...(flags.noShadows ? { shadows: false } : {}),
+        ...(flags.flatFacade ? { facade: 'flat' as const } : {}),
       },
       ...clockOf(flags, golden),
       ...(golden

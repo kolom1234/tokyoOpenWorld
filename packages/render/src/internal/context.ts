@@ -47,7 +47,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const { renderer, backend, depth } = await initRenderer(deps.canvas, cfg, log);
   const graph = createSceneGraph();
   const library = createMaterialLibrary(cfg.basisPath);
-  const materials = createMaterialRegistry(library);
+  const materials = createMaterialRegistry(library, cfg.facade);
   const hlod = createHlodSwitch();
   const view = createRenderView(cfg, deps.bus, log);
   renderer.toneMappingExposure = cfg.exposure;

@@ -77,7 +77,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 ### 4.4 build (L0 셀 → TKC)
 셀마다 섹션 생성 (`05-tile-format.md §4`):
 1. 지형 메시: 1 m 그리드 → RTIN 단순화(모든 샘플 수직 오차 ≤ 5 cm, 정확 측정) + 경계 정점 고정(ADR-0018). 높이장 섹션(물리용) 별도(모든 셀 공통 기준·스텝).
-2. 건물: 머티리얼 클래스별 병합, 정점 속성 `_BLDG`(u16), `_FACADE(u8x4: class, floors, tint idx, flags)`. LOD2 텍스처는 **사용하지 않고** 틴트만 추출(항공사진 기반 텍스처는 그림자가 구워져 있어 동적 조명과 충돌).
+2. 건물: 머티리얼 클래스별 병합, 정점 속성 `_BLDG`(u16), `_FACADE(u8x4: class, floors, tint idx, flags)` — `stages/build/facade-params.ts`(용도·높이 → 클래스·상점·커튼월, ADR-0030), 벽 평면 묶기(`wall-planes.ts`)·TEXCOORD_1(면 폭·건물 높이). LOD2 텍스처는 **사용하지 않고** 틴트만 추출(항공사진 기반 텍스처는 그림자가 구워져 있어 동적 조명과 충돌).
 3. 도로/보도/노면표시: 메시 + 데칼 메시(깊이 오프셋용 별도 프리미티브).
 4. 오버라이드: `content/overrides/<gmlId>/model.glb`가 있으면 해당 건물 대체(원점·스케일 검증).
 5. 인스턴스: 소품/나무 → 타입별 트랜스폼 배열(`props.inst`).

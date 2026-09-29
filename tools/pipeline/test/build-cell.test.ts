@@ -28,7 +28,16 @@ describe('buildings.mesh', () => {
     const d = await decodeGlb(r.glb as Uint8Array);
     const p = d.primitives[0];
     expect(p?.materialId).toBe('facade_default');
-    expect(Object.keys(p?.attributes ?? {}).sort()).toEqual(['NORMAL', 'POSITION', 'TEXCOORD_0', '_BLDG', '_FACADE']);
+    expect(Object.keys(p?.attributes ?? {}).sort()).toEqual([
+      'NORMAL',
+      'POSITION',
+      'TEXCOORD_0',
+      'TEXCOORD_1',
+      '_BLDG',
+      '_FACADE',
+    ]);
+    const uv = p?.attributes.TEXCOORD_0?.array as Float32Array;
+    const uv1 = p?.attributes.TEXCOORD_1?.array as Float32Array;
     const q = p?.attributes.POSITION?.array as Uint16Array;
     const bl = p?.attributes._BLDG?.array as Uint16Array;
     const fac = p?.attributes._FACADE?.array as Uint8Array;
@@ -49,6 +58,16 @@ describe('buildings.mesh', () => {
         expect(at(pt, k)).toBeLessThan(at(hi, k) + 0.005);
       }
       expect(at(fac, v * 4 + 1)).toBe(Math.round(h / 3.5)); // floors
+      expect(at(fac, v * 4)).toBe(0); // usage 401 → office
+      // 벽: v = 건물 바닥부터 높이(0..h), u = 면 시작점부터(0..면 폭), TEXCOORD_1 = (면 폭, 높이).
+      expect(at(uv1, v * 2 + 1)).toBeCloseTo(h, 3);
+      if (Math.abs(at(nrm, v * 3 + 1)) < 64) {
+        expect(at(uv, v * 2 + 1)).toBeGreaterThan(-0.01);
+        expect(at(uv, v * 2 + 1)).toBeLessThan(h + 0.01);
+        expect(at(uv, v * 2)).toBeGreaterThan(-0.01);
+        expect(at(uv, v * 2)).toBeLessThan(at(uv1, v * 2) + 0.01);
+        expect([w, dd].some((len) => Math.abs(at(uv1, v * 2) - len) < 1e-3)).toBe(true);
+      }
       // 외향: 법선이 박스 중심에서 멀어지는 방향.
       const dot = [0, 1, 2].reduce((a, k) => a + (at(pt, k) - (at(lo, k) + at(hi, k)) / 2) * at(nrm, v * 3 + k), 0);
       expect(dot).toBeGreaterThan(0);

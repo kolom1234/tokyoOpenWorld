@@ -53,7 +53,7 @@ scene
 - 공통 전역 유니폼(`EnvUniforms`): `wetness`, `snowCover`, `timeOfDay`, `season`, `windDir/strength`, `nightFactor`.
 
 ## 5. 절차적 파사드 셰이더 (M_FACADE)
-입력: UV0(벽면 미터: u=벽 둘레 방향, v=지면으로부터 높이), `_FACADE`(class, floors, tintIdx, flags), `_BLDG`.
+입력: UV0(벽면 미터: u=같은 평면 묶음 시작점부터, v=건물 최저점부터), UV1(면 폭, 건물 높이), `_FACADE`(class, floors, tintIdx, flags) — 면 상수는 **flat varying**. 구현 `materials/facade/{grid,walls,windows,retail,details,index}.ts`(ADR-0030, M03-T04). 1–3·6·8 구현, 4(유리·실내)는 T05, 5(야간)는 M09, 7(발코니)은 M05-T07.
 1. **층 분할**: `floorH = classDefaults.floorH` (오피스 3.8 m, 주거 2.9 m, 상업 1층 4.5 m) — `floors`가 있으면 벽 높이/floors로 보정.
 2. **베이 분할**: 클래스별 베이 폭(오피스 1.8 m, 맨션 3.0 m, 주택 1.8 m) → 창 SDF 마스크(프레임 두께, 코너 라운드).
 3. **벽 재질**: 클래스 + `hash(bldgId)`로 텍스처 배열 레이어 선택(타일, 노출콘크리트, ALC 패널, 금속 패널, 모르타르, 사이딩) × tint.

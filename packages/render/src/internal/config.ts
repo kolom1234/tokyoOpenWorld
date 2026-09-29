@@ -11,4 +11,5 @@ export const DEFAULT_RENDER_CONFIG: RenderConfig = {
   exposure: 3,
   gpuTiming: false,
   shadows: true,
+  facade: 'procedural',
 };
