@@ -1,23 +1,33 @@
 // 지형 높이장(08 §4, 05 §4 terrain.height): u16 257² → Jolt HeightFieldShape(1 m 간격, 블록 4). 샘플 [iz·size + ix] = 셀 로컬 (ix, h, iz),
-// (0, 0) = 셀 북서 모서리 = 셀 원점. 힙에 직접 채운다(샘플마다 JS 호출 없음 — 257²에 ≈ 6 ms, 한 틱 예산 안).
+// (0, 0) = 셀 북서 모서리 = 셀 원점. 힙에 직접 채운다(샘플마다 JS 호출 없음). 셀은 4×4 타일(65², 가장자리 샘플 공유)로 나눠 작업 하나 ≈ 0.3 ms(ADR-0042 부록).
 import type { HeightfieldData } from '@sanpo/tile-format';
 import type { Jolt } from './jolt-init.ts';
 
 /** Jolt 블록 크기(블록마다 최소·최대로 8비트 양자화 → 블록 안 높이 범위가 작아 정밀도 ≈ mm–cm). */
 const BLOCK_SIZE = 4;
 
-export function createHeightfieldShape(Jolt: Jolt, hf: HeightfieldData): InstanceType<Jolt['Shape']> {
+/** 높이장 타일: 샘플 [x0, x0 + n) × [z0, z0 + n)(셀 로컬 오프셋 (x0, 0, z0)). 기본 = 셀 전체. */
+export function createHeightfieldShape(
+  Jolt: Jolt,
+  hf: HeightfieldData,
+  x0 = 0,
+  z0 = 0,
+  n = hf.size,
+): InstanceType<Jolt['Shape']> {
   const s = new Jolt.HeightFieldShapeSettings();
   try {
-    s.mSampleCount = hf.size;
+    s.mSampleCount = n;
     s.mBlockSize = BLOCK_SIZE;
-    s.mOffset.Set(0, 0, 0);
+    s.mOffset.Set(x0, 0, z0);
     s.mScale.Set(1, 1, 1);
-    const n = hf.size * hf.size;
-    s.mHeightSamples.resize(n);
+    s.mHeightSamples.resize(n * n);
     const base = Jolt.getPointer(s.mHeightSamples.data()) >> 2;
     const heap = Jolt.HEAPF32;
-    for (let i = 0; i < n; i++) heap[base + i] = hf.minH + (hf.data[i] as number) * hf.step;
+    for (let j = 0; j < n; j++) {
+      const row = (z0 + j) * hf.size + x0;
+      const o = base + j * n;
+      for (let i = 0; i < n; i++) heap[o + i] = hf.minH + (hf.data[row + i] as number) * hf.step;
+    }
     const r = s.Create();
     if (!r.IsValid()) throw new Error(`heightfield: ${r.GetError().c_str()}`);
     const shape = r.Get();

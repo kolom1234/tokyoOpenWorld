@@ -1,5 +1,6 @@
 // 셀 콜라이더 적재(08 §4): 셀마다 [높이장, JCOL 셰이프들] 작업 → 적재 큐(도착 순서, 가까운 셀부터 보내는 건 메인 배선).
-// pump(예산 ms): 예산 안에서 작업을 하나 이상 처리(파이프라인이 triMesh를 ≤ 2500 삼각형 청크로 잘라 작업 하나 ≈ 4 ms, ADR-0042).
+// pump(예산 ms): 예산 안에서 작업을 하나 이상 처리. 작업 = 높이장 4×4 타일 하나, triMesh ≤ 600 삼각형 조각 하나(파이프라인 청크 2500을 여기서 더 자름 —
+// 렌더 경합에서 wasm이 2–3배 느려져도 한 작업 ≤ 8 ms, ADR-0042 부록).
 // 셀의 모든 작업이 끝나면 onLoaded(key). 바디 = 작업마다 정적 바디 1개(셀 원점 + 셰이프 posLocal), userData = 재질.
 import type { CellKey, Vec3d } from '@sanpo/core';
 import { type HeightfieldData, parseJcol } from '@sanpo/tile-format';
@@ -15,9 +16,37 @@ interface Job {
   estMs: number;
 }
 
-/** 실측(M04-T02, Node·world-mini): 높이장 257² ≈ 2.4 ms(첫 호출 7), 건물 메시 ≈ 1.4–1.6 ms/1000 삼각형(첫 호출 2.4). */
-const HEIGHTFIELD_MS = 3;
-const MESH_MS_PER_TRI = 0.0016;
+/** 실측(Node, MVP 30셀): 높이장 257² p50 3.4·최대 9 ms → 타일(65²) ≈ 1/16, 건물 메시 p50 1.9·p95 2.3 ms/1000 삼각형. */
+const HEIGHTFIELD_TILE_MS = 0.3;
+const MESH_MS_PER_TRI = 0.002;
+/** 높이장 타일 수(축당)·작업당 삼각형 상한. */
+const HF_TILES = 4;
+export const MAX_JOB_TRIS = 600;
+
+/** 인덱스 [t0, t1) 삼각형만 쓰는 정점으로 압축한 조각. */
+export function meshSlice(
+  vertices: Float32Array,
+  indices: Uint32Array,
+  t0: number,
+  t1: number,
+): { vertices: Float32Array; indices: Uint32Array } {
+  if (t0 === 0 && t1 * 3 >= indices.length) return { vertices, indices };
+  const sub = indices.subarray(t0 * 3, t1 * 3);
+  const remap = new Map<number, number>();
+  const out = new Uint32Array(sub.length);
+  const v: number[] = [];
+  for (let k = 0; k < sub.length; k++) {
+    const vi = sub[k] as number;
+    let m = remap.get(vi);
+    if (m === undefined) {
+      m = remap.size;
+      remap.set(vi, m);
+      v.push(vertices[vi * 3] as number, vertices[vi * 3 + 1] as number, vertices[vi * 3 + 2] as number);
+    }
+    out[k] = m;
+  }
+  return { vertices: new Float32Array(v), indices: out };
+}
 
 interface CellEntry {
   originWF: Vec3d;
@@ -79,10 +108,16 @@ function jobsOf(
 ): CellEntry['jobs'] {
   const jobs: CellEntry['jobs'] = [];
   if (hf) {
-    jobs.push({
-      run: () => add(createHeightfieldShape(w.Jolt, hf), e, [0, 0, 0], [0, 0, 0, 1], OBJ.TERRAIN, TERRAIN_MATERIAL),
-      estMs: HEIGHTFIELD_MS,
-    });
+    const n = (hf.size - 1) / HF_TILES + 1;
+    for (let tz = 0; tz < HF_TILES; tz++) {
+      for (let tx = 0; tx < HF_TILES; tx++) {
+        const shape = () => createHeightfieldShape(w.Jolt, hf, tx * (n - 1), tz * (n - 1), n);
+        jobs.push({
+          run: () => add(shape(), e, [0, 0, 0], [0, 0, 0, 1], OBJ.TERRAIN, TERRAIN_MATERIAL),
+          estMs: HEIGHTFIELD_TILE_MS,
+        });
+      }
+    }
   }
   if (!jcol) return jobs;
   const r = parseJcol(new Uint8Array(jcol));
@@ -92,11 +127,18 @@ function jobsOf(
   }
   for (const sh of r.value) {
     if (sh.kind !== 'triMesh') continue;
-    const mesh = () => createMeshShape(w.Jolt, sh.vertices, sh.indices, sh.material);
-    jobs.push({
-      run: () => add(mesh(), e, sh.posLocal, sh.quat, sh.layer, sh.material),
-      estMs: (sh.indices.length / 3) * MESH_MS_PER_TRI,
-    });
+    const nt = sh.indices.length / 3;
+    for (let t0 = 0; t0 < nt; t0 += MAX_JOB_TRIS) {
+      const t1 = Math.min(nt, t0 + MAX_JOB_TRIS);
+      const mesh = () => {
+        const m = meshSlice(sh.vertices, sh.indices, t0, t1);
+        return createMeshShape(w.Jolt, m.vertices, m.indices, sh.material);
+      };
+      jobs.push({
+        run: () => add(mesh(), e, sh.posLocal, sh.quat, sh.layer, sh.material),
+        estMs: (t1 - t0) * MESH_MS_PER_TRI,
+      });
+    }
   }
   return jobs;
 }

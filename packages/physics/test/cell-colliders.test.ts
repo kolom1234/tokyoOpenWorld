@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import type { PhysicsTransport } from '../src/api.ts';
 import { createPhysics } from '../src/index.ts';
 import type { ToWorker } from '../src/internal/protocol.ts';
+import { MAX_JOB_TRIS, meshSlice } from '../src/internal/worker/cell-colliders.ts';
 import { createPhysicsCore } from '../src/internal/worker/core.ts';
 
 const MINI = join(import.meta.dirname, '../../../tests/fixtures/world-mini/L0');
@@ -107,6 +108,18 @@ function rayMesh(o: readonly number[], d: readonly number[], m: JcolTriMesh): nu
 
 const log = createLogger({ level: 'warn' });
 
+describe('meshSlice', () => {
+  it('keeps only the vertices used by the triangle range, remapped in first-use order', () => {
+    const v = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 2, 0, 2]);
+    const idx = new Uint32Array([0, 1, 2, 1, 3, 2, 3, 4, 2]);
+    expect(meshSlice(v, idx, 0, 3)).toEqual({ vertices: v, indices: idx });
+    const s = meshSlice(v, idx, 1, 3);
+    expect([...s.indices]).toEqual([0, 1, 2, 1, 3, 2]);
+    expect([...s.vertices]).toEqual([1, 0, 0, 1, 0, 1, 0, 0, 1, 2, 0, 2]);
+    expect(MAX_JOB_TRIS).toBeLessThanOrEqual(1000);
+  });
+});
+
 describe('cell colliders (world-mini)', () => {
   it('loads 4 cells over several budgeted ticks and raycasts ground/walls within 5 cm', async () => {
     const cells = await loadCells();
@@ -134,7 +147,7 @@ describe('cell colliders (world-mini)', () => {
     }
     expect(cells.every((c) => phys.hasCell(c.key))).toBe(true);
     const st = phys.stats();
-    // 적재가 여러 틱에 나뉘었다(예산 4 ms, 작업 = 높이장·≤ 2500 삼각형 청크). 틱 시간(≤ 8 ms) 판정은 실제 브라우저에서 —
+    // 적재가 여러 틱에 나뉘었다(예산 4 ms, 작업 = 높이장 4×4 타일·≤ 600 삼각형 조각 — 타일 이음새(64·128) 레이 포함). 틱 시간(≤ 8 ms) 판정은 실제 브라우저에서 —
     // 병렬 vitest의 CPU 경합·GC로 Node 시간은 흔들린다(ADR-0042).
     expect(ticks).toBeGreaterThan(10);
     expect(st.colliderCells).toBe(4);
@@ -145,6 +158,8 @@ describe('cell colliders (world-mini)', () => {
       for (const [sx, sz] of [
         [10, 10],
         [128, 64],
+        [128, 128],
+        [64, 128],
         [200, 240],
       ] as const) {
         const want = c.hf.minH + (c.hf.data[sz * c.hf.size + sx] as number) * c.hf.step;

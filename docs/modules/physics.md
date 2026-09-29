@@ -33,7 +33,7 @@ anchorOf(posWF, gridM) → 앵커(x·z 격자, y 0); PHYSICS_PHASE = 30; DEFAULT
 - 핸들 = 슬롯(0–127) | 세대 << 7, 바디 기록의 handle로 옛 핸들 무시.
 - 값 반환 `BodyID`는 바인딩 임시 객체 → 복사해 보관·제거 때 해제. `new Jolt.*` 설정 객체는 `Jolt.destroy`(jolt-mem `using`).
 - 캐릭터 = 바디 아님(CharacterVirtual) — 강체와 같은 슬롯·스냅샷 배치, 스텝마다 `ExtendedUpdate`를 물리 스텝 전에. 입력 명령은 핸들당 프레임 마지막 것만.
-- 셀 콜라이더 적재: 셀 = [높이장, JCOL triMesh 청크(≤ 2500 삼각형)] 작업, 틱마다 예산 4 ms 안(예상 비용으로 판단, 최소 1작업) — ADR-0042. 레이·충돌은 삼각형 양면(PLATEAU 감김 불일치). 보행자·차량 간 물리 충돌 없음(레이어 행렬 08 §3 = worker/layers.ts `COLLISION_PAIRS`).
+- 셀 콜라이더 적재: 셀 = [높이장 4×4 타일(65²), JCOL triMesh ≤ 600 삼각형 조각(파이프라인 청크 2500을 워커가 더 자름)] 작업, 틱마다 예산 4 ms 안(예상 비용으로 판단, 최소 1작업) — ADR-0042. 레이·충돌은 삼각형 양면(PLATEAU 감김 불일치). 보행자·차량 간 물리 충돌 없음(레이어 행렬 08 §3 = worker/layers.ts `COLLISION_PAIRS`).
 
 ## Files
 api.ts, internal/protocol.ts(메시지·스냅샷 배치·isIsolated), internal/service.ts(createPhysics·핸들·연결),
