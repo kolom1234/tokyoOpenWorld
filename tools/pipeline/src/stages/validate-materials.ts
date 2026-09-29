@@ -1,4 +1,4 @@
-// validate: 공유 머티리얼(shared/materials, M03-T01) — manifest 스키마·KTX2 파일 존재·바이트 수·레이어 인덱스·그룹 일관성. 없으면 건너뜀(픽스처 빌드).
+// validate: 공유 머티리얼(shared/materials, M03-T01) — manifest 스키마·KTX2 파일(텍스처 3장 + 실내 큐브맵) 존재·바이트 수·레이어 인덱스·그룹 일관성. 없으면 건너뜀(픽스처 빌드).
 // see docs/05-tile-format.md §1, schemas/materials.schema.json
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -23,7 +23,7 @@ export function checkMaterials(dir: string, schema: ValidateFunction, errors: st
     return null;
   }
   let bytes = 0;
-  for (const t of Object.values(m.textures)) {
+  for (const t of [...Object.values(m.textures), ...(m.interiors ? [m.interiors] : [])]) {
     const f = join(mdir, t.file);
     if (!existsSync(f)) {
       errors.push(`materials: ${t.file} missing`);

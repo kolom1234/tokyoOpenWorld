@@ -1,5 +1,5 @@
 // 절차 파사드 ② 창(07 §5-2·4 일부): 베이 안 사각 SDF(프레임 두께·화면 공간 안티에일리어싱) + 클래스별 배치(오피스 띠창, 맨션 발코니 문,
-// 주택 드문드문, 커튼월 거의 전면 + 스팬드럴). 유리는 어두운 반사면(환경 프로브) — 실내 매핑·블라인드 무늬는 M03-T05.
+// 주택 드문드문, 커튼월 거의 전면 + 스팬드럴). 유리 셰이딩(반사·실내·블라인드)은 glass.ts·interior.ts(M03-T05).
 import { abs, float, fwidth, hash, max, mix, select, smoothstep, vec3 } from 'three/tsl';
 import type { B, F, FacadeGrid, FacadeInputs, V3 } from './grid.ts';
 import { FACADE_CLASS } from './grid.ts';
@@ -16,8 +16,12 @@ export interface WindowMasks {
   frame: F;
   /** 유리 선형 색(창마다 조금씩 다름). */
   glassColor: V3;
-  /** 0..1 블라인드가 내려온 정도(유리 위쪽 밝은 띠). */
+  /** 0..1 블라인드가 내려온 정도(창 높이 비). */
   blind: F;
+  /** 블라인드가 이 픽셀을 덮는가(창 위쪽부터 blind 비율) 0/1. */
+  blindMask: F;
+  /** 창 해시 시드(실내 방 선택 — interior.ts). */
+  cell: F;
 }
 
 /** 사각형 SDF 안쪽 마스크(가장자리 1픽셀 부드럽게). d < 0 = 안. */
@@ -63,5 +67,6 @@ export function facadeWindows(i: FacadeInputs, g: FacadeGrid, skip: B): WindowMa
   const tintJitter = h2.mul(0.5).add(0.75);
   const glassColor = mix(vec3(0.018, 0.024, 0.03), vec3(0.03, 0.036, 0.04), h1).mul(tintJitter);
   const blind = select(i.curtain, float(0), h1.mul(h2).mul(1.4).min(0.7));
-  return { window, glass, frame: window.sub(glass).max(0), glassColor, blind };
+  const blindMask = select(g.ly.greaterThan(cy.add(hh).sub(blind.mul(hh).mul(2))), float(1), float(0));
+  return { window, glass, frame: window.sub(glass).max(0), glassColor, blind, blindMask, cell };
 }

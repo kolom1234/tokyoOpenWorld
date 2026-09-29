@@ -3,7 +3,7 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 
 ## Current Milestone: M03 — Rendering Realism I (진행 순서: T10 → T01 → T02 → T03 → T04 → T06 → T05 → T07 → T08 → T09)
 ## Current Task: M03 큐 진행 중
-- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영).
+- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑).
 - In progress: –
 - 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
 - 배포 상태: staging Worker `tokyo-sanpo-staging` = 이 브랜치(T06) 코드 + dev 버킷 빌드 **`20260929-c9a28d3-ec1646fc`**(L0 294 + HLOD 177 + shared/materials, 477 파일 248.7 MB, current).
@@ -11,10 +11,15 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
   staging 첫 로딩(GOLDEN_BOOT): **12.7–13.4 MB**·첫 표시 10.6–11.2 s(부팅 exclusive whenReady, ADR-0033). 수정 전 79.0 MB — 같은 클라이언트 + M02 데이터 77.0 MB →
   데이터 증가(T04+T06)는 +2.0 MB, 나머지는 첫 표시 지연 동안의 선적재였다.
 - 로컬 최신 빌드 = staging과 같음(`20260929-c9a28d3-ec1646fc`).
-- Next step (정확히 한 걸음): M03-T05 유리·실내 매핑(파이프라인 실내 큐브맵 8종 → 창별 해시·블라인드·프레넬+프로브).
+- Next step (정확히 한 걸음): M03-T07 후처리 파이프라인(07 §7 순서: MRT → GTAO → SSGI → SSR → 대기 합성 → Bloom → 자동노출 → TRAA/TAAU → AgX → LUT → Sharpen, 1440p High ≤ 4 ms) — 깊이 프리패스로 파사드·지면 오버드로우 재측정.
 - Blockers: 없음
 
 ## Recently Completed
+- M03-T05 Glass & interior mapping — pipeline `materials/{interior-rooms,interiors}.ts`(방 8종 상자 가구·조명판 → 방 중심 6면 광선 추적 → 256² PNG 48장 →
+  `interiors.ktx2` ETC1S 2D 배열 0.14 MB, manifest `interiors`, 스키마·validate), `lib/png.ts` RGB 인코더. render `facade/interior.ts`(베이×층×깊이 방 상자 교차 →
+  면·LOD, 창별 방·좌우 반전, 유리 픽셀에서만 `If` 분기), `materials/glass.ts`(실내 발광 × (1−프레넬) × 투과율, 블라인드 확산면), library `maps.interiors`·방 평균색.
+  **수락**: `docs/screenshots/M03/T05/shinjuku-curtainwall-close.jpg`(서신주쿠 초고층 근접 — 창마다 실내·블라인드·소등 방), `class-mansion.jpg`(가구 실루엣 깊이감) — 육안.
+  **성능**: 파사드 단색 대비 ≈ 6.0 ms(T04 4.7 → +1.3, 분기 전 +2.7). core GPU 23.8/22.9/24.9/28.7 ms. 새 골든뷰 `shinjuku-curtainwall-close`. 테스트 +1파일/+4건. ADR-0034 (2026-09-29)
 - M03-T06 Terrain & road base materials — pipeline `surface-class.ts`(셀+8이웃 PLATEAU 도로 폴리곤 → 257² 1 m 래스터: 차도·횡단보도 0, 보도·교통섬 1, 나머지 7),
   RTIN 분류 경계 세분(차도 경계 1 m·그 밖 4 m, `edgeKeyOf`), HLOD 지형 7 고정. render `materials/{terrain,road,noise}.ts` + `weather/wetness.ts`:
   `_SURF` 원-핫 보간 → 상위 2클래스 반대칭 노이즈 경계, 주 클래스 회전·축척 2표본 분산 보존 혼합(안티타일링), 아스팔트 패치·유분·바램/보도 명암·때, 거시 명암,

@@ -161,6 +161,20 @@
       "seed": 1
     },
     {
+      "id": "shinjuku-curtainwall-close",
+      "core": false,
+      "title": "서신주쿠 초고층 커튼월 근접(약 80 m)",
+      "purpose": "M03-T05 유리 반사·실내 매핑 깊이감",
+      "eyeWF": [-745, 0, -3245],
+      "lookWF": [-800, 0, -3300],
+      "eyeAglM": 60,
+      "lookAglM": 95,
+      "fovDeg": 60,
+      "time": "2026-06-21T15:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
+    },
+    {
       "id": "road-ground-30m",
       "core": false,
       "title": "도겐자카 쪽 차도 지면(눈높이 1.7 m)",

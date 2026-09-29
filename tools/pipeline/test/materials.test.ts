@@ -148,4 +148,25 @@ describe('checkMaterials', () => {
     );
     expect(e3.join()).toMatch(/materials manifest/);
   });
+  it('checks the interiors array when the manifest lists it', () => {
+    const interiors = {
+      file: 'interiors.ktx2',
+      bytes: ktx.length,
+      size: 256,
+      encode: 'etc1s',
+      colorSpace: 'srgb',
+      faces: 6,
+      rooms: [{ id: 'office_open', avgColor: [0.3, 0.3, 0.3] }],
+    };
+    const e1: string[] = [];
+    const dir = make((m) => {
+      m.interiors = interiors;
+    });
+    expect(checkMaterials(dir, schema, e1)).toEqual(expect.objectContaining({ layers: 1 }));
+    expect(e1.join()).toMatch(/interiors.ktx2 missing/);
+    writeFileSync(join(dir, 'shared', 'materials', 'interiors.ktx2'), ktx);
+    const e2: string[] = [];
+    expect(checkMaterials(dir, schema, e2)).toEqual({ layers: 1, bytes: 4 * ktx.length });
+    expect(e2).toEqual([]);
+  });
 });

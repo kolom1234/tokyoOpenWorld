@@ -37,7 +37,7 @@ src/stages/hlod/child-split.ts    childKeys, 자식 지형 패치(RTIN + 스커�
 src/stages/hlod/boxes.ts          OBB 박스·블록 매스 기하 / l1.ts(용접 + meshopt simplify) / l2.ts(buildFarLevel) / l3.ts / run.ts(예산 재시도·cells.idx 병합)
 src/stages/validate-hlod.ts       HLOD 예산·자식 그룹 검사
 src/lib/{geom2d,png}.ts           볼록 껍질·최소 면적 사각형 / 최소 PNG 디코더
-src/stages/materials/{library,fetch,encode,run}.ts  `materials`(M03-T01, ADR-0027): content/materials/library.json → ambientCG zip(sha256 lock, `--update-lock`) → ImageMagick(리사이즈·ORM 패킹) → toktx KTX2 배열 3장 + manifest → 캐시 data/derived/materials/<hash> → `--build-id` 설치(shared/materials)
+src/stages/materials/{library,fetch,encode,run,interiors,interior-rooms}.ts  `materials`(M03-T01, ADR-0027; 실내 큐브맵 8방 × 6면 광선 추적 → interiors.ktx2 M03-T05, ADR-0034): content/materials/library.json → ambientCG zip(sha256 lock, `--update-lock`) → ImageMagick(리사이즈·ORM 패킹) → toktx KTX2 배열 3장 + manifest → 캐시 data/derived/materials/<hash> → `--build-id` 설치(shared/materials)
 src/stages/validate-materials.ts  manifest 스키마(schemas/materials.schema.json)·파일 크기·KTX2 헤더·그룹 일관성(없으면 건너뜀)
 interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts   (미구현)
 src/stages/validate.ts validate-seams.ts   스키마(ajv)·해시·예산·이웃 경계 검사 → report.{json,md} (M01-T05)

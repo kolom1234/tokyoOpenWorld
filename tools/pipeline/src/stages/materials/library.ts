@@ -40,6 +40,16 @@ export interface MaterialsManifest {
     source: string;
   }[];
   groups: Record<string, number[]>;
+  /** 실내 큐브맵 배열(M03-T05): 레이어 = 방 × 6 + 면(+X, −X, +Y, −Y, +Z, −Z). 옛 빌드엔 없음. */
+  interiors?: {
+    file: string;
+    bytes: number;
+    size: number;
+    encode: 'etc1s';
+    colorSpace: 'srgb';
+    faces: 6;
+    rooms: { id: string; avgColor: [number, number, number] }[];
+  };
   /** library.json + 인코더 설정 해시(캐시 키). */
   hash: string;
 }

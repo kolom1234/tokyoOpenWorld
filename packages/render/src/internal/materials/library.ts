@@ -1,10 +1,11 @@
-// 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + manifest(그룹·타일 크기·평균색).
+// 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + 실내 큐브맵 배열(M03-T05) + manifest(그룹·타일 크기·평균색).
 // 셰이더는 부팅 때 자리표시 배열(1×1)로 컴파일되고, manifest → 평균색, KTX2 적재 → 텍스처 교체(`TextureNode.value`) + ready = 1.
 // 바인딩 형식(texture_2d_array<f32>)이 같아 파이프라인 재컴파일이 없다. see docs/07-rendering.md §4, docs/modules/render.md
 import type { Logger, Vec3d } from '@sanpo/core';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { float, int, texture, uniform, uniformArray, vec2, vec3 } from 'three/tsl';
 import {
+  ClampToEdgeWrapping,
   type CompressedArrayTexture,
   DataArrayTexture,
   LinearFilter,
@@ -39,6 +40,8 @@ export const MATERIAL_GROUPS = [
 export type MaterialGroup = (typeof MATERIAL_GROUPS)[number];
 /** uniform 배열 길이(레이어 상한). */
 export const MAX_LAYERS = 64;
+/** 실내 방 종류 상한(파이프라인 interior-rooms.ts는 8). */
+export const MAX_ROOMS = 16;
 /** 텍스처 원점 오프셋 주기(m): 렌더 원점 이동(256 m 격자)과 무관하게 월드 고정 무늬. 모든 tileM의 배수일 필요는 없다(오차 = 주기 경계에서만). */
 const WORLD_UV_PERIOD_M = 4096;
 
@@ -48,6 +51,8 @@ export interface MaterialsManifest {
   textures: Record<'albedo' | 'normal' | 'orm', { file: string; bytes: number; size: number }>;
   layers: { id: string; group: string; index: number; tileM: number; avgColor: number[]; avgOrm: number[] }[];
   groups: Record<string, number[]>;
+  /** 실내 큐브맵 배열(M03-T05, 레이어 = 방 × 6 + 면). 옛 빌드엔 없음. */
+  interiors?: { file: string; bytes: number; size: number; rooms: { id: string; avgColor: number[] }[] };
   hash: string;
 }
 
@@ -68,9 +73,15 @@ type I = TslNode<'int'>;
 type TexNode = ReturnType<typeof texture<'vec4'>>;
 
 export interface MaterialLibrary {
-  readonly maps: { albedo: TexNode; normal: TexNode; orm: TexNode };
+  readonly maps: { albedo: TexNode; normal: TexNode; orm: TexNode; interiors: TexNode };
   /** 적재 전 0, 텍스처 교체 후 1(평균색 → 텍스처 혼합). */
   readonly ready: F;
+  /** 실내 큐브맵 적재 뒤 1(그 전·옛 빌드는 방 평균색). */
+  readonly interiorsReady: F;
+  /** 방 종류 수(적재 전 8 가정 — 평균색 기본값). */
+  readonly roomCount: F;
+  /** 방 평균색(선형). */
+  roomAvg(room: I): TslNode<'vec3'>;
   /** WF xz를 WORLD_UV_PERIOD_M로 접은 렌더 원점(렌더 좌표 + offset = 월드 고정 UV). */
   readonly worldOffset: TslNode<'vec2'>;
   /** 그룹 안에서 h∈[0,1)로 고른 레이어 인덱스(int). 그룹이 비었으면 0. */
@@ -170,8 +181,13 @@ async function fetchLibrary(
     loadArray(loader, base + m.textures.normal.file, true),
     loadArray(loader, base + m.textures.orm.file, true),
   ]);
-  const bytes = m.textures.albedo.bytes + m.textures.normal.bytes + m.textures.orm.bytes;
-  return { loader, albedo, normal, orm, bytes };
+  const interiors = m.interiors ? await loadArray(loader, base + m.interiors.file, false) : undefined;
+  if (interiors) {
+    interiors.wrapS = ClampToEdgeWrapping;
+    interiors.wrapT = ClampToEdgeWrapping;
+  }
+  const bytes = m.textures.albedo.bytes + m.textures.normal.bytes + m.textures.orm.bytes + (m.interiors?.bytes ?? 0);
+  return { loader, albedo, normal, orm, interiors, bytes };
 }
 
 function createMaps() {
@@ -179,13 +195,34 @@ function createMaps() {
     albedo: placeholder([200, 200, 200, 255], true),
     normal: placeholder([128, 128, 255, 255], false),
     orm: placeholder([255, 204, 0, 255], false),
+    interiors: placeholder([90, 88, 84, 255], true),
   };
   const maps = {
     albedo: texture<'vec4'>(holders.albedo),
     normal: texture<'vec4'>(holders.normal),
     orm: texture<'vec4'>(holders.orm),
+    interiors: texture<'vec4'>(holders.interiors),
   };
   return { holders, maps };
+}
+
+/** 방 평균색 uniform(기본 = 중간 회색) + manifest 적용. */
+function createRoomUniforms() {
+  const avg = Array.from({ length: MAX_ROOMS }, () => new Vector3(0.1, 0.1, 0.1));
+  const count = uniform(8);
+  return {
+    uAvg: uniformArray<'vec3'>(avg, 'vec3'),
+    count,
+    apply(m: MaterialsManifest): void {
+      const rooms = m.interiors?.rooms ?? [];
+      if (rooms.length === 0) return;
+      rooms.slice(0, MAX_ROOMS).forEach((r, i) => {
+        const [a = 0.3, b = 0.3, c = 0.3] = r.avgColor;
+        avg[i]?.set(srgbToLinear(a), srgbToLinear(b), srgbToLinear(c));
+      });
+      count.value = Math.min(rooms.length, MAX_ROOMS);
+    },
+  };
 }
 
 /** 소요 시간 기록 + 실패 상태·경고 + 완료 로그. */
@@ -208,7 +245,9 @@ async function timed(st: LibraryStats, log: Logger, fn: () => Promise<void>): Pr
 export function createMaterialLibrary(basisPath: string): MaterialLibrary {
   const { holders, maps } = createMaps();
   const u = createLayerUniforms();
+  const rooms = createRoomUniforms();
   const ready = uniform(0);
+  const interiorsReady = uniform(0);
   const offset = new Vector2(0, 0);
   const loaded: Texture[] = [];
   let loader: KTX2Loader | undefined;
@@ -222,6 +261,7 @@ export function createMaterialLibrary(basisPath: string): MaterialLibrary {
   const loadAll = async (manifestUrl: string, renderer: WebGPURenderer): Promise<void> => {
     const r = await fetchLibrary(manifestUrl, renderer, basisPath, (m) => {
       u.apply(m);
+      rooms.apply(m);
       st.layers = m.layerCount;
       st.state = 'manifest';
     });
@@ -231,7 +271,12 @@ export function createMaterialLibrary(basisPath: string): MaterialLibrary {
     maps.normal.value = r.normal;
     maps.orm.value = r.orm;
     ready.value = 1;
-    st.gpuBytes = uploadBytes(r.albedo) + uploadBytes(r.normal) + uploadBytes(r.orm);
+    if (r.interiors) {
+      loaded.push(r.interiors);
+      maps.interiors.value = r.interiors;
+      interiorsReady.value = 1;
+    }
+    st.gpuBytes = [r.albedo, r.normal, r.orm, r.interiors].reduce((n, t) => n + (t ? uploadBytes(t) : 0), 0);
     st.downloadBytes = r.bytes;
     st.state = 'ready';
   };
@@ -239,6 +284,9 @@ export function createMaterialLibrary(basisPath: string): MaterialLibrary {
   return {
     maps,
     ready,
+    interiorsReady,
+    roomCount: rooms.count,
+    roomAvg: (room) => vec3(rooms.uAvg.element(room)),
     worldOffset: uniform(offset),
     layerOf: (group, h) => layerOfIndex(int(MATERIAL_GROUPS.indexOf(group)), h),
     layerOfIndex,

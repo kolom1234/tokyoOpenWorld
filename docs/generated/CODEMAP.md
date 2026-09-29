@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 211개.
+> 파일 215개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -92,12 +92,14 @@
 - `packages/render/src/internal/materials/facade/details.ts` — 절차 파사드 ⑤ 디테일(07 §5-8): 층간 줄눈(슬래브 띠), 빗물 얼룩(상단→하단 그라디언트 × 가로 저주파 노이즈), 지면 AO, 모서리 AO, 옥상 두겁 띠. | exports: FacadeDetails, facadeDetails
 - `packages/render/src/internal/materials/facade/grid.ts` — 절차 파사드 ① 입력·층/베이 격자(07 §5-1·2): `_FACADE`(unorm8×4 → class·floors·tint·flags), UV0 = (면 시작점부터 m, 건물 바닥부터 m), | exports: F, I, B, V3, FACADE_CLASS, FACADE_CLASS_COUNT, FACADE_FLAG, RETAIL_FLOOR_M, FacadeInputs, facadeInputs, FacadeGrid, facadeGrid
 - `packages/render/src/internal/materials/facade/index.ts` — 절차 파사드 머티리얼(M_FACADE, 07 §5): 격자(grid) → 벽 재질(walls) + 창(windows) + 1층 상점(retail) + 디테일(details) → PBR. | exports: createFacadeMaterial
+- `packages/render/src/internal/materials/facade/interior.ts` — 절차 파사드 ④ 실내 매핑(07 §5-4, M03-T05): 베이 × 층 = 방 한 칸. 시선 광선을 방 상자(폭 = 베이, 높이 = 층, 깊이 = 클래스별)에 | exports: InteriorSample, facadeInterior
 - `packages/render/src/internal/materials/facade/retail.ts` — 절차 파사드 ④ 1층 상점(07 §5-6, flags.retail): 쇼윈도(0.3–3.2 m, 베이마다 멀리언), 간판 띠(3.4–4.2 m, 가상 브랜드 아틀라스는 M05-T06 — | exports: RetailSample, facadeRetail
 - `packages/render/src/internal/materials/facade/walls.ts` — 절차 파사드 ③ 벽 재질(07 §5-3): 클래스 + 건물 해시(tintIdx)로 텍스처 배열 그룹·레이어 선택 × 클래스 팔레트 틴트. 지붕은 평지붕 콘크리트/경사 기와. | exports: WallSample, facadeWall, wallFloor
 - `packages/render/src/internal/materials/facade/windows.ts` — 절차 파사드 ② 창(07 §5-2·4 일부): 베이 안 사각 SDF(프레임 두께·화면 공간 안티에일리어싱) + 클래스별 배치(오피스 띠창, 맨션 발코니 문, | exports: WindowMasks, facadeWindows
+- `packages/render/src/internal/materials/glass.ts` — M_GLASS 셰이딩(07 §4·§5-4, M03-T05): 유리 = 어두운 반사 유전체(PBR 스페큘러 — 환경 프로브, SSR은 T07) + 투과로 보이는 실내(발광 채널, | exports: interiorExposure, GlassInput, GlassOutput, glassShading
 - `packages/render/src/internal/materials/hlod.ts` — HLOD 머티리얼: 기본 단색 PBR + 자식 16영역 표시·디더 페이드. 셀별 페이드 16개는 per-object uniform(vec4 × 4, objectGroup)으로, | exports: HlodFadeData, createHlodFades, createHlodMaterial
 - `packages/render/src/internal/materials/ktx2-csp.ts` — KTX2Loader 워커를 CSP 호환으로(M03-T06, ADR-0032): 기본 init()은 트랜스코더 본문을 Blob 워커로 띄운다 → blob 워커는 페이지 CSP를 물려받고 | exports: KTX2_BOOTSTRAP_FILE, workerBody, useBootstrapWorker
-- `packages/render/src/internal/materials/library.ts` — 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + manifest(그룹·타일 크기·평균색). | exports: MATERIAL_GROUPS, MaterialGroup, MAX_LAYERS, MaterialsManifest, LibraryState, LibraryStats, MaterialLibrary, createMaterialLibrary
+- `packages/render/src/internal/materials/library.ts` — 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + 실내 큐브맵 배열(M03-T05) + manifest(그룹·타일 크기·평균색). | exports: MATERIAL_GROUPS, MaterialGroup, MAX_LAYERS, MAX_ROOMS, MaterialsManifest, LibraryState, LibraryStats, MaterialLibrary, createMaterialLibrary
 - `packages/render/src/internal/materials/noise.ts` — 셰이더 2D 값 노이즈(TSL): 지형 안티타일링·아스팔트 변형·물웅덩이 마스크(M03-T06). 입력 = 월드 고정 좌표(worldOffset 적용, m). | exports: noiseTexture, NoiseBank, noiseBank
 - `packages/render/src/internal/materials/precompile.ts` — 셰이더 선컴파일(06 §6): 고정 머티리얼 ID별 기본·HLOD 변형을 작은 더미 메시로 씬에 잠깐 붙여 `compileAsync` → 스트리밍 중 첫 사용 끊김 제거. | exports: precompileMaterials
 - `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼 + HLOD 변형(자식 페이드, M02-T05). 셀 머티리얼은 라이브러리 텍스처 배열을 쓴다(M03-T01, 적재 전 평균색). | exports: MaterialRegistry, PRECOMPILE_IDS, createMaterialRegistry
@@ -196,7 +198,7 @@
 - `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
 - `tools/pipeline/src/lib/gltf.ts` — 셀 glb 섹션 인코드/디코드: gltf-transform 문서 → EXT_meshopt_compression + KHR_mesh_quantization glb. see docs/05-tile-format.md §4 (glb), docs/adr/0018-cell-mesh-build.md | exports: GlbArray, GlbAttribute, GlbPrimitive, GlbMesh, DecodedGlb, encodeGlb, decodeGlb
 - `tools/pipeline/src/lib/ndjson-gz.ts` — 결정론적 ndjson.gz 입출력: 키 정렬된 레코드 → gzip(헤더 mtime=0, OS=255 고정). see docs/04-data-pipeline.md §1(재현성) | exports: writeNdjsonGz, readNdjsonGz
-- `tools/pipeline/src/lib/png.ts` — 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용. 외부 의존 없음(node:zlib). | exports: DecodedPng, decodePng
+- `tools/pipeline/src/lib/png.ts` — 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용 + RGB 인코더(실내 큐브맵 생성, M03-T05). 외부 의존 없음(node:zlib). | exports: DecodedPng, decodePng, encodePngRgb
 - `tools/pipeline/src/lib/polygon.ts` — 폴리곤 유틸: 셀 경계(축정렬 XZ 사각형) 클리핑. 도로·지형처럼 셀 경계에서 자르는 레이어용. see docs/04-data-pipeline.md §4.2, §6 | exports: ringAreaXZ, clipRingsToRect
 - `tools/pipeline/src/lib/raster.ts` — 래스터 유틸: 투영 격자 정의(PRJ 정수 m = 픽셀 중심), Float32 raw 입출력, GDAL VRT 기록, 결측 병합·통계. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: PrjGrid, geoTransformOf, targetExtentOf, readFloat32, writeGridVrt, FillStats, mergeWithFallback, ValueStats, valueStats
 - `tools/pipeline/src/lib/sigv4.ts` — AWS Signature V4(헤더 서명) — R2 S3 호환 API용 최소 구현(node:crypto). see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-create-signed-request.html | exports: SigV4Credentials, SignInput, EMPTY_SHA256, sha256Hex, uriEncode, signV4
@@ -236,14 +238,16 @@
 - `tools/pipeline/src/stages/hlod/tokyo23-lod1.worker.ts` — 워커 스레드: zip 멤버 1개씩 받아 원경 건물 줄을 돌려준다(tokyo23-lod1.ts runPool).
 - `tools/pipeline/src/stages/materials/encode.ts` — 자산 zip → 레이어 PNG(ImageMagick: 리사이즈·ORM 채널 패킹) → KTX2 배열(toktx: 알베도 ETC1S sRGB, 법선·ORM UASTC+RDO+zstd, 밉맵). | exports: ENCODE_ARGS, LayerImages, prepareLayer, encodeArray
 - `tools/pipeline/src/stages/materials/fetch.ts` — ambientCG zip 받기 + sha256 고정(data/sources.lock.json `ambientcg`.sha256 맵). 불일치 = 중단, 미기록 = --update-lock일 때만 기록. | exports: AmbientLock, sha256Of, FetchAssetsInput, fetchAssets
+- `tools/pipeline/src/stages/materials/interior-rooms.ts` — 실내 큐브맵 방 8종 정의(M03-T05, 07 §5-4): 자체 제작(외부 에셋 없음) — 상자 가구·천장 조명판·바닥 무늬만. | exports: Rgb, FloorPattern, Box, Room, INTERIOR_ROOMS
+- `tools/pipeline/src/stages/materials/interiors.ts` — 실내 큐브맵 생성(M03-T05, 07 §5-4): 방 8종(interior-rooms.ts)을 방 중심에서 6면 광선 추적 → 면 PNG 48장(레이어 = 방 × 6 + 면). | exports: INTERIOR_FACE_SIZE, INTERIOR_VERSION, INTERIOR_FACES, faceDir, renderFace, InteriorImages, writeInteriorFaces
 - `tools/pipeline/src/stages/materials/library.ts` — 머티리얼 라이브러리 정의(content/materials/library.json) 읽기·검사 + 런타임 매니페스트 형식(schemas/materials.schema.json). | exports: LibraryLayer, Library, MaterialsManifest, parseLibrary, readLibrary, groupsOf, zipNameOf, AMBIENTCG_GET
-- `tools/pipeline/src/stages/materials/run.ts` — materials 단계: library.json → ambientCG zip(sha256 고정) → 레이어 PNG → KTX2 배열 3장 + manifest.json | exports: MANIFEST_FILE, MaterialsInput, MaterialsResult, materialsHash, buildMaterials, installMaterials
+- `tools/pipeline/src/stages/materials/run.ts` — materials 단계: library.json → ambientCG zip(sha256 고정) → 레이어 PNG → KTX2 배열 3장 + 실내 큐브맵 배열(자체 생성, M03-T05) + manifest.json | exports: MANIFEST_FILE, MaterialsInput, MaterialsResult, materialsHash, buildMaterials, installMaterials
 - `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: PlateauSourceRoot, NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
 - `tools/pipeline/src/stages/normalize-terrain.ts` — normalize 단계(지형): GSI DEM1A(주) + DEM5A(결측 채움) → GDAL 재투영(EPSG:6677, 1 m) → 잔여 결측 보간 → data/normalized/terrain/dem_1m.tif. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: NormalizeTerrainInput, GradeReport, NormalizeTerrainResult, gridOfBounds, normalizeTerrain, writeTerrainMeta, hasDemSources
 - `tools/pipeline/src/stages/publish/publish.ts` — publish: data/build/<buildId> → R2 `world/<buildId>/**`(동시성·재시도) → 매니페스트 → 검증(S3 HEAD 또는 Worker HEAD) → KV 빌드 목록·(선택) 현재 포인터. | exports: CURRENT_KEY, BUILDS_KEY, FILES_KEY, BuildEntry, PublishFile, PublishReport, mapLimit, buildFiles, checkBuildDir, PublishInput, publishBuild, verifyViaWorker, selectGc, GcInput, gcBuilds
 - `tools/pipeline/src/stages/publish/targets.ts` — 퍼블리시 대상(env → R2 버킷·KV 네임스페이스)을 apps/worker/wrangler.jsonc에서 읽는다(바인딩 정의의 단일 출처). | exports: PublishEnv, PublishTarget, stripJsonc, readTargets, Clients, createClients
 - `tools/pipeline/src/stages/publish/uploaders.ts` — 퍼블리시 업로더 2종: `s3`(R2 S3 호환 API, SigV4 — 단일 PUT·멀티파트·HEAD 검증) / `api`(Cloudflare REST, API 토큰 — wrangler와 같은 엔드포인트). | exports: MULTIPART_THRESHOLD, PART_SIZE, ObjectPut, Uploader, S3Options, createS3Uploader, ApiOptions, createApiUploader, KvClient, createKvClient, resolveAccountId
 - `tools/pipeline/src/stages/validate-hlod.ts` — validate(HLOD L1–L3): 레벨별 크기 예산(L1 ≤ 3 MB, L2/L3 ≤ 2 MB), hlod.mesh 자식 그룹(모든 정점 _CHILD ∈ 0..15, | exports: HLOD_BUDGET_BYTES, HlodCellReport, inspectHlodCell, hlodSummary
-- `tools/pipeline/src/stages/validate-materials.ts` — validate: 공유 머티리얼(shared/materials, M03-T01) — manifest 스키마·KTX2 파일 존재·바이트 수·레이어 인덱스·그룹 일관성. 없으면 건너뜀(픽스처 빌드). | exports: MaterialsReport, checkMaterials
+- `tools/pipeline/src/stages/validate-materials.ts` — validate: 공유 머티리얼(shared/materials, M03-T01) — manifest 스키마·KTX2 파일(텍스처 3장 + 실내 큐브맵) 존재·바이트 수·레이어 인덱스·그룹 일관성. 없으면 건너뜀(픽스처 빌드). | exports: MaterialsReport, checkMaterials
 - `tools/pipeline/src/stages/validate-seams.ts` — validate: 이웃 셀 지형 경계 완전 일치 검사(terrain.height u16 행·열, terrain.mesh 경계 정점). see docs/04-data-pipeline.md §4.6, §6 | exports: CellTerrain, SeamReport, edgeVertices, checkSeams
 - `tools/pipeline/src/stages/validate.ts` — validate 단계: 스키마(world.json·셀 헤더·meta.json, ajv) + cells.idx 일치 + 섹션 해시 + 예산 + 경계 이음새 → report. see docs/04-data-pipeline.md §4.6 | exports: BUDGET, CellReport, ValidateReport, createValidators, validateBuild, reportMarkdown, writeReport

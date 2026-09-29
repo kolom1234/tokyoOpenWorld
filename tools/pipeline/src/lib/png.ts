@@ -1,6 +1,6 @@
-// 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용. 외부 의존 없음(node:zlib).
+// 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용 + RGB 인코더(실내 큐브맵 생성, M03-T05). 외부 의존 없음(node:zlib).
 // see https://www.w3.org/TR/png/ §7–9 (필터 0–4)
-import { inflateSync } from 'node:zlib';
+import { deflateSync, inflateSync } from 'node:zlib';
 
 export interface DecodedPng {
   width: number;
@@ -72,4 +72,51 @@ export function decodePng(buf: Uint8Array): DecodedPng {
   }
   const raw = inflateSync(Buffer.concat(idat));
   return { width, height, channels, data: unfilter(raw, width, height, channels) };
+}
+
+const CRC_TABLE = Uint32Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(bytes: Uint8Array): number {
+  let c = 0xffffffff;
+  for (const b of bytes) c = (CRC_TABLE[(c ^ b) & 0xff] as number) ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type: string, data: Uint8Array): Uint8Array {
+  const out = new Uint8Array(12 + data.length);
+  const view = new DataView(out.buffer);
+  view.setUint32(0, data.length);
+  out.set(new TextEncoder().encode(type), 4);
+  out.set(data, 8);
+  view.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+  return out;
+}
+
+/** 8비트 RGB(행 우선, 위 → 아래) → PNG 바이트(필터 0, 결정론). */
+export function encodePngRgb(width: number, height: number, rgb: Uint8Array): Uint8Array {
+  if (rgb.length !== width * height * 3) throw new RangeError('encodePngRgb: size mismatch');
+  const raw = new Uint8Array((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) raw.set(rgb.subarray(y * width * 3, (y + 1) * width * 3), y * (width * 3 + 1) + 1);
+  const ihdr = new Uint8Array(13);
+  const v = new DataView(ihdr.buffer);
+  v.setUint32(0, width);
+  v.setUint32(4, height);
+  ihdr.set([8, 2, 0, 0, 0], 8);
+  const parts = [
+    Uint8Array.from(SIGNATURE),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw, { level: 9 })),
+    chunk('IEND', new Uint8Array(0)),
+  ];
+  const out = new Uint8Array(parts.reduce((n, q) => n + q.length, 0));
+  let o = 0;
+  for (const q of parts) {
+    out.set(q, o);
+    o += q.length;
+  }
+  return out;
 }
