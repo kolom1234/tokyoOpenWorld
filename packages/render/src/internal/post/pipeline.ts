@@ -1,6 +1,6 @@
 // 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness])
 //  → AO/GI(GTAO 또는 SSGI 합성) → SSR(가산) → 대기 공중원근(aerialPerspective, 깊이 1 = 하늘) → 자동 노출 → Bloom(가산)
-//  → TRAA(렌더 스케일 1) 또는 TAAU(< 1, 앞 단계 전부 저해상도) → 출력 변환(AgX·sRGB, renderOutput) → 3D LUT → Sharpen.
+//  → TAAU(앞 단계 전부 렌더 스케일 해상도 — 동적 해상도 M03-T08) → 출력 변환(AgX·sRGB, renderOutput) → 3D LUT → Sharpen.
 // 효과 스위치 = post/config.ts(품질 티어 + 덮어쓰기).
 // WebGL2 폴백은 직접 렌더(M03-T09가 대체).
 import { aerialPerspective } from '@takram/three-atmosphere/webgpu';
@@ -11,13 +11,15 @@ import { sharpen } from 'three/examples/jsm/tsl/display/SharpenNode.js';
 import { ssgi } from 'three/examples/jsm/tsl/display/SSGINode.js';
 import { ssr } from 'three/examples/jsm/tsl/display/SSRNode.js';
 import { taau } from 'three/examples/jsm/tsl/display/TAAUNode.js';
-import { traa } from 'three/examples/jsm/tsl/display/TRAANode.js';
 import {
   colorToDirection,
   convertToTexture,
+  cos,
   diffuseColor,
   directionToColor,
+  Fn,
   float,
+  Loop,
   metalness,
   mrt,
   normalView,
@@ -27,6 +29,7 @@ import {
   roughness,
   sample,
   screenUV,
+  sin,
   texture3D,
   uniform,
   vec4,
@@ -63,6 +66,8 @@ export interface PostPipeline {
   readonly effects: PostEffects | null;
   /** 자동 노출 최근 값(없으면 null). */
   exposure(): { lum: number; scale: number } | null;
+  /** 동적 해상도: 씬 패스·중간 RTT·AO·SSR 해상도 배율(TAAU가 출력 해상도로 복원). */
+  setRenderScale(scale: number): void;
   dispose(): void;
 }
 
@@ -71,7 +76,13 @@ export interface PostPipeline {
  * CPU로 계산하는 소프트웨어 래스터(SwiftShader)에서 1.4 FPS까지 떨어진다(ADR-0028). 품질 티어(M03-T08/T09)가 대체.
  */
 export function createDirectRender(renderer: WebGPURenderer, scene: Scene, camera: Camera): PostPipeline {
-  return { render: () => renderer.render(scene, camera), effects: null, exposure: () => null, dispose() {} };
+  return {
+    render: () => renderer.render(scene, camera),
+    effects: null,
+    exposure: () => null,
+    setRenderScale() {},
+    dispose() {},
+  };
 }
 
 /**
@@ -91,14 +102,35 @@ function scenePassOf(scene: Scene, camera: Camera, fx: PostEffects): PassNode {
   );
   scenePass.getTexture('normal').type = UnsignedByteType;
   if (needDiffuse) scenePass.getTexture('diffuse').type = UnsignedByteType;
-  if (fx.renderScale < 1) scenePass.setResolutionScale(fx.renderScale);
+  if (fx.taa && fx.renderScale < 1) scenePass.setResolutionScale(fx.renderScale);
   return scenePass;
 }
 
+/** 렌더 스케일을 따라가는 노드들(동적 해상도). */
+interface Scalables {
+  rtts: { setResolutionScale(s: number): unknown }[];
+  ao?: { resolutionScale: number };
+  ssr?: { resolutionScale: number };
+}
+
 /** 중간 결과를 렌더 스케일 해상도 텍스처로(TAAU 전 단계는 전부 저해상도). */
-function lowRes(node: V4, fx: PostEffects): V4 {
-  const rtt = convertToTexture as unknown as (n: V4, w: null, h: null, o: { resolutionScale: number }) => V4;
-  return rtt(node, null, null, { resolutionScale: fx.renderScale });
+function lowRes(node: V4, fx: PostEffects, sc: Scalables): V4 {
+  type Rtt = V4 & { setResolutionScale(s: number): unknown };
+  const rtt = convertToTexture as unknown as (n: V4, w: null, h: null, o: { resolutionScale: number }) => Rtt;
+  const t = rtt(node, null, null, { resolutionScale: fx.renderScale });
+  sc.rtts.push(t);
+  return t;
+}
+
+/** 디버그 GPU 부하(`?gpuLoad=n`, M03-T08 수락 — 렌더 스케일 해상도에서 픽셀당 n회 삼각함수). 결과는 1e-9배로만 섞는다. */
+function gpuLoad(n: number): TslNode<'float'> {
+  return Fn(() => {
+    const acc = float(0).toVar();
+    Loop(n, ({ i }) => {
+      acc.addAssign(sin(screenUV.x.mul(float(i as unknown as TslNode<'float'>).add(1))).mul(cos(screenUV.y.add(acc))));
+    });
+    return acc.mul(1e-9);
+  })();
 }
 
 /** AO/GI·SSR을 씬 색에 합성(대기 전). 반환 = 대기 입력 텍스처 노드. */
@@ -106,6 +138,8 @@ function lightingComposite(
   scenePass: PassNode,
   camera: PerspectiveCamera,
   fx: PostEffects,
+  sc: Scalables,
+  load: number,
 ): { color: V4; nodes: { dispose(): void }[] } {
   const color = scenePass.getTextureNode('output');
   const depth = scenePass.getTextureNode('depth');
@@ -120,6 +154,7 @@ function lightingComposite(
     a.radius.value = 0.5;
     a.samples.value = fx.taa ? 8 : 16;
     a.useTemporalFiltering = fx.taa;
+    sc.ao = a;
     nodes.push(a);
     lit = vec4(color.rgb.mul(a.getTextureNode().sample(screenUV).r), color.a);
   } else if (fx.ao === 'ssgi') {
@@ -140,10 +175,12 @@ function lightingComposite(
       camera,
     });
     s.resolutionScale = 0.5 * fx.renderScale;
+    sc.ssr = s;
     nodes.push(s);
     lit = vec4(lit.rgb.add(s.getTextureNode().sample(screenUV).rgb), lit.a);
   }
-  return { color: lit === color ? color : lowRes(lit, fx), nodes };
+  if (load > 0) lit = vec4(lit.rgb.add(gpuLoad(load)), lit.a);
+  return { color: lit === color ? color : lowRes(lit, fx, sc), nodes };
 }
 
 export function createPostPipeline(
@@ -151,11 +188,13 @@ export function createPostPipeline(
   scene: Scene,
   camera: PerspectiveCamera,
   fx: PostEffects,
+  debugGpuLoad = 0,
 ): PostPipeline {
   const scenePass = scenePassOf(scene, camera, fx);
   const depth = scenePass.getTextureNode('depth');
   const pipeline = new RenderPipeline(renderer);
-  const { color, nodes } = lightingComposite(scenePass, camera, fx);
+  const sc: Scalables = { rtts: [] };
+  const { color, nodes } = lightingComposite(scenePass, camera, fx, sc, debugGpuLoad);
   const ap = aerialPerspective(color, depth);
   // 별(StarsNode)은 기본 데이터를 GitHub에서 받는다 — CSP(connect-src 'self')에 막히고 외부 런타임 의존이라 끈다(밤하늘 자체 에셋은 M09).
   if (ap.skyNode && 'showStars' in ap.skyNode) (ap.skyNode as { showStars: boolean }).showStars = false;
@@ -171,17 +210,11 @@ export function createPostPipeline(
     hdr = hdr.add(b);
   }
   if (fx.taa) {
+    // 동적 해상도(M03-T08)로 스케일이 1 ↔ < 1을 오가므로 항상 TAAU(스케일 1에서도 TRAA 대신 동작, 비용 비슷).
     const vel = scenePass.getTextureNode('velocity');
-    if (fx.renderScale < 1) {
-      const t = taau(lowRes(hdr, fx) as unknown as Parameters<typeof taau>[0], depth, vel, camera);
-      nodes.push(t);
-      hdr = t as unknown as V4;
-    } else {
-      const t = traa(hdr, depth, vel, camera);
-      t.useSubpixelCorrection = false;
-      nodes.push(t);
-      hdr = t as unknown as V4;
-    }
+    const t = taau(lowRes(hdr, fx, sc) as unknown as Parameters<typeof taau>[0], depth, vel, camera);
+    nodes.push(t);
+    hdr = t as unknown as V4;
   }
   pipeline.outputColorTransform = false;
   let out: V4 = renderOutput(hdr);
@@ -196,6 +229,13 @@ export function createPostPipeline(
     },
     effects: fx,
     exposure: () => (exposure ? { ...exposure.last } : null),
+    setRenderScale(scale) {
+      if (!fx.taa) return;
+      scenePass.setResolutionScale(scale);
+      for (const r of sc.rtts) r.setResolutionScale(scale);
+      if (sc.ao) sc.ao.resolutionScale = fx.aoScale * scale;
+      if (sc.ssr) sc.ssr.resolutionScale = 0.5 * scale;
+    },
     dispose() {
       pipeline.dispose();
       scenePass.dispose();

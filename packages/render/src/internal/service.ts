@@ -23,6 +23,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     gpu: ctx.gpuTimer.stats(),
     post: ctx.post.effects,
     exposure: ctx.post.exposure(),
+    quality: ctx.quality.stats(),
   };
 }
 
@@ -32,6 +33,8 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
   const { renderer, view, cells, hlod, library, graph, log } = ctx;
   return {
     renderOriginWF: view.renderOriginWF,
+    setQuality: (tier) => ctx.quality.setTier(tier),
+    detectQuality: () => ctx.quality.detect(),
     backend: ctx.backend,
     depth: ctx.depth,
     addCell: (p) => cells.add(p, view.renderOriginWF),

@@ -7,6 +7,7 @@ import type {
   EnvironmentState,
   EventBus,
   Logger,
+  QualityTier,
   SystemProvider,
   Vec3d,
 } from '@sanpo/core';
@@ -20,8 +21,8 @@ export type RenderBackend = 'webgpu' | 'webgl2';
  */
 export type DepthMode = 'reversed-z' | 'logarithmic' | 'standard';
 
-/** 07 §9 품질 티어. 초기 선택·동적 해상도는 M03-T08. */
-export type QualityTier = 'low' | 'medium' | 'high' | 'ultra';
+/** 07 §9 품질 티어(@sanpo/core 정의 재수출 — `quality/changed` 이벤트와 같은 타입). */
+export type { QualityTier };
 
 /** 후처리 효과 스위치(07 §7). 티어 표(`post/config.ts`) → 이 값, `RenderConfig.post`(디버그 `?post=`)로 개별 덮어쓰기. */
 export interface PostEffects {
@@ -65,6 +66,12 @@ export interface RenderConfig {
   quality: QualityTier;
   /** 티어 값 위에 덮어쓸 효과(`?post=ssr:0,ao:gtao` — A/B 측정). */
   post: Partial<PostEffects>;
+  /** 동적 해상도(M03-T08, 0.5–1.0, 목표 16.6 ms). 골든뷰는 끈다(결정론). */
+  dynamicResolution: boolean;
+  /** detect-gpu 벤치마크 JSON 경로(자체 호스팅 — apps/game이 `/detect-gpu/`로 서빙). */
+  gpuBenchmarksPath: string;
+  /** 디버그 GPU 부하(렌더 스케일 해상도에서 픽셀당 반복 수, `?gpuLoad=`) — 동적 해상도 수락 확인용. 0 = 끔. */
+  debugGpuLoad: number;
 }
 
 /** 공유 머티리얼 라이브러리 상태(M03-T01). 'manifest' = 평균색만, 'ready' = KTX2 배열 적용. */
@@ -99,10 +106,16 @@ export interface RenderStats {
   post: PostEffects | null;
   /** 자동 노출(기하 평균 휘도·배율, 약 0.5 s마다 갱신). 끔·WebGL2 = null. */
   exposure: { lum: number; scale: number } | null;
+  /** 품질 티어·현재 렌더 스케일·프레임 시간 EMA(ms). */
+  quality: { tier: QualityTier; renderScale: number; dynamic: boolean; frameMs: number };
 }
 
 export interface RenderService extends SystemProvider {
   readonly renderOriginWF: Readonly<Vec3d>;
+  /** 품질 티어 변경(후처리 재구성 — 셰이더 재컴파일 끊김 1회) + `quality/changed`. 버스 이벤트로도 바뀐다. */
+  setQuality(tier: QualityTier): void;
+  /** detect-gpu로 초기 티어 추정 → 적용 → 60프레임 측정 후 필요하면 한 단계 내림. 첫 표시 뒤에 부른다. */
+  detectQuality(): Promise<QualityTier>;
   readonly backend: RenderBackend;
   readonly depth: DepthMode;
   /** 셀 메시 추가(소유권 이전: 배열을 GPU 버퍼로 그대로 사용). 같은 키가 있으면 교체. */

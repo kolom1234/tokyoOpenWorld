@@ -123,8 +123,34 @@ function basisTranscoder(): Plugin {
   };
 }
 
+/**
+ * detect-gpu 벤치마크 JSON(@pmndrs/detect-gpu dist/benchmarks, MIT) → `/detect-gpu/*`(dev 서빙, build 복사). render `gpuBenchmarksPath`와 짝.
+ * 기본값(unpkg CDN)은 CSP connect-src 'self'에 막히고 외부 런타임 의존이라 자체 호스팅(M03-T08). 첫 표시 뒤 한 파일(≤ 155 KB)만 받는다.
+ */
+const GPU_BENCH_ROUTE = '/detect-gpu';
+function gpuBenchmarks(): Plugin {
+  // ESM 전용 exports라 require.resolve가 안 된다 → render 패키지의 pnpm 링크 경로.
+  const src = resolve(import.meta.dirname, '../../packages/render/node_modules/@pmndrs/detect-gpu/dist/benchmarks');
+  let outDir = 'dist';
+  return {
+    name: 'sanpo-gpu-benchmarks',
+    configResolved(c) {
+      outDir = resolve(c.root, c.build.outDir);
+    },
+    configureServer(server) {
+      server.middlewares.use(
+        GPU_BENCH_ROUTE,
+        serveDir(() => src),
+      );
+    },
+    writeBundle() {
+      cpSync(src, join(outDir, GPU_BENCH_ROUTE), { recursive: true });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [worldMiniFixture(), localBuild(), basisTranscoder()],
+  plugins: [worldMiniFixture(), localBuild(), basisTranscoder(), gpuBenchmarks()],
   // three addon(KTX2Loader)·takram의 `three` import를 WebGPU 빌드 + 호환 이름(src/three-compat.ts)으로 — WebGL 렌더러 번들 제외.
   resolve: { alias: [{ find: /^three$/, replacement: resolve(import.meta.dirname, 'src/three-compat.ts') }] },
   server: {

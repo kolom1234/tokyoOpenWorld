@@ -25,6 +25,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 |---|---|
 | index.html, vite.config.ts | Vite 엔트리. `three` → `three/webgpu` alias(addon 중복 번들 방지) + `sanpo-basis-transcoder`(`/basis/*` = three examples/jsm/libs/basis, dev 서빙·build 복사) + dev 서버 격리 헤더 + `/api`·`/world` → `wrangler dev`(8787) 프록시 + `sanpo-world-mini` 플러그인(dev 서빙, build 시 `dist/fixtures/world-mini` 복사, `SANPO_WORLD_MINI=0`이면 생략) + `sanpo-local-build`(dev 전용 `/local-world` → `data/build/<SANPO_LOCAL_BUILD | 최신>`) |
 | public/_headers | 정적 에셋 COOP/COEP/CORP/CSP·캐시 헤더(docs/13 §3) — Worker를 거치지 않는 응답용. `/basis/ktx2-worker.js`만 별도 CSP('unsafe-eval', ADR-0032) |
+| vite.config.ts `sanpo-gpu-benchmarks` | detect-gpu 벤치마크 JSON → `/detect-gpu/*`(dev 서빙·build 복사) |
 | public/basis/ktx2-worker.js | KTX2 트랜스코더 부트스트랩 워커(첫 메시지 본문을 전역 eval — render `materials/ktx2-csp.ts`와 짝) |
 | src/main.ts | 엔트리, 오류 화면, `?probe=decode`면 부트 대신 `debug/decode-probe.ts` 동적 import |
 | src/caps.ts | 기능 감지 `detectCaps(env?)` → `Caps`(webgpu `available/no-adapter/unsupported`, crossOriginIsolated, `IsolationMode`, decodeWorkers) |
@@ -48,7 +49,8 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/workers/*.worker.ts | 패키지 워커 엔트리 재수출(Vite 워커 번들링용) |
 | src/config/*.json | 기본 설정 오버라이드 |
 | src/debug/sun-override.ts | `?sun=az,el` → phase 68 `render.setEnvironment`(태양 고정, 달 반대편) — 조명·대기 확인·T02 수락 캡처 |
-| src/debug/post-flags.ts | `?quality=low\|medium\|high\|ultra`, `?post=ao:gtao,ssr:0,scale:0.85,…` → RenderConfig.quality·post(M03-T07 A/B) |
+| src/wiring/quality.ts | 품질 티어: `?quality=` > localStorage `sanpo.quality.v1` > 첫 표시 뒤 `render.detectQuality()`, `quality/changed`마다 저장. 골든뷰는 고정·동적 해상도 끔(M03-T08) |
+| src/debug/post-flags.ts | `?quality=low\|medium\|high\|ultra`, `?post=ao:gtao,ssr:0,scale:0.85,…` → RenderConfig.quality·post(M03-T07 A/B). `?dynres=0` 동적 해상도 끔, `?gpuLoad=n` 디버그 GPU 부하(M03-T08) |
 | src/debug/wet-override.ts | `?wet=0..1` → `WeatherOverride`(env 배선·태양 고정이 `weather.wetness`를 덮음) + 왼쪽 아래 슬라이더(골든뷰 제외) — M03-T06 젖음 수동 검증 |
 | src/three-compat.ts | Vite alias `three` 대상: `three/webgpu` + WebGL 전용 이름 2개 대체(ADR-0028) |
 | src/debug/bookmarks.ts | 골든뷰 북마크(M03-T10): `?view=<id>` → `tests/golden/views.json` 동적 import(별도 청크) → 시작 포즈(절대 또는 지면 + AGL)·부팅 대기 중심·fov, `createGoldenWatch`(스트리밍 큐 0·HLOD 페이드 0·`extra` 1.5 s → `#app[data-golden=ready]`), `__SANPO_GOLDEN__` |

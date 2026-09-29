@@ -4,12 +4,14 @@ import {
   createEventBus,
   createLogger,
   createScheduler,
+  type DeepPartial,
+  type EventBus,
   type FrameSource,
   type Logger,
   type PlayerState,
   type Scheduler,
 } from '@sanpo/core';
-import type { PostEffects, QualityTier } from '@sanpo/render';
+import type { PostEffects, QualityTier, RenderConfig } from '@sanpo/render';
 import type { ClockMode } from '@sanpo/sim';
 import { detectCaps } from './caps.ts';
 import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
@@ -20,6 +22,7 @@ import { createSunOverride, parseSunFlag } from './debug/sun-override.ts';
 import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-override.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
+import { loadTier, startQualityWiring } from './wiring/quality.ts';
 import {
   type LoadedWorld,
   loadWorld,
@@ -62,6 +65,10 @@ export interface BootFlags {
   quality?: QualityTier;
   /** `?post=` → 후처리 효과 덮어쓰기(A/B). */
   post?: Partial<PostEffects>;
+  /** `?dynres=0` → 동적 해상도 끔. */
+  noDynres?: boolean;
+  /** `?gpuLoad=<n>` → 디버그 GPU 부하(동적 해상도 확인). */
+  gpuLoad?: number;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -94,6 +101,8 @@ export function parseFlags(search: string): BootFlags {
     ...(parseWetFlag(q.get('wet')) !== undefined ? { wet: parseWetFlag(q.get('wet')) as number } : {}),
     ...(parseQualityFlag(q.get('quality')) ? { quality: parseQualityFlag(q.get('quality')) as QualityTier } : {}),
     ...(q.get('post') ? { post: parsePostFlag(q.get('post')) } : {}),
+    ...(q.get('dynres') === '0' ? { noDynres: true } : {}),
+    ...(Number(q.get('gpuLoad')) > 0 ? { gpuLoad: Math.min(Math.floor(Number(q.get('gpuLoad'))), 4096) } : {}),
   };
 }
 
@@ -157,29 +166,46 @@ function mountCanvas(doc: Document): HTMLCanvasElement {
   return canvas;
 }
 
+/** render 설정: 플래그 + 품질(`?quality=` > 저장값 > 기본) + 골든뷰 결정론(동적 해상도 끔). */
+function renderConfigOf(flags: BootFlags, golden: GoldenView | undefined): DeepPartial<RenderConfig> {
+  const quality = flags.quality ?? (golden ? undefined : loadTier(storageOf()));
+  return {
+    ...(flags.exposure ? { exposure: flags.exposure } : {}),
+    ...(flags.gpuTiming ? { gpuTiming: true } : {}),
+    ...(flags.noShadows ? { shadows: false } : {}),
+    ...(flags.flatFacade ? { facade: 'flat' as const } : {}),
+    ...(quality ? { quality } : {}),
+    ...(flags.post ? { post: flags.post } : {}),
+    ...(flags.noDynres || golden ? { dynamicResolution: false } : {}),
+    ...(flags.gpuLoad ? { debugGpuLoad: flags.gpuLoad } : {}),
+  };
+}
+
+function storageOf(): Storage | undefined {
+  try {
+    return globalThis.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
 async function setupWorldView(
   flags: BootFlags,
   scheduler: Scheduler,
   log: Logger,
   view: StatusView,
   golden: GoldenView | undefined,
+  bus: EventBus,
 ): Promise<WorldView | undefined> {
   try {
     const weather = weatherOf(flags, golden);
     const world = await createWorldView({
       canvas: mountCanvas(document),
-      bus: createEventBus(log),
+      bus,
       log,
       scheduler,
       backend: flags.backend === 'webgl' ? 'webgl' : 'auto',
-      renderConfig: {
-        ...(flags.exposure ? { exposure: flags.exposure } : {}),
-        ...(flags.gpuTiming ? { gpuTiming: true } : {}),
-        ...(flags.noShadows ? { shadows: false } : {}),
-        ...(flags.flatFacade ? { facade: 'flat' as const } : {}),
-        ...(flags.quality ? { quality: flags.quality } : {}),
-        ...(flags.post ? { post: flags.post } : {}),
-      },
+      renderConfig: renderConfigOf(flags, golden),
       ...clockOf(flags, golden),
       ...(weather ? { weather } : {}),
       ...(golden
@@ -243,7 +269,8 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
   scheduler.setFrameSource(createIdleFrameSource());
   const golden = flags.view === undefined ? undefined : await loadGoldenView(flags.view);
   if (flags.view !== undefined && golden === undefined) view.showError(`골든뷰 없음: ${flags.view}`);
-  const world = await setupWorldView(flags, scheduler, log, view, golden);
+  const bus = createEventBus(log);
+  const world = await setupWorldView(flags, scheduler, log, view, golden, bus);
   const watch = golden && world ? addGoldenWatch(scheduler, world, golden) : undefined;
   await scheduler.init();
 
@@ -260,6 +287,13 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
     const shown = await world.showWorld(loaded);
     view.setRendered(shown);
     watch?.start();
+    startQualityWiring({
+      render: world.render,
+      bus,
+      log: log.child('quality'),
+      storage: storageOf(),
+      fixed: flags.quality !== undefined || golden !== undefined,
+    });
   });
   return { loop, world };
 }

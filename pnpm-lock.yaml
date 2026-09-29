@@ -143,6 +143,9 @@ importers:
 
   packages/render:
     dependencies:
+      '@pmndrs/detect-gpu':
+        specifier: 6.0.23
+        version: 6.0.23
       '@sanpo/core':
         specifier: workspace:*
         version: link:../core
@@ -733,6 +736,9 @@ packages:
     resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
     engines: {node: '>=20'}
     hasBin: true
+
+  '@pmndrs/detect-gpu@6.0.23':
+    resolution: {integrity: sha512-kkWgtg7Vq3V+J9F5Ad4MolQenoQrE6Lb2VTbepenTDqjVQwYHQ2+YWYAIylHGYMlzSkmEmpYZzf7aRRE4adSmQ==}
 
   '@poppinss/colors@4.1.6':
     resolution: {integrity: sha512-H9xkIdFswbS8n1d6vmRd8+c10t2Qe+rZITbbDHHkQixH5+2x1FDGmi/0K+WgWiqQFKPSlIYB7jlH6Kpfn6Fleg==}
@@ -1913,6 +1919,8 @@ snapshots:
   '@playwright/test@1.63.0':
     dependencies:
       playwright: 1.63.0
+
+  '@pmndrs/detect-gpu@6.0.23': {}
 
   '@poppinss/colors@4.1.6':
     dependencies:

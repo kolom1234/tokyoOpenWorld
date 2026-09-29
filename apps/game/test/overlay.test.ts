@@ -22,6 +22,7 @@ describe('describeDebug', () => {
       gpu: { enabled: false, frameMs: 0, samples: 0 },
       post: null,
       exposure: null,
+      quality: { tier: 'high', renderScale: 0.85, dynamic: true, frameMs: 16.7 },
     };
     const t = { camera: { posWF: { x: -60, y: 75.4, z: -15 } }, hud: { speedKmh: 54 } } as unknown as TraversalService;
     const lines = describeDebug(stats, 59.94, t, 15.4);

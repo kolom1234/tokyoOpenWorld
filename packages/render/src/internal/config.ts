@@ -14,4 +14,7 @@ export const DEFAULT_RENDER_CONFIG: RenderConfig = {
   facade: 'procedural',
   quality: 'high',
   post: {},
+  dynamicResolution: true,
+  gpuBenchmarksPath: '/detect-gpu/',
+  debugGpuLoad: 0,
 };

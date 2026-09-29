@@ -44,11 +44,13 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
     phase: RENDER_PHASE,
     update(f) {
       ctx.post.render(f.dtReal);
+      ctx.quality.onFrame(f.dtReal);
       ctx.gpuTimer.afterFrame();
       counters.frames++;
     },
     dispose() {
       cells.dispose();
+      ctx.quality.dispose();
       ctx.post.dispose();
       ctx.env.dispose();
       ctx.shadows?.dispose();
