@@ -6,11 +6,10 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 - Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑).
 - In progress: –
 - 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
-- 배포 상태: staging Worker `tokyo-sanpo-staging` = 이 브랜치(T06) 코드 + dev 버킷 빌드 **`20260929-c9a28d3-ec1646fc`**(L0 294 + HLOD 177 + shared/materials, 477 파일 248.7 MB, current).
-  dev 버킷 옛 빌드: `20260928-b2d1e36-7fb58d45`(M02-T07, 측정용 재업로드 2026-09-29 — 10/6 이후 gc), `20260928-7e215f4-7fb58d45`(10/5 이후 gc). `pnpm pipeline gc --env dev --apply`.
-  staging 첫 로딩(GOLDEN_BOOT): **12.7–13.4 MB**·첫 표시 10.6–11.2 s(부팅 exclusive whenReady, ADR-0033). 수정 전 79.0 MB — 같은 클라이언트 + M02 데이터 77.0 MB →
-  데이터 증가(T04+T06)는 +2.0 MB, 나머지는 첫 표시 지연 동안의 선적재였다.
-- 로컬 최신 빌드 = staging과 같음(`20260929-c9a28d3-ec1646fc`).
+- 배포 상태: staging Worker `tokyo-sanpo-staging` = b84bfa1 코드 + dev 버킷 빌드 **`20260929-b84bfa1-ec1646fc`**(L0 294 + HLOD 177 + shared/materials(실내 큐브맵 포함), 478 파일 248.9 MB, current).
+  dev 버킷 옛 빌드(gc 대기, 7일 규칙): `20260929-c9a28d3-ec1646fc`(T06, 10/6~), `20260928-b2d1e36-7fb58d45`(M02-T07, 10/6~), `20260928-7e215f4-7fb58d45`(10/5~). `pnpm pipeline gc --env dev --apply`(2026-09-29 dry-run = 0).
+  staging 첫 로딩(GOLDEN_BOOT): **12.65 MB**·첫 표시 10.2 s(T05 기준). 머티리얼(첫 표시 뒤 지연) 18.18 MB.
+- 로컬 최신 빌드 = staging과 같음(`20260929-b84bfa1-ec1646fc`).
 - Next step (정확히 한 걸음): M03-T07 후처리 파이프라인(07 §7 순서: MRT → GTAO → SSGI → SSR → 대기 합성 → Bloom → 자동노출 → TRAA/TAAU → AgX → LUT → Sharpen, 1440p High ≤ 4 ms) — 깊이 프리패스로 파사드·지면 오버드로우 재측정.
 - Blockers: 없음
 
