@@ -7,6 +7,7 @@
 three는 0.186.1로 고정(02). takram 0.19.1(2026-05, 최신)은 three r186과 두 군데서 어긋나고, 게임은 WebGPU 빌드만 번들한다.
 
 ## Decision
+0. (ADR-0029 §5 개정) WebGPU 경로에서는 하늘 배경 노드를 쓰지 않는다(환경 프로브와 겹치면 배경 머티리얼 매 프레임 재빌드).
 1. **좌표**: `AtmosphereContext.matrixWorldToECEF` = 렌더 원점(WF)의 타원체 위치(TP + 지오이드고 36.7 m, MVP 구역 상수) × 로컬 North-Up-East ×
    WF 축 변환(도북 −Z를 진북 기준 방위 γ로 회전 — `gridConvergenceDeg`). 원점 재설정 때 다시 계산. 태양·달은 **WF 방향을 받아** 같은 행렬로 ECEF로 보낸다
    (render는 천문 계산을 하지 않는다 — `setEnvironment(EnvironmentState)`, sim은 T03).
@@ -24,9 +25,9 @@ three는 0.186.1로 고정(02). takram 0.19.1(2026-05, 최신)은 three r186과 
    KTX2Loader·takram의 `three` import가 WebGL 렌더러를 끌어오지 않는다.
 7. **three r186 주의**: MRT 없이 `pass().getTextureNode('output')`을 쓰는 예제 패턴은 (위 LUT 문제와 겹쳐) 원인 분리가 어려웠다 — 항상 `setMRT(mrt({ output, … }))`.
 8. **GPU 타이머**: `RenderConfig.gpuTiming`(`?gpuTiming=1`) → three `trackTimestamp` + `resolveTimestampsAsync('render')` → `stats().gpu.frameMs`(렌더 패스 합, 컴퓨트 제외).
-   Chrome은 `--enable-webgpu-developer-features`여야 100 µs 양자화가 풀린다(골든 설정에 포함).
+   Chrome은 `--enable-webgpu-developer-features`여야 100 µs 양자화가 풀린다(골든 설정에 포함). → 합산 방식 정정: ADR-0029 §6.
 
 ## Consequences
-- 실측(RTX 3050 Laptop, 2560×1440, core 4뷰): GPU 프레임 **4.5–6.4 ms**(대기·환경·공중원근 포함, 그림자·SSGI 전).
+- 실측(RTX 3050 Laptop, 2560×1440, core 4뷰): GPU 프레임 ≈ 17–25 ms(대기·환경·공중원근 포함, 그림자 전). 처음 적은 4.5–6.4 ms는 GPU 타이머 버그(ADR-0029 §6)로 틀린 값.
 - takram이 r186을 지원하면 패치 제거(패치 파일 = 3 hunk). takram 업그레이드 시 `pnpm install`이 패치 적용 실패로 알려 준다.
 - 황혼·밤은 고정 노출에서 매우 어둡다 → 자동 노출(T07)·야간 광원(M09)에서 해결.

@@ -52,7 +52,16 @@ export interface AtmosphereRig {
   dispose(): void;
 }
 
-export function createAtmosphere(renderer: WebGPURenderer, scene: Scene, camera: Camera): AtmosphereRig {
+/**
+ * @param skyBackground 하늘을 `scene.backgroundNode`로 그릴지. 후처리(aerialPerspective)가 깊이 1 텍셀에 하늘을 그리면 불필요하고,
+ * 환경 프로브(SkyEnvironmentNode)와 함께 쓰면 배경 머티리얼이 매 프레임 재빌드된다(CPU ≈ 20 ms, 실측) → WebGL2 직접 렌더에서만 켠다.
+ */
+export function createAtmosphere(
+  renderer: WebGPURenderer,
+  scene: Scene,
+  camera: Camera,
+  withSkyBackground: boolean,
+): AtmosphereRig {
   const ctx = new AtmosphereContext();
   ctx.camera = camera;
   // 레이마칭 산란은 STBN 시간 노이즈를 넣는다 → TAA(M03-T07) 전에는 LUT 조회로(프레임 간 결정론, CPU 폴백 비용↓).
@@ -66,7 +75,7 @@ export function createAtmosphere(renderer: WebGPURenderer, scene: Scene, camera:
   );
   const light = new AtmosphereLight(LIGHT_DISTANCE_M);
   light.name = 'sun';
-  scene.backgroundNode = skyBackground() as unknown as TslNode;
+  if (withSkyBackground) scene.backgroundNode = skyBackground() as unknown as TslNode;
   const rot = new Matrix4();
   const dir = new Vector3();
   const sunWF = new Vector3(0, 1, 0);

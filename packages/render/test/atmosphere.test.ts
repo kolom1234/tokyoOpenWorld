@@ -36,20 +36,27 @@ describe('worldToEcef', () => {
 
 describe('gpu timer', () => {
   it('averages resolved render time per frame and stays inert when disabled', async () => {
-    let next = 8;
-    const renderer = { resolveTimestampsAsync: async () => next } as never;
+    const timestamps = new Map<string, number>([
+      ['a:f1', 6],
+      ['b:f2', 2],
+    ]);
+    const renderer = {
+      resolveTimestampsAsync: async () => 0.1,
+      backend: { timestampQueryPool: { render: { timestamps } } },
+    } as never;
     const t = createGpuTimer(renderer, true);
     t.afterFrame();
     await Promise.resolve();
     await Promise.resolve();
-    next = 4;
+    timestamps.set('a:f1', 3);
     t.afterFrame();
     t.afterFrame(); // 해석 대기 중 → 다음 표본에 2프레임으로 합산
     await new Promise((r) => setTimeout(r, 0));
     const s = t.stats();
     expect(s.enabled).toBe(true);
     expect(s.samples).toBeGreaterThanOrEqual(1);
-    expect(s.frameMs).toBeGreaterThan(0);
+    // 첫 표본 = 1프레임 8 ms(6 + 2, 마지막 frame id만 보는 three 반환값 0.1이 아니라 풀 합).
+    expect(s.frameMs).toBeGreaterThan(4);
     const off = createGpuTimer(renderer, false);
     off.afterFrame();
     expect(off.stats()).toEqual({ enabled: false, frameMs: 0, samples: 0 });

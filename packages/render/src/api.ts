@@ -37,6 +37,8 @@ export interface RenderConfig {
   exposure: number;
   /** GPU 타이머(timestamp-query) — `stats().gpu` 성능 계측(`?gpuTiming=1`). 약간의 오버헤드. */
   gpuTiming: boolean;
+  /** 태양 CSM 그림자(WebGPU만, 품질 티어 T08이 조정). */
+  shadows: boolean;
 }
 
 /** 공유 머티리얼 라이브러리 상태(M03-T01). 'manifest' = 평균색만, 'ready' = KTX2 배열 적용. */

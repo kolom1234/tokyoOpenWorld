@@ -27,7 +27,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | public/_headers | 정적 에셋 COOP/COEP/CORP/CSP·캐시 헤더(docs/13 §3) — Worker를 거치지 않는 응답용 |
 | src/main.ts | 엔트리, 오류 화면, `?probe=decode`면 부트 대신 `debug/decode-probe.ts` 동적 import |
 | src/caps.ts | 기능 감지 `detectCaps(env?)` → `Caps`(webgpu `available/no-adapter/unsupported`, crossOriginIsolated, `IsolationMode`, decodeWorkers) |
-| src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini|local`, `backend=webgl`, `probe=decode`, `view=<id>`, `exposure=<n>`, `sun=<방위>,<고도>`, `gpuTiming=1`), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
+| src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini|local`, `backend=webgl`, `probe=decode`, `view=<id>`, `exposure=<n>`, `sun=<방위>,<고도>`, `gpuTiming=1`, `time=<ISO>`, `shadows=0`), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
 | src/world-view.ts | (`start` 옵션: 골든뷰 시작 포즈·대기 중심·fov) 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: streaming 높이장(프록시) }, freecam 시작)`·카메라 배선 → `providers`·`frameSource`. `showWorld(loaded)` = `render.precompile` → `createStreaming`(디코드 워커) + streaming-render 배선을 스케줄러에 추가 → `whenReady(스폰 384 m, L0)` → 시작 시점 재설정 → `render.loadMaterials(materialsUrl)`(비동기, 첫 표시 뒤 — `materialsSettled`) → 스폰 3×3 live 수(M02-T05) |
 | src/start-view.ts | 시작 시점: 스크램블 교차로 북서 상공(WF −60, −15) 지면 위 60 m → Scramble Square(WF 130.8, 130, 132.5) 바라봄 |
 | src/wiring/camera.ts | phase 65: `render.setCamera(traversal.camera)` |
@@ -42,7 +42,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/wiring/streaming-physics.ts | 물리 반경 필터, `requestSections` → physics.addCell/removeCell |
 | src/wiring/streaming-sim.ts | nav/lanes/meta 전달 |
 | src/wiring/sim-physics.ts | MessageChannel 생성·연결 |
-| src/wiring/env.ts | sim.environment() → render.setEnvironment, audio |
+| src/wiring/env.ts | phase 66 `render.setEnvironment(sim.environment())`(M03-T03, audio는 M10), `defaultClock`(오늘 12:00 JST custom 1배속). world-view가 `createSim`(골든뷰·`?time=` = frozen) 생성, frameSource 시각 = sim 시계 |
 | src/wiring/ui-bridge.ts | UiBridge 구현(시그널) |
 | src/workers/*.worker.ts | 패키지 워커 엔트리 재수출(Vite 워커 번들링용) |
 | src/config/*.json | 기본 설정 오버라이드 |

@@ -66,7 +66,7 @@ scene
 ## 6. 조명·대기
 | 요소 | 구현 |
 |---|---|
-| 태양/달 | three `SunLight` addon (CSM 캐스케이드 그림자). High: 4 캐스케이드×2048², 그림자 거리 600 m. 방향은 **sim이 계산**(suncalc + 수렴각 보정)해 `EnvironmentState.sunDirWF`로 전달, render는 소비만 |
+| 태양/달 | takram `AtmosphereLight`(DirectionalLight) + takram `CascadedShadowMapsNode`(three CSM 확장, 캐스케이드 페이드). High: 4 캐스케이드×2048², 그림자 거리 600 m, cast = 건물·랜드마크, HLOD 제외. 방향은 **sim이 계산**(suncalc + 수렴각, 1 km 격자 관측점)해 `EnvironmentState.sunDirWF`로 전달, render는 소비만(ADR-0029) |
 | 하늘/대기 | `@takram/three-atmosphere/webgpu` 0.19.1(+ r186 호환 패치) — `AtmosphereContext`(WF→ECEF: 원점 위치·NUE·수렴각 γ·지오이드 36.7 m) + `AtmosphereLight`(직사·하늘 간접) + `skyBackground()` + 후처리 `aerialPerspective`(ADR-0028) |
 | 환경 조명 | `SkyEnvironmentNode`(하늘 64² 큐브 → PMREM) = `scene.environmentNode`, 라이트 간접 끔. 갱신 = 카메라 1 km 이동 또는 태양 각도 변화(라이브러리 임계값, 분할 렌더 안 함 — ADR-0028) |
 | 간접광 | `SSGINode`(High+), `GTAONode`(Medium+). 플레이어 주변 `LightProbeGrid`는 M09-T03에서 효용 평가 후 채택 |

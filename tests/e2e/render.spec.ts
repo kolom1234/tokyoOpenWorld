@@ -1,5 +1,5 @@
 // 렌더 스모크(M01-T06): `?world=mini&debug=1&backend=webgl` 시작 화면에 건물이 보이는지(하늘이 아닌 픽셀 비율),
-// 원점 재설정 강제 테스트(+4096 m → 복귀) 전후 화면이 픽셀 단위로 같은지(떨림·누적 오차 없음). 스크린샷은 test-results/screenshots/. see docs/14-testing-perf.md §1
+// 원점 재설정 강제 테스트(+4096 m → 복귀) 전후 화면이 픽셀 단위로 같은지(떨림·누적 오차 없음). 시계는 `?time=`으로 고정(M03-T03 — 태양이 움직이면 하늘이 바뀜). 스크린샷은 test-results/screenshots/. see docs/14-testing-perf.md §1
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
@@ -63,7 +63,7 @@ test('start view renders Scramble Square and surrounding buildings (WebGL2 fallb
     if (m.type() === 'error') errors.push(m.text());
   });
   mkdirSync(SHOTS, { recursive: true });
-  await page.goto('/?world=mini&debug=1&backend=webgl');
+  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
   const app = page.locator('#app');
   await expect(app).toHaveAttribute('data-backend', 'webgl2', { timeout: 30_000 });
   await expect(app).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
@@ -89,7 +89,7 @@ test('start view renders Scramble Square and surrounding buildings (WebGL2 fallb
 });
 
 test('forced origin rebase (+4096 m and back) leaves the view pixel-identical', async ({ page }) => {
-  await page.goto('/?world=mini&debug=1&backend=webgl');
+  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
   await expect(page.locator('#app')).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
   await page.addStyleTag({ content: HIDE_UI });
   const overlay = page.locator('.debug-overlay');

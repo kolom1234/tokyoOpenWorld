@@ -8,7 +8,7 @@ WebGPU(폴백 WebGL2) 렌더링 전부: 씬 그래프·원점 재설정, 셀 메
 ## Public API (M01-T06 구현분 — 07 §11의 부분집합)
 ```ts
 createRender(deps: { canvas: HTMLCanvasElement; bus: EventBus; log: Logger; config?: DeepPartial<RenderConfig> }): Promise<RenderService>
-RenderConfig { backend: 'auto' | 'webgl'; farM (60 km); maxPixelRatio (2); rebaseDistanceM (2048); rebaseGridM (256); basisPath ('/basis/'); exposure (3); gpuTiming (false) }
+RenderConfig { backend: 'auto' | 'webgl'; farM (60 km); maxPixelRatio (2); rebaseDistanceM (2048); rebaseGridM (256); basisPath ('/basis/'); exposure (3); gpuTiming (false); shadows (true) }
 RenderService extends SystemProvider {            // systems: renderPrep(70), render(80)
   readonly renderOriginWF: Readonly<Vec3d>;
   readonly backend: 'webgpu' | 'webgl2';           // 초기화 후 실제 백엔드
@@ -43,7 +43,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
 - 실존 상표·로고 텍스처 금지(M_SIGN은 가상 브랜드 아틀라스만).
 
 ## Files
-context(초기화·씬·머티리얼·대기·후처리 묶음), frame(renderPrep 70·render 80), renderer/(init — WebGPURenderer·깊이 전략·trackTimestamp, backend-caps — WebGPU 어댑터·EXT_clip_control 예측, gpu-timer — timestamp 평균), lighting/(atmosphere — Context·Light·하늘·WF→ECEF·LUT prepare, env-probe — SkyEnvironmentNode, sun — 방향 규약·기본값), post/(pipeline — 씬 패스 MRT → aerialPerspective / 직접 렌더), scene/(scene-graph, cell-node — DecodedMesh→Mesh·CellSet·`_CHILD` 변환, origin — 재설정 순수 계산, render-view — WF 카메라·재설정 실행, hlod-switch — 자식 표시·페이드 상태), materials/(registry — 기본·HLOD, library — KTX2 배열·manifest·평균색·그룹 uniform, textured — 지형(`_SURF` 그룹·월드 XZ)·파사드(건물 해시 벽 그룹, UV0 벽 미터)·sampleLayer·perturbWorld·buildingHashes, hlod — TSL 자식 페이드·붕괴, precompile — 셀과 같은 속성 형식 더미), lighting/sun, config.ts, service.ts.
+context(초기화·씬·머티리얼·대기·후처리 묶음), frame(renderPrep 70·render 80), renderer/(init — WebGPURenderer·깊이 전략·trackTimestamp, backend-caps — WebGPU 어댑터·EXT_clip_control 예측, gpu-timer — timestamp 평균), lighting/(atmosphere — Context·Light·(WebGL2만)하늘 배경·WF→ECEF·LUT prepare, env-probe — SkyEnvironmentNode(WebGPU만), shadows — CSM(takram CascadedShadowMapsNode, WebGPU만), sun — 방향 규약·기본값), post/(pipeline — 씬 패스 MRT → aerialPerspective / 직접 렌더), scene/(scene-graph, cell-node — DecodedMesh→Mesh·CellSet·`_CHILD` 변환, origin — 재설정 순수 계산, render-view — WF 카메라·재설정 실행, hlod-switch — 자식 표시·페이드 상태), materials/(registry — 기본·HLOD, library — KTX2 배열·manifest·평균색·그룹 uniform, textured — 지형(`_SURF` 그룹·월드 XZ)·파사드(건물 해시 벽 그룹, UV0 벽 미터)·sampleLayer·perturbWorld·buildingHashes, hlod — TSL 자식 페이드·붕괴, precompile — 셀과 같은 속성 형식 더미), lighting/sun, config.ts, service.ts.
 컬링은 three 메시별 프러스텀 컬링(boundsLocal 구) — 별도 culling.ts 없음(필요 시 perf 후).
 예정: renderer/dynamic-resolution, scene/(culling, hlod-switch), materials/(terrain, road, decal, facade/*, glass, …), lighting/(atmosphere, env-probe, clustered, night-lights), post/*, weather/*, instances/*, debug/overlay.
 
@@ -56,6 +56,8 @@ context(초기화·씬·머티리얼·대기·후처리 묶음), frame(renderPre
 M01-T06 최소 구현(초기화·reversed-Z·방향광·셀 메시·원점 재설정) + M02-T05 HLOD 자식 전환·선컴파일(ADR-0025) → M03 본격(머티리얼·대기·후처리).
 
 ## Gotchas
+- GPU 타이머는 풀 `timestamps` 합산(three 반환값은 마지막 frame id만 — ADR-0029 §6). 그림자는 `renderer.shadowMap.enabled` 필수.
+- WebGPU 경로에 `scene.backgroundNode`를 두지 말 것(환경 프로브와 겹치면 배경 머티리얼 매 프레임 재빌드, ADR-0029 §5).
 - takram 0.19.1 × three r186: 패치 필수(struct Proxy, requestIdleCallback 타임아웃). LUT가 0이면 조명·하늘이 **검게** 나온다 — `precompile()`의 LUT prepare 확인.
 - 게임 번들은 `three` → `apps/game/src/three-compat.ts` alias(WebGLCubeRenderTarget·WebGLRenderer 대체). render 패키지 테스트(Node)는 실제 `three`를 쓴다.
 - three r186 명칭: 후처리는 `RenderPipeline`(구 PostProcessing), `PCFSoftShadowMap` 제거됨. addon 이름은 `node_modules/three/examples/jsm/{tsl/display,lighting,lights}`에서 확인.

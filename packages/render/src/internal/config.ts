@@ -10,4 +10,5 @@ export const DEFAULT_RENDER_CONFIG: RenderConfig = {
   basisPath: '/basis/',
   exposure: 3,
   gpuTiming: false,
+  shadows: true,
 };

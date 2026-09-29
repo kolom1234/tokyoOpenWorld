@@ -13,10 +13,12 @@ import {
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
 import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
+import { type ClockMode, createSim, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import { startFreecamPose } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
+import { createEnvWiring, defaultClock } from './wiring/env.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
 import type { LoadedWorld } from './world-load.ts';
 
@@ -27,6 +29,7 @@ export interface WorldView {
   readonly render: RenderService;
   readonly input: InputService;
   readonly traversal: TraversalService;
+  readonly sim: SimService;
   readonly ground: GroundQuery;
   readonly providers: readonly SystemProvider[];
   readonly frameSource: FrameSource;
@@ -50,6 +53,8 @@ export interface WorldViewDeps {
   now?: () => number;
   /** 시작 시점 재정의(골든뷰 북마크 `?view=`): 부팅 대기 중심과 지면 확인 뒤 포즈. 없으면 스폰·startFreecamPose. */
   start?: { centerWF: Vec3d; pose: (ground: GroundQuery) => FreecamParams; fovDeg?: number };
+  /** 시계 시작(골든뷰·`?time=` = frozen). 없으면 오늘 정오 JST부터 1배속(wiring/env.ts). */
+  clock?: ClockMode;
 }
 
 /** 월드 로드 뒤 생기는 것들(getter로 노출). */
@@ -111,21 +116,23 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
   );
   const now = deps.now ?? Date.now;
+  const sim = createSim({ bus, log, now, initialClock: deps.clock ?? defaultClock(now()) });
   const frameSource: FrameSource = {
     camera: () => traversal.camera,
     player: () => traversal.player,
-    gameTimeMs: now,
-    timeScale: () => 1,
+    gameTimeMs: () => sim.clock.gameTimeMs,
+    timeScale: () => sim.clock.timeScale,
   };
-  const cameraWiring = createCameraWiring(traversal, render);
+  const wiringSystems = [createCameraWiring(traversal, render), createEnvWiring(sim, render)];
 
   return {
     render,
     input,
     traversal,
+    sim,
     ground,
     frameSource,
-    providers: [input, traversal, { systems: () => [cameraWiring] }, render],
+    providers: [input, sim, traversal, { systems: () => wiringSystems }, render],
     get streaming() {
       return late.streaming;
     },

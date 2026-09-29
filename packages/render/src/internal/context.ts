@@ -6,6 +6,7 @@ import type { DepthMode, RenderBackend, RenderConfig, RenderDeps } from '../api.
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
 import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
 import { attachEnvProbe, type EnvProbe } from './lighting/env-probe.ts';
+import { enableSunShadows, type SunShadows } from './lighting/shadows.ts';
 import { DEFAULT_MOON_DIR_WF, DEFAULT_SUN_DIR_WF } from './lighting/sun.ts';
 import { createMaterialLibrary, type MaterialLibrary } from './materials/library.ts';
 import { createMaterialRegistry, type MaterialRegistry } from './materials/registry.ts';
@@ -32,6 +33,8 @@ export interface RenderContext {
   readonly cells: CellSet;
   readonly atmosphere: AtmosphereRig;
   readonly env: EnvProbe;
+  /** WebGPU만(WebGL2 폴백은 품질 티어 M03-T09에서 결정). */
+  readonly shadows: SunShadows | undefined;
   readonly post: PostPipeline;
   readonly gpuTimer: GpuTimer;
   /** 프레임 카운터·마지막 HLOD 페이드 수(stats). */
@@ -48,7 +51,9 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const hlod = createHlodSwitch();
   const view = createRenderView(cfg, deps.bus, log);
   renderer.toneMappingExposure = cfg.exposure;
-  const atmosphere = createAtmosphere(renderer, graph.scene, view.camera);
+  // WebGPU = 후처리(공중원근이 하늘까지) + 환경 프로브, WebGL2 = 직접 렌더 + 하늘 배경 + 라이트 간접광(ADR-0028).
+  const post = backend === 'webgpu';
+  const atmosphere = createAtmosphere(renderer, graph.scene, view.camera, !post);
   graph.roots.light.add(atmosphere.light, atmosphere.light.target);
   atmosphere.setOrigin(view.renderOriginWF);
   atmosphere.setBodies(DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF);
@@ -66,8 +71,9 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     hlod,
     cells: createCellSet(materials, graph.roots, hlod),
     atmosphere,
-    env: attachEnvProbe(graph.scene, atmosphere.light),
-    post: (backend === 'webgpu' ? createPostPipeline : createDirectRender)(renderer, graph.scene, view.camera),
+    env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },
+    shadows: backend === 'webgpu' && cfg.shadows ? enableSunShadows(renderer, atmosphere.light) : undefined,
+    post: (post ? createPostPipeline : createDirectRender)(renderer, graph.scene, view.camera),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0 },
   };

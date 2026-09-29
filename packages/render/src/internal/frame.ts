@@ -51,6 +51,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
       cells.dispose();
       ctx.post.dispose();
       ctx.env.dispose();
+      ctx.shadows?.dispose();
       ctx.atmosphere.dispose();
       ctx.materials.dispose();
       library.dispose();

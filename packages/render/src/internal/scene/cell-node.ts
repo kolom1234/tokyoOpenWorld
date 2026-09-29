@@ -100,6 +100,9 @@ export function createCellNode(
       const m = new Mesh(buildGeometry(prim), material);
       m.name = `${p.id}/${slot}/${prim.materialId}`;
       m.matrixAutoUpdate = false;
+      // 그림자(M03-T03): 건물·랜드마크만 드리우고, HLOD(원경, 그림자 거리 600 m 밖)는 받지도 않는다.
+      m.castShadow = slot === 'buildings' || slot === 'overrides';
+      m.receiveShadow = !hlod;
       if (hlod) m.userData.hlodFade = hlodFades;
       m.userData.cellSeed = cellSeed;
       triangles += triangleCount(m.geometry);

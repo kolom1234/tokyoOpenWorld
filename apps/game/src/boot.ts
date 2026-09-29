@@ -9,6 +9,7 @@ import {
   type PlayerState,
   type Scheduler,
 } from '@sanpo/core';
+import type { ClockMode } from '@sanpo/sim';
 import { detectCaps } from './caps.ts';
 import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
 import { createDebugOverlay } from './debug/overlay.ts';
@@ -46,9 +47,19 @@ export interface BootFlags {
   sun?: { azDeg: number; elDeg: number };
   /** `?gpuTiming=1` → GPU 타이머(render stats().gpu, 골든 metrics). */
   gpuTiming?: boolean;
+  /** `?time=<ISO 8601>` → 시계를 그 시각에 고정(frozen). 골든뷰는 북마크의 time. */
+  timeMs?: number;
+  /** `?shadows=0` → 태양 그림자 끔(A/B 성능 비교). */
+  noShadows?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
+
+/** 시계: `?time=` > 골든뷰 time > 기본(world-view). 둘 다 frozen(결정론). */
+function clockOf(flags: BootFlags, golden: GoldenView | undefined): { clock?: ClockMode } {
+  const ms = flags.timeMs ?? (golden ? Date.parse(golden.time) : undefined);
+  return ms === undefined ? {} : { clock: { kind: 'frozen', atMs: ms } };
+}
 
 function sunFlag(v: string | null): Pick<BootFlags, 'sun'> {
   const sun = parseSunFlag(v);
@@ -66,6 +77,8 @@ export function parseFlags(search: string): BootFlags {
     ...(Number(q.get('exposure')) > 0 ? { exposure: Number(q.get('exposure')) } : {}),
     ...sunFlag(q.get('sun')),
     ...(q.get('gpuTiming') === '1' ? { gpuTiming: true } : {}),
+    ...(Number.isFinite(Date.parse(q.get('time') ?? '')) ? { timeMs: Date.parse(q.get('time') ?? '') } : {}),
+    ...(q.get('shadows') === '0' ? { noShadows: true } : {}),
   };
 }
 
@@ -137,7 +150,9 @@ async function setupWorldView(
       renderConfig: {
         ...(flags.exposure ? { exposure: flags.exposure } : {}),
         ...(flags.gpuTiming ? { gpuTiming: true } : {}),
+        ...(flags.noShadows ? { shadows: false } : {}),
       },
+      ...clockOf(flags, golden),
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),
