@@ -18,6 +18,7 @@ describe('describeDebug', () => {
       renderOriginWF: { x: 4096, y: 0, z: 0 },
       hlodParents: 3,
       hlodFading: 1,
+      materials: { state: 'ready', layers: 32, downloadBytes: 20_500_000, gpuBytes: 64_000_000, loadMs: 900 },
     };
     const t = { camera: { posWF: { x: -60, y: 75.4, z: -15 } }, hud: { speedKmh: 54 } } as unknown as TraversalService;
     const lines = describeDebug(stats, 59.94, t, 15.4);
@@ -27,6 +28,7 @@ describe('describeDebug', () => {
     expect(lines[3]).toBe('고도 T.P. 75.4 m · 지면 위 60.0 m · 54.0 km/h');
     expect(lines[4]).toBe('원점 (4096, 0, 0) · 재설정 2회');
     expect(lines[5]).toBe('셀 4 · draw 9 · tris 230,499');
+    expect(lines[7]).toBe('머티리얼 ready · 32층 · 20.5 MB → GPU 64.0 MB · 900 ms');
     expect(describeDebug(stats, 0, t, undefined)[3]).toContain('지면 미적재');
     expect(lines[6]).toContain('월드 로드 전');
     const st = {

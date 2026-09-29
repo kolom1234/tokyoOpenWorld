@@ -49,7 +49,7 @@ scene
 | `M_VEHICLE` | 차량 | 클리어코트 도장, 유리, 라이트 발광 |
 | `M_WATER` | 강·연못 | 법선 스크롤 + SSR + 빗방울 파문 |
 | `M_SIGN` | 간판/전광판 | **가상 브랜드** 텍스트 아틀라스 발광, 밤 점등 |
-- 텍스처: `shared/materials`의 KTX2 배열(albedo / normal / ORM) 1024² 레이어. 매니페스트가 `materialId → layer` 매핑.
+- 텍스처: `shared/materials`의 KTX2 배열 3장 — albedo 1024² ETC1S(sRGB), normal·ORM 512² UASTC(ADR-0027). 매니페스트(`schemas/materials.schema.json`)가 레이어별 그룹·`tileM`·평균색, 그룹 → 레이어 인덱스를 준다. 셰이더는 그룹(`MATERIAL_GROUPS` 13종) + 해시로 레이어를 고른다. 첫 표시 뒤 지연 적재(그 전엔 평균색), 유리는 절차(텍스처 없음).
 - 공통 전역 유니폼(`EnvUniforms`): `wetness`, `snowCover`, `timeOfDay`, `season`, `windDir/strength`, `nightFactor`.
 
 ## 5. 절차적 파사드 셰이더 (M_FACADE)

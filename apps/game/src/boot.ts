@@ -158,6 +158,7 @@ function addGoldenWatch(scheduler: Scheduler, world: WorldView, golden: GoldenVi
     root,
     streaming: () => world.streaming?.stats(),
     render: () => world.render.stats(),
+    extra: () => world.materialsSettled,
   });
   scheduler.add({ systems: () => [watch.system] });
   Object.assign(globalThis, { __SANPO_GOLDEN__: { view: golden, render: () => world.render.stats() } });

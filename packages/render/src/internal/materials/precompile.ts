@@ -1,5 +1,5 @@
 // 셰이더 선컴파일(06 §6): 고정 머티리얼 ID별 기본·HLOD 변형을 작은 더미 메시로 씬에 잠깐 붙여 `compileAsync` → 스트리밍 중 첫 사용 끊김 제거.
-// 더미 정점 속성은 실제 셀과 같은 이름·형식(POSITION f32·NORMAL i8 정규화·_child f32)이어야 같은 파이프라인이 캐시된다.
+// 더미 정점 속성은 실제 셀과 같은 이름·형식이어야 같은 파이프라인이 캐시된다(dummyGeometry).
 import type { Logger } from '@sanpo/core';
 import {
   BufferAttribute,
@@ -13,11 +13,20 @@ import {
 import { createHlodFades } from './hlod.ts';
 import { type MaterialRegistry, PRECOMPILE_IDS } from './registry.ts';
 
-function dummyGeometry(hlod: boolean): BufferGeometry {
+/** 실제 셀과 같은 속성 형식(cell-node 변환 후): 지형 f32 위치·f32 `_surf`, 건물 u16 위치·f32 UV·f32 `_bldg`·unorm8×4 `_facade`, HLOD u16 위치·f32 `_child`. */
+function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
   const g = new BufferGeometry();
-  g.setAttribute('position', new BufferAttribute(new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 1]), 3));
+  const quantized = hlod || id === 'facade_default';
+  const pos = quantized ? new Uint16Array([0, 0, 0, 1, 0, 0, 0, 0, 1]) : new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 1]);
+  g.setAttribute('position', new BufferAttribute(pos, 3));
   g.setAttribute('normal', new BufferAttribute(new Int8Array([0, 127, 0, 0, 127, 0, 0, 127, 0]), 3, true));
   if (hlod) g.setAttribute('_child', new BufferAttribute(new Float32Array(3), 1));
+  else if (id === 'terrain_ground') g.setAttribute('_surf', new BufferAttribute(new Float32Array(3), 1));
+  else if (id === 'facade_default') {
+    g.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
+    g.setAttribute('_bldg', new BufferAttribute(new Float32Array(3), 1));
+    g.setAttribute('_facade', new BufferAttribute(new Uint8Array(12), 4, true));
+  }
   return g;
 }
 
@@ -34,7 +43,7 @@ export async function precompileMaterials(
   const geos: BufferGeometry[] = [];
   for (const id of PRECOMPILE_IDS) {
     for (const hlod of [false, true]) {
-      const g = dummyGeometry(hlod);
+      const g = dummyGeometry(id, hlod);
       geos.push(g);
       const m = new Mesh(g, hlod ? materials.getHlod(id) : materials.get(id));
       if (hlod) m.userData.hlodFade = createHlodFades();

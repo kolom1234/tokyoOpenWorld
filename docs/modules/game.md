@@ -23,16 +23,16 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 ## Files
 | 파일 | 책임 |
 |---|---|
-| index.html, vite.config.ts | Vite 엔트리. dev 서버 격리 헤더 + `/api`·`/world` → `wrangler dev`(8787) 프록시 + `sanpo-world-mini` 플러그인(dev 서빙, build 시 `dist/fixtures/world-mini` 복사, `SANPO_WORLD_MINI=0`이면 생략) + `sanpo-local-build`(dev 전용 `/local-world` → `data/build/<SANPO_LOCAL_BUILD | 최신>`) |
+| index.html, vite.config.ts | Vite 엔트리. `three` → `three/webgpu` alias(addon 중복 번들 방지) + `sanpo-basis-transcoder`(`/basis/*` = three examples/jsm/libs/basis, dev 서빙·build 복사) + dev 서버 격리 헤더 + `/api`·`/world` → `wrangler dev`(8787) 프록시 + `sanpo-world-mini` 플러그인(dev 서빙, build 시 `dist/fixtures/world-mini` 복사, `SANPO_WORLD_MINI=0`이면 생략) + `sanpo-local-build`(dev 전용 `/local-world` → `data/build/<SANPO_LOCAL_BUILD | 최신>`) |
 | public/_headers | 정적 에셋 COOP/COEP/CORP/CSP·캐시 헤더(docs/13 §3) — Worker를 거치지 않는 응답용 |
 | src/main.ts | 엔트리, 오류 화면, `?probe=decode`면 부트 대신 `debug/decode-probe.ts` 동적 import |
 | src/caps.ts | 기능 감지 `detectCaps(env?)` → `Caps`(webgpu `available/no-adapter/unsupported`, crossOriginIsolated, `IsolationMode`, decodeWorkers) |
 | src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini|local`, `backend=webgl`, `probe=decode`, `view=<id>`), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
-| src/world-view.ts | (`start` 옵션: 골든뷰 시작 포즈·대기 중심·fov) 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: streaming 높이장(프록시) }, freecam 시작)`·카메라 배선 → `providers`·`frameSource`. `showWorld(loaded)` = `render.precompile` → `createStreaming`(디코드 워커) + streaming-render 배선을 스케줄러에 추가 → `whenReady(스폰 384 m, L0)` → 시작 시점 재설정 → 스폰 3×3 live 수(M02-T05) |
+| src/world-view.ts | (`start` 옵션: 골든뷰 시작 포즈·대기 중심·fov) 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: streaming 높이장(프록시) }, freecam 시작)`·카메라 배선 → `providers`·`frameSource`. `showWorld(loaded)` = `render.precompile` → `createStreaming`(디코드 워커) + streaming-render 배선을 스케줄러에 추가 → `whenReady(스폰 384 m, L0)` → 시작 시점 재설정 → `render.loadMaterials(materialsUrl)`(비동기, 첫 표시 뒤 — `materialsSettled`) → 스폰 3×3 live 수(M02-T05) |
 | src/start-view.ts | 시작 시점: 스크램블 교차로 북서 상공(WF −60, −15) 지면 위 60 m → Scramble Square(WF 130.8, 130, 132.5) 바라봄 |
 | src/wiring/camera.ts | phase 65: `render.setCamera(traversal.camera)` |
 | src/debug/overlay.ts | `?debug=1` 오버레이(FPS·백엔드·깊이·카메라 WF·고도·원점·재설정 횟수·draw/tris·스트리밍 레벨별 상주/대기/fetch/디코드/실패·HLOD 부모/페이드, `data-*` e2e용) + **O 키 원점 재설정 테스트**(+4096 m → 1 s → 복귀). `globalThis.__SANPO_DEBUG__ = { world, rebaseTest }`(디버그 모드만) |
-| src/world-load.ts | `loadWorld(baseUrl, source, fetch?)` → `Result<LoadedWorld, string>`: world.json(`checkManifest`: formatVersion·WORLD_ORIGIN) → cells.idx(`cellsIndex`) → `spawnCells`(스폰 셀 ± 1 중 색인에 있는 L0). 셀 fetch·검증은 streaming. `WORLD_MINI_BASE_URL`, `WORLD_LOCAL_BASE_URL`(`/local-world`) |
+| src/world-load.ts | `loadWorld(baseUrl, source, fetch?)` → `Result<LoadedWorld, string>`: world.json(`checkManifest`: formatVersion·WORLD_ORIGIN) → cells.idx(`cellsIndex`) → `spawnCells`(스폰 셀 ± 1 중 색인에 있는 L0), `materialsUrl`(files.materials, 픽스처 제외). 셀 fetch·검증은 streaming. `WORLD_MINI_BASE_URL`, `WORLD_LOCAL_BASE_URL`(`/local-world`) |
 | src/loop.ts | rAF → scheduler.tick, `FrameHook`(before/after) |
 | src/world-status.ts | `fetchWorldStatus()` → `WorldStatus`(ready/loaded/unconfigured/no-build/error). 기본 `fv` = `@sanpo/tile-format` `FORMAT_VERSION` |
 | src/status-view.ts | 부트 상태 화면(M00 임시, `#app[data-isolated|data-webgpu|data-world|data-world-source|data-world-cells|data-backend|data-rendered-cells|data-error]` — e2e용). 셀이 화면에 올라오면 CSS로 숨김(오류 시 유지) |

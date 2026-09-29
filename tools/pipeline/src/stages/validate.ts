@@ -15,11 +15,12 @@ import {
 import Ajv2020, { type ValidateFunction } from 'ajv/dist/2020.js';
 import { decodeGlb } from '../lib/gltf.ts';
 import { type HlodCellReport, hlodSummary, inspectHlodCell } from './validate-hlod.ts';
+import { checkMaterials, type MaterialsReport } from './validate-materials.ts';
 import { type CellTerrain, checkSeams, type SeamReport } from './validate-seams.ts';
 
 /** docs/04 §4.6 예산(L0). 크기는 10진 MB. */
 export const BUDGET = { cellBytes: 4_000_000, tris: 400_000, colliderTris: 60_000, instances: 5_000 } as const;
-const SCHEMA_FILES = ['area', 'world', 'cell-header', 'cell-meta'];
+const SCHEMA_FILES = ['area', 'world', 'cell-header', 'cell-meta', 'materials'];
 const DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
 
 export interface CellReport {
@@ -39,6 +40,8 @@ export interface ValidateReport {
   cells: CellReport[];
   hlod: HlodCellReport[];
   seams: Omit<SeamReport, 'errors'>;
+  /** shared/materials(없으면 null). */
+  materials: MaterialsReport | null;
   errors: string[];
 }
 
@@ -46,6 +49,7 @@ interface Validators {
   world: ValidateFunction;
   header: ValidateFunction;
   meta: ValidateFunction;
+  materials: ValidateFunction;
 }
 
 export function createValidators(schemasDir: string): Validators {
@@ -57,7 +61,12 @@ export function createValidators(schemasDir: string): Validators {
     if (!v) throw new Error(`validate: schema ${id} missing`);
     return v;
   };
-  return { world: get('sanpo/world'), header: get('sanpo/cell-header'), meta: get('sanpo/cell-meta') };
+  return {
+    world: get('sanpo/world'),
+    header: get('sanpo/cell-header'),
+    meta: get('sanpo/cell-meta'),
+    materials: get('sanpo/materials'),
+  };
 }
 
 function schemaErrors(v: ValidateFunction, data: unknown, what: string, errors: string[]): void {
@@ -189,7 +198,8 @@ export async function validateBuild(
   }
   const { errors: seamErrors, ...seams } = checkSeams(terrains);
   errors.push(...seamErrors);
-  return { buildId: world.buildId, cells, hlod, seams, errors };
+  const materials = checkMaterials(dir, ctx.v.materials, errors);
+  return { buildId: world.buildId, cells, hlod, seams, materials, errors };
 }
 
 /** 셀 표(Markdown): PR 본문·인계용. */
@@ -209,6 +219,9 @@ export function reportMarkdown(r: ValidateReport): string {
     '',
     `seams: ${s.pairs} pairs, ${s.heightSamples} height samples, ${s.meshVertices} mesh edge vertices compared`,
     ...hlodSummary(r.hlod ?? []),
+    r.materials
+      ? `materials: ${r.materials.layers} layers, ${(r.materials.bytes / 1e6).toFixed(2)} MB`
+      : 'materials: none',
     `errors: ${r.errors.length}`,
     ...r.errors.map((e) => `- ${e}`),
     '',

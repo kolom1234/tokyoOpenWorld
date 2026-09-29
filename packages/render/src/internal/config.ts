@@ -7,4 +7,5 @@ export const DEFAULT_RENDER_CONFIG: RenderConfig = {
   maxPixelRatio: 2,
   rebaseDistanceM: 2048,
   rebaseGridM: 256,
+  basisPath: '/basis/',
 };

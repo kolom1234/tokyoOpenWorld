@@ -35,7 +35,7 @@
 ## 4. 에셋 (텍스처·모델·폰트·사운드)
 | 소스 | 사용 | 라이선스 |
 |---|---|---|
-| ambientCG | PBR 머티리얼(아스팔트, 콘크리트, 타일, 금속, 유리, 페인트) | CC0 |
+| ambientCG | PBR 머티리얼 32종(M03-T01, `content/materials/library.json` — 아스팔트·보도블록·콘크리트·타일·금속·미장·사이딩·ALC·벽돌·지붕·잔디·흙·자갈), 1K-JPG zip sha256은 `sources.lock` `ambientcg`, 자산별 출처 `ATTRIBUTION.json` `ambientcg-<asset>` | CC0 |
 | Poly Haven | PBR 텍스처, HDRI(포토모드 참고용), 일부 소품 모델 | CC0 |
 | Quaternius (Universal Base Characters / Universal Animation Library 무료판) | 보행자 베이스 메시·애니메이션 | CC0 |
 | Kenney | 보조 소품/아이콘 | CC0 |

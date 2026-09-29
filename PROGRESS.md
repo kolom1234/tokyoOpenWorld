@@ -3,15 +3,23 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 
 ## Current Milestone: M03 — Rendering Realism I (진행 순서: T10 → T01 → T02 → T03 → T04 → T06 → T05 → T07 → T08 → T09)
 ## Current Task: M03 큐 진행 중
-- Done in this session: M03-T10(골든뷰 인프라, 앞당김).
+- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리).
 - In progress: –
 - 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
 - 배포 상태: staging Worker `tokyo-sanpo-staging` = dev 버킷 빌드 `20260928-b2d1e36-7fb58d45`(이전 `20260928-7e215f4-7fb58d45` — 10/5 이후 gc 가능).
   staging 첫 로딩(GOLDEN_BOOT, 새 컨텍스트) **59.8 MB**·첫 표시 6.9 s(M03 시작 기준).
-- Next step (정확히 한 걸음): M03-T01 머티리얼 라이브러리(ambientCG CC0 → KTX2 배열, 파이프라인 `materials` 단계).
+- 로컬 빌드 `20260928-b2d1e36-7fb58d45`에 shared/materials 설치됨(`materials --build-id`). staging 반영은 파이프라인 재빌드(T04/T06) 때 한 번에.
+- Next step (정확히 한 걸음): M03-T02 대기·하늘(@takram/three-atmosphere 0.19.1 `/webgpu` 설치 → lighting/atmosphere.ts·env-probe.ts).
 - Blockers: 없음
 
 ## Recently Completed
+- M03-T01 Material library & texture arrays — ambientCG CC0 32종(`content/materials/library.json`: 아스팔트 3·보도 4·콘크리트 4·타일 벽 6·금속 3·미장 2·사이딩 2·ALC·벽돌·지붕 2·잔디 2·흙·자갈; 유리는 T05 절차),
+  pipeline `materials`(`stages/materials/{library,fetch,encode,run}.ts`: zip sha256 lock(`ambientcg`, `--update-lock`) → ImageMagick 리사이즈·ORM 패킹 → toktx 4.4.2 KTX2 배열 → 캐시 `data/derived/materials/<hash>` → `--build-id` 설치) + validate(`validate-materials.ts`, `schemas/materials.schema.json`).
+  크기: albedo 1024² ETC1S 6.3 MB · normal 512² UASTC 7.0 MB · ORM 512² UASTC 4.7 MB = **18.0 MB**(1024² 3장은 55.8 MB → ADR-0027). 인코딩 ≈ 2.5 min.
+  render: `materials/library.ts`(자리표시 배열 → manifest 평균색 → KTX2 교체, 재컴파일 없음), `textured.ts`(지형 `_SURF` 그룹·월드 XZ, 파사드 건물 해시 벽 그룹·UV0), `loadMaterials(url)`·`stats().materials`, context/frame/service 분리.
+  game: 첫 표시 뒤 `loadMaterials(world.json files.materials)`, `three`→`three/webgpu` alias, `/basis/*` 트랜스코더 서빙·복사, 오버레이 머티리얼 줄.
+  **수락**: GPU 텍스처 메모리 **67.1 MB**(BC7, ≤ 400 MB), 적재 0.6–1.4 s, 모든 레이어 출처(ATTRIBUTION `ambientcg-<asset>` 32건, sources.lock sha256 32건 — 테스트가 대조). 첫 표시 전송에 머티리얼 0.08 MB(manifest)만 — 텍스처는 첫 표시 뒤.
+  버그 2건 수정: 큰 float 시드 varying 보간 → 픽셀 노이즈(uint 결합으로), 1성분 정수 속성 WebGL2 타입 불일치(`_SURF`·`_BLDG` f32, `_FACADE` unorm8x4). e2e 5/5(WebGL2) 통과. 테스트 +2파일/+10건. ADR-0027 (2026-09-29)
 - M03-T10 Golden views infrastructure(앞당김) — `tests/golden/views.json`(7뷰, core 4: 스크램블 지면 + 7 m·서신주쿠 초고층·요요기 상공 300 m·富ヶ谷 저층 주택가 L0 −4,−3 — 주택가는 셀 meta 스캔으로 선정: 건물 288동·중앙 9.6 m·p90 13.4 m),
   게임 `?view=<id>`(`debug/bookmarks.ts`: 절대/지면 + AGL 포즈, 뷰 중심 부팅 대기, fov, 스트리밍 큐 0·HLOD 페이드 0·추가 조건 1.5 s → `#app[data-golden=ready]`), `pnpm golden`(실제 GPU Chrome 2560×1440, DPR 1, PNG 원본 + 1920×1080 JPEG 저장, SSIM, 부팅 전송 MB).
   **수락**: RTX 3050 Laptop·Chrome headed, core 4장을 새 컨텍스트로 연속 2회 캡처 → SSIM **1.000 / 1.000 / 1.000 / 1.000**(≥ 0.99), 각 뷰 ready 5.4–5.7 s, 콘솔 오류 0.

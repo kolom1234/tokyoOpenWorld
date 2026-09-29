@@ -50,7 +50,7 @@
 | `meshoptimizer` 1.3.0 (encode, reorder, simplify) | 압축·정점 캐시 재정렬, LOD 단순화(지형은 RTIN, ADR-0018) | MIT |
 | `earcut` 3.0.2 (+ `@types/earcut` 3.0.0) | 건물 면 폴리곤 삼각분할 | ISC |
 | `ajv` 8.20.0 | validate 단계 JSON Schema 검사 | MIT |
-| KTX-Software `toktx` ≥ 4.3 | KTX2(ETC1S/UASTC) 인코딩 | Apache-2.0 |
+| KTX-Software `toktx` 4.4.2 (+ ImageMagick 7, 채널 패킹) | KTX2(ETC1S/UASTC) 인코딩 — 파이프라인 이미지(ADR-0027) | Apache-2.0 / ImageMagick |
 | `proj4` 2.22.0 (JS) / pyproj (검증용) | 좌표 변환 (EPSG 정의 고정 문자열 사용) | MIT |
 | `recast-navigation` (Node) | 셀별 내비메시 타일 굽기 | MIT |
 | `@aws-sdk/client-s3` 3.x | R2(S3 호환 API) 업로드 | Apache-2.0 |
