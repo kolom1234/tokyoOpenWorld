@@ -45,8 +45,8 @@ export interface RenderContext {
   post: PostPipeline;
   readonly quality: QualityManager;
   readonly gpuTimer: GpuTimer;
-  /** 프레임 카운터·마지막 HLOD 페이드 수(stats). */
-  readonly counters: { frames: number; fading: number };
+  /** 프레임 카운터·마지막 HLOD 페이드 수·장면 버전(셀·HLOD 표시 변경마다 +1, 그림자 캐시 무효화)·이번 프레임 그림자 캐스케이드 수(stats). */
+  readonly counters: { frames: number; fading: number; sceneVersion: number; shadowUpdates: number };
 }
 
 /** WebGL2 고정 노출(WebGPU 자동 노출 골든뷰 배율 0.8–1.9의 기하 중간 ≈ 1.25). */
@@ -59,6 +59,25 @@ function postEffectsFor(cfg: RenderConfig, backend: RenderBackend): (tier: Quali
     const fx = resolvePost(tier, cfg.post);
     return backend === 'webgl2' ? { ...fx, autoExposure: false, fixedExposure: WEBGL2_EXPOSURE } : fx;
   };
+}
+
+/** 품질 관리자: 티어 변경 = applyTier(그림자·후처리 재구성), 동적 해상도 = 현재 후처리의 렌더 스케일. */
+function attachQuality(
+  ctx: Pick<RenderContext, 'cfg' | 'log' | 'backend' | 'post'>,
+  deps: RenderDeps,
+  post: boolean,
+  applyTier: (tier: QualityTier) => number,
+): QualityManager {
+  return createQualityManager({
+    bus: deps.bus,
+    log: ctx.log,
+    backend: ctx.backend,
+    initial: ctx.cfg.quality,
+    dynamic: post && ctx.cfg.dynamicResolution,
+    benchmarksPath: ctx.cfg.gpuBenchmarksPath,
+    applyTier,
+    applyScale: (s) => ctx.post.setRenderScale(s),
+  });
 }
 
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
@@ -101,24 +120,21 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     atmosphere,
     envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },
-    shadows: post && cfg.shadows ? enableSunShadows(renderer, atmosphere.light) : undefined,
+    shadows:
+      post && cfg.shadows
+        ? enableSunShadows(renderer, atmosphere.light, cfg.quality, () => materials.all())
+        : undefined,
     post: makePost(cfg.quality),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
-    counters: { frames: 0, fading: 0 },
+    counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
   };
-  ctx.quality = createQualityManager({
-    bus: deps.bus,
-    log,
-    backend,
-    initial: cfg.quality,
-    dynamic: post && cfg.dynamicResolution,
-    benchmarksPath: cfg.gpuBenchmarksPath,
-    applyTier(tier) {
-      ctx.post.dispose();
-      ctx.post = makePost(tier);
-      return postFor(tier).renderScale;
-    },
-    applyScale: (s) => ctx.post.setRenderScale(s),
+  ctx.quality = attachQuality(ctx, deps, post, (tier) => {
+    ctx.shadows?.setTier(tier);
+    ctx.post.dispose();
+    ctx.post = makePost(tier);
+    return postFor(tier).renderScale;
   });
+  // WebGL2 상한 등으로 관리자가 티어를 낮췄으면 그림자도 맞춘다(첫 빌드 전 — 재컴파일 없음).
+  if (ctx.quality.tier !== cfg.quality) ctx.shadows?.setTier(ctx.quality.tier);
   return ctx as RenderContext;
 }

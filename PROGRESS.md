@@ -2,16 +2,21 @@
 Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
 
 ## Current Milestone: M03 보강(5항목) → M04 — Physics & Walking
-## Current Task: M03 보강 ② 성능(고정 비용·파사드) — 큐: ①떨림 ✅ → ②성능 → ③품질 감지 재검증 → ④WebGL2 금속·flaky e2e → ⑤밤 창(Known Issue만) → M04-T01…T06
-- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038).
-- In progress: –
+## Current Task: M03 보강 ③ 품질 감지 재검증 — 큐: ①떨림 ✅ → ②성능 ✅ → ③품질 감지 재검증 → ④WebGL2 금속·flaky e2e → ⑤밤 창(Known Issue만) → M04-T01…T06
+- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039).
+
 - 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
-  `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost). 방법은 ADR-0038 Context에 기록.
+  `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost), `perf.mjs`(무제한 프레임 rAF p50·전력 상한·패스별 GPU, `PROT=1` 회전). 방법은 ADR-0038 Context에 기록.
 - 배포 상태: staging = 75629ce 코드(M03 전체) + dev 버킷 빌드 `20260929-b84bfa1-ec1646fc`(변경 없음). 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): 성능 측정 하네스(scratchpad `perf.mjs`: 무제한 프레임 p50, 1080p Medium·1440p High, 스폰·core 뷰)로 현재 수치 표 작성 → 공중원근 저해상도화부터.
+- In progress(미커밋): ④ flaky e2e — `apps/game/src/debug/overlay.ts` `data-settled`, `tests/e2e/render.spec.ts` 원점 재설정 테스트가 안정 후 캡처(부하 재현 검증 전).
+- Next step (정확히 한 걸음): scratchpad `tiercheck.mjs`(새 프로필·회전·90 s)로 1080p·1440p 자동 품질 감지 티어 변화 기록 → 연쇄 하강 없으면 ③ 완료.
 - Blockers: 없음
 
 ## Recently Completed
+- M03 보강 ② 렌더 고정 비용 — 그림자 07 §9 티어(Low 2×1024·150 m … Ultra 4×4096·800 m) + 캐스케이드 갱신 스케줄(움직일 때 c0 매 프레임 + 먼 것 하나, 정지 15프레임마다 하나),
+  저해상도 공중원근(`post/aerial.ts` ½×½ MRT S·T → 깊이 인지 업샘플, 윤곽·지평선 급경계는 정확 계산, 태양·달 원반만 렌더 스케일; `PostEffects.aerial`), 파사드 깊이 프리패스 쌍둥이,
+  HLOD 불투명/페이드(alphaHash) 변형 전환, GPU 타이머 패스별 분해. **15 W 실측**(rAF p50, 5뷰): 1080p Medium 정지 18.6–21.6 → 14.3–16.6 ms, 회전 19.1–22.2 → 15.4–17.0,
+  1440p High 정지 33.6–40.0 → 25.9–30.2, 회전 33.8–40.3 → 27.3–31.4. 테스트 +6건. ADR-0039 (2026-09-30)
 - M03 보강 ① 정지 화면 떨림 — 원인 실측: TAA 끄면 0, GTAO 끄면 1/13 → **GTAO 시간 노이즈(useTemporalFiltering)를 TAAU가 다 못 섞음**(노출·그림자·SSR·Bloom·렌더 스케일·정밀도 무관).
   수정: GTAO 고정 노이즈 + `post/ao-filter.ts` 5×5 깊이 인지 블러(AO 해상도 RTT). 정지 근경 0.592 → 0.082(|Δ휘도|), 스크램블 원경 0.113 → 0.037, 이동 근경 1.41 → 0.44.
   e2e `flicker.spec.ts`(`?forcePost=1` — SwiftShader에서 GTAO+TAAU, 수정 전 0.204 실패 / 후 0.115 통과, 임계 0.15). `RenderConfig.debugForcePost`. 테스트 +1건·e2e +1. ADR-0038 (2026-09-30)
@@ -57,25 +62,18 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
   WebGPU 하늘 배경 제거(환경 프로브와 겹쳐 배경 머티리얼 매 프레임 재빌드 → 30 FPS였음), **GPU 타이머 정정**(three 반환값은 마지막 frame id만 → 풀 합산, 무제한 프레임과 일치).
   **수락**: 2026-06-21 시부야 남중 **11:43 JST 고도 77.782°·방위 180.05°**, 12:00 **77.237°**(테스트). 캐스케이드 경계: 상공 150 m 사선 시점·태양 25°에서 이음새 없음(fade).
   GPU(1440p): 스크램블 20.1 · 서신주쿠 18.9 · 요요기 23.6 · 주택가 22.9 ms(그림자 끔 17.6/17.2/25.2/22.5 — 잡음 ±2 ms). e2e 5/5(시각 고정). 테스트 +3파일/+13건. ADR-0029 (2026-09-29)
-- M03-T02 Atmosphere & sky — takram three-atmosphere 0.19.1 WebGPU: `lighting/atmosphere.ts`(AtmosphereContext·AtmosphereLight·skyBackground, WF→ECEF = 원점 타원체 위치(TP + 지오이드 36.7 m)·NUE·수렴각 γ, 원점 재설정마다),
-  `env-probe.ts`(SkyEnvironmentNode 64² → PMREM, 라이트 간접 끔), `post/pipeline.ts`(pass MRT → aerialPerspective → AgX, 노출 3; WebGL2는 직접 렌더), `setEnvironment()`, GPU 타이머(`?gpuTiming=1`, `stats().gpu`),
-  game `?sun=az,el`·`?exposure=`·`?gpuTiming=1`, `three-compat.ts` alias. **three r186 호환 패치**(patches/: struct Proxy `.layout.name`, LUT `requestIdleCallback` 타임아웃 — 없으면 조명·하늘이 검다) + precompile에서 LUT 계산 await.
-  **수락**: 요요기 상공 300 m 일출(방위 70°·고도 2°)·정오(180°·70°)·일몰(290°·2°)·황혼(290°·−5°, 노출 40) 4장 — 지평선 붉어짐·정오 원경 청색 연무·황혼 잔광 확인(`docs/screenshots/M03/T02/sky-*.jpg`).
-  GPU 프레임 수치는 타이머 버그로 틀렸음(→ T03에서 정정: 그림자 없이 17.2–25.2 ms). 첫 로딩 증가 0(에셋 없음). e2e 5/5(WebGL2). 테스트 +2파일/+6건. ADR-0028 (2026-09-29)
 
 ## Known Issues
+- [perf] **이 PC GPU 전력 상한이 15 W ↔ 30 W로 바뀐다**(LG gram 17 17ZD90R, RTX 3050 4GB Laptop, 기본 30 W·최대 45 W, 전원 모드 최고 성능) — 15 W에선 2배 느림.
+  측정은 행마다 `nvidia-smi enforced.power.limit` 기록. 15 W 기준 1080p Medium 회전 15.4–17.0 ms(2뷰가 16.6 ms 살짝 초과 → 동적 해상도가 흡수), 30 W 8–9 ms(ADR-0039).
+- [perf] WebGPU 타임스탬프 합은 실제 프레임의 ≈ 1/4(클럭 비율) → 비중(`stats().gpu.passes`)만 신뢰, 절대값은 무제한 프레임 rAF p50. `pnpm perf`(M02-T07~)에 반영 필요.
+- [render] TAAU(1080p Medium ≈ 12 %)는 three 패치 없이 경량화 불가 → 동적 해상도로 흡수(ADR-0039). L0 반경 축소(HLOD 우선)도 보류.
 - [render] 정지 화면 원경 수평선 부근 서브픽셀 건물 윤곽의 TAAU 재구성 반짝임 잔존(>12 단계 0.047 % 픽셀, ADR-0038). 대안: TAAU 분산 감마 1.5 패치(−30 %, 고스팅 위험), 원경 윤곽 사전 필터링.
 - [render/webgl2] 하드웨어 WebGL2에서 일부 금속·커튼월 파사드가 WebGPU보다 어둡다(환경 프로브 반사 차이, 원인 미확정 — M03-T09).
 - [e2e] 로컬에서 부하가 있을 때 e2e 1건이 가끔 실패(재실행 통과, 2026-09-29 T07·T08 중 2회) — 어느 스펙인지 미확인. CI에서 재현되면 조사.
-- [render] 그림자 티어화(07 §9 그림자 행: 캐스케이드 수·해상도·거리)는 CSM 재생성이 필요해 미구현 — 모든 티어가 4×2048·600 m.
-- [perf] 후처리 1440p High ≈ 7 ms(3060 환산, 기준 4 ms) — 공중원근(takram) ≈ 6 ms·TRAA/TAAU ≈ 8 ms(3050 Laptop)가 크다. 파사드 ≈ 6 ms(기준 1.5). T08 동적 해상도로 16.6 ms 유지, 근본 절감은 후속(2026-09-29).
-- [perf] gpu-timer(timestamp 합산)는 패스·컴퓨트가 많으면 값이 튄다 → 후처리 비교는 무제한 프레임 p50(scratch cpu.mjs)로. `pnpm perf`(M02-T07~)에 반영 필요.
 - [perf] 첫 표시 ≈ 11 s(12 s 목표 근접) — 선컴파일 ≈ 5 s·대기 LUT. 첫 표시 직후 HLOD 1–2 s 디졸브(ADR-0033). T07/T08에서 선컴파일 병렬화 검토.
 - [render] 지면 `_SURF` 7(plaza)이 공원·녹지까지 덮음(요요기 콘크리트색), 도로 가장자리 1 m 계단 — M05 토지이용·도로 메시 전까지.
-- [render] 파사드 셰이더 ≈ 4.7 ms @1440p(RTX 3050 L) — 수락 1.5 ms 미달(ADR-0030). T07 깊이 프리패스(오버드로우 제거)·T08 동적 해상도 후 재측정.
 - [pipeline] PLATEAU 동일 평면 중복 면 z-파이팅 잔존(WebGL2 원점 재설정 e2e ≈ 70 px). 벽–벽 중복 제거는 필요 시 M05-T07.
-- [perf] 1440p GPU 17–25 ms(RTX 3050 Laptop): 씬 패스 12–17 ms + 공중원근 쿼드 5–10 ms. 07 §10(RTX 3060 ≤ 12 ms) 빠듯 → T07(후처리)·T08(동적 해상도)에서 줄일 것.
-- [render] 고정 노출 3(자동 노출 T07 전) → 황혼·밤은 매우 어둡다. WebGL2 폴백은 공중원근 없이 직접 렌더(SwiftShader 1.4 FPS 회피) — T08/T09 품질 티어에서 재결정(ADR-0028).
 - [render] takram 패치(patches/)는 three r186 전용 — three/takram 버전을 올리면 패치 재확인.
 - [pipeline] GSI DEM 2025판 표고는 JGD2024(2025 개정) 기준, PLATEAU는 JGD2011 → LOD3 차도 정점 vs dem_1m 차 중앙값 +0.05 m(IQR −0.03~+0.18, p95 +8.2 m = 고가도로). M01-T05는 도로 메시 없음 → M03 도로 빌드 때 도로면 우선 스냅 여부 결정.
 - [pipeline] `fetch` 미구현 → zip에서 필요한 것만 수동 해제(`data/raw/plateau-{shibuya,shinjuku,meguro}/extracted/`: MVP 24메시 udx/bldg·tran + codelists + schemas, 2026-09-29). 23구 zip은 풀지 않음(hlod-prep 스트림). 標高タイル은 hlod-prep이 받음. fetch 구현 시 lock sha256 검증.

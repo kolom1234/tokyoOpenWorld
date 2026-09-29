@@ -24,6 +24,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     post: ctx.post.effects,
     exposure: ctx.post.exposure(),
     quality: ctx.quality.stats(),
+    shadows: ctx.shadows ? { ...ctx.shadows.settings, updated: ctx.counters.shadowUpdates } : null,
   };
 }
 
@@ -37,9 +38,18 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     detectQuality: () => ctx.quality.detect(),
     backend: ctx.backend,
     depth: ctx.depth,
-    addCell: (p) => cells.add(p, view.renderOriginWF),
-    removeCell: (key) => cells.remove(key),
-    setHlodChildVisible: (parent, child, visible) => hlod.setChildVisible(parent, child, visible),
+    addCell: (p) => {
+      cells.add(p, view.renderOriginWF);
+      ctx.counters.sceneVersion++;
+    },
+    removeCell: (key) => {
+      cells.remove(key);
+      ctx.counters.sceneVersion++;
+    },
+    setHlodChildVisible: (parent, child, visible) => {
+      hlod.setChildVisible(parent, child, visible);
+      ctx.counters.sceneVersion++;
+    },
     loadMaterials: (url) => library.load(url, renderer, log),
     async precompile() {
       await ctx.atmosphere.prepare();

@@ -15,6 +15,7 @@ export function parsePostFlag(v: string | null): Partial<PostEffects> {
   for (const part of (v ?? '').split(',')) {
     const [k = '', val = ''] = part.split(':');
     if (k === 'ao' && (val === 'none' || val === 'gtao' || val === 'ssgi')) out.ao = val;
+    else if (k === 'aerial' && (val === 'full' || val === 'half')) out.aerial = val;
     else if (k === 'aoScale' && Number(val) > 0 && Number(val) <= 1) out.aoScale = Number(val);
     else if (k === 'scale' && Number(val) >= 0.5 && Number(val) <= 1) out.renderScale = Number(val);
     else if ((BOOL_KEYS as readonly string[]).includes(k) && (val === '0' || val === '1'))

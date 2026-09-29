@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 223개.
+> 파일 224개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -82,14 +82,14 @@
 - `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 호스트·캐릭터/차량/자전거. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts'
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, RenderConfig, MaterialLibraryStats, RenderStats, RenderService, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, RenderService, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, createRenderContext
 - `packages/render/src/internal/frame.ts` — 프레임 시스템: renderPrep(70: 캔버스 크기·원점 재설정·카메라·HLOD 페이드) / render(80). see docs/01-architecture.md §5, docs/07-rendering.md §1–3 | exports: RENDER_PREP_PHASE, RENDER_PHASE, createFrameSystems
 - `packages/render/src/internal/lighting/atmosphere.ts` — 대기(M03-T02, 07 §6): @takram/three-atmosphere WebGPU — AtmosphereContext(렌더러 contextNode) + AtmosphereLight(태양 직사·하늘 간접) + 하늘 배경. | exports: GEOID_HEIGHT_M, worldToEcef, AtmosphereRig, createAtmosphere
 - `packages/render/src/internal/lighting/env-probe.ts` — 환경 조명(07 §6): 하늘에서 동적 큐브맵 → PMREM(`SkyEnvironmentNode`) → scene.environmentNode. | exports: ENV_CUBE_SIZE, EnvProbe, attachEnvProbe
-- `packages/render/src/internal/lighting/shadows.ts` — 태양 그림자(07 §6·§9): 대기 라이트(DirectionalLight)에 CSM(takram `CascadedShadowMapsNode` ⊃ three CSMShadowNode) — High = 4 캐스케이드 × 2048², 거리 600 m, 캐스케이드 경계 페이드. | exports: ShadowSettings, SHADOWS_HIGH, SunShadows, enableSunShadows
+- `packages/render/src/internal/lighting/shadows.ts` — 태양 그림자(07 §6·§9): 대기 라이트(DirectionalLight)에 CSM(takram `CascadedShadowMapsNode` ⊃ three CSMShadowNode), 캐스케이드 경계 페이드. | exports: ShadowSettings, SHADOW_TIERS, STATIC_REFRESH_FRAMES, ShadowFrame, SunShadows, cascadeDue, enableSunShadows
 - `packages/render/src/internal/lighting/sun.ts` — 태양 방향 규약(WF: +X 동, +Y 위, −Z 도북) + 기본값. 방향은 계산하지 않고 sim(EnvironmentState.sunDirWF)에서 받는다 — 연결 전 기본 방향만 여기. | exports: DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF, sunDirFromAzEl
 - `packages/render/src/internal/materials/facade/details.ts` — 절차 파사드 ⑤ 디테일(07 §5-8): 층간 줄눈(슬래브 띠), 빗물 얼룩(상단→하단 그라디언트 × 가로 저주파 노이즈), 지면 AO, 모서리 AO, 옥상 두겁 띠. | exports: FacadeDetails, facadeDetails
 - `packages/render/src/internal/materials/facade/grid.ts` — 절차 파사드 ① 입력·층/베이 격자(07 §5-1·2): `_FACADE`(unorm8×4 → class·floors·tint·flags), UV0 = (면 시작점부터 m, 건물 바닥부터 m), | exports: F, I, B, V3, FACADE_CLASS, FACADE_CLASS_COUNT, FACADE_FLAG, RETAIL_FLOOR_M, FacadeInputs, facadeInputs, FacadeGrid, facadeGrid
@@ -108,6 +108,7 @@
 - `packages/render/src/internal/materials/road.ts` — M_ROAD 변형(07 §4, M03-T06): 아스팔트 보수 패치·유분 얼룩·바랜 구간, 보도 명암·때, 공통 거시 명암. 추가 표본 없이 noiseBank 채널만. | exports: Variation, NO_VARIATION, macroTint, asphaltVariation, pavingVariation
 - `packages/render/src/internal/materials/terrain.ts` — M_TERRAIN(07 §4, M03-T06): `_SURF` 스플랫 — 정점 원-핫(8클래스, 보간) → 픽셀마다 상위 2클래스 노이즈 경계 혼합. | exports: TerrainOptions, createTerrainMaterial
 - `packages/render/src/internal/materials/textured.ts` — 라이브러리 텍스처 표본 함수(sampleLayer·법선 변환, M03-T01). 지형은 terrain.ts(M03-T06), 파사드는 facade/(M03-T04). | exports: LayerSample, sampleLayer, tsToWorld, worldToView, perturbWorld
+- `packages/render/src/internal/post/aerial.ts` — 저해상도 공중원근(M03 보강 2, ADR-0039): takram aerialPerspective는 픽셀마다 산란 LUT·투과 조회(1080p Medium, 15 W에서 GPU의 ≈ 19 %). | exports: AERIAL_SCALE, LowResAerialNode, composeAerial
 - `packages/render/src/internal/post/ao-filter.ts` — GTAO 공간 필터(ADR-0038): GTAO 시간 노이즈(프레임마다 회전, useTemporalFiltering)는 TAAU가 다 섞지 못해 정지 화면이 떨렸다 | exports: AoFilterNode, filterAo
 - `packages/render/src/internal/post/config.ts` — 품질 티어 → 후처리 효과(07 §9 표의 AO/GI/SSR 행 + 07 §7 나머지). 티어 선택·동적 해상도는 M03-T08, 여기는 표와 덮어쓰기만. | exports: POST_TIERS, resolvePost
 - `packages/render/src/internal/post/exposure.ts` — 자동 노출(07 §7): 씬 패스 HDR(하늘·공중원근 전)을 32² 격자로 읽어 로그 휘도 평균 → EMA → 노출 배율. 전부 GPU(컴퓨트 1회/프레임, | exports: REF_LUM, ADAPT, AutoExposure, createAutoExposure
@@ -118,7 +119,7 @@
 - `packages/render/src/internal/renderer/dynamic-resolution.ts` — 동적 해상도(07 §9, M03-T08): 프레임 시간 EMA로 렌더 스케일 ±0.05(0.5–1.0) — 목표 16.6 ms. | exports: DynResConfig, DYNRES_DEFAULTS, DynamicResolution, createDynamicResolution
 - `packages/render/src/internal/renderer/gpu-timer.ts` — GPU 타이머(M03 성능 표): WebGPU timestamp-query(three `trackTimestamp`)로 렌더 패스 GPU 시간을 모아 프레임당 평균(ms). | exports: GpuTimerStats, GpuTimer, createGpuTimer
 - `packages/render/src/internal/renderer/init.ts` — WebGPURenderer 초기화(WebGL2 폴백) + 깊이 전략 결정(reversed-Z 우선, 불가 시 logarithmic — ADR-0006). see docs/07-rendering.md §1 | exports: InitializedRenderer, resolveDepthMode, initRenderer
-- `packages/render/src/internal/scene/cell-node.ts` — 셀 → 렌더 노드: DecodedMesh 프리미티브 → BufferGeometry(TypedArray 그대로) + 공유 머티리얼, 슬롯별 Group(위치 = originWF − renderOrigin). see docs/07-rendering.md §2–3 | exports: CellRenderNode, threeAttributeName, buildGeometry, cellSeedOf, createCellNode, placeCellNode, disposeCellNode, CellSet, createCellSet
+- `packages/render/src/internal/scene/cell-node.ts` — 셀 → 렌더 노드: DecodedMesh 프리미티브 → BufferGeometry(TypedArray 그대로) + 공유 머티리얼, 슬롯별 Group(위치 = originWF − renderOrigin). see docs/07-rendering.md §2–3 | exports: CellRenderNode, threeAttributeName, buildGeometry, cellSeedOf, PREPASS_RENDER_ORDER, hlodNeedsDither, createCellNode, placeCellNode, disposeCellNode, CellSet, createCellSet
 - `packages/render/src/internal/scene/hlod-switch.ts` — HLOD 자식 표시 상태: 자식 셀이 live면 부모의 그 자식 영역을 0.3 s 디더로 숨기고, 자식이 해제되면 즉시 다시 보인다(구멍 없음). | exports: HLOD_CHILDREN, HLOD_FADE_S, HlodSwitch, createHlodSwitch
 - `packages/render/src/internal/scene/origin.ts` — 렌더 원점 재설정 순수 계산: 판정(거리 ≥ 2048 m), 256 m 격자 스냅, 노드 위치 = WF − renderOrigin(float64 → 대입 시 float32). see docs/01-architecture.md §7, docs/07-rendering.md §2 | exports: needsRebase, snapOrigin, toRender
 - `packages/render/src/internal/scene/render-view.ts` — 렌더 시점 상태: WF 카메라(float64) 보관, 원점 재설정 판정·실행(origin/rebased), three 카메라에 렌더 좌표 대입. see docs/07-rendering.md §2 | exports: RenderView, createRenderView

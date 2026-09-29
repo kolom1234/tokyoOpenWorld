@@ -79,6 +79,27 @@ export function cellSeedOf(key: CellKey): number {
   return (h >>> 0) % 4096;
 }
 
+/** 07 §3 머티리얼 순서 앞(renderOrder −1): 같은 지오메트리를 깊이만 먼저 → 파사드·지면은 보이는 픽셀만 셰이딩(ADR-0039). */
+export const PREPASS_RENDER_ORDER = -1;
+
+function prepassTwin(m: Mesh, materials: MaterialRegistry): Mesh {
+  const d = new Mesh(m.geometry, materials.prepass());
+  d.name = `${m.name}/prepass`;
+  d.matrixAutoUpdate = false;
+  d.renderOrder = PREPASS_RENDER_ORDER;
+  d.castShadow = false;
+  d.receiveShadow = false;
+  return d;
+}
+
+/** 페이드 중(0 < f < 1)인 자식이 있으면 디더 변형이 필요하다. */
+export function hlodNeedsDither(fades: readonly Vector4[]): boolean {
+  for (const v of fades) {
+    for (const f of [v.x, v.y, v.z, v.w]) if (f > 0 && f < 1) return true;
+  }
+  return false;
+}
+
 export function createCellNode(
   p: CellPayload,
   materials: MaterialRegistry,
@@ -108,6 +129,8 @@ export function createCellNode(
       triangles += triangleCount(m.geometry);
       meshes.push(m);
       group.add(m);
+      if (hlod) m.userData.hlodMaterialId = prim.materialId;
+      if (slot === 'buildings' && prim.materialId === 'facade_default') group.add(prepassTwin(m, materials));
     }
     roots[SLOT_ROOT[slot]].add(group);
     groups.push(group);
@@ -139,6 +162,8 @@ export interface CellSet {
   add(p: CellPayload, renderOriginWF: Readonly<Vec3d>): void;
   remove(key: CellKey): void;
   placeAll(renderOriginWF: Readonly<Vec3d>): void;
+  /** renderPrep(HLOD 페이드 진행 뒤): 페이드 중인 셀만 HLOD 디더 변형, 나머지는 불투명 변형. 반환 = 디더 중인 셀 수. */
+  syncHlodMaterials(): number;
   dispose(): void;
 }
 
@@ -148,12 +173,20 @@ export function createCellSet(
   hlod?: HlodSwitch,
 ): CellSet {
   const cells = new Map<CellKey, CellRenderNode>();
+  const dithering = new Set<CellKey>();
   const remove = (key: CellKey): void => {
     const node = cells.get(key);
     if (node === undefined) return;
     if (node.hlodFades) hlod?.detach(key);
     disposeCellNode(node);
     cells.delete(key);
+    dithering.delete(key);
+  };
+  const setDither = (node: CellRenderNode, on: boolean): void => {
+    for (const m of node.meshes) {
+      const id = m.userData.hlodMaterialId as string | undefined;
+      if (id !== undefined) m.material = materials.getHlod(id, on);
+    }
   };
   return {
     get size() {
@@ -168,6 +201,17 @@ export function createCellSet(
     remove,
     placeAll(origin) {
       for (const node of cells.values()) placeCellNode(node, origin);
+    },
+    syncHlodMaterials() {
+      for (const [key, node] of cells) {
+        if (!node.hlodFades) continue;
+        const on = hlodNeedsDither(node.hlodFades);
+        if (on === dithering.has(key)) continue;
+        setDither(node, on);
+        if (on) dithering.add(key);
+        else dithering.delete(key);
+      }
+      return dithering.size;
     },
     dispose() {
       for (const key of [...cells.keys()]) remove(key);

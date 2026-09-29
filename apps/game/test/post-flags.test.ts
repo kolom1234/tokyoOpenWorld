@@ -7,12 +7,14 @@ describe('post flags', () => {
   it('parses tiers and effect overrides, ignoring junk', () => {
     expect(parseQualityFlag('medium')).toBe('medium');
     expect(parseQualityFlag('epic')).toBeUndefined();
-    expect(parsePostFlag('ssr:0,ao:gtao,aoScale:1,scale:0.75,bogus:1,taa:x')).toEqual({
+    expect(parsePostFlag('ssr:0,ao:gtao,aoScale:1,scale:0.75,bogus:1,taa:x,aerial:full')).toEqual({
       ssr: false,
       ao: 'gtao',
       aoScale: 1,
       renderScale: 0.75,
+      aerial: 'full',
     });
+    expect(parsePostFlag('aerial:quarter')).toEqual({});
     const f = parseFlags('?quality=low&post=bloom:1');
     expect([f.quality, f.post]).toEqual(['low', { bloom: true }]);
   });

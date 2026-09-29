@@ -41,6 +41,15 @@ export interface PostEffects {
   fixedExposure?: number;
   lut: boolean;
   sharpen: boolean;
+  /** 대기 공중원근 해상도: 'half' = 렌더 스케일의 ½×½에서 산란·투과 + 깊이 인지 업샘플(ADR-0039), 'full' = 픽셀마다(takram). */
+  aerial: 'full' | 'half';
+}
+
+/** 패스별 GPU 시간(`?gpuTiming=1`): 프레임 안 렌더 호출 순번별 평균. label = 씬(`scene`)·그림자(`shadow`)·후처리 쿼드 이름 등. */
+export interface GpuPassTime {
+  index: number;
+  label: string;
+  ms: number;
 }
 
 export interface RenderConfig {
@@ -105,13 +114,15 @@ export interface RenderStats {
   hlodFading: number;
   materials: MaterialLibraryStats;
   /** GPU 프레임 시간(렌더 패스 합, gpuTiming일 때만). */
-  gpu: { enabled: boolean; frameMs: number; samples: number };
+  gpu: { enabled: boolean; frameMs: number; samples: number; passes: GpuPassTime[] };
   /** 적용 중 후처리 효과(WebGL2 직접 렌더 = null). */
   post: PostEffects | null;
   /** 자동 노출(기하 평균 휘도·배율, 약 0.5 s마다 갱신). 끔·WebGL2 = null. */
   exposure: { lum: number; scale: number } | null;
   /** 품질 티어·현재 렌더 스케일·프레임 시간 EMA(ms). */
   quality: { tier: QualityTier; renderScale: number; dynamic: boolean; frameMs: number };
+  /** 태양 그림자(07 §9 티어) + 이번 프레임 다시 그린 캐스케이드 수(ADR-0039). 그림자 없음 = null. */
+  shadows: { cascades: number; mapSize: number; maxFarM: number; updated: number } | null;
 }
 
 export interface RenderService extends SystemProvider {

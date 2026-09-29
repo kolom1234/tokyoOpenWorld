@@ -7,14 +7,21 @@ import type { PostEffects, QualityTier } from '../../api.ts';
  * High 안 빼기 실측: GTAO 3.5, Bloom 3.0(½ → ¼ 해상도로), Sharpen 2.2, SSR 1.6, 노출 0.6, LUT 0.5 ms → Sharpen은 Ultra만.
  */
 export const POST_TIERS: Readonly<Record<QualityTier, PostEffects>> = {
-  low: fx('none', false, false, false, 0.6),
-  medium: fx('gtao', false, true, false, 0.75),
-  high: fx('gtao', true, true, false, 0.85),
-  ultra: fx('ssgi', true, true, true, 1),
+  low: fx('none', false, false, false, 0.6, 'half'),
+  medium: fx('gtao', false, true, false, 0.75, 'half'),
+  high: fx('gtao', true, true, false, 0.85, 'half'),
+  ultra: fx('ssgi', true, true, true, 1, 'full'),
 };
 
-function fx(ao: PostEffects['ao'], ssr: boolean, bloom: boolean, sharpen: boolean, renderScale: number): PostEffects {
-  return { ao, aoScale: 0.5, ssr, bloom, autoExposure: true, taa: true, lut: true, sharpen, renderScale };
+function fx(
+  ao: PostEffects['ao'],
+  ssr: boolean,
+  bloom: boolean,
+  sharpen: boolean,
+  renderScale: number,
+  aerial: PostEffects['aerial'],
+): PostEffects {
+  return { ao, aoScale: 0.5, ssr, bloom, autoExposure: true, taa: true, lut: true, sharpen, renderScale, aerial };
 }
 
 /** 티어 기본값 + 덮어쓰기. SSGI 시간 필터는 TAA를 전제 → TAA를 끄면 SSGI는 GTAO, 렌더 스케일은 1. */
