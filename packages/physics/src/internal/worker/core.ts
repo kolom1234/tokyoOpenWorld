@@ -3,15 +3,27 @@
 import type { Vec3d } from '@sanpo/core';
 import type { FromWorker, ToWorker } from '../protocol.ts';
 import { type BodySlots, createBodySlots } from './bodies.ts';
+import { type CellColliders, createCellColliders } from './cell-colliders.ts';
+import { warmUpShapes } from './heightfield.ts';
 import { loadJolt } from './jolt-init.ts';
+import { createQueries, type Queries } from './queries.ts';
 import { createPostSink, createSabSink, type SnapshotSink } from './snapshot-writer.ts';
 import { createWorld, type PhysicsWorld } from './world.ts';
 
 export type Send = (msg: FromWorker, transfer?: Transferable[]) => void;
 
+/** 08 §4 수락: 셀 적재 틱 ≤ 8 ms. */
+const LOAD_TICK_LIMIT_MS = 8;
+
 interface State {
   world: PhysicsWorld;
   bodies: BodySlots;
+  colliders: CellColliders;
+  queries: Queries;
+  cellBudgetMs: number;
+  loadMs: number;
+  /** 적재 틱이 8 ms(08 §4 수락)를 넘은 횟수. */
+  loadOver: number;
   sink: SnapshotSink;
   dt: number;
   maxSteps: number;
@@ -26,6 +38,12 @@ export interface PhysicsCore {
 
 function step(st: State, targetS: number): void {
   const t0 = performance.now();
+  if (st.colliders.pending > 0) {
+    st.colliders.pump(st.cellBudgetMs);
+    const ms = performance.now() - t0;
+    st.loadMs = Math.max(st.loadMs, ms);
+    if (ms > LOAD_TICK_LIMIT_MS) st.loadOver++;
+  }
   if (st.simT === null) st.simT = targetS - st.dt;
   let n = 0;
   while (st.simT + st.dt <= targetS + 1e-9 && n < st.maxSteps) {
@@ -43,16 +61,31 @@ function step(st: State, targetS: number): void {
   frame[2] = top;
   st.tickMs += (performance.now() - t0 - st.tickMs) * 0.1;
   frame[3] = st.tickMs;
+  frame[4] = st.colliders.pending;
+  frame[5] = st.colliders.cells;
+  frame[6] = st.loadMs;
+  frame[7] = st.loadOver;
   st.sink.commit();
 }
 
 async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<State> {
   const loaded = await loadJolt();
+  warmUpShapes(loaded.Jolt);
   const world = createWorld(loaded.Jolt, 0);
   const anchor: Vec3d = { ...msg.anchorWF };
   const st: State = {
     world,
     bodies: createBodySlots(world, anchor),
+    colliders: createCellColliders(
+      world,
+      anchor,
+      (key) => send({ t: 'cellLoaded', key }),
+      (m) => send({ t: 'warn', message: m }),
+    ),
+    queries: createQueries(world, anchor),
+    cellBudgetMs: msg.cellBudgetMs,
+    loadMs: 0,
+    loadOver: 0,
     sink: msg.sab ? createSabSink(msg.sab) : createPostSink(send),
     dt: 1 / msg.stepHz,
     maxSteps: msg.maxSteps,
@@ -75,9 +108,17 @@ export function createPhysicsCore(send: Send): PhysicsCore {
     }
     if (!st) return;
     if (msg.t === 'step') {
-      for (const c of msg.cmds) st.bodies.apply(c);
+      for (const c of msg.cmds) {
+        if (c.c === 'removeCell') st.colliders.remove(c.key);
+        else st.bodies.apply(c);
+      }
       step(st, msg.targetS);
-    } else if (msg.t === 'dispose') {
+    } else if (msg.t === 'addCell') st.colliders.enqueue(msg.key, msg.originWF, msg.jcol, msg.hf);
+    else if (msg.t === 'ray')
+      send({ t: 'rayHit', id: msg.id, hit: st.queries.raycast(msg.originWF, msg.dir, msg.maxDist) });
+    else if (msg.t === 'dispose') {
+      st.colliders.dispose();
+      st.queries.dispose();
       st.bodies.dispose();
       st.world.dispose();
       st = undefined;

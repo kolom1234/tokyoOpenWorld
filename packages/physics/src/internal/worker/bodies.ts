@@ -10,7 +10,7 @@ interface BodyEntry {
 }
 
 export interface BodySlots {
-  apply(cmd: Command): void;
+  apply(cmd: Exclude<Command, { c: 'removeCell' }>): void;
   /** 바디 기록(pos WF·quat·vel·angVel·flags·groundMat·handle). 반환 = 슬롯 상한(마지막 사용 슬롯 + 1). */
   fill(frame: Float64Array): number;
   readonly count: number;

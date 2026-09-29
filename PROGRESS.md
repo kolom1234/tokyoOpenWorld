@@ -2,16 +2,20 @@
 Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
 
 ## Current Milestone: M04 — Physics & Walking (M03 보강 5항목 완료)
-## Current Task: M04-T02 Cell colliders — 큐: M04-T01 ✅ → T02 → T03 → T04 → T05 → T06 → ④WebGL2 금속·flaky e2e → ⑤밤 창(Known Issue만) → M04-T01…T06
-- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041).
+## Current Task: M04-T03 Character & walk mode — 큐: M04-T01 ✅ → T02 ✅ → T03 → T04 → T05 → T06 → ④WebGL2 금속·flaky e2e → ⑤밤 창(Known Issue만) → M04-T01…T06
+- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042).
 
 - 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
   `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost), `perf.mjs`(무제한 프레임 rAF p50·전력 상한·패스별 GPU, `PROT=1` 회전). 방법은 ADR-0038 Context에 기록.
 - 배포 상태: staging = b386e8e 코드(M03 보강 ①–⑤, 2026-09-30) + dev 버킷 빌드 `20260929-b84bfa1-ec1646fc`(변경 없음). 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): M04-T02 — 05-tile-format §6 JCOL 배치 확인 → tools/pipeline `stages/build/collision.ts`(건물 simplify 0.3 m·프리미티브) → 워커 `cell-colliders.ts`·`heightfield.ts`.
+- Next step (정확히 한 걸음): MVP 로컬 재빌드(collision.bin 포함: `docker/run.sh node tools/pipeline/src/cli.ts build --area mvp-shibuya-shinjuku` → hlod → materials → validate) 진행 중이면 결과 확인 → M04-T03 `worker/character.ts`(CharacterVirtual).
 - Blockers: 없음
 
 ## Recently Completed
+- M04-T02 Cell colliders — pipeline `stages/build/collision.ts`(건물 면 1 mm 용접 → meshopt simplify 절대 0.3 m → 64 m 블록 순 **≤ 2500 삼각형 청크** JCOL triMesh, TKC `colliderTris`),
+  워커 `cell-colliders.ts`(셀 = [높이장, 청크…] 작업, 틱 예산 4 ms·예상 비용 판단·워밍업, 정적 바디 userData = 재질), `heightfield.ts`(힙 직접 채움), `queries.ts`(레이캐스트 **양면** — PLATEAU 감김 불일치),
+  API `addCell/removeCell/hasCell/raycast`·stats 적재 지표, 게임 `wiring/streaming-physics.ts`(버스 `cell/ready` — onReady는 렌더 단독, 물리 반경 256 m 등, 동시 2). 픽스처 재생성.
+  **수락**: 실제 GPU Chrome(world-mini) 적재 틱 최대 **5.8 ms**, 8 ms 초과 0. 지면 레이 오차 ≤ 0.4 mm(Node·브라우저), 벽 = JCOL CPU 교차 ±5 cm. 테스트 +3·e2e +1. ADR-0042 (2026-09-30)
 - M04-T01 Physics worker bootstrap — `@sanpo/physics`: jolt-physics 1.1.0 **single-thread**(multithread는 Vite 중첩 pthread 워커 번들 실패·초기화 3 s → 08 §1 이탈),
   메인 구동 고정 스텝(phase 30 → step(targetS, 명령) → 워커 120 Hz·틱당 ≤ 4), SAB 더블 버퍼 + seqlock / 폴백 postMessage, 보간(지금 − 25 ms, nlerp, 10 m 순간이동 스냅),
   레이어·충돌 행렬(08 §3), 핸들 = 슬롯 | 세대, `debugSpawnBox`, 게임 `?probe=physics`(+`physicsIsolation=degraded`), vite `worker.format = 'es'`.
@@ -49,17 +53,9 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
   면·LOD, 창별 방·좌우 반전, 유리 픽셀에서만 `If` 분기), `materials/glass.ts`(실내 발광 × (1−프레넬) × 투과율, 블라인드 확산면), library `maps.interiors`·방 평균색.
   **수락**: `docs/screenshots/M03/T05/shinjuku-curtainwall-close.jpg`(서신주쿠 초고층 근접 — 창마다 실내·블라인드·소등 방), `class-mansion.jpg`(가구 실루엣 깊이감) — 육안.
   **성능**: 파사드 단색 대비 ≈ 6.0 ms(T04 4.7 → +1.3, 분기 전 +2.7). core GPU 23.8/22.9/24.9/28.7 ms. 새 골든뷰 `shinjuku-curtainwall-close`. 테스트 +1파일/+4건. ADR-0034 (2026-09-29)
-- M03-T06 Terrain & road base materials — pipeline `surface-class.ts`(셀+8이웃 PLATEAU 도로 폴리곤 → 257² 1 m 래스터: 차도·횡단보도 0, 보도·교통섬 1, 나머지 7),
-  RTIN 분류 경계 세분(차도 경계 1 m·그 밖 4 m, `edgeKeyOf`), HLOD 지형 7 고정. render `materials/{terrain,road,noise}.ts` + `weather/wetness.ts`:
-  `_SURF` 원-핫 보간 → 상위 2클래스 반대칭 노이즈 경계, 주 클래스 회전·축척 2표본 분산 보존 혼합(안티타일링), 아스팔트 패치·유분·바램/보도 명암·때, 거시 명암,
-  젖음(`WeatherParams.wetness` core 계약 추가 → `EnvUniforms.wetness`; 흡수율 어두워짐·수막·물웅덩이), triplanar는 `TerrainOptions.triplanar`(기본 끔, T08 티어).
-  game `?wet=0..1` + 슬라이더(`debug/wet-override.ts`), 골든 `weather: 'rain'` = 0.85, 새 골든뷰 `road-ground-30m`.
-  **수락**: `docs/screenshots/M03/T06/road-ground-30m.jpg` — 눈높이 30 m 차도에서 타일 반복 식별 안 됨(육안), 젖음 `M03/T06/wet/*`.
-  **성능**: 첫 구현 +12 ms(ALU 해시 노이즈 ≈ 160회/픽셀) → 노이즈 텍스처·noiseBank 4표본·법선 1표본으로 지형 순증 ≈ +1.2–1.8 ms. core 4뷰 GPU 23.2/21.9/25.0/28.0 ms(T04 21.3/20.8/24.8/26.0).
-  빌드 L0 122.3 → 132.9 MB(+8.6 %). **staging 첫 반영**: publish에 shared/materials 추가, KTX2 트랜스코더 CSP(부트스트랩 워커, ADR-0032), 하늘 별 끔(외부 데이터).
-  픽스처·디코드 스냅샷 재생성. 테스트 +2파일/+6건. e2e 5/5. ADR-0031·0032 (2026-09-29)
 
 ## Known Issues
+- [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장만. 연석·계단(M04-T04)·소품·나무 줄기(M05) 없음. CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱 22 ms까지(기록만).
 - [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).
 - [render] 동적 해상도는 60 Hz 수직 동기에서 여유를 못 재 "시도-후퇴"로 0.05씩 오르내린다(15 W 1080p High: 120 s에 19회, 0.5–0.85). 정지 떨림에는 영향 없음(ADR-0038 측정) — 선명도 변화가 거슬리면 시도 간격·히스테리시스 조정.
 - [perf] **이 PC GPU 전력 상한이 15 W ↔ 30 W로 바뀐다**(LG gram 17 17ZD90R, RTX 3050 4GB Laptop, 기본 30 W·최대 45 W, 전원 모드 최고 성능) — 15 W에선 2배 느림.

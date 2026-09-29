@@ -12,6 +12,7 @@ import {
   type Vec3d,
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
+import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
 import { type ClockMode, createSim, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
@@ -20,6 +21,7 @@ import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
+import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
 import type { LoadedWorld } from './world-load.ts';
 
@@ -37,6 +39,9 @@ export interface WorldView {
   /** showWorld 뒤에만 있다. */
   readonly streaming: StreamingService | undefined;
   readonly wiring: StreamingRenderWiring | undefined;
+  /** showWorld 뒤에만 있다(물리 워커 — M04-T02 셀 콜라이더). */
+  readonly physics: PhysicsService | undefined;
+  readonly physicsWiring: StreamingPhysicsWiring | undefined;
   /** 머티리얼 라이브러리 적재가 끝났거나(성공·실패) 대상이 없음(골든뷰 안정 조건). */
   readonly materialsSettled: boolean;
   /** streaming 시작 → 스폰 영역 live까지 대기 → 시작 시점으로 이동. 반환 = 스폰 영역 live L0 셀 수. */
@@ -64,6 +69,8 @@ export interface WorldViewDeps {
 interface LateState {
   streaming?: StreamingService;
   wiring?: StreamingRenderWiring;
+  physics?: PhysicsService;
+  physicsWiring?: StreamingPhysicsWiring;
   materialsSettled: boolean;
 }
 
@@ -76,18 +83,32 @@ async function startStreaming(
   late: LateState,
 ): Promise<StreamingService> {
   const { bus, log } = deps;
+  const supervisor = createWorkerSupervisor({ log });
   const s = createStreaming({
     bus,
     log,
     world: { baseUrl: world.baseUrl, buildId: world.buildId, cellsIndex: world.cellsIndex },
-    supervisor: createWorkerSupervisor({ log }),
+    supervisor,
     initialMode: 'freecam',
   });
   late.streaming = s;
   late.wiring = createStreamingRenderWiring({ streaming: s, render, traversal, log: log.child('world') });
+  // 물리(M04-T02): 앵커 = 스폰 격자점. 워커 초기화는 기다리지 않는다(셀 콜라이더는 준비되면 적재).
+  const physics = createPhysics({ bus, log, supervisor, originWF: world.spawnWF });
+  physics.ready.catch((e: unknown) => log.error('physics', e));
+  late.physics = physics;
+  late.physicsWiring = createStreamingPhysicsWiring({
+    streaming: s,
+    bus,
+    physics,
+    player: () => ({ posWF: traversal.player.posWF, mode: traversal.mode }),
+    log: log.child('physics-wiring'),
+  });
   for (const sys of s.systems()) await sys.init?.();
   deps.scheduler.add(s);
   deps.scheduler.add({ systems: () => late.wiring?.systems ?? [] });
+  deps.scheduler.add(physics);
+  deps.scheduler.add({ systems: () => (late.physicsWiring ? [late.physicsWiring.system] : []) });
   return s;
 }
 
@@ -141,6 +162,12 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     },
     get wiring() {
       return late.wiring;
+    },
+    get physics() {
+      return late.physics;
+    },
+    get physicsWiring() {
+      return late.physicsWiring;
     },
     get materialsSettled() {
       return late.materialsSettled;

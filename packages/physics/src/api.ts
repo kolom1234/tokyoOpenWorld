@@ -1,6 +1,7 @@
 // @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만.
 // 좌표: 명령·스냅샷은 WF float64, 워커 안에서만 PHYS(= WF − 앵커, float32). see docs/08-physics.md §1–3·§9–10, docs/modules/physics.md
-import type { EventBus, Logger, Quat, SystemProvider, Vec3, Vec3d, WorkerSupervisor } from '@sanpo/core';
+import type { CellKey, EventBus, Logger, Quat, SystemProvider, Vec3, Vec3d, WorkerSupervisor } from '@sanpo/core';
+import type { HeightfieldData } from '@sanpo/tile-format';
 
 /** 바디 핸들(메인에서 발급 — 스냅샷 슬롯 + 세대). */
 export type BodyHandle = number & { readonly __brand: 'BodyHandle' };
@@ -31,6 +32,20 @@ export interface PhysicsConfig {
   isolation: 'auto' | 'degraded' | 'shared';
   /** 앵커 격자(m): 세션 시작 앵커 = 첫 위치의 이 격자점(08 §2). */
   anchorGridM: number;
+  /** 셀 콜라이더 적재 틱 예산(ms): 틱마다 이 안에서 작업(높이장·triMesh 청크)을 하나 이상(08 §4 — 수락 ≤ 8 ms). */
+  cellBudgetMs: number;
+}
+
+/** 레이캐스트 결과(WF). */
+export interface RayHit {
+  posWF: Vec3d;
+  /** 표면 법선(단위). */
+  normal: Vec3;
+  distance: number;
+  /** ObjectLayer(08 §3: 0 STATIC_WORLD, 1 TERRAIN …). */
+  layer: number;
+  /** JCOL 재질(05 §6). */
+  material: number;
 }
 
 export interface PhysicsStats {
@@ -43,6 +58,12 @@ export interface PhysicsStats {
   bodies: number;
   /** 워커 Jolt 초기화 시간(ms). */
   initMs: number;
+  /** 적재된(또는 적재 중인) 콜라이더 셀 수·남은 적재 작업 수·적재 틱 최대(ms). */
+  colliderCells: number;
+  colliderPending: number;
+  loadTickMaxMs: number;
+  /** 적재 틱이 8 ms를 넘은 횟수(GC 등 잡음 포함). */
+  loadTicksOver8Ms: number;
   /** 최근 틱(스텝 묶음) 워커 처리 시간 평균(ms). */
   tickMs: number;
   anchorWF: Readonly<Vec3d>;
@@ -58,6 +79,16 @@ export interface PhysicsService extends SystemProvider {
    */
   debugSpawnBox(posWF: Vec3d, halfExtentM: Vec3, dynamic: boolean): BodyHandle;
   despawn(h: BodyHandle): void;
+  /**
+   * 셀 콜라이더(08 §4): jcol = collision.bin(gzip 해제), hf = terrain.height. 버퍼 소유권은 워커로 넘어간다(Transferable).
+   * 같은 키면 교체. 워커가 틱당 예산 안에서 적재 → 끝나면 hasCell = true.
+   */
+  addCell(key: CellKey, originWF: Vec3d, jcol: ArrayBuffer | undefined, heightfield: HeightfieldData | undefined): void;
+  removeCell(key: CellKey): void;
+  /** 적재 완료(발밑 셀 확인 — groundMissing 판정, M04-T06). */
+  hasCell(key: CellKey): boolean;
+  /** 가장 가까운 충돌(모든 레이어). dir은 정규화 불필요. */
+  raycast(originWF: Vec3d, dir: Vec3, maxDist: number): Promise<RayHit | null>;
   /** 순간 이동(속도 0). */
   teleport(h: BodyHandle, posWF: Vec3d, yawRad: number): void;
   /** 보간 완료 포즈(아직 스냅샷이 없으면 undefined). */

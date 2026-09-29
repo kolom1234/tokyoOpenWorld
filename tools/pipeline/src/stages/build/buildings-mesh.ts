@@ -34,6 +34,8 @@ export interface BuildingsBuild {
   vertices: number;
   tris: number;
   sources: string[];
+  /** 충돌용 원본 스트림(셀 로컬 xyz·삼각형 인덱스, 양자화 전) — collision.ts가 용접·단순화. */
+  collision: { pos: Float32Array; idx: Uint32Array };
 }
 
 /** 정점 스트림(셀 로컬, 양자화 전). */
@@ -194,10 +196,11 @@ export async function buildBuildings(records: readonly BuildingRecord[], originW
     tris += addBuilding(s, b, ctx, originWF);
   }
   const sources = [...new Set(sorted.map((b) => b.source))].sort();
-  if (s.count === 0) return { glb: null, meta, aabbLocal: null, vertices: 0, tris: 0, sources };
+  const collision = { pos: Float32Array.from(s.pos), idx: Uint32Array.from(s.idx) };
+  if (s.count === 0) return { glb: null, meta, aabbLocal: null, vertices: 0, tris: 0, sources, collision };
   const aabbLocal = boundsOf(s.pos);
   const glb = await encodeBuildings(s, aabbLocal);
-  return { glb, meta, aabbLocal, vertices: s.count, tris, sources };
+  return { glb, meta, aabbLocal, vertices: s.count, tris, sources, collision };
 }
 
 async function encodeBuildings(s: Stream, b: Aabb): Promise<Uint8Array> {

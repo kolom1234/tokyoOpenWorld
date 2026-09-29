@@ -36,7 +36,8 @@
 - 물리 반경: 도보 256 m, 자전거 320 m, 차량 512 m, 열차 탑승 중 = 열차 주변 256 m. 스트리밍 L0 셀 중 반경 내 셀만 `addCell`.
 - 공급 경로: wiring이 물리 반경 내 `live` 셀에 대해 `streaming.requestSections(key, ['collision.bin','terrain.height'])` → `physics.addCell(...)`(Transferable).
 - `addCell(key, originWF, jcol, heightfield)`: JCOL 파싱(`@sanpo/tile-format`의 `parseJcol`을 워커에서 사용 — 별도 파서 금지) → 삼각 메시는 `MeshShapeSettings` → 셀당 정적 바디 1개(서브 셰이프 머티리얼 포함), 프리미티브는 `StaticCompoundShape`로 묶어 1개. 높이장 → `HeightFieldShapeSettings`(257², 블록 크기 4).
-- 셰이프 생성은 워커에서 수 ms 걸리므로 셀당 1틱에 1개만 처리하는 **적재 큐** 사용.
+- 셰이프 생성은 워커에서 수 ms 걸리므로 **적재 큐**: 파이프라인이 건물 메시를 ≤ 2500 삼각형 청크(JCOL 셰이프 여러 개)로 자르고, 워커는 틱마다 예산 4 ms 안에서 [높이장, 청크…] 작업을 처리(ADR-0042 — 셀 하나를 한 틱에 만들면 8–30 ms).
+- 공급 경로 구현: 게임 `wiring/streaming-physics.ts`가 버스 `cell/ready`(onReady는 렌더 단독)로 live L0를 추적. 레이·충돌은 삼각형 양면(PLATEAU 감김 불일치).
 - 플레이어 발밑 셀 콜라이더가 없으면 `groundMissing` 플래그 → traversal이 이동을 일시 정지(낙하 방지).
 
 ## 5. 캐릭터 (도보)

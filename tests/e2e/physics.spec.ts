@@ -45,3 +45,62 @@ for (const [label, query, expected] of [
     expect(errors).toEqual([]);
   });
 }
+
+// M04-T02: 게임 부트(world-mini) → streaming live L0 → collision.bin + terrain.height → 물리 워커 적재 → 레이캐스트가 지면(높이장)·건물을 맞힌다.
+test('cell colliders: world-mini cells load into the physics worker and raycasts hit ground and buildings', async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
+  await expect(page.locator('#app')).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
+  type Dbg = {
+    world: {
+      physics: {
+        stats(): { colliderCells: number; colliderPending: number; loadTickMaxMs: number; loadTicksOver8Ms: number };
+        raycast(
+          o: object,
+          d: object,
+          m: number,
+        ): Promise<{ posWF: { x: number; y: number; z: number }; layer: number } | null>;
+      };
+      ground: { groundHeightAt(x: number, z: number): number | undefined };
+    };
+  };
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const s = (globalThis as unknown as { __SANPO_DEBUG__: Dbg }).__SANPO_DEBUG__.world.physics.stats();
+          return s.colliderCells >= 4 && s.colliderPending === 0;
+        }),
+      { timeout: 60_000 },
+    )
+    .toBe(true);
+  const r = await page.evaluate(async () => {
+    const w = (globalThis as unknown as { __SANPO_DEBUG__: Dbg }).__SANPO_DEBUG__.world;
+    const out: { want: number | undefined; got: number | undefined; layer: number | undefined }[] = [];
+    // 정수 좌표(높이장 샘플) — 지면 레이.
+    for (const [x, z] of [
+      [-60, -15],
+      [-200, -200],
+      [100, 100],
+      [-10, 180],
+    ] as const) {
+      const hit = await w.physics.raycast({ x, y: 400, z }, { x: 0, y: -1, z: 0 }, 800);
+      out.push({ want: w.ground.groundHeightAt(x, z), got: hit?.posWF.y, layer: hit?.layer });
+    }
+    // 스크램블 스퀘어(최고 건물) 쪽 수평 레이: 건물(STATIC_WORLD = 0)에 맞아야 한다.
+    const wall = await w.physics.raycast({ x: -60, y: 60, z: -15 }, { x: 191, y: 0, z: 147 }, 400);
+    return { ground: out, wall, stats: w.physics.stats() };
+  });
+  test.info().annotations.push({ type: 'colliders', description: JSON.stringify(r) });
+  for (const g of r.ground) {
+    // 지면을 맞힌 레이(TERRAIN = 1)는 streaming 높이장과 ±5 cm. 건물 지붕에 먼저 맞은 레이는 제외.
+    if (g.layer === 1) expect(Math.abs((g.got as number) - (g.want as number))).toBeLessThanOrEqual(0.05);
+  }
+  expect(r.ground.filter((g) => g.layer === 1).length).toBeGreaterThanOrEqual(2);
+  expect(r.wall?.layer).toBe(0);
+  // 적재 틱(≤ 8 ms) 판정은 실제 GPU 브라우저에서(PR·PROGRESS 기록) — SwiftShader는 렌더가 모든 CPU 코어를 써서 워커 wasm도 2–3배 느리다(최대 22 ms 실측).
+  expect(errors).toEqual([]);
+});

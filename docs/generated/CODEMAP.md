@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 237개.
+> 파일 242개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -24,6 +24,7 @@
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라(phase 20 확정) → render.setCamera(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
 - `apps/game/src/wiring/env.ts` — 배선: sim.environment()(태양·달·날씨, 카메라 위치) → render.setEnvironment. camera(65) 뒤·renderPrep(70) 앞. see docs/modules/game.md, docs/01-architecture.md §5 | exports: ENV_WIRING_PHASE, defaultClock, createEnvWiring
 - `apps/game/src/wiring/quality.ts` — 품질 티어 배선(M03-T08): 저장된 티어(localStorage)로 시작 → 없으면 첫 표시 뒤 스트리밍이 조용해지면 render.detectQuality()(detect-gpu + 60프레임). | exports: QUALITY_STORAGE_KEY, loadTier, QualityWiringDeps, startQualityWiring
+- `apps/game/src/wiring/streaming-physics.ts` — 배선: streaming live L0 셀(버스 `cell/ready` — onReady는 렌더 배선 단독 소유) → 물리 반경(08 §4) 안이면 collision.bin + terrain.height를 따로 요청(requestSections)해 physics.addCell, | exports: PHYSICS_WIRING_PHASE, PHYSICS_RADIUS_M, StreamingPhysicsDeps, StreamingPhysicsStats, StreamingPhysicsWiring, cellDistance, createStreamingPhysicsWiring
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
@@ -79,18 +80,21 @@
 - `packages/input/src/internal/service.ts` — createInput: 디바이스 부착 + phase 0 시스템(원시 입력 → ActionState 스냅샷). see docs/modules/input.md | exports: INPUT_PHASE, createInput
 
 ## packages/physics
-- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, PhysicsConfig, PhysicsStats, PhysicsService, PhysicsTransport, PhysicsDeps
+- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, PhysicsTransport, PhysicsDeps
 - `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 물리. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts', anchorOf, createPhysics, DEFAULT_PHYSICS_CONFIG, PHYSICS_PHASE
 - `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). | exports: CommandQueue, createCommandQueue
 - `packages/physics/src/internal/host/snapshot-reader.ts` — 스냅샷 읽기·보간(08 §9): SAB는 seqlock으로 최신 버퍼를 복사, 폴백은 받은 프레임 그대로. 최근 몇 개를 시뮬레이션 시각 순으로 두고 | exports: SnapshotHistory, createSnapshotHistory, readSab
-- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, isIsolated, SLOT_BITS, slotOf, Command, ToWorker, FromWorker
+- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, isIsolated, SLOT_BITS, slotOf, Command, RayHitMsg, ToWorker, FromWorker
 - `packages/physics/src/internal/service.ts` — createPhysics(08 §1·§9·§10): 워커(감독자) 또는 주입 전송 → init(앵커·SAB) → ready. 시스템 'physics'(phase 30)가 프레임마다 | exports: PHYSICS_PHASE, DEFAULT_PHYSICS_CONFIG, anchorOf, createPhysics
 - `packages/physics/src/internal/worker/bodies.ts` — 워커 바디 슬롯: 명령(상자·삭제·순간이동) 적용 + 스냅샷 채우기. 슬롯 = 핸들 하위 비트(메인이 발급), 좌표 변환 WF ↔ PHYS는 여기서만. | exports: BodySlots, createBodySlots
+- `packages/physics/src/internal/worker/cell-colliders.ts` — 셀 콜라이더 적재(08 §4): 셀마다 [높이장, JCOL 셰이프들] 작업 → 적재 큐(도착 순서, 가까운 셀부터 보내는 건 메인 배선). | exports: CellColliders, createCellColliders
 - `packages/physics/src/internal/worker/core.ts` — 물리 워커 코어(08 §1·§9): init → Jolt 로드·월드·스냅샷 싱크, step → 명령 적용 + 고정 스텝(메인 시계 targetS까지, 최대 N, 초과 시간은 버림) → 스냅샷. | exports: Send, PhysicsCore, createPhysicsCore
+- `packages/physics/src/internal/worker/heightfield.ts` — 지형 높이장(08 §4, 05 §4 terrain.height): u16 257² → Jolt HeightFieldShape(1 m 간격, 블록 4). 샘플 [iz·size + ix] = 셀 로컬 (ix, h, iz), | exports: createHeightfieldShape, createMeshShape, warmUpShapes
 - `packages/physics/src/internal/worker/jolt-init.ts` — Jolt 초기화(08 §1, ADR-0041): single-thread wasm-compat 빌드(wasm 내장). multithread 빌드는 pthread 워커를 자기 파일로 띄우는데 | exports: Jolt, JoltBuildName, JoltLoaded, loadJolt
 - `packages/physics/src/internal/worker/jolt-mem.ts` — Jolt 메모리 규칙(08 §1): `new Jolt.X()` 설정 객체는 쓰고 나서 `Jolt.destroy()` 필수 → using()으로 강제. | exports: using, usingAll, Scratch, createScratch
 - `packages/physics/src/internal/worker/layers.ts` — 오브젝트 레이어·브로드페이즈 레이어·충돌 행렬(08 §3). 표(COLLISION_PAIRS)는 순수 데이터 — Jolt 필터는 createLayerFilters가 만든다. | exports: OBJ, ObjectLayer, NUM_OBJECT_LAYERS, BP, NUM_BP_LAYERS, BROADPHASE_OF, COLLISION_PAIRS, collides, LayerFilters, createLayerFilters
 - `packages/physics/src/internal/worker/physics.worker.ts` — 물리 워커 엔트리(08 §1): 메시지 → 코어(순서 보장). 치명적 오류는 감독자 규약(`worker/error`, fatal) → 메인이 재시작.
+- `packages/physics/src/internal/worker/queries.ts` — 공간 질의(08 §10): 레이캐스트(가장 가까운 충돌, 삼각형 양면) — 위치·법선(WF)·거리·레이어·재질. 필터는 모든 레이어(마스크는 호출 쪽 결과 필터로). | exports: Queries, createQueries
 - `packages/physics/src/internal/worker/snapshot-writer.ts` — 스냅샷 쓰기(08 §9): SAB 더블 버퍼(비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가) 또는 폴백 postMessage(Transferable). | exports: SnapshotSink, sabViews, createSabSink, createPostSink
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
@@ -238,6 +242,7 @@
 - `tools/pipeline/src/spike/spike-metrics.ts` — M01-T02 스파이크 비교 지표: 보존(gml:id·속성·면 종류·텍스처·도로 기능), 좌표 일치, 규모. see docs/adr/0007-plateau-reader.md | exports: RunStats, compareOutputs
 - `tools/pipeline/src/stages/build/assemble.ts` — L0 셀 조립: terrain.mesh + terrain.height + buildings.mesh + meta.json → TKC, 영역 빌드(cells.idx·world.json). see docs/04-data-pipeline.md §4.4, docs/05-tile-format.md §1–3 | exports: CellBuildStats, CellBuildInput, buildCell, AreaBuildInput, unionBounds, buildArea
 - `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, quantizePositions, buildBuildings
+- `tools/pipeline/src/stages/build/collision.ts` — collision.bin 섹션(04 §4.4-6, 05 §6): 건물 렌더 면(벽·지붕·부속물) → 1 mm 용접 → meshopt 단순화(절대 오차 0.3 m) → | exports: SIMPLIFY_ERROR_M, MAX_CHUNK_TRIS, CollisionBuild, weld, buildCollision
 - `tools/pipeline/src/stages/build/dem-window.ts` — dem_1m.tif에서 셀 빌드용 높이 창 읽기(GDAL) + 셀별 (257+2m)² 부분 창 추출. see docs/04-data-pipeline.md §4.4, §6 | exports: CELL_SIZE_M, DEM_MARGIN, DemWindow, CellWindow, readDemWindow, cellWindow, sampleAt, DemWindowMeta, writeDemWindowFiles, readDemWindowFiles
 - `tools/pipeline/src/stages/build/facade-params.ts` — 절차 파사드 파라미터(M03-T04, 07 §5): PLATEAU 건물 용도 코드·높이·층수 → `_FACADE`(u8×4: class, floors, tintIdx, flags). | exports: FACADE_CLASS, FacadeClass, FACADE_FLAG, FacadeInput, facadeParams
 - `tools/pipeline/src/stages/build/heightfield.ts` — terrain.height 섹션: 셀 창(257²) → 공통 기준·스텝 양자화 → writeHeightfield → gzip. see docs/05-tile-format.md §4 (terrain.height), docs/adr/0018-cell-mesh-build.md | exports: cellHeightfield, encodeTerrainHeight
