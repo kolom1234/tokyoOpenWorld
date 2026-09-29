@@ -75,7 +75,12 @@ export function createAtmosphere(
   );
   const light = new AtmosphereLight(LIGHT_DISTANCE_M);
   light.name = 'sun';
-  if (withSkyBackground) scene.backgroundNode = skyBackground() as unknown as TslNode;
+  if (withSkyBackground) {
+    const sky = skyBackground();
+    // 별 데이터는 외부(GitHub) 기본 URL → 끈다(post/pipeline.ts와 같은 이유).
+    sky.showStars = false;
+    scene.backgroundNode = sky as unknown as TslNode;
+  }
   const rot = new Matrix4();
   const dir = new Vector3();
   const sunWF = new Vector3(0, 1, 0);

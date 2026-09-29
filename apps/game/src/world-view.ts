@@ -16,6 +16,7 @@ import { createRender, type RenderConfig, type RenderService } from '@sanpo/rend
 import { type ClockMode, createSim, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
+import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
@@ -55,6 +56,8 @@ export interface WorldViewDeps {
   start?: { centerWF: Vec3d; pose: (ground: GroundQuery) => FreecamParams; fovDeg?: number };
   /** 시계 시작(골든뷰·`?time=` = frozen). 없으면 오늘 정오 JST부터 1배속(wiring/env.ts). */
   clock?: ClockMode;
+  /** 디버그 날씨 덮어쓰기(`?wet=`). */
+  weather?: WeatherOverride;
 }
 
 /** 월드 로드 뒤 생기는 것들(getter로 노출). */
@@ -123,7 +126,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     gameTimeMs: () => sim.clock.gameTimeMs,
     timeScale: () => sim.clock.timeScale,
   };
-  const wiringSystems = [createCameraWiring(traversal, render), createEnvWiring(sim, render)];
+  const wiringSystems = [createCameraWiring(traversal, render), createEnvWiring(sim, render, deps.weather)];
 
   return {
     render,

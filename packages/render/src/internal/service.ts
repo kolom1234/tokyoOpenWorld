@@ -41,7 +41,10 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       await precompileMaterials(renderer, graph.scene, view.camera, ctx.materials, log);
     },
     setCamera: (c) => view.setCamera(c),
-    setEnvironment: (e) => ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF),
+    setEnvironment: (e) => {
+      ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF);
+      ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);
+    },
     stats: () => statsOf(ctx),
     dispose: () => draw.dispose(),
     systems: () => [prep, draw],

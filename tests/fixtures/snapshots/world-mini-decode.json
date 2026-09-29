@@ -1,6 +1,6 @@
 {
   "L0_-1_-1": {
-    "tris": 66483,
+    "tris": 79127,
     "sections": {
       "buildings.mesh": [
         {
@@ -51,27 +51,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 17704,
-          "indices": 103146,
-          "indexHash": 4258414977,
+          "vertices": 24026,
+          "indices": 141078,
+          "indexHash": 2823405878,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3323083368
+              "hash": 3626885985
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 4211999862
+              "hash": 1717790964
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1033423684
+              "hash": 993683551
             }
           }
         }
@@ -79,7 +79,7 @@
     }
   },
   "L0_0_-1": {
-    "tris": 58701,
+    "tris": 66917,
     "sections": {
       "buildings.mesh": [
         {
@@ -130,27 +130,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 20024,
-          "indices": 117066,
-          "indexHash": 1010512572,
+          "vertices": 24132,
+          "indices": 141714,
+          "indexHash": 1865938063,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 1579233423
+              "hash": 1807496863
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 3577343280
+              "hash": 3511237120
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1501496493
+              "hash": 2866743344
             }
           }
         }
@@ -158,7 +158,7 @@
     }
   },
   "L0_-1_0": {
-    "tris": 61338,
+    "tris": 73164,
     "sections": {
       "buildings.mesh": [
         {
@@ -209,27 +209,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 18055,
-          "indices": 105252,
-          "indexHash": 1354509899,
+          "vertices": 23968,
+          "indices": 140730,
+          "indexHash": 82162257,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3449087685
+              "hash": 942913170
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1517422201
+              "hash": 1158149211
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 3014100718
+              "hash": 964933374
             }
           }
         }
@@ -237,7 +237,7 @@
     }
   },
   "L0_0_0": {
-    "tris": 42648,
+    "tris": 50490,
     "sections": {
       "buildings.mesh": [
         {
@@ -288,27 +288,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 15196,
-          "indices": 88098,
-          "indexHash": 4286801710,
+          "vertices": 19117,
+          "indices": 111624,
+          "indexHash": 4162318039,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3451079015
+              "hash": 3080395491
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 4108201293
+              "hash": 1772742045
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 2425987547
+              "hash": 3372982976
             }
           }
         }

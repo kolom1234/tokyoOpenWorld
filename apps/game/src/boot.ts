@@ -15,6 +15,7 @@ import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewP
 import { createDebugOverlay } from './debug/overlay.ts';
 import { createStatsHook } from './debug/stats.ts';
 import { createSunOverride, parseSunFlag } from './debug/sun-override.ts';
+import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-override.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
 import {
@@ -53,6 +54,8 @@ export interface BootFlags {
   noShadows?: boolean;
   /** `?facade=flat` → 파사드 단색(셰이더 비용 A/B). */
   flatFacade?: boolean;
+  /** `?wet=<0..1>` → 노면 젖음 고정 + 슬라이더(debug/wet-override.ts). */
+  wet?: number;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -82,7 +85,17 @@ export function parseFlags(search: string): BootFlags {
     ...(Number.isFinite(Date.parse(q.get('time') ?? '')) ? { timeMs: Date.parse(q.get('time') ?? '') } : {}),
     ...(q.get('shadows') === '0' ? { noShadows: true } : {}),
     ...(q.get('facade') === 'flat' ? { flatFacade: true } : {}),
+    ...(parseWetFlag(q.get('wet')) !== undefined ? { wet: parseWetFlag(q.get('wet')) as number } : {}),
   };
+}
+
+/** 골든뷰 비(`weather: 'rain'`)의 노면 젖음 — sim 날씨(M06) 전까지 고정값. */
+const GOLDEN_RAIN_WETNESS = 0.85;
+
+/** 날씨 덮어쓰기: `?wet=` > 골든뷰 비 > 없음(sim 값). */
+function weatherOf(flags: BootFlags, golden: GoldenView | undefined): WeatherOverride | undefined {
+  if (flags.wet !== undefined) return { wetness: flags.wet };
+  return golden?.weather === 'rain' ? { wetness: GOLDEN_RAIN_WETNESS } : undefined;
 }
 
 /** 월드 출처 결정(API 또는 픽스처) → 데이터 로드. 각 단계 상태를 onStatus로 알리고, 성공하면 로드 결과를 돌려준다. */
@@ -144,6 +157,7 @@ async function setupWorldView(
   golden: GoldenView | undefined,
 ): Promise<WorldView | undefined> {
   try {
+    const weather = weatherOf(flags, golden);
     const world = await createWorldView({
       canvas: mountCanvas(document),
       bus: createEventBus(log),
@@ -157,13 +171,17 @@ async function setupWorldView(
         ...(flags.flatFacade ? { facade: 'flat' as const } : {}),
       },
       ...clockOf(flags, golden),
+      ...(weather ? { weather } : {}),
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),
     });
     for (const p of world.providers) scheduler.add(p);
     if (flags.sun)
-      scheduler.add({ systems: () => [createSunOverride(world.render, flags.sun as NonNullable<BootFlags['sun']>)] });
+      scheduler.add({
+        systems: () => [createSunOverride(world.render, flags.sun as NonNullable<BootFlags['sun']>, weather)],
+      });
+    if (weather && !golden) mountWetSlider(document, weather);
     scheduler.setFrameSource(world.frameSource);
     document.body.classList.add('rendering');
     view.setRenderer(world.render.backend, world.render.depth);

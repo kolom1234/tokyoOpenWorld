@@ -5,6 +5,7 @@ import { enableSunShadows, SHADOWS_HIGH } from '../src/internal/lighting/shadows
 import { createMaterialLibrary } from '../src/internal/materials/library.ts';
 import { createMaterialRegistry } from '../src/internal/materials/registry.ts';
 import { createCellNode } from '../src/internal/scene/cell-node.ts';
+import { createEnvUniforms } from '../src/internal/weather/wetness.ts';
 
 describe('sun shadows', () => {
   it('configures cascaded shadow maps on the sun light and undoes it on dispose', () => {
@@ -23,7 +24,7 @@ describe('sun shadows', () => {
 
   it('lets only buildings cast and keeps HLOD out of the shadow passes', () => {
     const lib = createMaterialLibrary('/basis/');
-    const reg = createMaterialRegistry(lib);
+    const reg = createMaterialRegistry(lib, createEnvUniforms());
     const roots = Object.fromEntries(
       ['terrain', 'road', 'building', 'override', 'prop', 'vegetation', 'dynamic', 'light'].map((k) => [
         k,

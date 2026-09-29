@@ -50,7 +50,8 @@ scene
 | `M_WATER` | 강·연못 | 법선 스크롤 + SSR + 빗방울 파문 |
 | `M_SIGN` | 간판/전광판 | **가상 브랜드** 텍스트 아틀라스 발광, 밤 점등 |
 - 텍스처: `shared/materials`의 KTX2 배열 3장 — albedo 1024² ETC1S(sRGB), normal·ORM 512² UASTC(ADR-0027). 매니페스트(`schemas/materials.schema.json`)가 레이어별 그룹·`tileM`·평균색, 그룹 → 레이어 인덱스를 준다. 셰이더는 그룹(`MATERIAL_GROUPS` 13종) + 해시로 레이어를 고른다. 첫 표시 뒤 지연 적재(그 전엔 평균색), 유리는 절차(텍스처 없음).
-- 공통 전역 유니폼(`EnvUniforms`): `wetness`, `snowCover`, `timeOfDay`, `season`, `windDir/strength`, `nightFactor`.
+- 공통 전역 유니폼(`EnvUniforms`): `wetness`, `snowCover`, `timeOfDay`, `season`, `windDir/strength`, `nightFactor`. 구현(M03-T06) = `weather/wetness.ts`의 `wetness`(값 = `EnvironmentState.weather.wetness`, sim 날씨 M06 전엔 0·디버그 `?wet=`), 나머지는 쓰는 태스크에서 추가.
+- **M_TERRAIN 구현(M03-T06, ADR-0031)** `materials/{terrain,road,noise}.ts`: 정점 `_SURF` 원-핫(8) 보간 → 픽셀마다 상위 2클래스, 클래스 순서에 반대칭인 노이즈로 경계 혼합(±0.08). 주 클래스 = 위 투영 2표본(두 번째 = 0.83 rad 회전·0.61배 축척, ≈ 6 m 노이즈 가중, **분산 보존 혼합** m + (mix − m)/√(w²+(1−w)²)), 법선은 첫 표본만. 보조 클래스 = 알베도·ORM 1표본. 경사 triplanar(측면 투영 알베도)는 `TerrainOptions.triplanar`(기본 끔, +0.7–1.3 ms — 품질 티어 T08). 노이즈 = 256² RGBA 격자값 텍스처 `noiseBank`(4축척 × 4채널, 4표본 — ALU 해시는 7–9 ms였다). 이어서 M_ROAD 변형(아스팔트 보수 패치·유분·바랜 구간, 보도 구간 명암·때 — 추가 표본 없음), 29 m 거시 명암, 젖음(흡수율별 알베도 ↓ 최대 55 %, 수막 거칠기 ↓, n.y > 0.97 포장면 물웅덩이 — 젖음 0.35부터). 1440p 지형 순증 ≈ +1.2–1.8 ms(RTX 3050 Laptop). 도로 전용 메시·연석·차선(`M_ROAD`·`M_DECAL` 별도 메시)은 M05-T01. 파문 노멀은 M06.
 
 ## 5. 절차적 파사드 셰이더 (M_FACADE)
 입력: UV0(벽면 미터: u=같은 평면 묶음 시작점부터, v=건물 최저점부터), UV1(면 폭, 건물 높이), `_FACADE`(class, floors, tintIdx, flags) — 면 상수는 **flat varying**. 구현 `materials/facade/{grid,walls,windows,retail,details,index}.ts`(ADR-0030, M03-T04). 1–3·6·8 구현, 4(유리·실내)는 T05, 5(야간)는 M09, 7(발코니)은 M05-T07.

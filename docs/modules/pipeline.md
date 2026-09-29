@@ -22,7 +22,8 @@ src/stages/derive/{roads,sidewalks,curbs,terrain-shape,markings/*,props/*,lanes,
 src/stages/build/dem-window.ts   dem_1m.tif 창 읽기(gdal_translate -srcwin, 영역 밖 여유 샘플은 가장자리 복제) + 셀별 259² 창 (M01-T05)
 src/stages/build/heightfield.ts  terrain.height(공통 기준 −100 m·0.01 m) (M01-T05)
 src/stages/build/terrain-rtin.ts RTIN 정확 오차 단순화 + 경계 강제 (M01-T05, ADR-0018)
-src/stages/build/terrain-mesh.ts terrain.mesh(float32 POSITION, int8 NORMAL, _SURF) (M01-T05)
+src/stages/build/terrain-mesh.ts terrain.mesh(float32 POSITION, int8 NORMAL, _SURF) (M01-T05; `_SURF` 경계 RTIN 세분 — 차도 1 m·그 밖 4 m, M03-T06)
+src/stages/build/surface-class.ts `_SURF` 분류 격자: 셀+8이웃 정규화 도로(roads/<cellId>.ndjson.gz) → 257² 스캔라인 래스터(M03-T06, ADR-0031)
 src/stages/build/buildings-mesh.ts buildings.mesh(u16 POSITION·균일 scale, _BLDG, _FACADE, UV0, TEXCOORD_1) + meta.buildings (M01-T05, M03-T04)
 src/stages/build/facade-params.ts  용도·높이·층 → `_FACADE`(class·tint·상점·커튼월·창 시드, L0·HLOD 공용, ADR-0030)
 src/stages/build/wall-planes.ts    벽 평면 군집(방향 1°·15 cm → u 원점·폭 공유)·벽과 동일 평면 부속물 판정
@@ -41,7 +42,7 @@ src/stages/validate-materials.ts  manifest 스키마(schemas/materials.schema.js
 interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts   (미구현)
 src/stages/validate.ts validate-seams.ts   스키마(ajv)·해시·예산·이웃 경계 검사 → report.{json,md} (M01-T05)
 src/stages/fixture.ts fixture-plateau.ts   tests/fixtures 생성: world-mini(buildArea 2×2 → validate → 복사 + ATTRIBUTION), plateau-mini(CityGML 원문 발췌·DEM 창·스냅샷), `plateauMiniSnapshot` (M01-T07, ADR-0019)
-src/stages/publish/{publish,uploaders,targets}.ts   publish·gc(ADR-0026): 파일 수집·검증 → 업로드(s3 SigV4 / api REST, 동시성 16·재시도) → manifest → HEAD 검증 → KV(CURRENT/BUILDS/BUILD_FILES); 대상 = apps/worker/wrangler.jsonc
+src/stages/publish/{publish,uploaders,targets}.ts   publish·gc(ADR-0026): 파일 수집(tkc·index·world.json·shared/materials, M03-T06)·검증 → 업로드(s3 SigV4 / api REST, 동시성 16·재시도) → manifest → HEAD 검증 → KV(CURRENT/BUILDS/BUILD_FILES); 대상 = apps/worker/wrangler.jsonc
 src/lib/sigv4.ts                AWS SigV4(헤더 서명, 테스트 벡터 일치)
 src/lib/{gltf,triangulate,mesh-ops,polygon,spline,raster,hash,parallel,ndjson-gz}.ts   (gltf·triangulate·polygon·ndjson-gz·raster 구현)
 scripts/golden-geo.py

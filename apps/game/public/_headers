@@ -6,6 +6,10 @@
   Cross-Origin-Resource-Policy: same-origin
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'
   X-Content-Type-Options: nosniff
+/basis/ktx2-worker.js
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self'
+  Cache-Control: no-cache
 /fixtures/*
   Cache-Control: no-cache
 /assets/*

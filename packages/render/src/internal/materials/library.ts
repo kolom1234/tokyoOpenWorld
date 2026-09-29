@@ -18,6 +18,7 @@ import {
   Vector3,
   type WebGPURenderer,
 } from 'three/webgpu';
+import { useBootstrapWorker } from './ktx2-csp.ts';
 
 /** 셰이더가 아는 그룹(파이프라인 content/materials/library.json의 group과 같은 이름). 추가 = 끝에만. */
 export const MATERIAL_GROUPS = [
@@ -162,7 +163,7 @@ async function fetchLibrary(
   if (!res.ok) throw new Error(`materials manifest HTTP ${res.status}`);
   const m = (await res.json()) as MaterialsManifest;
   onManifest(m);
-  const loader = new KTX2Loader().setTranscoderPath(basisPath).detectSupport(renderer);
+  const loader = useBootstrapWorker(new KTX2Loader().setTranscoderPath(basisPath), basisPath).detectSupport(renderer);
   const base = manifestUrl.slice(0, manifestUrl.lastIndexOf('/') + 1);
   const [albedo, normal, orm] = await Promise.all([
     loadArray(loader, base + m.textures.albedo.file, false),

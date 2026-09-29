@@ -23,7 +23,10 @@ export function createPostPipeline(renderer: WebGPURenderer, scene: Scene, camer
   const color = scenePass.getTextureNode('output');
   const depth = scenePass.getTextureNode('depth');
   const pipeline = new RenderPipeline(renderer);
-  pipeline.outputNode = aerialPerspective(color, depth) as unknown as RenderPipeline['outputNode'];
+  const ap = aerialPerspective(color, depth);
+  // 별(StarsNode)은 기본 데이터를 GitHub에서 받는다 — CSP(connect-src 'self')에 막히고 외부 런타임 의존이라 끈다(밤하늘 자체 에셋은 M09).
+  if (ap.skyNode && 'showStars' in ap.skyNode) (ap.skyNode as { showStars: boolean }).showStars = false;
+  pipeline.outputNode = ap as unknown as RenderPipeline['outputNode'];
   return {
     render: () => pipeline.render(),
     dispose() {

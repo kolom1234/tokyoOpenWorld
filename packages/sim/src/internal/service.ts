@@ -14,7 +14,7 @@ export const SIM_CLOCK_PHASE = 10;
  */
 const OBSERVER_GRID_M = 1000;
 
-const CLEAR: WeatherParams = { cloudCover: 0, rainMmH: 0, fog: 0, windMs: 2, windDirDeg: 0, snow: 0 };
+const CLEAR: WeatherParams = { cloudCover: 0, rainMmH: 0, fog: 0, windMs: 2, windDirDeg: 0, snow: 0, wetness: 0 };
 
 function dayOfYearJst(ms: number): number {
   const d = new Date(ms + 9 * 3600_000);

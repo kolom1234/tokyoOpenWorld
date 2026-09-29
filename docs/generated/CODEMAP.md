@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 204개.
+> 파일 211개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -13,6 +13,7 @@
 - `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeStreaming, describeMaterials, describeDebug, createDebugOverlay
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
 - `apps/game/src/debug/sun-override.ts` — `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다. | exports: parseSunFlag, dirFromAzEl, overrideEnvironment, createSunOverride
+- `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/start-view.ts` — 시작 시점(M01-T06): 스크램블 교차로 북서쪽 상공 약 60 m에서 Shibuya Scramble Square를 바라본다. 골든뷰 북마크(M03)가 생기면 그쪽으로 이동. | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose
@@ -95,10 +96,14 @@
 - `packages/render/src/internal/materials/facade/walls.ts` — 절차 파사드 ③ 벽 재질(07 §5-3): 클래스 + 건물 해시(tintIdx)로 텍스처 배열 그룹·레이어 선택 × 클래스 팔레트 틴트. 지붕은 평지붕 콘크리트/경사 기와. | exports: WallSample, facadeWall, wallFloor
 - `packages/render/src/internal/materials/facade/windows.ts` — 절차 파사드 ② 창(07 §5-2·4 일부): 베이 안 사각 SDF(프레임 두께·화면 공간 안티에일리어싱) + 클래스별 배치(오피스 띠창, 맨션 발코니 문, | exports: WindowMasks, facadeWindows
 - `packages/render/src/internal/materials/hlod.ts` — HLOD 머티리얼: 기본 단색 PBR + 자식 16영역 표시·디더 페이드. 셀별 페이드 16개는 per-object uniform(vec4 × 4, objectGroup)으로, | exports: HlodFadeData, createHlodFades, createHlodMaterial
+- `packages/render/src/internal/materials/ktx2-csp.ts` — KTX2Loader 워커를 CSP 호환으로(M03-T06, ADR-0032): 기본 init()은 트랜스코더 본문을 Blob 워커로 띄운다 → blob 워커는 페이지 CSP를 물려받고 | exports: KTX2_BOOTSTRAP_FILE, workerBody, useBootstrapWorker
 - `packages/render/src/internal/materials/library.ts` — 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + manifest(그룹·타일 크기·평균색). | exports: MATERIAL_GROUPS, MaterialGroup, MAX_LAYERS, MaterialsManifest, LibraryState, LibraryStats, MaterialLibrary, createMaterialLibrary
+- `packages/render/src/internal/materials/noise.ts` — 셰이더 2D 값 노이즈(TSL): 지형 안티타일링·아스팔트 변형·물웅덩이 마스크(M03-T06). 입력 = 월드 고정 좌표(worldOffset 적용, m). | exports: noiseTexture, NoiseBank, noiseBank
 - `packages/render/src/internal/materials/precompile.ts` — 셰이더 선컴파일(06 §6): 고정 머티리얼 ID별 기본·HLOD 변형을 작은 더미 메시로 씬에 잠깐 붙여 `compileAsync` → 스트리밍 중 첫 사용 끊김 제거. | exports: precompileMaterials
 - `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼 + HLOD 변형(자식 페이드, M02-T05). 셀 머티리얼은 라이브러리 텍스처 배열을 쓴다(M03-T01, 적재 전 평균색). | exports: MaterialRegistry, PRECOMPILE_IDS, createMaterialRegistry
-- `packages/render/src/internal/materials/textured.ts` — 라이브러리 텍스처 표본 함수(sampleLayer·perturbWorld) + 지형 기본 머티리얼(`_SURF` 그룹, 월드 XZ 평면 투영, M03-T01). | exports: LayerSample, sampleLayer, perturbWorld, createTerrainMaterial
+- `packages/render/src/internal/materials/road.ts` — M_ROAD 변형(07 §4, M03-T06): 아스팔트 보수 패치·유분 얼룩·바랜 구간, 보도 명암·때, 공통 거시 명암. 추가 표본 없이 noiseBank 채널만. | exports: Variation, NO_VARIATION, macroTint, asphaltVariation, pavingVariation
+- `packages/render/src/internal/materials/terrain.ts` — M_TERRAIN(07 §4, M03-T06): `_SURF` 스플랫 — 정점 원-핫(8클래스, 보간) → 픽셀마다 상위 2클래스 노이즈 경계 혼합. | exports: TerrainOptions, createTerrainMaterial
+- `packages/render/src/internal/materials/textured.ts` — 라이브러리 텍스처 표본 함수(sampleLayer·법선 변환, M03-T01). 지형은 terrain.ts(M03-T06), 파사드는 facade/(M03-T04). | exports: LayerSample, sampleLayer, tsToWorld, worldToView, perturbWorld
 - `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7): 씬 패스(MRT) → 대기 공중원근(aerialPerspective, 깊이 1 = 하늘) → 출력 변환(톤매핑 AgX·sRGB). | exports: PostPipeline, createDirectRender, createPostPipeline
 - `packages/render/src/internal/renderer/backend-caps.ts` — 초기화 전 백엔드·깊이 기능 예측: WebGPU 어댑터 유무, WebGL2 EXT_clip_control(reversed-Z 필요조건). see docs/07-rendering.md §1, ADR-0006 | exports: BackendProbe, webgl2HasClipControl, probeBackend
 - `packages/render/src/internal/renderer/gpu-timer.ts` — GPU 타이머(M03 성능 표): WebGPU timestamp-query(three `trackTimestamp`)로 렌더 패스 GPU 시간을 모아 프레임당 평균(ms). | exports: GpuTimerStats, GpuTimer, createGpuTimer
@@ -109,6 +114,7 @@
 - `packages/render/src/internal/scene/render-view.ts` — 렌더 시점 상태: WF 카메라(float64) 보관, 원점 재설정 판정·실행(origin/rebased), three 카메라에 렌더 좌표 대입. see docs/07-rendering.md §2 | exports: RenderView, createRenderView
 - `packages/render/src/internal/scene/scene-graph.ts` — 씬 그래프 골격: scene → worldRoot(원점 고정) → 레이어 루트, skyRoot(카메라 상대). see docs/07-rendering.md §2 | exports: LayerRoot, SLOT_ROOT, SceneGraph, createSceneGraph
 - `packages/render/src/internal/service.ts` — createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3 | exports: RENDER_PHASE, RENDER_PREP_PHASE, createRender
+- `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06). | exports: EnvUniforms, createEnvUniforms, WetInput, WetOutput, applyWetness
 
 ## packages/sim
 - `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState)만. 날씨·군중·교통·열차는 M06·M07·M09. | exports: DayType, TimeScale, ClockMode, WorldClock, SimService, SimDeps
@@ -212,7 +218,8 @@
 - `tools/pipeline/src/stages/build/facade-params.ts` — 절차 파사드 파라미터(M03-T04, 07 §5): PLATEAU 건물 용도 코드·높이·층수 → `_FACADE`(u8×4: class, floors, tintIdx, flags). | exports: FACADE_CLASS, FacadeClass, FACADE_FLAG, FacadeInput, facadeParams
 - `tools/pipeline/src/stages/build/heightfield.ts` — terrain.height 섹션: 셀 창(257²) → 공통 기준·스텝 양자화 → writeHeightfield → gzip. see docs/05-tile-format.md §4 (terrain.height), docs/adr/0018-cell-mesh-build.md | exports: cellHeightfield, encodeTerrainHeight
 - `tools/pipeline/src/stages/build/manifest.ts` — 빌드 식별·매니페스트: buildId(YYYYMMDD-<git7>-<lock8>), world.json 직렬화. see docs/04-data-pipeline.md §2, docs/05-tile-format.md §2 | exports: AreaDef, gitShort, lockHash8, buildDate, makeBuildId, createdAtOf, worldJson
-- `tools/pipeline/src/stages/build/terrain-mesh.ts` — terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: TERRAIN_SIMPLIFY_ERROR_M, TERRAIN_MATERIAL, SURF_DEFAULT, TerrainGeometry, remapVertices, buildTerrainGeometry, encodeTerrainMesh
+- `tools/pipeline/src/stages/build/surface-class.ts` — 지형 표면 분류(M03-T06, 05 §4 `_SURF`): PLATEAU 도로 폴리곤(TrafficArea) → 셀 1 m 격자(257²) 분류 래스터. | exports: SURF, surfaceGrid
+- `tools/pipeline/src/stages/build/terrain-mesh.ts` — terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금, `_SURF` 경계 ≤ 2 m 세분) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: TERRAIN_SIMPLIFY_ERROR_M, TERRAIN_MATERIAL, TerrainGeometry, remapVertices, buildTerrainGeometry, encodeTerrainMesh
 - `tools/pipeline/src/stages/build/terrain-rtin.ts` — 지형 단순화: RTIN(직각 이등변 삼각형 이분 계층) + 정확 오차(삼각형 내부 모든 격자 샘플) + 경계 정점 강제. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: rtinTriangulate
 - `tools/pipeline/src/stages/build/wall-planes.ts` — 벽 평면 묶기(M03-T04): 같은 건물에서 같은 평면(수평 법선 방향·평면 위치)에 있는 벽 면들은 u 원점·폭을 공유한다. | exports: WallFace, WallSpan, wallSpans, coplanarWithAny
 - `tools/pipeline/src/stages/fixture-plateau.ts` — plateau-mini 픽스처: 원천 CityGML에서 셀 1개의 건물 몇 동·도로 몇 개만 잘라 같은 파일 이름으로 기록. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: PlateauMiniOptions, splitCityGml, extractPlateauMini

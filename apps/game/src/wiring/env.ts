@@ -2,6 +2,7 @@
 import type { GameSystem } from '@sanpo/core';
 import type { RenderService } from '@sanpo/render';
 import type { ClockMode, SimService } from '@sanpo/sim';
+import { type WeatherOverride, withWeatherOverride } from '../debug/wet-override.ts';
 
 export const ENV_WIRING_PHASE = 66;
 const JST_OFFSET_MS = 9 * 3600_000;
@@ -15,11 +16,16 @@ export function defaultClock(nowMs: number): ClockMode {
   return { kind: 'custom', startMs: dayStart + DEFAULT_START_HOUR_JST * 3600_000, scale: 1 };
 }
 
-export function createEnvWiring(sim: SimService, render: Pick<RenderService, 'setEnvironment'>): GameSystem {
+/** weather = 디버그 날씨 덮어쓰기(`?wet=`, debug/wet-override.ts). */
+export function createEnvWiring(
+  sim: SimService,
+  render: Pick<RenderService, 'setEnvironment'>,
+  weather?: WeatherOverride,
+): GameSystem {
   return {
     id: 'wiring/env',
     phase: ENV_WIRING_PHASE,
-    update: () => render.setEnvironment(sim.environment()),
+    update: () => render.setEnvironment(withWeatherOverride(sim.environment(), weather)),
     dispose() {},
   };
 }

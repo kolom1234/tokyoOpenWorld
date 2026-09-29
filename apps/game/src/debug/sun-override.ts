@@ -1,6 +1,7 @@
 // `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다.
 // see docs/modules/game.md
 import type { EnvironmentState, GameSystem, Vec3 } from '@sanpo/core';
+import { type WeatherOverride, withWeatherOverride } from './wet-override.ts';
 
 /** 01-architecture §5: renderPrep(70) 직전. */
 const SUN_OVERRIDE_PHASE = 68;
@@ -28,7 +29,7 @@ export function overrideEnvironment(azDeg: number, elDeg: number, now: number): 
     moonDirWF: { x: -sun.x, y: -sun.y, z: -sun.z },
     sunIlluminanceLux: 0,
     moonPhase: 0,
-    weather: { cloudCover: 0, rainMmH: 0, fog: 0, windMs: 0, windDirDeg: 0, snow: 0 },
+    weather: { cloudCover: 0, rainMmH: 0, fog: 0, windMs: 0, windDirDeg: 0, snow: 0, wetness: 0 },
     season: { dayOfYear: 172, foliageTint: 0, bloom: 0, leafDensity: 1, outfitPalette: 0 },
     wind: { x: 0, y: 0, z: 0 },
   };
@@ -37,12 +38,13 @@ export function overrideEnvironment(azDeg: number, elDeg: number, now: number): 
 export function createSunOverride(
   target: { setEnvironment(e: Readonly<EnvironmentState>): void },
   sun: { azDeg: number; elDeg: number },
+  weather?: WeatherOverride,
 ): GameSystem {
   return {
     id: 'debug/sunOverride',
     phase: SUN_OVERRIDE_PHASE,
     update(f) {
-      target.setEnvironment(overrideEnvironment(sun.azDeg, sun.elDeg, f.gameTimeMs));
+      target.setEnvironment(withWeatherOverride(overrideEnvironment(sun.azDeg, sun.elDeg, f.gameTimeMs), weather));
     },
     dispose() {},
   };

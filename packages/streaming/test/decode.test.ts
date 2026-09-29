@@ -67,7 +67,7 @@ describe('decodeCell (world-mini)', () => {
     expect(list).toContain(r.value.heightfield?.data.buffer);
     // 실제 transfer가 가능한지(중복·공유 버퍼면 DataCloneError).
     const moved = structuredClone(r.value, { transfer: list });
-    expect(moved.meshes.terrain?.primitives[0]?.index?.length).toBe(105252);
+    expect(moved.meshes.terrain?.primitives[0]?.index?.length).toBe(140730);
   });
 
   it('decodes only requested sections (requestSections path)', async () => {

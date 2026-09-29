@@ -41,12 +41,17 @@
   Cross-Origin-Resource-Policy: same-origin
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'
   X-Content-Type-Options: nosniff
+/basis/ktx2-worker.js
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self'
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 /index.html
   Cache-Control: no-cache
 ```
 - COOP/COEP → `crossOriginIsolated` → SharedArrayBuffer, Jolt 멀티스레드 사용 가능.
+- **KTX2 트랜스코더 워커만 `'unsafe-eval'`(ADR-0032)**: basis_transcoder(embind)가 `new Function`을 쓴다. blob 워커는 페이지 CSP를 물려받으므로
+  같은 출처 정적 부트스트랩 `/basis/ktx2-worker.js`에만 별도 CSP(`!`로 전역 CSP 분리 — 두 정책이 겹치면 교집합이 된다). 페이지 CSP는 그대로.
 - 외부 도메인 리소스 금지(폰트 포함 자체 호스팅). §5 확장 시 `connect-src`에 world 도메인 추가 + R2 CORS 설정.
 
 ## 4. Worker 라우트 (`apps/worker/src/routes/`)
@@ -79,11 +84,11 @@
 - **world-mini 픽스처(M01-T07, ADR-0019)**: `vite build`가 `tests/fixtures/world-mini`를 `dist/fixtures/world-mini/`로 복사 → PR preview·staging 정적 에셋(`/fixtures/*` = `Cache-Control: no-cache`). 게임은 `?world=mini`일 때만 이 경로를 쓴다. production 빌드는 `SANPO_WORLD_MINI=0`으로 복사 생략.
 - 시크릿: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. 월드 퍼블리시용 `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`는 **빌드 머신 로컬에만**(CI에 두지 않음).
   키가 없으면 퍼블리시는 같은 API 토큰으로 R2 REST 업로드 + 배포된 Worker HEAD 검증(ADR-0026).
-- 월드 퍼블리시(빌드 머신, 호스트에서): `pnpm pipeline publish --build-id <id> --env dev|prod [--set-current] [--verify-url https://<worker>/world]`,
+- 월드 퍼블리시(빌드 머신, 호스트에서): `pnpm pipeline publish --build-id <id> --env dev|prod [--set-current] [--verify-url https://<worker>/world]` — 대상 = world.json·cells.idx·`L<n>/**.tkc`·`shared/materials/*`(manifest·KTX2, `image/ktx2`, M03-T06),
   검증만 `--verify-only --verify-url …`, 정리 `pnpm pipeline gc --env dev [--apply]`. 데이터 롤백 = `CURRENT_BUILD:v1`을 직전 buildId로(§8).
 - ODPT 키는 파이프라인(오프라인 시간표 컴파일)에서만 사용. 런타임·클라이언트에 비밀값 없음.
 
 ## 8. 릴리스 호환성
 - 클라이언트 번들은 지원 `formatVersion`을 상수로 가진다. `/api/world/current?fv=<n>`로 해당 포맷의 buildId를 받는다 → 코드와 데이터를 독립 배포 가능.
 - 데이터 롤백 = KV 값을 직전 buildId로 되돌림(즉시).
-- 현재(2026-09-29, M02-T07): staging = `20260928-b2d1e36-7fb58d45`(MVP L0 294 + HLOD 177, 212 MB, dev 버킷). production 데이터 없음(첫 prod 퍼블리시 전까지 `/api/world/current` = no_build → 스모크는 경고만).
+- 현재(2026-09-29, M03-T06): staging = `20260929-c9a28d3-ec1646fc`(MVP L0 294 + HLOD 177 + 머티리얼, 248.7 MB, dev 버킷). 이전 `20260928-b2d1e36-7fb58d45`(M02-T07). production 데이터 없음(첫 prod 퍼블리시 전까지 `/api/world/current` = no_build → 스모크는 경고만).

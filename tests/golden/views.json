@@ -159,6 +159,20 @@
       "time": "2026-05-15T14:00:00+09:00",
       "weather": "clear",
       "seed": 1
+    },
+    {
+      "id": "road-ground-30m",
+      "core": false,
+      "title": "도겐자카 쪽 차도 지면(눈높이 1.7 m)",
+      "purpose": "M03-T06 지면 스플랫·아스팔트 변형·안티타일링(30 m 반복 식별 불가)",
+      "eyeWF": [-32, 0, 95],
+      "lookWF": [-25, 0, 55],
+      "eyeAglM": 1.7,
+      "lookAglM": 0,
+      "fovDeg": 60,
+      "time": "2026-05-15T12:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
     }
   ]
 }

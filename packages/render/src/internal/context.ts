@@ -17,6 +17,7 @@ import { type CellSet, createCellSet } from './scene/cell-node.ts';
 import { createHlodSwitch, type HlodSwitch } from './scene/hlod-switch.ts';
 import { createRenderView, type RenderView } from './scene/render-view.ts';
 import { createSceneGraph, type SceneGraph } from './scene/scene-graph.ts';
+import { createEnvUniforms, type EnvUniforms } from './weather/wetness.ts';
 
 export interface RenderContext {
   readonly cfg: Readonly<RenderConfig>;
@@ -33,6 +34,8 @@ export interface RenderContext {
   readonly cells: CellSet;
   readonly atmosphere: AtmosphereRig;
   readonly env: EnvProbe;
+  /** 전역 환경 유니폼(젖음 등, 07 §3). */
+  readonly envUniforms: EnvUniforms;
   /** WebGPU만(WebGL2 폴백은 품질 티어 M03-T09에서 결정). */
   readonly shadows: SunShadows | undefined;
   readonly post: PostPipeline;
@@ -47,7 +50,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const { renderer, backend, depth } = await initRenderer(deps.canvas, cfg, log);
   const graph = createSceneGraph();
   const library = createMaterialLibrary(cfg.basisPath);
-  const materials = createMaterialRegistry(library, cfg.facade);
+  const envUniforms = createEnvUniforms();
+  const materials = createMaterialRegistry(library, envUniforms, cfg.facade);
   const hlod = createHlodSwitch();
   const view = createRenderView(cfg, deps.bus, log);
   renderer.toneMappingExposure = cfg.exposure;
@@ -71,6 +75,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     hlod,
     cells: createCellSet(materials, graph.roots, hlod),
     atmosphere,
+    envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },
     shadows: backend === 'webgpu' && cfg.shadows ? enableSunShadows(renderer, atmosphere.light) : undefined,
     post: (post ? createPostPipeline : createDirectRender)(renderer, graph.scene, view.camera),

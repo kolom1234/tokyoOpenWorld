@@ -203,6 +203,8 @@ export interface WeatherParams {
   windMs: number;
   windDirDeg: number;
   snow: number;
+  /** 노면 젖음 0(마름)..1(흠뻑) — 비 누적·건조(sim 날씨 M06). render 젖음 셰이딩 입력(07 §8). */
+  wetness: number;
   temperatureC?: number;
 }
 export interface SeasonParams {

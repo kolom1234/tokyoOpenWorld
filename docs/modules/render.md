@@ -19,7 +19,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   loadMaterials(manifestUrl): Promise<MaterialLibraryStats>;  // M03-T01: manifest → 평균색 → KTX2 배열 3장 교체(재컴파일 없음), 첫 표시 뒤 호출
   precompile(): Promise<void>;                     // 대기 LUT 계산(await) + 고정 머티리얼 × {기본, HLOD} compileAsync
   setCamera(c: CameraState): void;                 // WF float64 — 다음 renderPrep에서 반영
-  setEnvironment(e: EnvironmentState): void;       // M03-T02: sunDirWF·moonDirWF → 대기(ECEF). 천문 계산은 sim
+  setEnvironment(e: EnvironmentState): void;       // M03-T02: sunDirWF·moonDirWF → 대기(ECEF). 천문 계산은 sim. M03-T06: weather.wetness → EnvUniforms.wetness(0..1 클램프)
   stats(): RenderStats;                            // backend, depth, frames, drawCalls, triangles, cells, originRebases, renderOriginWF, hlodParents, hlodFading, materials{state,layers,downloadBytes,gpuBytes,loadMs}, gpu{enabled,frameMs,samples}
   dispose(): void;
 }
@@ -44,7 +44,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
 - 실존 상표·로고 텍스처 금지(M_SIGN은 가상 브랜드 아틀라스만).
 
 ## Files
-context(초기화·씬·머티리얼·대기·후처리 묶음), frame(renderPrep 70·render 80), renderer/(init — WebGPURenderer·깊이 전략·trackTimestamp, backend-caps — WebGPU 어댑터·EXT_clip_control 예측, gpu-timer — timestamp 평균), lighting/(atmosphere — Context·Light·(WebGL2만)하늘 배경·WF→ECEF·LUT prepare, env-probe — SkyEnvironmentNode(WebGPU만), shadows — CSM(takram CascadedShadowMapsNode, WebGPU만), sun — 방향 규약·기본값), post/(pipeline — 씬 패스 MRT → aerialPerspective / 직접 렌더), scene/(scene-graph, cell-node — DecodedMesh→Mesh·CellSet·`_CHILD` 변환, origin — 재설정 순수 계산, render-view — WF 카메라·재설정 실행, hlod-switch — 자식 표시·페이드 상태), materials/(facade/ — 절차 파사드 grid·walls·windows·retail·details·index(ADR-0030), registry — 기본·HLOD(`facade: 'flat'` 비교 모드), library — KTX2 배열·manifest·평균색·그룹 uniform, textured — 지형(`_SURF` 그룹·월드 XZ)·파사드(건물 해시 벽 그룹, UV0 벽 미터)·sampleLayer·perturbWorld·buildingHashes, hlod — TSL 자식 페이드·붕괴, precompile — 셀과 같은 속성 형식 더미), lighting/sun, config.ts, service.ts.
+context(초기화·씬·머티리얼·대기·후처리 묶음), frame(renderPrep 70·render 80), renderer/(init — WebGPURenderer·깊이 전략·trackTimestamp, backend-caps — WebGPU 어댑터·EXT_clip_control 예측, gpu-timer — timestamp 평균), lighting/(atmosphere — Context·Light·(WebGL2만)하늘 배경·WF→ECEF·LUT prepare·별 끔(외부 데이터), env-probe — SkyEnvironmentNode(WebGPU만), shadows — CSM(takram CascadedShadowMapsNode, WebGPU만), sun — 방향 규약·기본값), post/(pipeline — 씬 패스 MRT → aerialPerspective / 직접 렌더), scene/(scene-graph, cell-node — DecodedMesh→Mesh·CellSet·`_CHILD` 변환, origin — 재설정 순수 계산, render-view — WF 카메라·재설정 실행, hlod-switch — 자식 표시·페이드 상태), materials/(facade/ — 절차 파사드 grid·walls·windows·retail·details·index(ADR-0030), registry — 기본·HLOD(`facade: 'flat'` 비교 모드), library — KTX2 배열·manifest·평균색·그룹 uniform, ktx2-csp — 트랜스코더를 정적 부트스트랩 워커(`<basisPath>ktx2-worker.js`)로(ADR-0032), textured — sampleLayer·tsToWorld·worldToView·perturbWorld, terrain — `_SURF` 2클래스 스플랫·안티타일링·경사 triplanar 옵션(M03-T06), road — 아스팔트·보도 변형(noiseBank 채널), noise — 256² 격자값 텍스처·noiseBank(4축척 × 4채널), hlod — TSL 자식 페이드·붕괴, precompile — 셀과 같은 속성 형식 더미), lighting/sun, weather/(wetness — EnvUniforms·applyWetness, M03-T06), config.ts, service.ts.
 컬링은 three 메시별 프러스텀 컬링(boundsLocal 구) — 별도 culling.ts 없음(필요 시 perf 후).
 예정: renderer/dynamic-resolution, scene/(culling, hlod-switch), materials/(terrain, road, decal, facade/*, glass, …), lighting/(atmosphere, env-probe, clustered, night-lights), post/*, weather/*, instances/*, debug/overlay.
 

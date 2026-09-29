@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createMaterialLibrary, MATERIAL_GROUPS } from '../src/internal/materials/library.ts';
 import { createMaterialRegistry, PRECOMPILE_IDS } from '../src/internal/materials/registry.ts';
 import { cellSeedOf } from '../src/internal/scene/cell-node.ts';
+import { createEnvUniforms } from '../src/internal/weather/wetness.ts';
 
 const log = createLogger({ level: 'error' });
 
@@ -37,7 +38,7 @@ describe('material library', () => {
 describe('registry', () => {
   it('builds textured cell materials and flat HLOD variants for every precompiled id', () => {
     const lib = createMaterialLibrary('/basis/');
-    const r = createMaterialRegistry(lib);
+    const r = createMaterialRegistry(lib, createEnvUniforms());
     expect(PRECOMPILE_IDS).toEqual(['terrain_ground', 'facade_default']);
     for (const id of PRECOMPILE_IDS) {
       expect(r.get(id).name).toBe(id);
