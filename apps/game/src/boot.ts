@@ -293,6 +293,10 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
       log: log.child('quality'),
       storage: storageOf(),
       fixed: flags.quality !== undefined || golden !== undefined,
+      streamingIdle: () => {
+        const st = world.streaming?.stats();
+        return st !== undefined && st.queued + st.fetching + st.decoding + st.pendingReady === 0;
+      },
     });
   });
   return { loop, world };

@@ -24,7 +24,22 @@ describe('quality wiring', () => {
     const storage = memStorage();
     const bus = createEventBus(log);
     const detectQuality = vi.fn(async (): Promise<QualityTier> => 'medium');
-    startQualityWiring({ render: { detectQuality }, bus, log, storage, fixed: false });
+    const timers: (() => void)[] = [];
+    let idle = false;
+    startQualityWiring({
+      render: { detectQuality },
+      bus,
+      log,
+      storage,
+      fixed: false,
+      streamingIdle: () => idle,
+      setTimer: (fn) => timers.push(fn),
+    });
+    // 스트리밍이 바쁘면 기다린다.
+    for (let i = 0; i < 3; i++) (timers.shift() as () => void)();
+    expect(detectQuality).not.toHaveBeenCalled();
+    idle = true;
+    for (let i = 0; i < 2; i++) (timers.shift() as () => void)();
     await Promise.resolve();
     await Promise.resolve();
     expect(detectQuality).toHaveBeenCalledTimes(1);
