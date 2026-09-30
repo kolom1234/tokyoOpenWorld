@@ -1,22 +1,25 @@
 # PROGRESS
-Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
+Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
-## Current Milestone: M04 — Physics & Walking (M03 보강 5항목 완료)
-## Current Task: M04 완료(T01–T06, draft PR #16) → 다음 = M05-T01 Roads, sidewalks, curbs, terrain shaping (사용자 확인 대기: Quaternius 아바타 다운로드 승인)
-- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042), M04-T03 캐릭터·walk(ADR-0043), M04-T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044), M04-T05 3인칭 카메라 충돌·아바타(ADR-0045), M04-T06 앵커 재설정·발밑 보호(ADR-0046).
-
-- 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
-  `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost), `perf.mjs`(무제한 프레임 rAF p50·전력 상한·패스별 GPU, `PROT=1` 회전). 방법은 ADR-0038 Context에 기록.
-- 배포 상태(2026-09-30 21:2x): staging = **0dc0075 코드(M04 전체: walk·3인칭·아바타·발밑 보호)** + dev 버킷 current **`20260929-99bffa8-ec1646fc`**(collision.bin 포함, 478파일 260.5 MB, Worker HEAD 전수 검증).
-  인증 = 사용자 환경변수 `CLOUDFLARE_API_TOKEN`(wrangler도 이 토큰 사용 — whoami "User API Token"). 실제 GPU로 staging 부트 → C → 걷기 1.35 m/s 확인. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- ⚠️ 2026-09-30 19:32 PC 재부팅(비정상 종료 추정) → `.git/refs/heads/claude/m03-fixes-m04`가 NUL 41바이트로 손상 → reflog·origin 모두 f031f80이라 파일에 직접 복구(백업 scratchpad `broken-ref.bin`), `git fsck` 오류 없음.
-- 보행 봇(scratchpad `walkbot.mjs <url> <분> <시드>`): 실제 입력(키 W/X/Shift, 합성 포인터 드래그 회전)으로 스폰(스크램블) 반경 110 m 자유 보행, 끼임 후보(10 s < 1 m) → 8방향 탈출 시도로 막다른 곳/끼임 분류.
-- In progress: 없음(모든 변경 커밋·푸시, 작업 트리 깨끗).
-- Next step (정확히 한 걸음): `docs/roadmap/M05.md`의 `### M05-T01` 블록 읽기 → 04 §4.3(지형 성형·연석)·§6 → `tools/pipeline/src/stages/derive/` 신설(도로·보도 폴리곤 = 이미 normalize된 PLATEAU TrafficArea).
-  사용자가 Quaternius 다운로드를 승인하면 먼저 아바타 교체(render `scene/avatar.ts` 자리, 03·ATTRIBUTION 갱신).
+## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
+## Current Task: M05-T01 Roads, sidewalks, curbs, terrain shaping (다음)
+- Done in this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048).
+- 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷).
+  in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용.
+- 배포 상태: staging = 0dc0075(M04) 그대로, dev 버킷 current `20260929-99bffa8-ec1646fc`. 옛 빌드 gc는 10/6 이후.
+- In progress: 없음.
+- Next step (정확히 한 걸음): `docs/roadmap/M05.md` `### M05-T01` → 04 §4.3·§6 → `tools/pipeline/src/stages/derive/` 신설(도로·보도 폴리곤 = normalize된 PLATEAU TrafficArea).
 - Blockers: 없음
 
 ## Recently Completed
+- M05 결정 2 Quaternius 아바타 — UBC Standard(Superhero_Male + Hair_SimpleParted) + UAL Standard(Idle·Walk·Jog_Fwd·Sprint) → `pnpm pipeline avatar`(호스트 Node, `lib/zip.ts`)
+  → 프리미티브 1·머티리얼 1·**정점색**(텍스처 표본 + 스킨 가중치 옷 영역: 반팔 셔츠·바지·운동화, 머리털 짙은 갈색) → `apps/game/src/assets/avatar-ubc-male.glb` **709 KB·15,619 삼각형**(커밋, Vite 해시 에셋).
+  render `loadAvatar`(속력 매듭 0·1.35·3.0·5.0 블렌드, 위상 공유, 재생 속도 [0.75, 1.6]), 첫 표시 뒤 적재(초기 다운로드 밖), `avatarSettled` → `data-settled`. 실제 GPU: 걷기·달리기 60 FPS.
+  M06 군중: CC0·같은 골격·43클립 OK, 단순화 1k 삼각형 오차 1.4 cm → LOD 가능. ⚠️ 무료판 체형 = Superhero 남·여뿐 → Regular·Teen은 유료 Source($20, CC0) — **사용자 결정 필요(M06 전)**. ADR-0048 (2026-10-01)
+- M05 결정 1 시작 모드 walk — 로딩 중 freecam → 첫 표시에 world.json 스폰(yawDeg) 눈높이에서 walk 요청(착지점 = walk 링 탐색). `?mode=freecam`·골든뷰 = freecam 유지(render·flicker e2e). ADR-0047 (2026-09-30)
+- M05 결정 0·3 e2e — 원인: 첫 표시 ≈ 2 s 뒤 detect-gpu가 판정용 WebGL 컨텍스트 생성 → SwiftShader GPU 프로세스와 동기 IPC로 **메인 스레드 16 s 정지**(walk C 무시·render 스크린샷 시간 초과).
+  render: 소프트웨어 래스터 = detect-gpu 생략 → Low. 오버레이 `data-settled`에 머티리얼·첫 품질 티어(·아바타), `tests/e2e/game.ts`(프레임 수·키 탭 2프레임·게임 루프 직후 캔버스 캡처). 로컬 워커 2(CI 동일).
+  로컬 CI=1 재시도 0: 10/10, walk·render ×3 9/9.
 - M04-T06 Anchor rebase & ground-missing guard — physics `setFocus`(배선 250 ms) → 4096 m 초과면 `rebase` 명령: 워커가 적재된 모든 바디·캐릭터·에스컬레이터 구간 −Δ, 앵커 객체 제자리 갱신, OptimizeBroadPhase.
   traversal `ground-guard.ts`: 발밑 L0 미적재 = **hold**(캐릭터 입력 — 중력·이동 없음), 제동 거리 + 0.6 m 앞 셀 미적재 = **stop**, `hud.groundLoading` → 게임 `wiring/ground-loading.ts`(0.2 s 넘으면 "지면 불러오는 중…").
   잠재 버그 2개 수정: 작업 없는 셀이 영영 미적재, streaming 본문 도중 취소 시 `cancel()` 미처리 거부("signal is aborted without reason").
@@ -61,9 +64,7 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
 ## Known Issues
 - [physics] 육교·계단·연석·에스컬레이터 **데이터 없음** — 엔진(M04-T04)만. 연석·보도 = M05-T01, 육교·계단 = M05-T08(PLATEAU brid + OSM steps → 램프 프록시), 역 에스컬레이터 = M07 역 오버라이드. 지형 재질 = asphalt 고정(`_SURF` 재질은 M05-T01).
 - [streaming] 순간이동을 이어 하면 이전 목적지 작업이 큐(동시 8·대기 16)에 남아 스로틀에서 새 발밑 L0가 늦게 온다(Fast 3G 3번째 순간이동 뒤 4분+ 공중 고정 — 낙하 없음). 발밑 L0 우선·이전 목적지 취소는 M08 transition(`whenReady`)과 함께(ADR-0046).
-- [e2e] 로컬 `pnpm test:e2e`(기본 워커 = 코어 절반 = 4)는 이 노트북(15 W 전력 상한)에서 SwiftShader 경합으로 불안정(render·flicker·decode·walk가 번갈아 시간 초과) → `--workers=2`(CI 러너와 같음)로 10/10 통과(2026-09-30).
-- [avatar] 3인칭 아바타 = 자체 절차 마네킹(캡슐). Quaternius 베이스 아바타(09 §3)는 외부 다운로드라 사용자 승인 필요(파일·출처·크기 확인 → 03·ATTRIBUTION 갱신) — ADR-0045.
-- [traversal] 게임 시작은 freecam(골든뷰·e2e 결정론) — C로 걷기. 09 §1 "walk = 기본"은 M08 스폰 흐름에서 재검토(ADR-0043).
+- [avatar] 무료판 체형 Superhero만(근육질) — 도심 보행자로 과장됨. 유료 Source(Regular·Teen, CC0) 도입 여부는 사용자 결정(ADR-0048). 발 IK 없음(재생 속도 자르기로 약간의 발 미끄럼).
 - [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장만(소품·나무 줄기 = M05). CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱이 길다(기록만).
 - [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).
 - [render] 동적 해상도는 60 Hz 수직 동기에서 여유를 못 재 "시도-후퇴"로 0.05씩 오르내린다(15 W 1080p High: 120 s에 19회, 0.5–0.85). 정지 떨림에는 영향 없음(ADR-0038 측정) — 선명도 변화가 거슬리면 시도 간격·히스테리시스 조정.
