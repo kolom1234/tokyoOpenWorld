@@ -108,6 +108,8 @@ export interface PhysicsService extends SystemProvider {
   hasCell(key: CellKey): boolean;
   /** 가장 가까운 충돌(모든 레이어). dir은 정규화 불필요. */
   raycast(originWF: Vec3d, dir: Vec3, maxDist: number): Promise<RayHit | null>;
+  /** 구 캐스트(3인칭 카메라 충돌 — 09 §3): 반경 radius 구를 dir로 maxDist까지. distance = 구 중심 이동 거리, 시작부터 겹치면 0. */
+  sphereCast(originWF: Vec3d, dir: Vec3, radius: number, maxDist: number): Promise<RayHit | null>;
   /** 순간 이동(속도 0). */
   teleport(h: BodyHandle, posWF: Vec3d, yawRad: number): void;
   /** 보간 완료 포즈(아직 스냅샷이 없으면 undefined). */

@@ -71,6 +71,8 @@ export type ToWorker =
   /** 셀 콜라이더(버퍼는 Transferable). 적재는 step 틱마다 예산 안에서. */
   | { t: 'addCell'; key: CellKey; originWF: Vec3d; jcol?: ArrayBuffer; hf?: HeightfieldData }
   | { t: 'ray'; id: number; originWF: Vec3d; dir: Vec3; maxDist: number }
+  /** 구 캐스트(카메라 충돌, 08 §10) — 결과는 rayHit(같은 id). */
+  | { t: 'sphere'; id: number; originWF: Vec3d; dir: Vec3; radius: number; maxDist: number }
   /** 메인 시계 targetS까지 고정 스텝(명령은 첫 스텝 전에 적용). */
   | { t: 'step'; targetS: number; cmds: Command[] }
   | { t: 'dispose' };

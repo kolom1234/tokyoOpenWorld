@@ -16,6 +16,7 @@ import { createDirectRender, createPostPipeline, type PostPipeline } from './pos
 import { createQualityManager, type QualityManager } from './quality.ts';
 import { createGpuTimer, type GpuTimer } from './renderer/gpu-timer.ts';
 import { initRenderer } from './renderer/init.ts';
+import { type Avatar, createAvatar } from './scene/avatar.ts';
 import { type CellSet, createCellSet } from './scene/cell-node.ts';
 import { createHlodSwitch, type HlodSwitch } from './scene/hlod-switch.ts';
 import { createRenderView, type RenderView } from './scene/render-view.ts';
@@ -35,6 +36,8 @@ export interface RenderContext {
   readonly view: RenderView;
   readonly hlod: HlodSwitch;
   readonly cells: CellSet;
+  /** 플레이어 아바타(dynamic 루트, M04-T05). */
+  readonly avatar: Avatar;
   readonly atmosphere: AtmosphereRig;
   readonly env: EnvProbe;
   /** 전역 환경 유니폼(젖음 등, 07 §3). */
@@ -100,6 +103,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   atmosphere.setBodies(DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF);
   if (backend === 'webgl2') glassRoughness.value = WEBGL2_GLASS_ROUGHNESS;
   const postFor = postEffectsFor(cfg, backend);
+  const avatar = createAvatar();
+  graph.roots.dynamic.add(avatar.group);
   const makePost = (tier: QualityTier): PostPipeline =>
     post
       ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad)
@@ -117,12 +122,13 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     view,
     hlod,
     cells: createCellSet(materials, graph.roots, hlod),
+    avatar,
     atmosphere,
     envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },
     shadows:
       post && cfg.shadows
-        ? enableSunShadows(renderer, atmosphere.light, cfg.quality, () => materials.all())
+        ? enableSunShadows(renderer, atmosphere.light, cfg.quality, () => [...materials.all(), ...avatar.materials])
         : undefined,
     post: makePost(cfg.quality),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),

@@ -54,6 +54,7 @@
 | `AttachedRig` | 차량 보닛/운전석/열차 전면: 부모 바디 로컬 오프셋 + 미세 진동(서스펜션 가속도 기반) |
 | `FreeRig` | 관성(감쇠 3/s), 시네마틱 스무딩 옵션 |
 - 모든 리그 출력은 `CameraState { posWF: Vec3d; quat; fovDeg; near }` → render.setCamera + streaming 관심점.
+- ThirdPersonRig 구현(M04-T05, ADR-0045): 회전 프레임당 ≤ 8°, 부채꼴 5개 sphereCast(1프레임 비동기 보상), 아바타 = 자체 절차 마네킹(Quaternius는 다운로드 승인 뒤).
 
 ## 4. 입력 (`@sanpo/input`)
 - 디바이스: 키보드·마우스(Pointer Lock), 게임패드(Gamepad API 표준 매핑).

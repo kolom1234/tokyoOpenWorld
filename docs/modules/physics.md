@@ -17,6 +17,7 @@ PhysicsService extends SystemProvider {   // system 'physics', phase 30 — 프�
   despawn(h); teleport(h, posWF, yawRad);   // 캐릭터도(속도 0)
   addCell(key, originWF, jcol?: ArrayBuffer, heightfield?: HeightfieldData); removeCell(key); hasCell(key)   // M04-T02 셀 콜라이더(적재 큐, ADR-0042)
   raycast(originWF, dir, maxDist): Promise<RayHit | null>   // RayHit { posWF, normal, distance, layer, material } — 삼각형 양면
+  sphereCast(originWF, dir, radius, maxDist): Promise<RayHit | null>   // 구 캐스트(3인칭 카메라 충돌, M04-T05) — distance = 구 중심 이동, 시작 겹침 = 0
   pose(h): Readonly<Pose> | undefined;     // Pose { posWF, quat, linVel, grounded, groundMaterial, escalator } — 렌더 시각(지금 − 지연) 보간. 캐릭터 = 발, 지면 재질 = 지면 바디 userData 하위 8비트
   stats(): PhysicsStats;                    // ready, isolation, build, steps, simTimeS, bodies, initMs, tickMs, anchorWF, colliderCells, colliderPending, loadTickMaxMs, loadTicksOver8Ms
   dispose();
@@ -25,7 +26,7 @@ PhysicsTransport { post; onMessage; terminate }   // 워커 대신 주입
 createInlineTransport(): PhysicsTransport & { flush() }   // 같은 스레드 워커 코어(Node 테스트·도구 — 브라우저 게임은 쓰지 않음, ADR-0044)
 anchorOf(posWF, gridM) → 앵커(x·z 격자, y 0); PHYSICS_PHASE = 30; DEFAULT_PHYSICS_CONFIG
 ```
-예정: sphereCast(T05), spawnVehicle·wheels·connectKinematicSource(M05~).
+예정: spawnVehicle·wheels·connectKinematicSource(M05~).
 
 ## Invariants
 - Jolt 객체는 워커 밖으로 나가지 않는다. 메인↔워커 좌표는 WF float64, 워커 안에서만 PHYS = WF − 앵커(float32).
@@ -41,19 +42,19 @@ anchorOf(posWF, gridM) → 앵커(x·z 격자, y 0); PHYSICS_PHASE = 30; DEFAULT
 api.ts, internal/protocol.ts(메시지·스냅샷 배치·isIsolated), internal/service.ts(createPhysics·핸들·연결), internal/inline-transport.ts,
 internal/host/(command-queue, snapshot-reader — 기록·보간·readSab), internal/worker/(physics.worker — 엔트리, core — 메시지·고정 스텝, jolt-init — single 빌드,
 jolt-mem — using·스크래치, layers — 레이어·행렬·필터, world — JoltInterface, bodies — 슬롯(강체·캐릭터)·명령·기록, character — CharacterVirtual·가감속·ExtendedUpdate·에스컬레이터 운반, escalators — SENSOR 박스 OBB 구간, primitives — JCOL 박스·캡슐·원기둥, snapshot-writer — SAB·post 싱크,
-cell-colliders — 셀 적재 큐·정적 바디, heightfield — 높이장·메시 셰이프(힙 직접 채움)·워밍업, queries — 레이캐스트).
+cell-colliders — 셀 적재 큐·정적 바디, heightfield — 높이장·메시 셰이프(힙 직접 채움)·워밍업, queries — 레이캐스트·구 캐스트).
 예정: worker/(vehicle-*, kinematics).
 
 ## Tests
 test/layers-snapshot.test.ts(충돌 행렬·브로드페이즈 매핑·보간·같은 시각 교체·순간이동 스냅·SAB seqlock),
 test/worker-integration.test.ts(같은 스레드 워커 코어 + 실제 Jolt: SAB·폴백 낙하 — 스냅샷 시각 보간 = 워커 값, 사이 = 선형, 바닥 정지, 슬롯 재사용),
-test/character.test.ts(실제 Jolt: 평지 1.35 m/s·접지, 0.15 m 연석 오르기, 벽 앞 정지·관통 없음, 감속 정지, 순간이동·무지면 낙하),
+test/character.test.ts(실제 Jolt: 평지 1.35 m/s·접지, 0.15 m 연석 오르기, 벽 앞 정지·관통 없음, 감속 정지, 순간이동·무지면 낙하, sphereCast 벽 − 반경·하늘 미스·시작 겹침 0),
 test/stairs-escalator.test.ts(JCOL 합성 장면: 챌면 0.18 m 계단 오르내림 1/6 s 창 ≥ 0.9 m/s·접지, 램프 프록시 매끈·재질 tile, 에스컬레이터 0.5 m/s 운반·떠오름 없음·걷기 +0.6 한도·재질 metal),
 test/cell-colliders.test.ts(world-mini 4셀 적재 — 8 ms 초과 틱 ≤ 1(Node GC), 지면 레이 = 높이장 ±5 cm, 벽 레이 = JCOL CPU 교차 ±5 cm, 제거 후 미스).
 E2E tests/e2e/physics.spec.ts(`?probe=physics`, 프로덕션 preview 격리: shared·degraded; world-mini 부트 → 셀 콜라이더 적재·지면/벽 레이).
 
 ## Status
-M04-T01 워커 부트스트랩, T02 셀 콜라이더(ADR-0042), T03 캐릭터(ADR-0043), T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044 — 육교·연석 데이터는 M05-T01/T08) → T05(sphereCast·아바타).
+M04-T01 워커 부트스트랩, T02 셀 콜라이더(ADR-0042), T03 캐릭터(ADR-0043), T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044 — 육교·연석 데이터는 M05-T01/T08) T05 sphereCast(ADR-0045) → T06(앵커 재설정·발밑 셀 미적재 정지).
 
 ## Gotchas
 - multithread 빌드 금지(ADR-0041): Vite가 pthread 워커를 iife로 중첩 번들 → 최상위 await 빌드 실패. `apps/game` vite `worker.format = 'es'`.

@@ -1,5 +1,6 @@
 // @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6
 import type {
+  AvatarState,
   CameraState,
   DeepPartial,
   EventBus,
@@ -48,6 +49,8 @@ export interface ModeOutput {
   interest: InterestPoint[];
   hud: HudHints;
   player?: ModePlayer;
+  /** 바디가 있는 모드의 아바타(없으면 마지막 아바타를 대기 자세로 유지 — freecam에서 세워 둔 바디). */
+  avatar?: AvatarState;
 }
 export type ModeRequirement = 'physics' | 'trains';
 export interface TraversalMode {
@@ -138,6 +141,8 @@ export interface TraversalService extends SystemProvider {
   readonly interest: ReadonlyArray<InterestPoint>;
   /** walk 시점(1인칭·3인칭 — V). */
   readonly view: WalkView;
+  /** 플레이어 아바타(참조 고정 — 배선이 render.setAvatar로 넘긴다, M04-T05). */
+  readonly avatar: Readonly<AvatarState>;
   /** requires 미충족·미등록 모드는 false. */
   request(to: ModeId, params?: unknown): boolean;
   /** M02 이전: 즉시 이동 후 resolve(스트리밍 대기·transition 모드는 M02-T05 이후). */

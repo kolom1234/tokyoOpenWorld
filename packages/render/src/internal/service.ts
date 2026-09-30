@@ -54,8 +54,15 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     async precompile() {
       await ctx.atmosphere.prepare();
       await precompileMaterials(renderer, graph.scene, view.camera, ctx.materials, log);
+      // 아바타(3인칭 첫 표시 끊김 방지): 잠깐 보이게 해 파이프라인만 만든다.
+      ctx.avatar.group.visible = true;
+      await renderer
+        .compileAsync(ctx.avatar.group, view.camera, graph.scene)
+        .catch((e: unknown) => log.warn('avatar precompile', e));
+      ctx.avatar.group.visible = false;
     },
     setCamera: (c) => view.setCamera(c),
+    setAvatar: (a) => ctx.avatar.set(a),
     setEnvironment: (e) => {
       ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF);
       ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);

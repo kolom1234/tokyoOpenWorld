@@ -84,12 +84,15 @@ test('walk: C lands the character on the ground, W walks at 1.35 m/s, V third pe
   test.info().annotations.push({ type: 'walk', description: JSON.stringify(info) });
   for (const v of speeds) expect(Math.abs(v - 1.35)).toBeLessThan(0.03);
 
+  // 3인칭: 붐은 0.25 m에서 시작해 sphereCast 결과가 오면 초당 4 m로 풀린다(스폰 광장 — 뒤가 트여 있어 3.5 m 전후까지).
   await page.keyboard.press('KeyV');
   await expect.poll(async () => (await state(page)).view).toBe('third');
-  const tp = await state(page);
-  const d = Math.hypot(tp.cam.x - tp.pos.x, tp.cam.y - (tp.pos.y + 1.55), tp.cam.z - tp.pos.z);
-  expect(d).toBeGreaterThan(3.3);
-  expect(d).toBeLessThan(3.8);
+  const boom = async () => {
+    const tp = await state(page);
+    return Math.hypot(tp.cam.x - tp.pos.x, tp.cam.y - (tp.pos.y + 1.55), tp.cam.z - tp.pos.z);
+  };
+  await expect.poll(boom, { timeout: 60_000 }).toBeGreaterThan(3.0);
+  expect(await boom()).toBeLessThan(3.8);
 
   await page.keyboard.press('KeyC');
   await expect.poll(async () => (await state(page)).mode).toBe('freecam');

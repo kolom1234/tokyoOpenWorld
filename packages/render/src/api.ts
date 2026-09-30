@@ -1,6 +1,7 @@
 // @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리.
 // see docs/modules/render.md, docs/07-rendering.md §11
 import type {
+  AvatarState,
   CameraState,
   CellKey,
   DeepPartial,
@@ -152,6 +153,8 @@ export interface RenderService extends SystemProvider {
   precompile(): Promise<void>;
   /** WF float64 카메라. 다음 renderPrep(phase 70)에서 원점 재설정·투영에 반영. */
   setCamera(c: Readonly<CameraState>): void;
+  /** 플레이어 아바타(절차 마네킹, M04-T05 — ADR-0045). 매 프레임 renderPrep 전에. */
+  setAvatar(a: Readonly<AvatarState>): void;
   stats(): RenderStats;
   dispose(): void;
 }

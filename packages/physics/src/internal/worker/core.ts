@@ -146,6 +146,8 @@ export function createPhysicsCore(send: Send): PhysicsCore {
     } else if (msg.t === 'addCell') st.colliders.enqueue(msg.key, msg.originWF, msg.jcol, msg.hf);
     else if (msg.t === 'ray')
       send({ t: 'rayHit', id: msg.id, hit: st.queries.raycast(msg.originWF, msg.dir, msg.maxDist) });
+    else if (msg.t === 'sphere')
+      send({ t: 'rayHit', id: msg.id, hit: st.queries.sphereCast(msg.originWF, msg.dir, msg.radius, msg.maxDist) });
     else if (msg.t === 'dispose') {
       st.colliders.dispose();
       st.queries.dispose();

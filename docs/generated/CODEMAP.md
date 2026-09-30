@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 251개.
+> 파일 253개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -21,7 +21,7 @@
 - `apps/game/src/start-view.ts` — 시작 시점(M01-T06): 스크램블 교차로 북서쪽 상공 약 60 m에서 Shibuya Scramble Square를 바라본다. 골든뷰 북마크(M03)가 생기면 그쪽으로 이동. | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
-- `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라(phase 20 확정) → render.setCamera(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
+- `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라·아바타(phase 20 확정) → render.setCamera·setAvatar(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
 - `apps/game/src/wiring/env.ts` — 배선: sim.environment()(태양·달·날씨, 카메라 위치) → render.setEnvironment. camera(65) 뒤·renderPrep(70) 앞. see docs/modules/game.md, docs/01-architecture.md §5 | exports: ENV_WIRING_PHASE, defaultClock, createEnvWiring
 - `apps/game/src/wiring/quality.ts` — 품질 티어 배선(M03-T08): 저장된 티어(localStorage)로 시작 → 없으면 첫 표시 뒤 스트리밍이 조용해지면 render.detectQuality()(detect-gpu + 60프레임). | exports: QUALITY_STORAGE_KEY, loadTier, QualityWiringDeps, startQualityWiring
 - `apps/game/src/wiring/streaming-physics.ts` — 배선: streaming live L0 셀(버스 `cell/ready` — onReady는 렌더 배선 단독 소유) → 물리 반경(08 §4) 안이면 collision.bin + terrain.height를 따로 요청(requestSections)해 physics.addCell, | exports: PHYSICS_WIRING_PHASE, PHYSICS_RADIUS_M, StreamingPhysicsDeps, StreamingPhysicsStats, StreamingPhysicsWiring, cellDistance, createStreamingPhysicsWiring
@@ -45,7 +45,7 @@
 - `packages/audio/src/index.ts` — @sanpo/audio 공개 엔트리(L2): WebAudio 앰비언스·3D 사운드. api.ts 재수출 + create* 팩토리만. see docs/modules/audio.md | exports: * from './api.ts'
 
 ## packages/core
-- `packages/core/src/api.ts` — @sanpo/core 공개 계약(타입·인터페이스·상수). 구현은 internal/*, 재수출은 index.ts. see docs/modules/core.md | exports: EventMap, EventName, Vec3d, Vec3, Quat, Result, CellKey, CellLevel, CellId, Unsubscribe, EventBus, LogLevel, LogSink, Logger, LoggerOptions, CameraState, PlayerState, FrameContext, GameSystem, SystemProvider, FrameSource, Scheduler, SchedulerDeps, Rng, WORLD_SEED, DeepPartial, WorkerFactory, SupervisorOptions, WorkerErrorMessage, SupervisedWorkerState, SupervisedWorker, WorkerSupervisor, WorkerSupervisorDeps, ModeId, QualityTier, I18nKey, InterestPoint, WeatherParams, SeasonParams, EnvironmentState, SharedInstanceBuffer, GroundQuery, TrainInfo
+- `packages/core/src/api.ts` — @sanpo/core 공개 계약(타입·인터페이스·상수). 구현은 internal/*, 재수출은 index.ts. see docs/modules/core.md | exports: EventMap, EventName, Vec3d, Vec3, Quat, Result, CellKey, CellLevel, CellId, Unsubscribe, EventBus, LogLevel, LogSink, Logger, LoggerOptions, CameraState, PlayerState, AvatarState, FrameContext, GameSystem, SystemProvider, FrameSource, Scheduler, SchedulerDeps, Rng, WORLD_SEED, DeepPartial, WorkerFactory, SupervisorOptions, WorkerErrorMessage, SupervisedWorkerState, SupervisedWorker, WorkerSupervisor, WorkerSupervisorDeps, ModeId, QualityTier, I18nKey, InterestPoint, WeatherParams, SeasonParams, EnvironmentState, SharedInstanceBuffer, GroundQuery, TrainInfo
 - `packages/core/src/events.ts` — 전역 이벤트 목록(EventMap) 단일 정의 파일. 이벤트 추가는 여기서만. see docs/01-architecture.md §6 | exports: EventMap, EventName
 - `packages/core/src/index.ts` — @sanpo/core 공개 엔트리(L0): 공통 타입·이벤트버스·로거·rng·설정. api.ts 재수출 + 팩토리/순수 함수. see docs/modules/core.md | exports: * from './api.ts', cellIdString, packCellKey, unpackCellKey, mergeConfig, createEventBus, hash32, createLogger, clamp, degToRad, lerp, quatCopy, quatFromAxisAngle, quatFromYaw, quatIdentity, quatMultiply, quatNormalize, quatSet, quatSlerp, radToDeg, vec3, vec3Add, vec3AddScaled, vec3ApplyQuat, vec3Copy, vec3Cross, vec3Distance, vec3DistanceSq, vec3Dot, vec3Length, vec3LengthSq, vec3Lerp, vec3Normalize, vec3Scale, vec3Set, vec3Sub, err, mapResult, ok, unwrapOr, createRng, createScheduler, MAX_DT_REAL_S, createWorkerSupervisor
 - `packages/core/src/internal/cell-key.ts` — 셀 키 pack/unpack/문자열화(53-bit 안전 정수). 레이아웃 변경 = 캐시·세이브 호환 파괴 → ADR 필요. see docs/01-architecture.md §8 | exports: packCellKey, unpackCellKey, cellIdString
@@ -99,7 +99,7 @@
 - `packages/physics/src/internal/worker/layers.ts` — 오브젝트 레이어·브로드페이즈 레이어·충돌 행렬(08 §3). 표(COLLISION_PAIRS)는 순수 데이터 — Jolt 필터는 createLayerFilters가 만든다. | exports: OBJ, ObjectLayer, NUM_OBJECT_LAYERS, BP, NUM_BP_LAYERS, BROADPHASE_OF, COLLISION_PAIRS, collides, LayerFilters, createLayerFilters
 - `packages/physics/src/internal/worker/physics.worker.ts` — 물리 워커 엔트리(08 §1): 메시지 → 코어(순서 보장). 치명적 오류는 감독자 규약(`worker/error`, fatal) → 메인이 재시작.
 - `packages/physics/src/internal/worker/primitives.ts` — JCOL 프리미티브 셰이프(05 §6 kind 1–3: 박스·캡슐·원기둥) → Jolt 셰이프(참조 1개를 잡아 돌려줌 — 바디 생성 뒤 호출 측이 Release). | exports: PRIMITIVE_MS, createPrimitiveShape
-- `packages/physics/src/internal/worker/queries.ts` — 공간 질의(08 §10): 레이캐스트(가장 가까운 충돌, 삼각형 양면) — 위치·법선(WF)·거리·레이어·재질. 필터는 모든 레이어(마스크는 호출 쪽 결과 필터로). | exports: Queries, createQueries
+- `packages/physics/src/internal/worker/queries.ts` — 공간 질의(08 §10): 레이캐스트·구 캐스트(가장 가까운 충돌, 삼각형 양면) — 위치·법선(WF)·거리·레이어·재질. 필터는 모든 레이어(마스크는 호출 쪽 결과 필터로). | exports: Queries, createQueries
 - `packages/physics/src/internal/worker/snapshot-writer.ts` — 스냅샷 쓰기(08 §9): SAB 더블 버퍼(비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가) 또는 폴백 postMessage(Transferable). | exports: SnapshotSink, sabViews, createSabSink, createPostSink
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
@@ -141,6 +141,7 @@
 - `packages/render/src/internal/renderer/dynamic-resolution.ts` — 동적 해상도(07 §9, M03-T08): 프레임 시간 EMA로 렌더 스케일 ±0.05(0.5–1.0) — 목표 16.6 ms. | exports: DynResConfig, DYNRES_DEFAULTS, DynamicResolution, createDynamicResolution
 - `packages/render/src/internal/renderer/gpu-timer.ts` — GPU 타이머(M03 성능 표): WebGPU timestamp-query(three `trackTimestamp`)로 렌더 패스 GPU 시간을 모아 프레임당 평균(ms). | exports: GpuTimerStats, GpuTimer, createGpuTimer
 - `packages/render/src/internal/renderer/init.ts` — WebGPURenderer 초기화(WebGL2 폴백) + 깊이 전략 결정(reversed-Z 우선, 불가 시 logarithmic — ADR-0006). see docs/07-rendering.md §1 | exports: InitializedRenderer, resolveDepthMode, initRenderer
+- `packages/render/src/internal/scene/avatar.ts` — 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리 — 외부 에셋 없음. Quaternius 모델 교체는 다운로드 승인 뒤), | exports: Avatar, createAvatar
 - `packages/render/src/internal/scene/cell-node.ts` — 셀 → 렌더 노드: DecodedMesh 프리미티브 → BufferGeometry(TypedArray 그대로) + 공유 머티리얼, 슬롯별 Group(위치 = originWF − renderOrigin). see docs/07-rendering.md §2–3 | exports: CellRenderNode, threeAttributeName, buildGeometry, cellSeedOf, PREPASS_RENDER_ORDER, hlodNeedsDither, createCellNode, placeCellNode, disposeCellNode, CellSet, createCellSet
 - `packages/render/src/internal/scene/hlod-switch.ts` — HLOD 자식 표시 상태: 자식 셀이 live면 부모의 그 자식 영역을 0.3 s 디더로 숨기고, 자식이 해제되면 즉시 다시 보인다(구멍 없음). | exports: HLOD_CHILDREN, HLOD_FADE_S, HlodSwitch, createHlodSwitch
 - `packages/render/src/internal/scene/origin.ts` — 렌더 원점 재설정 순수 계산: 판정(거리 ≥ 2048 m), 256 m 격자 스냅, 노드 위치 = WF − renderOrigin(float64 → 대입 시 float32). see docs/01-architecture.md §7, docs/07-rendering.md §2 | exports: needsRebase, snapOrigin, toRender
@@ -199,9 +200,10 @@
 ## packages/traversal
 - `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
 - `packages/traversal/src/index.ts` — @sanpo/traversal 공개 엔트리(L3): 이동 모드 상태기계·카메라 리그. api.ts 재수출 + create* 팩토리만. see docs/modules/traversal.md | exports: * from './api.ts', forwardOf, lookAtAngles, createTraversal, DEFAULT_TRAVERSAL_SETTINGS
+- `packages/traversal/src/internal/camera/boom.ts` — 3인칭 카메라 붐 충돌(09 §3 ThirdPersonRig, M04-T05, ADR-0045): 피벗 → 카메라 방향 sphereCast(반경 0.2 m, 워커 — 비동기 ≈ 1프레임). | exports: CAMERA_RADIUS_M, MAX_STEP_RAD, BoomState, createBoomState, resetBoom, stepToward, requestBoom, boomLength
 - `packages/traversal/src/internal/camera/first-person-rig.ts` — FirstPersonRig(09 §3): 눈 = 발 + 눈높이(연석·계단 높이 변화는 스무딩) + 헤드밥(걸음 주기 수직·반주기 측면), 시선 스무딩. 순수 계산. see docs/09-traversal.md §3 | exports: LookState, FirstPersonState, createLookState, createFirstPersonState, stepLook, followFeet, headBob, firstPersonCamera
 - `packages/traversal/src/internal/camera/free-rig.ts` — FreeRig: 6DOF 관성 자유비행(요·피치, 롤 잠금) 순수 계산. WF float64. see docs/09-traversal.md §2 freecam, §3 | exports: FreeRigState, FreeRigIntent, createFreeRigState, clampPitch, forwardOf, rigQuat, lookAtAngles, stepFreeRig
-- `packages/traversal/src/internal/camera/third-person-rig.ts` — ThirdPersonRig(09 §3): 피벗 = 발 + 어깨 높이, 오른쪽 어깨 오프셋 0.4 m, 시선 반대쪽으로 거리 3.5 m(휠 1.5–6). | exports: zoomDistance, thirdPersonCamera
+- `packages/traversal/src/internal/camera/third-person-rig.ts` — ThirdPersonRig(09 §3): 피벗 = 발 + 어깨 높이, 붐 = 오른쪽 어깨 0.4 m − 시선 × 거리 3.5 m(휠 1.5–6). 충돌은 boom.ts(sphereCast)가 붐 길이를 줄인다(M04-T05), | exports: zoomDistance, Boom, createBoom, thirdPersonBoom, thirdPersonCamera, avatarOpacity
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → CameraState. physics 불필요. see docs/09-traversal.md §2 freecam | exports: createFreecamMode
 - `packages/traversal/src/internal/modes/walk.ts` — walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도 | exports: isWalkParams, moveVelocity, WalkMode, createWalkMode

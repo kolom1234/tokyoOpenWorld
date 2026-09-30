@@ -108,6 +108,21 @@ describe('character (CharacterVirtual)', () => {
     phys.dispose();
   });
 
+  it('sphereCast (camera collision) stops the sphere at wall − radius and misses open sky', async () => {
+    const { phys, run } = await scene();
+    await run(0.1);
+    // 서쪽 벽 면 x = O.x − 9.75, 반경 0.2 → 중심 이동 9.55 m.
+    const hit = await phys.sphereCast({ x: O.x, y: 1.5, z: O.z }, { x: -1, y: 0, z: 0 }, 0.2, 20);
+    expect(hit?.distance).toBeCloseTo(9.55, 2);
+    expect(hit?.posWF.x).toBeCloseTo(O.x - 9.55, 2);
+    expect(hit?.normal.x).toBeCloseTo(1, 2);
+    expect(await phys.sphereCast({ x: O.x, y: 1.5, z: O.z }, { x: 0, y: 1, z: 0 }, 0.2, 20)).toBeNull();
+    // 시작부터 겹침(벽 안쪽 0.1 m) → 0.
+    const inside = await phys.sphereCast({ x: O.x - 9.7, y: 1.5, z: O.z }, { x: 1, y: 0, z: 0 }, 0.2, 5);
+    expect(inside?.distance ?? -1).toBeLessThan(0.01);
+    phys.dispose();
+  });
+
   it('teleports a character (velocity 0) and falls under gravity when there is no ground', async () => {
     const { phys, ch, run, pose } = await scene();
     phys.teleport(ch, { x: O.x + 100, y: 5, z: O.z }, 0);

@@ -1,7 +1,7 @@
 // walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도
 // (스틱 기울기 = 연속, 최대 = 현재 단계), X = 걸음 단계 순환(1.35/1.8/3.0), Shift·L3 = 달리기 5.0, 휠 = 3인칭 거리.
 // 진입: 바디가 기준점 returnToBodyM 안이면 바디로 복귀, 아니면 기준점 아래 지면에 놓는다(비동기 레이 — 그동안 카메라는 기준점에서 대기).
-import type { CameraState, FrameContext, ModeId, Vec3, Vec3d } from '@sanpo/core';
+import type { AvatarState, CameraState, FrameContext, ModeId, Vec3, Vec3d } from '@sanpo/core';
 import type { BodyHandle, PhysicsService } from '@sanpo/physics';
 import type {
   ModeOutput,
@@ -12,6 +12,7 @@ import type {
   WalkParams,
   WalkView,
 } from '../../api.ts';
+import { type BoomState, boomLength, createBoomState, requestBoom, resetBoom, stepToward } from '../camera/boom.ts';
 import {
   createFirstPersonState,
   createLookState,
@@ -23,7 +24,14 @@ import {
   stepLook,
 } from '../camera/first-person-rig.ts';
 import { rigQuat } from '../camera/free-rig.ts';
-import { thirdPersonCamera, zoomDistance } from '../camera/third-person-rig.ts';
+import {
+  avatarOpacity,
+  type Boom,
+  createBoom,
+  thirdPersonBoom,
+  thirdPersonCamera,
+  zoomDistance,
+} from '../camera/third-person-rig.ts';
 import { findStreetSpot } from '../walk-placement.ts';
 
 const MS_TO_KMH = 3.6;
@@ -90,6 +98,13 @@ interface Rt {
   readonly camera: CameraState;
   readonly player: ModePlayer;
   readonly output: ModeOutput;
+  /** 3인칭 붐 충돌(sphereCast 결과)·목표/현재 시선 붐. */
+  readonly boom: BoomState;
+  readonly boomNow: Boom;
+  readonly boomScratch: Boom;
+  /** 3인칭 카메라 시선(스무딩 시선을 프레임당 ≤ 8°로 따라감 — 붐 충돌 부채꼴이 덮는 범위). */
+  readonly tp: { yaw: number; pitch: number };
+  readonly avatar: AvatarState;
 }
 
 function createRt(settings: Readonly<TraversalSettings>): Rt {
@@ -124,7 +139,22 @@ function createRt(settings: Readonly<TraversalSettings>): Rt {
     hud: { speedKmh: 0 },
     player,
   };
-  return { settings, w, look: createLookState(0, 0), fp: createFirstPersonState(), st, camera, player, output };
+  const avatar: AvatarState = { visible: false, posWF: st.feet, yawRad: 0, speedMs: 0, grounded: true, opacity: 1 };
+  return {
+    settings,
+    w,
+    look: createLookState(0, 0),
+    fp: createFirstPersonState(),
+    st,
+    camera,
+    player,
+    output,
+    boom: createBoomState(),
+    boomNow: createBoom(),
+    boomScratch: createBoom(),
+    tp: { yaw: 0, pitch: 0 },
+    avatar,
+  };
 }
 
 function settle(rt: Rt, spot: Vec3d): void {
@@ -132,6 +162,7 @@ function settle(rt: Rt, spot: Vec3d): void {
   rt.st.vel.x = rt.st.vel.y = rt.st.vel.z = 0;
   rt.st.expect = { ...spot };
   rt.fp.feetY = Number.NaN;
+  resetBoom(rt.boom);
 }
 
 function cancel(st: WalkState): void {
@@ -202,19 +233,41 @@ function drive(rt: Rt, frame: FrameContext, ctx: TraversalContext, physics: Phys
   if (st.view === 'first') {
     const bob = headBob(rt.fp, st.grounded && !st.escalator ? hSpeed : 0, frame.dtReal, w);
     firstPersonCamera(rt.camera, st.feet, feetY, look, bob, w);
-  } else {
-    const groundY = ctx.ground.groundHeightAt(st.feet.x, st.feet.z);
-    thirdPersonCamera(rt.camera, st.feet, feetY, look, st.distanceM, w, groundY);
-  }
+    rt.avatar.visible = false;
+  } else thirdPerson(rt, frame, ctx, physics, feetY);
   rt.output.hud.speedKmh = hSpeed * MS_TO_KMH;
   rt.player.yawRad = st.bodyYaw;
+  Object.assign(rt.avatar, { yawRad: st.bodyYaw, speedMs: hSpeed, grounded: st.grounded });
+  rt.output.avatar = rt.avatar;
+}
+
+/**
+ * 3인칭(M04-T05, ADR-0045): 카메라 시선은 스무딩 시선을 프레임당 ≤ 8°로 따라가고, 붐 길이는 지난 프레임 부채꼴 결과로 자른다(당기기 즉시·풀기 4 m/s).
+ * 이번 시선 가운데 부채꼴을 다시 요청(다음 프레임용), 붐이 짧으면 아바타 디더 페이드.
+ */
+function thirdPerson(rt: Rt, frame: FrameContext, ctx: TraversalContext, physics: PhysicsService, feetY: number): void {
+  const { st, w, look, tp } = rt;
+  tp.yaw = stepToward(tp.yaw, look.smYaw, true);
+  tp.pitch = stepToward(tp.pitch, look.smPitch, false);
+  const now = thirdPersonBoom(rt.boomNow, st.feet, feetY, tp.yaw, tp.pitch, st.distanceM, w);
+  const len = boomLength(rt.boom, tp.yaw, tp.pitch, now.len, frame.dtReal);
+  const boomAt = (y: number, p: number) => thirdPersonBoom(rt.boomScratch, st.feet, feetY, y, p, st.distanceM, w);
+  requestBoom(rt.boom, physics, tp.yaw, tp.pitch, boomAt);
+  thirdPersonCamera(rt.camera, now, len, tp.yaw, tp.pitch, ctx.ground.groundHeightAt(st.feet.x, st.feet.z));
+  rt.avatar.visible = true;
+  rt.avatar.opacity = avatarOpacity(len);
 }
 
 /** 시점·걸음 단계 토글, 시선(스무딩)·3인칭 거리. */
 function handleView(rt: Rt, frame: FrameContext, ctx: TraversalContext): void {
   const { st, w } = rt;
   const s = ctx.input.state;
-  if (s.justPressed('toggleView')) st.view = st.view === 'first' ? 'third' : 'first';
+  if (s.justPressed('toggleView')) {
+    st.view = st.view === 'first' ? 'third' : 'first';
+    resetBoom(rt.boom);
+    rt.tp.yaw = rt.look.smYaw;
+    rt.tp.pitch = rt.look.smPitch;
+  }
   if (s.justPressed('pace')) st.pace = (st.pace + 1) % w.paceSpeedsMs.length;
   const k = rt.settings.lookRadPerPx;
   stepLook(rt.look, -s.axis('lookX') * k, -s.axis('lookY') * k, frame.dtReal, w.lookSmoothingS);

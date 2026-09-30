@@ -1,5 +1,6 @@
 // createTraversal: FSM + 기본 모드(freecam·walk) 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD·플레이어). see docs/modules/traversal.md
 import {
+  type AvatarState,
   type CameraState,
   type GameSystem,
   type ModeId,
@@ -47,18 +48,47 @@ function handleFreecamToggle(fsm: ModeFsm, ctx: TraversalContext, camera: Readon
 interface OutputState {
   readonly camera: CameraState;
   readonly player: PlayerState;
+  readonly avatar: AvatarState;
   readonly last: ModeOutput;
   apply(o: ModeOutput, mode: ModeId): void;
 }
 
-/** 서비스가 노출하는 카메라·플레이어(참조 고정 — FrameSource가 같은 객체를 계속 읽는다). */
+/**
+ * 아바타: 모드가 주면 복사, 안 주면(freecam) 마지막 것을 대기 자세로 — walk에서 세워 둔 바디가 보인다(한 번도 없었으면 계속 숨김).
+ */
+function applyAvatar(out: AvatarState & { seen?: boolean }, a: Readonly<AvatarState> | undefined): void {
+  if (a) {
+    out.visible = a.visible;
+    vec3Copy(out.posWF, a.posWF);
+    out.yawRad = a.yawRad;
+    out.speedMs = a.speedMs;
+    out.grounded = a.grounded;
+    out.opacity = a.opacity;
+    out.seen = true;
+  } else {
+    out.visible = out.seen === true;
+    out.speedMs = 0;
+    out.opacity = 1;
+  }
+}
+
+/** 서비스가 노출하는 카메라·플레이어·아바타(참조 고정 — FrameSource·배선이 같은 객체를 계속 읽는다). */
 function createOutputState(fovDeg: number, near: number, mode: ModeId): OutputState {
   const camera: CameraState = { posWF: { x: 0, y: 0, z: 0 }, quat: { x: 0, y: 0, z: 0, w: 1 }, fovDeg, near };
   const player: PlayerState = { posWF: { x: 0, y: 0, z: 0 }, velWF: { x: 0, y: 0, z: 0 }, yawRad: 0, mode };
+  const avatar: AvatarState = {
+    visible: false,
+    posWF: { x: 0, y: 0, z: 0 },
+    yawRad: 0,
+    speedMs: 0,
+    grounded: true,
+    opacity: 1,
+  };
   let last: ModeOutput = { camera, interest: [], hud: {} };
   return {
     camera,
     player,
+    avatar,
     get last() {
       return last;
     },
@@ -79,6 +109,7 @@ function createOutputState(fovDeg: number, near: number, mode: ModeId): OutputSt
         player.yawRad = yawOfQuat(o.camera.quat);
       }
       player.mode = id;
+      applyAvatar(avatar, o.avatar);
     },
   };
 }
@@ -121,6 +152,7 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
     get view() {
       return walk.view;
     },
+    avatar: out.avatar,
     request: (to, params) => fsm.request(to, params),
     teleport(posWF, yawRad) {
       fsm.current?.teleport?.(posWF, yawRad);

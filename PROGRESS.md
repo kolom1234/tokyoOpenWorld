@@ -2,8 +2,8 @@
 Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
 
 ## Current Milestone: M04 — Physics & Walking (M03 보강 5항목 완료)
-## Current Task: M04-T05 Camera collision & avatar — 큐: M04-T01 ✅ → T02 ✅ → T03 ✅ → T04 ✅(엔진, 육교·연석 데이터 ⚠️ → M05-T01/T08) → T05 → T06
-- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042), M04-T03 캐릭터·walk(ADR-0043), M04-T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044).
+## Current Task: M04-T06 Anchor rebase & ground-missing guard — 큐: M04-T01 ✅ → T02 ✅ → T03 ✅ → T04 ✅(엔진, 육교·연석 데이터 ⚠️ → M05-T01/T08) → T05 ✅(아바타 = 자체 마네킹, Quaternius ⚠️ 승인 대기) → T06
+- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042), M04-T03 캐릭터·walk(ADR-0043), M04-T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044), M04-T05 3인칭 카메라 충돌·아바타(ADR-0045).
 
 - 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
   `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost), `perf.mjs`(무제한 프레임 rAF p50·전력 상한·패스별 GPU, `PROT=1` 회전). 방법은 ADR-0038 Context에 기록.
@@ -11,10 +11,14 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
   인증 = 사용자 환경변수 `CLOUDFLARE_API_TOKEN`(wrangler도 이 토큰 사용 — whoami "User API Token"). 실제 GPU로 staging 부트 → C → 걷기 1.35 m/s 확인. 옛 빌드 gc는 10/6 이후(7일 규칙).
 - ⚠️ 2026-09-30 19:32 PC 재부팅(비정상 종료 추정) → `.git/refs/heads/claude/m03-fixes-m04`가 NUL 41바이트로 손상 → reflog·origin 모두 f031f80이라 파일에 직접 복구(백업 scratchpad `broken-ref.bin`), `git fsck` 오류 없음.
 - 보행 봇(scratchpad `walkbot.mjs <url> <분> <시드>`): 실제 입력(키 W/X/Shift, 합성 포인터 드래그 회전)으로 스폰(스크램블) 반경 110 m 자유 보행, 끼임 후보(10 s < 1 m) → 8방향 탈출 시도로 막다른 곳/끼임 분류.
-- Next step (정확히 한 걸음): M04-T05 physics `sphereCast`(카메라 충돌) → traversal `third-person-rig.ts` 충돌 적용.
+- Next step (정확히 한 걸음): M04-T06 physics 앵커 재설정(4096 m, 08 §2) → traversal walk 발밑 셀 미적재 시 이동 정지 + 로딩 표시(`physics.hasCell`).
 - Blockers: 없음
 
 ## Recently Completed
+- M04-T05 Camera collision & avatar — physics `sphereCast`(워커 CastShape 구·양면), traversal 3인칭: 카메라 시선 프레임당 ≤ 8° + **부채꼴 5개 sphereCast**(가운데·yaw ±8°·pitch ±8°, r 0.2 m)로
+  다음 프레임 붐 한계(1프레임 비동기 보상, 당기기 즉시·풀기 4 m/s), 붐 0.5–1.2 m 아바타 디더 페이드. render `setAvatar`: **자체 절차 마네킹**(캡슐·구, 속도 블렌드 대기·걷기·달리기, 선컴파일) — core `AvatarState`.
+  **수락**(실제 GPU, MVP, 봇이 찾은 막다른 골목 8곳 × 25 s, 홱 돌리기·걷기·줌, 매 프레임 피벗 → 카메라 구 0.1 m 캐스트): **12,600 프레임·검사 10,083회 관통 0**
+  (첫 구현 = 목표 방향 1개 질의는 관통 발생 → 부채꼴·회전 상한으로 수정). ⚠️ Quaternius 모델은 외부 다운로드 → 사용자 승인 뒤 교체. 테스트 +2파일(render avatar, sphereCast). ADR-0045 (2026-09-30)
 - M04-T04 Stairs, curbs, escalators, ground material(엔진) — 워커 JCOL 프리미티브(박스·캡슐·원기둥) 정적 바디, userData = 재질 | flags << 8(`groundMaterial` 하위 8비트),
   **에스컬레이터 = JCOL SENSOR 박스 flags bit2**(05 §6 확장, 로컬 +Z 진행) OBB 목록 → 발이 안이면 진행 방향 0.5 m/s + 걷기 수평 ≤ 0.6, `Pose.escalator`(헤드밥 끔; 수직 속도 누적 버그는 테스트로 잡아 수정),
   카메라 발 높이 = 임계 감쇠 스프링(ω 12), `createInlineTransport()` 공개. **수락(합성)**: 실제 Jolt + traversal — 연석 0.15 m·계단 0.18 m 카메라 프레임당 **최대 1.58 cm**(< 3 cm ✅),
@@ -73,6 +77,8 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
 
 ## Known Issues
 - [physics] 육교·계단·연석·에스컬레이터 **데이터 없음** — 엔진(M04-T04)만. 연석·보도 = M05-T01, 육교·계단 = M05-T08(PLATEAU brid + OSM steps → 램프 프록시), 역 에스컬레이터 = M07 역 오버라이드. 지형 재질 = asphalt 고정(`_SURF` 재질은 M05-T01).
+- [e2e] 로컬 `pnpm test:e2e`(기본 워커 = 코어 절반 = 4)는 이 노트북(15 W 전력 상한)에서 SwiftShader 경합으로 불안정(render·flicker·decode·walk가 번갈아 시간 초과) → `--workers=2`(CI 러너와 같음)로 10/10 통과(2026-09-30).
+- [avatar] 3인칭 아바타 = 자체 절차 마네킹(캡슐). Quaternius 베이스 아바타(09 §3)는 외부 다운로드라 사용자 승인 필요(파일·출처·크기 확인 → 03·ATTRIBUTION 갱신) — ADR-0045.
 - [traversal] 게임 시작은 freecam(골든뷰·e2e 결정론) — C로 걷기. 09 §1 "walk = 기본"은 M08 스폰 흐름에서 재검토(ADR-0043).
 - [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장만. 연석·계단(M04-T04)·소품·나무 줄기(M05) 없음. CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱 22 ms까지(기록만).
 - [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).

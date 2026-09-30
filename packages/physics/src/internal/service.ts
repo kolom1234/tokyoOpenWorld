@@ -194,7 +194,7 @@ type BodyApi = Pick<
   PhysicsService,
   'debugSpawnBox' | 'spawnCharacter' | 'setCharacterInput' | 'despawn' | 'teleport' | 'pose'
 >;
-type CellApi = Pick<PhysicsService, 'addCell' | 'removeCell' | 'hasCell' | 'raycast'>;
+type CellApi = Pick<PhysicsService, 'addCell' | 'removeCell' | 'hasCell' | 'raycast' | 'sphereCast'>;
 
 function bodyApi(
   queue: ReturnType<typeof createCommandQueue>,
@@ -252,6 +252,10 @@ function cellApi(
     hasCell: (key) => track.loaded.has(key),
     raycast: (originWF, dir, maxDist) =>
       track.ray((id) => transport.post({ t: 'ray', id, originWF: { ...originWF }, dir: { ...dir }, maxDist })),
+    sphereCast: (originWF, dir, radius, maxDist) =>
+      track.ray((id) =>
+        transport.post({ t: 'sphere', id, originWF: { ...originWF }, dir: { ...dir }, radius, maxDist }),
+      ),
   };
 }
 

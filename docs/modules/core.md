@@ -22,6 +22,7 @@ export interface SystemProvider { systems(): readonly GameSystem[] }   // 서비
 export interface FrameSource { camera(): CameraState; player(): PlayerState; gameTimeMs(): number; timeScale(): number }
 export interface FrameContext { frameIndex: number; dtReal: number; dtGame: number; gameTimeMs: number; camera: Readonly<CameraState>; player: Readonly<PlayerState> }
 export interface CameraState { posWF: Vec3d; quat: Quat; fovDeg: number; near: number }
+export interface AvatarState { visible; posWF(발); yawRad; speedMs; grounded; opacity }   // traversal → render.setAvatar(M04-T05, ADR-0045)
 export interface PlayerState { posWF: Vec3d; velWF: Vec3; yawRad: number; mode: string }
 export interface Scheduler { add(p: GameSystem | SystemProvider): void; remove(id: string): void; setFrameSource(src: FrameSource): void; init(): Promise<void>; tick(nowMs: number): void }
 export interface SchedulerDeps { log: Logger; clock: () => number }   // clock: 시스템별 update 시간 측정(ms)

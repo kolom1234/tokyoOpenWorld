@@ -41,7 +41,23 @@ function fakePhysics() {
   const inputs: CharacterInput[] = [];
   let body: { pos: Vec3d; vel: Vec3 } | undefined;
   let spawned = 0;
+  /** 카메라 구 캐스트가 맞힐 거리(없으면 막힘 없음). */
+  const wall = { distance: undefined as number | undefined };
   const physics = {
+    sphereCast(o: Vec3d, d: Vec3): Promise<RayHit | null> {
+      const t = wall.distance;
+      return Promise.resolve(
+        t === undefined
+          ? null
+          : {
+              posWF: { x: o.x + d.x * t, y: o.y + d.y * t, z: o.z + d.z * t },
+              normal: { x: 0, y: 0, z: -1 },
+              distance: t,
+              layer: 0,
+              material: 0,
+            },
+      );
+    },
     raycast(o: Vec3d): Promise<RayHit | null> {
       rays.push({ ...o });
       const roof = Math.hypot(o.x, o.z) < 5;
@@ -83,7 +99,7 @@ function fakePhysics() {
     body.pos.x += body.vel.x * dt;
     body.pos.z += body.vel.z * dt;
   };
-  return { physics, rays, inputs, step, spawned: () => spawned, body: () => body };
+  return { physics, rays, inputs, step, wall, spawned: () => spawned, body: () => body };
 }
 
 const log = createLogger({ sink: () => undefined });
@@ -178,10 +194,31 @@ describe('walk mode', () => {
     s.hits.add('toggleView');
     s.tick();
     expect(s.t.view).toBe('third');
-    // yaw = 0(북 −Z)·피치 −20° → 카메라는 발 뒤(+Z)·위, 오른쪽 어깨(+X 0.4).
+    // 붐은 0.25 m에서 시작해 결과가 오면 초당 4 m로 풀린다(1.2 s).
+    for (let i = 0; i < 72; i++) {
+      await flush();
+      s.tick();
+    }
+    // yaw = 0(북 −Z)·피치 −20° → 카메라는 발 뒤(+Z)·위, 오른쪽 어깨(+X 0.4 × 3.5/3.52).
     expect(s.t.camera.posWF.z).toBeGreaterThan(feet.z + 3);
-    expect(s.t.camera.posWF.x).toBeCloseTo(feet.x + 0.4, 6);
+    expect(s.t.camera.posWF.x).toBeGreaterThan(feet.x + 0.35);
     expect(s.t.camera.posWF.y).toBeGreaterThan(feet.y + 1.55);
+    expect(s.t.avatar.visible).toBe(true);
+    expect(s.t.avatar.opacity).toBe(1);
+    // 벽이 붐 1.0 m에 있으면 → 즉시 0.95 m 안으로, 아바타는 반쯤 투명.
+    s.wall.distance = 1.0;
+    for (let i = 0; i < 3; i++) {
+      await flush();
+      s.tick();
+    }
+    const d = Math.hypot(
+      s.t.camera.posWF.x - feet.x,
+      s.t.camera.posWF.y - (feet.y + 1.55),
+      s.t.camera.posWF.z - feet.z,
+    );
+    expect(d).toBeLessThanOrEqual(0.951);
+    expect(s.t.avatar.opacity).toBeLessThan(1);
+    s.wall.distance = undefined;
     s.hits.add('freeCam');
     s.tick();
     expect(s.t.mode).toBe('freecam');

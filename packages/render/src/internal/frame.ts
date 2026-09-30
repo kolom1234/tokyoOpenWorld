@@ -55,6 +55,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
         rebased = true;
       });
       library.setOrigin(view.renderOriginWF);
+      ctx.avatar.update(f.dtReal, view.renderOriginWF);
       counters.fading = hlod.update(f.dtReal);
       cells.syncHlodMaterials();
       const sceneChanged = counters.sceneVersion !== sceneVersion || counters.fading > 0;
@@ -74,6 +75,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
     },
     dispose() {
       cells.dispose();
+      ctx.avatar.dispose();
       ctx.quality.dispose();
       ctx.post.dispose();
       ctx.env.dispose();
