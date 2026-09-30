@@ -1,11 +1,11 @@
-// 품질 관리자(M03-T08): detect-gpu 매핑, 버스 양방향(되먹임 없음), 60프레임 측정 뒤 한 단계 강등, WebGL2 상한.
+// 품질 관리자(M03-T08): detect-gpu 매핑, 버스 양방향(되먹임 없음), 60프레임 측정 뒤 한 단계 강등, WebGL2 상한, 소프트웨어 래스터 = Low(감지 생략).
 import { createEventBus, createLogger, type QualityTier } from '@sanpo/core';
 import { describe, expect, it, vi } from 'vitest';
 import { createQualityManager, tierFromDetect } from '../src/internal/quality.ts';
 
 const log = createLogger({ level: 'error' });
 
-function rig(dynamic = true, backend: 'webgpu' | 'webgl2' = 'webgpu', initial: QualityTier = 'high') {
+function rig(dynamic = true, backend: 'webgpu' | 'webgl2' = 'webgpu', initial: QualityTier = 'high', software = false) {
   const bus = createEventBus(log);
   const tiers: QualityTier[] = [];
   const scales: number[] = [];
@@ -15,6 +15,7 @@ function rig(dynamic = true, backend: 'webgpu' | 'webgl2' = 'webgpu', initial: Q
     bus,
     log,
     backend,
+    software,
     initial,
     dynamic,
     benchmarksPath: '/detect-gpu/',
@@ -64,5 +65,14 @@ describe('quality manager', () => {
     for (let i = 0; i < 500; i++) r.q.onFrame(0.03);
     expect(spy).not.toHaveBeenCalled();
     expect(r.scales).toEqual([]);
+  });
+
+  it('software rasterizer: detect() resolves to low without detect-gpu (no extra WebGL context)', async () => {
+    const r = rig(false, 'webgl2', 'medium', true);
+    await expect(r.q.detect()).resolves.toBe('low');
+    expect(r.emitted).toEqual(['low']);
+    // 이미 low면 재구성·방출 없음.
+    await expect(r.q.detect()).resolves.toBe('low');
+    expect(r.tiers).toEqual(['low']);
   });
 });

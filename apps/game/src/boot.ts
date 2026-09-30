@@ -22,7 +22,7 @@ import { createSunOverride, parseSunFlag } from './debug/sun-override.ts';
 import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-override.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
-import { loadTier, startQualityWiring } from './wiring/quality.ts';
+import { loadTier, type QualityWiring, startQualityWiring } from './wiring/quality.ts';
 import {
   type LoadedWorld,
   loadWorld,
@@ -198,6 +198,11 @@ function storageOf(): Storage | undefined {
   }
 }
 
+/** 월드 로드 뒤 정해지는 안정 조건(디버그 오버레이 `data-settled`). */
+interface LateReady {
+  quality?: QualityWiring;
+}
+
 async function setupWorldView(
   flags: BootFlags,
   scheduler: Scheduler,
@@ -205,6 +210,7 @@ async function setupWorldView(
   view: StatusView,
   golden: GoldenView | undefined,
   bus: EventBus,
+  late: LateReady,
 ): Promise<WorldView | undefined> {
   try {
     const weather = weatherOf(flags, golden);
@@ -241,6 +247,7 @@ async function setupWorldView(
         get streaming() {
           return world.streaming;
         },
+        settledExtra: () => world.materialsSettled && late.quality?.settled === true,
       });
       scheduler.add(overlay.system);
       // e2e·콘솔 조작용 핸들(디버그 모드에서만 노출).
@@ -279,7 +286,8 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
   const golden = flags.view === undefined ? undefined : await loadGoldenView(flags.view);
   if (flags.view !== undefined && golden === undefined) view.showError(`골든뷰 없음: ${flags.view}`);
   const bus = createEventBus(log);
-  const world = await setupWorldView(flags, scheduler, log, view, golden, bus);
+  const late: LateReady = {};
+  const world = await setupWorldView(flags, scheduler, log, view, golden, bus, late);
   const watch = golden && world ? addGoldenWatch(scheduler, world, golden) : undefined;
   await scheduler.init();
 
@@ -296,7 +304,7 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
     const shown = await world.showWorld(loaded);
     view.setRendered(shown);
     watch?.start();
-    startQualityWiring({
+    late.quality = startQualityWiring({
       render: world.render,
       bus,
       log: log.child('quality'),

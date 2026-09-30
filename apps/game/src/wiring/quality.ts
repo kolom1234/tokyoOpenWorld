@@ -56,17 +56,29 @@ function whenIdle(d: QualityWiringDeps, run: () => void): void {
   timer(poll, IDLE_POLL_MS);
 }
 
-/** 첫 표시 뒤 호출. 반환 = 구독 해제. */
-export function startQualityWiring(d: QualityWiringDeps): () => void {
-  if (d.fixed) return () => undefined;
-  const off = d.bus.on('quality/changed', ({ tier }) => saveTier(d.storage, tier));
+export interface QualityWiring {
+  /** 첫 티어 결정이 끝났다(감지 완료·실패, 저장값·고정 = 즉시). e2e 안정 조건(`data-settled`) — 감지 중 티어 재구성을 피해 측정한다. */
+  readonly settled: boolean;
+  /** 구독 해제. */
+  off(): void;
+}
+
+/** 첫 표시 뒤 호출. */
+export function startQualityWiring(d: QualityWiringDeps): QualityWiring {
+  const state: { settled: boolean; off: () => void } = { settled: true, off: () => {} };
+  if (d.fixed) return state;
+  state.off = d.bus.on('quality/changed', ({ tier }) => saveTier(d.storage, tier));
   if (loadTier(d.storage) === undefined) {
+    state.settled = false;
     whenIdle(d, () => {
       void d.render
         .detectQuality()
         .then((tier) => saveTier(d.storage, tier))
-        .catch((e: unknown) => d.log.warn('detectQuality', e));
+        .catch((e: unknown) => d.log.warn('detectQuality', e))
+        .finally(() => {
+          state.settled = true;
+        });
     });
   }
-  return off;
+  return state;
 }

@@ -15,7 +15,7 @@ RenderConfig += dynamicResolution (true), gpuBenchmarksPath ('/detect-gpu/'), de
 RenderConfig += debugForcePost (false)  // 소프트웨어 래스터에서도 후처리 체인(CI 정지 떨림 e2e, ADR-0038)
 PostEffects += aerial: 'full' | 'half'   // 공중원근 해상도(Low–High half, Ultra full, `?post=aerial:full`) — ADR-0039
 RenderStats += shadows: { cascades, mapSize, maxFarM, updated } | null;  gpu.passes: GpuPassTime[] { index, label, ms }  // ADR-0039
-RenderService += setQuality(tier), detectQuality(): Promise<QualityTier>  // 버스 'quality/changed'도 적용(되먹임 없음), 자기 변경은 방출
+RenderService += setQuality(tier), detectQuality(): Promise<QualityTier>  // 버스 'quality/changed'도 적용(되먹임 없음), 자기 변경은 방출. 소프트웨어 래스터 = detect-gpu 생략 → low
 QualityTier = @sanpo/core 재수출
 RenderService extends SystemProvider {            // systems: renderPrep(70), render(80)
   readonly renderOriginWF: Readonly<Vec3d>;

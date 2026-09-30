@@ -33,7 +33,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/world-view.ts | (`start` 옵션: 골든뷰 시작 포즈·대기 중심·fov) 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: streaming 높이장(프록시) }, freecam 시작)`·카메라 배선 → `providers`·`frameSource`. `showWorld(loaded)` = `render.precompile` → `createStreaming`(디코드 워커) + streaming-render 배선을 스케줄러에 추가 → `whenReady(스폰 384 m, L0)` → 시작 시점 재설정 → `render.loadMaterials(materialsUrl)`(비동기, 첫 표시 뒤 — `materialsSettled`) → 스폰 3×3 live 수(M02-T05) |
 | src/start-view.ts | 시작 시점: 스크램블 교차로 북서 상공(WF −60, −15) 지면 위 60 m → Scramble Square(WF 130.8, 130, 132.5) 바라봄 |
 | src/wiring/camera.ts | phase 65: `render.setCamera(traversal.camera)` + `render.setAvatar(traversal.avatar)`(M04-T05) |
-| src/debug/overlay.ts | `?debug=1` 오버레이(FPS·백엔드·깊이·카메라 WF·고도·원점·재설정 횟수·draw/tris·스트리밍 레벨별 상주/대기/fetch/디코드/실패·HLOD 부모/페이드, `data-*` e2e용) + **O 키 원점 재설정 테스트**(+4096 m → 1 s → 복귀). `globalThis.__SANPO_DEBUG__ = { world, rebaseTest }`(디버그 모드만) |
+| src/debug/overlay.ts | `?debug=1` 오버레이(FPS·백엔드·깊이·카메라 WF·고도·원점·재설정 횟수·draw/tris·스트리밍 레벨별 상주/대기/fetch/디코드/실패·HLOD 부모/페이드, `data-*` e2e용 — `data-settled` = 스트리밍 0·페이드 0·`settledExtra`(머티리얼·첫 품질 티어), `data-mode`) + **O 키 원점 재설정 테스트**(+4096 m → 1 s → 복귀). `globalThis.__SANPO_DEBUG__ = { world, rebaseTest }`(디버그 모드만) |
 | src/world-load.ts | `loadWorld(baseUrl, source, fetch?)` → `Result<LoadedWorld, string>`: world.json(`checkManifest`: formatVersion·WORLD_ORIGIN) → cells.idx(`cellsIndex`) → `spawnCells`(스폰 셀 ± 1 중 색인에 있는 L0), `materialsUrl`(files.materials, 픽스처 제외). 셀 fetch·검증은 streaming. `WORLD_MINI_BASE_URL`, `WORLD_LOCAL_BASE_URL`(`/local-world`) |
 | src/loop.ts | rAF → scheduler.tick, `FrameHook`(before/after) |
 | src/world-status.ts | `fetchWorldStatus()` → `WorldStatus`(ready/loaded/unconfigured/no-build/error). 기본 `fv` = `@sanpo/tile-format` `FORMAT_VERSION` |
@@ -50,7 +50,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/workers/*.worker.ts | 패키지 워커 엔트리 재수출(Vite 워커 번들링용) |
 | src/config/*.json | 기본 설정 오버라이드 |
 | src/debug/sun-override.ts | `?sun=az,el` → phase 68 `render.setEnvironment`(태양 고정, 달 반대편) — 조명·대기 확인·T02 수락 캡처 |
-| src/wiring/quality.ts | 품질 티어: `?quality=` > localStorage `sanpo.quality.v1` > 첫 표시 뒤 스트리밍이 2 s 조용해지면 `render.detectQuality()`, `quality/changed`마다 저장. 골든뷰는 고정·동적 해상도 끔(M03-T08) |
+| src/wiring/quality.ts | 품질 티어: `?quality=` > localStorage `sanpo.quality.v1` > 첫 표시 뒤 스트리밍이 2 s 조용해지면 `render.detectQuality()`, `quality/changed`마다 저장. 골든뷰는 고정·동적 해상도 끔(M03-T08). 반환 `{ settled, off }` — settled = 첫 티어 결정 끝(e2e 안정 조건) |
 | src/debug/physics-probe.ts | `?probe=physics`(+`&physicsIsolation=degraded`): 렌더 없이 물리 워커 + 상자 낙하 3 s → `__SANPO_PHYSICS_PROBE__`, `#app[data-probe]`(e2e physics.spec.ts, M04-T01) |
 | src/debug/post-flags.ts | `?quality=low\|medium\|high\|ultra`, `?post=ao:gtao,ssr:0,scale:0.85,…` → RenderConfig.quality·post(M03-T07 A/B). `?dynres=0` 동적 해상도 끔, `?gpuLoad=n` 디버그 GPU 부하(M03-T08), `?forcePost=1` 소프트웨어 래스터에서도 후처리(정지 떨림 e2e, ADR-0038). `?post=aerial:full|half,exp:<n>`(ADR-0039·0040) |
 | src/debug/wet-override.ts | `?wet=0..1` → `WeatherOverride`(env 배선·태양 고정이 `weather.wetness`를 덮음) + 왼쪽 아래 슬라이더(골든뷰 제외) — M03-T06 젖음 수동 검증 |

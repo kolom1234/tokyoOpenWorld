@@ -68,13 +68,15 @@ function postEffectsFor(cfg: RenderConfig, backend: RenderBackend): (tier: Quali
 function attachQuality(
   ctx: Pick<RenderContext, 'cfg' | 'log' | 'backend' | 'post'>,
   deps: RenderDeps,
-  post: boolean,
+  hw: { post: boolean; software: boolean },
   applyTier: (tier: QualityTier) => number,
 ): QualityManager {
+  const { post, software } = hw;
   return createQualityManager({
     bus: deps.bus,
     log: ctx.log,
     backend: ctx.backend,
+    software,
     initial: ctx.cfg.quality,
     dynamic: post && ctx.cfg.dynamicResolution,
     benchmarksPath: ctx.cfg.gpuBenchmarksPath,
@@ -134,7 +136,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
   };
-  ctx.quality = attachQuality(ctx, deps, post, (tier) => {
+  ctx.quality = attachQuality(ctx, deps, { post, software }, (tier) => {
     ctx.shadows?.setTier(tier);
     ctx.post.dispose();
     ctx.post = makePost(tier);

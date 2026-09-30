@@ -22,6 +22,11 @@ export interface QualityDeps {
   bus: EventBus;
   log: Logger;
   backend: RenderBackend;
+  /**
+   * 소프트웨어 래스터(SwiftShader 등 — CI): detect-gpu를 부르지 않고 Low. detect-gpu는 어차피 차단 목록(티어 0)인데,
+   * 판정용 WebGL 컨텍스트 생성이 바쁜 GPU 프로세스와 동기 IPC라 메인 스레드를 16 s까지 막았다(CI e2e walk·render 시간 초과).
+   */
+  software?: boolean;
   initial: QualityTier;
   dynamic: boolean;
   benchmarksPath: string;
@@ -99,9 +104,13 @@ export function createQualityManager(d: QualityDeps): QualityManager {
       if (cap(t) !== tier) apply(t, true);
     },
     async detect() {
-      const r = await getGPUTier({ benchmarksURL: d.benchmarksPath.replace(/\/$/, '') });
-      const t = tierFromDetect(r.tier, d.backend);
-      d.log.info(`detect-gpu: tier ${r.tier} (${r.type}${r.gpu ? `, ${r.gpu}` : ''}) → ${t}`);
+      let t: QualityTier = 'low';
+      if (d.software) d.log.info('detect-gpu: skipped (software rasterizer) → low');
+      else {
+        const r = await getGPUTier({ benchmarksURL: d.benchmarksPath.replace(/\/$/, '') });
+        t = tierFromDetect(r.tier, d.backend);
+        d.log.info(`detect-gpu: tier ${r.tier} (${r.type}${r.gpu ? `, ${r.gpu}` : ''}) → ${t}`);
+      }
       if (t !== tier) apply(t, true);
       else measuring = -WARMUP_FRAMES;
       return tier;
