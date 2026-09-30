@@ -69,6 +69,8 @@ interface WalkState {
   feet: Vec3d;
   vel: Vec3;
   grounded: boolean;
+  /** 에스컬레이터로 운반 중(헤드밥 끔). */
+  escalator: boolean;
   bodyYaw: number;
 }
 
@@ -106,6 +108,7 @@ function createRt(settings: Readonly<TraversalSettings>): Rt {
     feet: { x: 0, y: 0, z: 0 },
     vel: { x: 0, y: 0, z: 0 },
     grounded: false,
+    escalator: false,
     bodyYaw: 0,
   };
   const camera: CameraState = {
@@ -181,6 +184,7 @@ function readPose(st: WalkState, physics: PhysicsService, h: BodyHandle): void {
   Object.assign(st.feet, pose.posWF);
   Object.assign(st.vel, pose.linVel);
   st.grounded = pose.grounded;
+  st.escalator = pose.escalator;
 }
 
 /** 입력 → 캐릭터 속도 명령, 포즈 → 카메라(1인칭·3인칭)·HUD·플레이어. */
@@ -196,7 +200,7 @@ function drive(rt: Rt, frame: FrameContext, ctx: TraversalContext, physics: Phys
   const hSpeed = Math.hypot(st.vel.x, st.vel.z);
   const feetY = followFeet(rt.fp, st.feet.y, st.grounded, frame.dtReal, w.eyeFollowPerS);
   if (st.view === 'first') {
-    const bob = headBob(rt.fp, st.grounded ? hSpeed : 0, frame.dtReal, w);
+    const bob = headBob(rt.fp, st.grounded && !st.escalator ? hSpeed : 0, frame.dtReal, w);
     firstPersonCamera(rt.camera, st.feet, feetY, look, bob, w);
   } else {
     const groundY = ctx.ground.groundHeightAt(st.feet.x, st.feet.z);

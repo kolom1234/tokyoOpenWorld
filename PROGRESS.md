@@ -2,18 +2,25 @@
 Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
 
 ## Current Milestone: M04 — Physics & Walking (M03 보강 5항목 완료)
-## Current Task: M04-T04 Stairs, curbs, escalators, ground material — 큐: M04-T01 ✅ → T02 ✅(MVP 적재 틱 수정 ✅) → T03 ✅ → T04 → T05 → T06
-- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042), M04-T03 캐릭터·walk(ADR-0043).
+## Current Task: M04-T05 Camera collision & avatar — 큐: M04-T01 ✅ → T02 ✅ → T03 ✅ → T04 ✅(엔진, 육교·연석 데이터 ⚠️ → M05-T01/T08) → T05 → T06
+- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042), M04-T03 캐릭터·walk(ADR-0043), M04-T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044).
 
 - 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
   `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost), `perf.mjs`(무제한 프레임 rAF p50·전력 상한·패스별 GPU, `PROT=1` 회전). 방법은 ADR-0038 Context에 기록.
-- 배포 상태: staging = b386e8e 코드(M03 보강 ①–⑤, 2026-09-30) + dev 버킷 빌드 `20260929-b84bfa1-ec1646fc`(변경 없음). 옛 빌드 gc는 10/6 이후(7일 규칙).
-  MVP 로컬 재빌드 `20260929-99bffa8-ec1646fc`(collision.bin 포함, L0 294셀 144.5 MB, 검증 오류 0) 완료 — dev 버킷 publish·staging 배포는 적재 틱 수정 뒤.
+- 배포 상태(2026-09-30 20:0x): staging = **f031f80 코드(walk)** + dev 버킷 current **`20260929-99bffa8-ec1646fc`**(collision.bin 포함, 478파일 260.5 MB, Worker HEAD 전수 검증).
+  인증 = 사용자 환경변수 `CLOUDFLARE_API_TOKEN`(wrangler도 이 토큰 사용 — whoami "User API Token"). 실제 GPU로 staging 부트 → C → 걷기 1.35 m/s 확인. 옛 빌드 gc는 10/6 이후(7일 규칙).
+- ⚠️ 2026-09-30 19:32 PC 재부팅(비정상 종료 추정) → `.git/refs/heads/claude/m03-fixes-m04`가 NUL 41바이트로 손상 → reflog·origin 모두 f031f80이라 파일에 직접 복구(백업 scratchpad `broken-ref.bin`), `git fsck` 오류 없음.
 - 보행 봇(scratchpad `walkbot.mjs <url> <분> <시드>`): 실제 입력(키 W/X/Shift, 합성 포인터 드래그 회전)으로 스폰(스크램블) 반경 110 m 자유 보행, 끼임 후보(10 s < 1 m) → 8방향 탈출 시도로 막다른 곳/끼임 분류.
-- Next step (정확히 한 걸음): M04-T04 초안 적용(scratchpad `t04-drafts/apply_t04.py` — escalators·primitives·inline-transport·테스트 2개·ADR-0044) → cell-colliders `jobsOf`에 프리미티브·에스컬레이터 등록 손으로 추가 → first-person-rig 발 높이 임계 감쇠 스프링.
+- Next step (정확히 한 걸음): M04-T05 physics `sphereCast`(카메라 충돌) → traversal `third-person-rig.ts` 충돌 적용.
 - Blockers: 없음
 
 ## Recently Completed
+- M04-T04 Stairs, curbs, escalators, ground material(엔진) — 워커 JCOL 프리미티브(박스·캡슐·원기둥) 정적 바디, userData = 재질 | flags << 8(`groundMaterial` 하위 8비트),
+  **에스컬레이터 = JCOL SENSOR 박스 flags bit2**(05 §6 확장, 로컬 +Z 진행) OBB 목록 → 발이 안이면 진행 방향 0.5 m/s + 걷기 수평 ≤ 0.6, `Pose.escalator`(헤드밥 끔; 수직 속도 누적 버그는 테스트로 잡아 수정),
+  카메라 발 높이 = 임계 감쇠 스프링(ω 12), `createInlineTransport()` 공개. **수락(합성)**: 실제 Jolt + traversal — 연석 0.15 m·계단 0.18 m 카메라 프레임당 **최대 1.58 cm**(< 3 cm ✅),
+  계단 오르내림 1/6 s 창 ≥ 0.9 m/s·접지, 램프 프록시 프레임당 높이 < 1 cm, 에스컬레이터 0.45–0.55 m/s. ⚠️ 시부야 육교 왕복은 **데이터 없음**(PLATEAU brid·OSM steps 미수집, 연석 = M05-T01) → M05-T08 신설. ADR-0044 (2026-09-30)
+  + 워커 **빈 시간 적재**(메시지 사이 setTimeout 조각 — 부록 A의 잘게 나눈 작업이 SwiftShader e2e 60 s를 넘겨 physics·walk e2e가 깨졌던 것 수정, 4 spec 52 → 38 s) + 조각 예산 **3 ms**
+  (실제 GPU 봇 4분: 4 ms = 최대 8.3 ms·초과 1 → 3 ms = **최대 6.19 ms·초과 0**, 끼임·낙하 0, 걷기 1.349 m/s). ADR-0042 부록 B.
 - M04-T02 보강: MVP 보행 중 적재 틱(최대 20.4 ms·8 ms 초과 54회 — Node MVP 30셀 높이장 최대 9.0·2500 삼각형 최대 7.0 ms, 브라우저 렌더 경합 2–3배) →
   워커가 작업을 더 잘게: 높이장 **4×4 타일**(65², 가장자리 공유), triMesh **≤ 600 삼각형 조각**(쓰는 정점만 압축, `meshSlice`). 실제 GPU 봇 4분: **최대 6.18 ms·초과 0회**(2×2·800은 8.65 ms·1회). 재빌드 불필요. ADR-0042 부록 A (2026-09-30)
 - M04-T03 Character & walk mode — physics `worker/character.ts`(CharacterVirtual r 0.25·키 1.70·경사 50°·계단 0.40·바닥 붙기 0.5·예측 0.1·양면, 가속 8/감속 10, ExtendedUpdate), 슬롯 공유(bodies Entry rigid|char),
@@ -65,6 +72,7 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
   **성능**: 파사드 단색 대비 ≈ 6.0 ms(T04 4.7 → +1.3, 분기 전 +2.7). core GPU 23.8/22.9/24.9/28.7 ms. 새 골든뷰 `shinjuku-curtainwall-close`. 테스트 +1파일/+4건. ADR-0034 (2026-09-29)
 
 ## Known Issues
+- [physics] 육교·계단·연석·에스컬레이터 **데이터 없음** — 엔진(M04-T04)만. 연석·보도 = M05-T01, 육교·계단 = M05-T08(PLATEAU brid + OSM steps → 램프 프록시), 역 에스컬레이터 = M07 역 오버라이드. 지형 재질 = asphalt 고정(`_SURF` 재질은 M05-T01).
 - [traversal] 게임 시작은 freecam(골든뷰·e2e 결정론) — C로 걷기. 09 §1 "walk = 기본"은 M08 스폰 흐름에서 재검토(ADR-0043).
 - [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장만. 연석·계단(M04-T04)·소품·나무 줄기(M05) 없음. CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱 22 ms까지(기록만).
 - [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).

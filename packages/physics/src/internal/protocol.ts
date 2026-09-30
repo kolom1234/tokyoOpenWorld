@@ -21,6 +21,8 @@ export const SNAPSHOT_BYTES = HEADER_INTS * 4 + 2 * FRAME_F64 * 8;
 export const BODY_ALIVE = 1;
 export const BODY_ACTIVE = 2;
 export const BODY_GROUNDED = 4;
+/** 캐릭터가 에스컬레이터 구간 안(08 §5). */
+export const BODY_ESCALATOR = 8;
 
 /** 격리 여부(SharedArrayBuffer 사용 가능) — 메인·워커 공용(메인 번들에 Jolt를 끌어오지 않게 여기 둔다). */
 export function isIsolated(): boolean {

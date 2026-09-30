@@ -91,4 +91,4 @@
 ## 8. 릴리스 호환성
 - 클라이언트 번들은 지원 `formatVersion`을 상수로 가진다. `/api/world/current?fv=<n>`로 해당 포맷의 buildId를 받는다 → 코드와 데이터를 독립 배포 가능.
 - 데이터 롤백 = KV 값을 직전 buildId로 되돌림(즉시).
-- 현재(2026-09-29, M03-T06): staging = `20260929-c9a28d3-ec1646fc`(MVP L0 294 + HLOD 177 + 머티리얼, 248.7 MB, dev 버킷). 이전 `20260928-b2d1e36-7fb58d45`(M02-T07). production 데이터 없음(첫 prod 퍼블리시 전까지 `/api/world/current` = no_build → 스모크는 경고만).
+- 현재(2026-09-30, M04-T03): staging = `20260929-99bffa8-ec1646fc`(MVP L0 294 + HLOD + 머티리얼, collision.bin 포함, 478파일 260.5 MB, dev 버킷), 코드 f031f80(walk). 이전 `20260929-b84bfa1-ec1646fc`·`20260929-c9a28d3-ec1646fc`(M03-T06). 이전 `20260928-b2d1e36-7fb58d45`(M02-T07). production 데이터 없음(첫 prod 퍼블리시 전까지 `/api/world/current` = no_build → 스모크는 경고만).

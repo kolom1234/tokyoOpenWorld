@@ -36,7 +36,7 @@
 - 물리 반경: 도보 256 m, 자전거 320 m, 차량 512 m, 열차 탑승 중 = 열차 주변 256 m. 스트리밍 L0 셀 중 반경 내 셀만 `addCell`.
 - 공급 경로: wiring이 물리 반경 내 `live` 셀에 대해 `streaming.requestSections(key, ['collision.bin','terrain.height'])` → `physics.addCell(...)`(Transferable).
 - `addCell(key, originWF, jcol, heightfield)`: JCOL 파싱(`@sanpo/tile-format`의 `parseJcol`을 워커에서 사용 — 별도 파서 금지) → 삼각 메시는 `MeshShapeSettings` → 셀당 정적 바디 1개(서브 셰이프 머티리얼 포함), 프리미티브는 `StaticCompoundShape`로 묶어 1개. 높이장 → `HeightFieldShapeSettings`(257², 블록 크기 4).
-- 셰이프 생성은 워커에서 수 ms 걸리므로 **적재 큐**: 파이프라인이 건물 메시를 ≤ 2500 삼각형 청크(JCOL 셰이프 여러 개)로 자르고, 워커는 틱마다 예산 4 ms 안에서 [높이장, 청크…] 작업을 처리(ADR-0042 — 셀 하나를 한 틱에 만들면 8–30 ms).
+- 셰이프 생성은 워커에서 수 ms 걸리므로 **적재 큐**: 파이프라인이 건물 메시를 ≤ 2500 삼각형 청크(JCOL 셰이프 여러 개)로 자르고, 워커는 이를 다시 [높이장 4×4 타일, ≤ 600 삼각형 조각] 작업으로 나눠 조각마다 예산 3 ms 안에서 처리 — step 때와 메시지 사이 빈 시간 모두(ADR-0042 부록 A·B, 셀 하나를 한 틱에 만들면 8–30 ms).
 - 공급 경로 구현: 게임 `wiring/streaming-physics.ts`가 버스 `cell/ready`(onReady는 렌더 단독)로 live L0를 추적. 레이·충돌은 삼각형 양면(PLATEAU 감김 불일치).
 - 플레이어 발밑 셀 콜라이더가 없으면 `groundMissing` 플래그 → traversal이 이동을 일시 정지(낙하 방지).
 
@@ -48,6 +48,7 @@
 - **에스컬레이터**: SENSOR 구간 진입 시 `EscalatorMode`: 경로 스플라인을 0.5 m/s로 이동(일본 기준 분속 30 m), 걸어서 오르기 허용(+0.6 m/s).
 - **이동 발판(열차)**: 키네마틱 TRAIN 바디 위에서는 `GetGroundVelocity()`를 캐릭터 속도에 합산 → 달리는 열차 안에서 걷기 가능.
 - 지면 재질 → 발소리(audio)로 전달 (`groundMaterial`).
+- 구현(M04-T04, ADR-0044): 에스컬레이터 = JCOL SENSOR 박스(flags bit2, 로컬 +Z = 진행 방향) OBB 목록 — 발이 안이면 진행 방향 0.5 m/s + 걷기 수평 ≤ 0.6 m/s, 스냅샷 `escalator`. 램프 프록시(bit0)·연석은 일반 정적 충돌면(프리미티브 박스 지원). 지형 재질 = asphalt(1) — `_SURF` 재질은 M05-T01.
 - 구현(M04-T03, ADR-0043): 위치 = 발(캡슐 `mShapeOffset`), 스텝마다 가감속 → `ExtendedUpdate`(계단·바닥 붙기) → 물리 스텝. 스냅샷은 강체와 같은 슬롯 배치(flags GROUNDED, groundMat = 지면 바디 userData).
 
 ## 6. 차량 (승용차)

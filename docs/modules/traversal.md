@@ -21,7 +21,7 @@ ModeOutput { camera; interest; hud; player?: ModePlayer { posWF; velWF; yawRad }
 WalkParams { posWF 기준점; yawRad; pitchRad? }   // 바디가 returnToBodyM 안이면 복귀, 아니면 기준점 아래 지면(하늘 레이 → TERRAIN)에 놓기
 FreecamParams { posWF: Vec3d; yawRad; pitchRad }   // yaw: +Y축 반시계, 0 = −Z(도북); pitch 위 +
 TraversalSettings { lookRadPerPx 0.0025; fovDeg 70; nearM 0.1; freecam: { dampingPerS 3; min/max/startSpeedMs 0.5/60/15; speedStepPerNotch 1.25; sprintMultiplier 4; maxAltitudeM 1000; minClearanceM 1 };
-  walk: { paceSpeedsMs [1.35, 1.8, 3.0]; sprintMs 5; eyeHeightM 1.6; headBob true; bobVerticalM 0.012; bobLateralM 0.006; lookSmoothingS 0.03; eyeFollowPerS 12;
+  walk: { paceSpeedsMs [1.35, 1.8, 3.0]; sprintMs 5; eyeHeightM 1.6; headBob true; bobVerticalM 0.012; bobLateralM 0.006; lookSmoothingS 0.03; eyeFollowPerS 12(임계 감쇠 스프링 ω);
           thirdPerson { shoulderM 0.4; distanceM 3.5; min 1.5; max 6; pivotHeightM 1.55 }; returnToBodyM 150; view 'first' } }
 forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad };  DEFAULT_TRAVERSAL_SETTINGS
 ```
@@ -33,6 +33,7 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 - 카메라 출력은 항상 `CameraState`(WF float64). 롤 잠금(쿼터니언 = yaw(Y)·pitch(X), 피치 ±89°).
 - traversal은 render/sim을 직접 호출하지 않는다(출력만 제공, 배선은 apps/game). 열차 정보는 컨텍스트의 `trains()` 함수로만 받음.
 - `physics`가 없으면 `requires: ['physics']` 모드는 진입 불가, freecam만 동작. C 키: freecam ↔ 직전 모드(없으면 walk, 불가면 유지). 전환 파라미터 = 지금 카메라 포즈(ADR-0043).
+- walk: 발 높이 변화(연석·계단)는 임계 감쇠 스프링(ω 12)으로 따라가 카메라 프레임당 < 3 cm(ADR-0044), 에스컬레이터 운반 중 헤드밥 끔.
 - walk: 입력 → 카메라 yaw 기준 원하는 수평 속도 → `setCharacterInput`(가감속은 physics). 포즈 = 보간 스냅샷(발). 놓은 직후 옛 스냅샷(2 m 밖)은 무시. 착지점 = 하늘 레이 첫 충돌이 TERRAIN인 후보.
 - freecam: 전방 이동은 피치 포함(6DOF), 좌우는 수평, E/Q는 월드 위아래. 지면을 알면 지면 + 1 m 아래로 내려가지 않음(soft 충돌 대용), 고도 ≤ 1,000 m.
 - 바디 없는 모드(freecam)에서는 `player.posWF` = 카메라 위치, `player.yawRad` = 카메라 수평 방위. walk = 발 위치·물리 속도·몸 방향.

@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 248개.
+> 파일 251개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -82,20 +82,23 @@
 
 ## packages/physics
 - `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, CharacterInput, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, PhysicsTransport, PhysicsDeps
-- `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 물리. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts', anchorOf, createPhysics, DEFAULT_PHYSICS_CONFIG, PHYSICS_PHASE
+- `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 물리. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts', createInlineTransport, anchorOf, createPhysics, DEFAULT_PHYSICS_CONFIG, PHYSICS_PHASE
 - `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). 캐릭터 입력은 핸들당 마지막 것만(같은 프레임 덮어쓰기). | exports: CommandQueue, createCommandQueue
 - `packages/physics/src/internal/host/snapshot-reader.ts` — 스냅샷 읽기·보간(08 §9): SAB는 seqlock으로 최신 버퍼를 복사, 폴백은 받은 프레임 그대로. 최근 몇 개를 시뮬레이션 시각 순으로 두고 | exports: SnapshotHistory, createSnapshotHistory, readSab
-- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, isIsolated, SLOT_BITS, slotOf, Command, RayHitMsg, ToWorker, FromWorker
+- `packages/physics/src/internal/inline-transport.ts` — 같은 스레드 전송: 워커 대신 워커 코어를 직접 돌린다(Node 테스트·도구 — 브라우저 게임은 쓰지 않는다). flush() = 마지막 메시지 처리 완료. | exports: createInlineTransport
+- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, BODY_ESCALATOR, isIsolated, SLOT_BITS, slotOf, Command, RayHitMsg, ToWorker, FromWorker
 - `packages/physics/src/internal/service.ts` — createPhysics(08 §1·§9·§10): 워커(감독자) 또는 주입 전송 → init(앵커·SAB) → ready. 시스템 'physics'(phase 30)가 프레임마다 | exports: PHYSICS_PHASE, DEFAULT_PHYSICS_CONFIG, anchorOf, createPhysics
 - `packages/physics/src/internal/worker/bodies.ts` — 워커 바디 슬롯: 명령(상자·캐릭터·입력·삭제·순간이동) 적용 + 스냅샷 채우기. 슬롯 = 핸들 하위 비트(메인이 발급), 좌표 변환 WF ↔ PHYS는 여기서만. | exports: BodyCommand, BodySlots, createBodySlots
 - `packages/physics/src/internal/worker/cell-colliders.ts` — 셀 콜라이더 적재(08 §4): 셀마다 [높이장, JCOL 셰이프들] 작업 → 적재 큐(도착 순서, 가까운 셀부터 보내는 건 메인 배선). | exports: MAX_JOB_TRIS, meshSlice, CellColliders, createCellColliders
 - `packages/physics/src/internal/worker/character.ts` — 도보 캐릭터(08 §5): Jolt CharacterVirtual 캡슐(반경 0.25, 전체 키 1.70 — 위치 = 발, mShapeOffset으로 캡슐을 위로), 경사 50°, 계단 0.40 m, | exports: CHARACTER, CharacterBody, Characters, approach, createCharacters
 - `packages/physics/src/internal/worker/core.ts` — 물리 워커 코어(08 §1·§9): init → Jolt 로드·월드·스냅샷 싱크, step → 명령 적용 + 고정 스텝(메인 시계 targetS까지, 최대 N, 초과 시간은 버림) → 스냅샷. | exports: Send, PhysicsCore, createPhysicsCore
+- `packages/physics/src/internal/worker/escalators.ts` — 에스컬레이터 구간(08 §5, ADR-0044): JCOL SENSOR 박스(flags bit2) = OBB, 박스 로컬 +Z = 진행 방향(경사 포함). 캐릭터 발이 안에 있으면 | exports: ESCALATOR, EscalatorVolume, Escalators, rotate, escalatorVolume, inside, createEscalators
 - `packages/physics/src/internal/worker/heightfield.ts` — 지형 높이장(08 §4, 05 §4 terrain.height): u16 257² → Jolt HeightFieldShape(1 m 간격, 블록 4). 샘플 [iz·size + ix] = 셀 로컬 (ix, h, iz), | exports: createHeightfieldShape, createMeshShape, warmUpShapes
 - `packages/physics/src/internal/worker/jolt-init.ts` — Jolt 초기화(08 §1, ADR-0041): single-thread wasm-compat 빌드(wasm 내장). multithread 빌드는 pthread 워커를 자기 파일로 띄우는데 | exports: Jolt, JoltBuildName, JoltLoaded, loadJolt
 - `packages/physics/src/internal/worker/jolt-mem.ts` — Jolt 메모리 규칙(08 §1): `new Jolt.X()` 설정 객체는 쓰고 나서 `Jolt.destroy()` 필수 → using()으로 강제. | exports: using, usingAll, Scratch, createScratch
 - `packages/physics/src/internal/worker/layers.ts` — 오브젝트 레이어·브로드페이즈 레이어·충돌 행렬(08 §3). 표(COLLISION_PAIRS)는 순수 데이터 — Jolt 필터는 createLayerFilters가 만든다. | exports: OBJ, ObjectLayer, NUM_OBJECT_LAYERS, BP, NUM_BP_LAYERS, BROADPHASE_OF, COLLISION_PAIRS, collides, LayerFilters, createLayerFilters
 - `packages/physics/src/internal/worker/physics.worker.ts` — 물리 워커 엔트리(08 §1): 메시지 → 코어(순서 보장). 치명적 오류는 감독자 규약(`worker/error`, fatal) → 메인이 재시작.
+- `packages/physics/src/internal/worker/primitives.ts` — JCOL 프리미티브 셰이프(05 §6 kind 1–3: 박스·캡슐·원기둥) → Jolt 셰이프(참조 1개를 잡아 돌려줌 — 바디 생성 뒤 호출 측이 Release). | exports: PRIMITIVE_MS, createPrimitiveShape
 - `packages/physics/src/internal/worker/queries.ts` — 공간 질의(08 §10): 레이캐스트(가장 가까운 충돌, 삼각형 양면) — 위치·법선(WF)·거리·레이어·재질. 필터는 모든 레이어(마스크는 호출 쪽 결과 필터로). | exports: Queries, createQueries
 - `packages/physics/src/internal/worker/snapshot-writer.ts` — 스냅샷 쓰기(08 §9): SAB 더블 버퍼(비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가) 또는 폴백 postMessage(Transferable). | exports: SnapshotSink, sabViews, createSabSink, createPostSink
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld

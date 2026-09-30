@@ -26,7 +26,7 @@ export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
   interpolationDelayS: 1 / 60 + 1 / 120,
   isolation: 'auto',
   anchorGridM: 1024,
-  cellBudgetMs: 4,
+  cellBudgetMs: 3,
 };
 
 /** 08 §2: 앵커 = 첫 위치의 격자점(y = 0 — 도쿄 표고 < 100 m). */
@@ -130,6 +130,7 @@ function emptyPose(): Pose {
     linVel: { x: 0, y: 0, z: 0 },
     grounded: false,
     groundMaterial: 0,
+    escalator: false,
   };
 }
 

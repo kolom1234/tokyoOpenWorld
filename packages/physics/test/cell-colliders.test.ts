@@ -147,7 +147,7 @@ describe('cell colliders (world-mini)', () => {
     }
     expect(cells.every((c) => phys.hasCell(c.key))).toBe(true);
     const st = phys.stats();
-    // 적재가 여러 틱에 나뉘었다(예산 4 ms, 작업 = 높이장 4×4 타일·≤ 600 삼각형 조각 — 타일 이음새(64·128) 레이 포함). 틱 시간(≤ 8 ms) 판정은 실제 브라우저에서 —
+    // 적재가 여러 틱에 나뉘었다(예산 cellBudgetMs, 작업 = 높이장 4×4 타일·≤ 600 삼각형 조각 — 타일 이음새(64·128) 레이 포함). 틱 시간(≤ 8 ms) 판정은 실제 브라우저에서 —
     // 병렬 vitest의 CPU 경합·GC로 Node 시간은 흔들린다(ADR-0042).
     expect(ticks).toBeGreaterThan(10);
     expect(st.colliderCells).toBe(4);

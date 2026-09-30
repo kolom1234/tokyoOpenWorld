@@ -67,7 +67,14 @@ function fakePhysics() {
     },
     pose(): Pose | undefined {
       return body
-        ? { posWF: body.pos, quat: { x: 0, y: 0, z: 0, w: 1 }, linVel: body.vel, grounded: true, groundMaterial: 0 }
+        ? {
+            posWF: body.pos,
+            quat: { x: 0, y: 0, z: 0, w: 1 },
+            linVel: body.vel,
+            grounded: true,
+            groundMaterial: 0,
+            escalator: false,
+          }
         : undefined;
     },
   } as unknown as PhysicsService;

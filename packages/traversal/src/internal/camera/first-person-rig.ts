@@ -26,6 +26,8 @@ export interface FirstPersonState {
   stepPhase: number;
   /** 스무딩된 발 높이(WF y). NaN = 아직 없음. */
   feetY: number;
+  /** 스무딩 스프링 속도(m/s). */
+  feetVy: number;
 }
 
 export function createLookState(yawRad: number, pitchRad: number): LookState {
@@ -34,7 +36,7 @@ export function createLookState(yawRad: number, pitchRad: number): LookState {
 }
 
 export function createFirstPersonState(): FirstPersonState {
-  return { stepPhase: 0, feetY: Number.NaN };
+  return { stepPhase: 0, feetY: Number.NaN, feetVy: 0 };
 }
 
 /** 입력(rad) 누적 + 지수 스무딩(시간 상수 tau). yaw는 감긴 차이로 따라간다. */
@@ -52,10 +54,19 @@ export function stepLook(s: LookState, dYaw: number, dPitch: number, dt: number,
   }
 }
 
-/** 발 높이 스무딩: 지면 위 작은 변화(연석 0.15 m)는 비율 perS로, 공중·큰 변화는 즉시. */
-export function followFeet(s: FirstPersonState, y: number, grounded: boolean, dt: number, perS: number): number {
-  if (!Number.isFinite(s.feetY) || !grounded || Math.abs(y - s.feetY) > SNAP_M) s.feetY = y;
-  else s.feetY += (y - s.feetY) * (1 - Math.exp(-perS * dt));
+/** 발 높이 스무딩(ADR-0044): 지면 위 작은 변화(연석·계단)는 임계 감쇠 스프링(ω = omega)으로, 공중·0.6 m 넘는 변화는 즉시. */
+export function followFeet(s: FirstPersonState, y: number, grounded: boolean, dt: number, omega: number): number {
+  if (!Number.isFinite(s.feetY) || !grounded || Math.abs(y - s.feetY) > SNAP_M) {
+    s.feetY = y;
+    s.feetVy = 0;
+    return y;
+  }
+  // 임계 감쇠 스프링 정확해: x(t) = (x0 + (v0 + ωx0)t)e^(−ωt). 0.15 m 연석의 최대 속도 ≈ 0.15ω/e(ω 12 → 0.66 m/s = 60 fps 1.1 cm/프레임).
+  const x0 = s.feetY - y;
+  const v0 = s.feetVy;
+  const e = Math.exp(-omega * dt);
+  s.feetY = y + (x0 + (v0 + omega * x0) * dt) * e;
+  s.feetVy = (v0 - omega * (v0 + omega * x0) * dt) * e;
   return s.feetY;
 }
 

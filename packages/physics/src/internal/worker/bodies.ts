@@ -4,6 +4,7 @@ import type { Vec3d } from '@sanpo/core';
 import {
   BODY_ACTIVE,
   BODY_ALIVE,
+  BODY_ESCALATOR,
   BODY_GROUNDED,
   BODY_STRIDE,
   type Command,
@@ -84,7 +85,7 @@ function writeEntry(
     const ch = e.c.jolt;
     put(f, o, ch.GetPosition(), ch.GetRotation(), ch.GetLinearVelocity(), null, anchor);
     const g = chars.groundOf(e.c);
-    f[o + 13] = BODY_ALIVE | BODY_ACTIVE | (g.grounded ? BODY_GROUNDED : 0);
+    f[o + 13] = BODY_ALIVE | BODY_ACTIVE | (g.grounded ? BODY_GROUNDED : 0) | (e.c.escalator ? BODY_ESCALATOR : 0);
     f[o + 14] = g.material;
   }
   f[o + 15] = e.handle;

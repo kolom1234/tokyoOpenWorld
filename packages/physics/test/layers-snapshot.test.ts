@@ -47,6 +47,7 @@ const pose = (): Pose => ({
   linVel: { x: 0, y: 0, z: 0 },
   grounded: false,
   groundMaterial: 0,
+  escalator: false,
 });
 
 describe('snapshot history', () => {

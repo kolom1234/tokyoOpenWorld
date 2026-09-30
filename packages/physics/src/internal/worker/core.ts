@@ -5,6 +5,7 @@ import type { FromWorker, ToWorker } from '../protocol.ts';
 import { type BodySlots, createBodySlots } from './bodies.ts';
 import { type CellColliders, createCellColliders } from './cell-colliders.ts';
 import { type Characters, createCharacters } from './character.ts';
+import { createEscalators } from './escalators.ts';
 import { warmUpShapes } from './heightfield.ts';
 import { loadJolt } from './jolt-init.ts';
 import { createQueries, type Queries } from './queries.ts';
@@ -38,14 +39,19 @@ export interface PhysicsCore {
   handle(msg: ToWorker): Promise<void>;
 }
 
+/** 적재 한 조각(예산 안, 최소 1작업) + 적재 틱 통계. */
+function pumpLoad(st: State): void {
+  if (st.colliders.pending === 0) return;
+  const t0 = performance.now();
+  st.colliders.pump(st.cellBudgetMs);
+  const ms = performance.now() - t0;
+  st.loadMs = Math.max(st.loadMs, ms);
+  if (ms > LOAD_TICK_LIMIT_MS) st.loadOver++;
+}
+
 function step(st: State, targetS: number): void {
   const t0 = performance.now();
-  if (st.colliders.pending > 0) {
-    st.colliders.pump(st.cellBudgetMs);
-    const ms = performance.now() - t0;
-    st.loadMs = Math.max(st.loadMs, ms);
-    if (ms > LOAD_TICK_LIMIT_MS) st.loadOver++;
-  }
+  pumpLoad(st);
   if (st.simT === null) st.simT = targetS - st.dt;
   let n = 0;
   while (st.simT + st.dt <= targetS + 1e-9 && n < st.maxSteps) {
@@ -76,7 +82,8 @@ async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<
   warmUpShapes(loaded.Jolt);
   const world = createWorld(loaded.Jolt, 0);
   const anchor: Vec3d = { ...msg.anchorWF };
-  const characters = createCharacters(world);
+  const escalators = createEscalators();
+  const characters = createCharacters(world, escalators);
   const st: State = {
     world,
     characters,
@@ -84,6 +91,7 @@ async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<
     colliders: createCellColliders(
       world,
       anchor,
+      escalators,
       (key) => send({ t: 'cellLoaded', key }),
       (m) => send({ t: 'warn', message: m }),
     ),
@@ -102,10 +110,27 @@ async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<
   return st;
 }
 
-/** 메시지는 도착 순서대로 하나씩(init의 Jolt 로드를 기다린 뒤 step). */
+/**
+ * 메시지는 도착 순서대로 하나씩(init의 Jolt 로드를 기다린 뒤 step). 적재 작업이 남으면 메시지 사이 빈 시간에도 조각(예산 cellBudgetMs = 3 ms)씩 처리 —
+ * 적재 속도가 메인 프레임률(step 1회/프레임)에 묶이지 않게(저 FPS·SwiftShader). 조각 사이엔 다음 메시지가 먼저 들어올 수 있다.
+ */
 export function createPhysicsCore(send: Send): PhysicsCore {
   let st: State | undefined;
   let queue: Promise<void> = Promise.resolve();
+  let idleScheduled = false;
+  const scheduleIdle = (): void => {
+    if (idleScheduled || !st || st.colliders.pending === 0) return;
+    idleScheduled = true;
+    setTimeout(() => {
+      queue = queue
+        .then(() => {
+          idleScheduled = false;
+          if (st) pumpLoad(st);
+          scheduleIdle();
+        })
+        .catch((e: unknown) => send({ t: 'warn', message: `collider load: ${String(e)}` }));
+    }, 0);
+  };
   const run = async (msg: ToWorker): Promise<void> => {
     if (msg.t === 'init') {
       st = await init(msg, send);
@@ -132,7 +157,7 @@ export function createPhysicsCore(send: Send): PhysicsCore {
   };
   return {
     handle(msg) {
-      const p = queue.then(() => run(msg));
+      const p = queue.then(() => run(msg)).finally(scheduleIdle);
       // 한 메시지가 실패해도 뒤 메시지는 계속 처리(오류는 호출자에게).
       queue = p.catch(() => undefined);
       return p;

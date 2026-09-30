@@ -103,7 +103,7 @@ export interface WalkSettings {
   bobLateralM: number;
   /** 시선 스무딩 시간 상수(s). */
   lookSmoothingS: number;
-  /** 발 높이 변화(연석·계단) 카메라 스무딩 비율(1/s). 0.6 m 넘는 변화·공중은 즉시. */
+  /** 발 높이 변화(연석·계단) 카메라 스무딩 — 임계 감쇠 스프링 각진동수(rad/s). 0.6 m 넘는 변화·공중은 즉시(ADR-0044). */
   eyeFollowPerS: number;
   thirdPerson: {
     shoulderM: number;

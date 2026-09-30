@@ -17,8 +17,10 @@ export interface Pose {
   quat: Quat;
   linVel: Vec3;
   grounded: boolean;
-  /** 발밑 지면 재질 ID(M04-T04~, 없으면 0). */
+  /** 발밑 지면 재질 ID(JCOL 재질 — 지형 = asphalt 1, 없으면 0). */
   groundMaterial: number;
+  /** 캐릭터가 에스컬레이터 구간 안(0.5 m/s 운반 중, 08 §5). */
+  escalator: boolean;
 }
 
 /** 도보 캐릭터 입력(08 §5·§10): 원하는 수평 속도 — 가속 8·감속 10 m/s²은 워커가. */
@@ -42,7 +44,7 @@ export interface PhysicsConfig {
   isolation: 'auto' | 'degraded' | 'shared';
   /** 앵커 격자(m): 세션 시작 앵커 = 첫 위치의 이 격자점(08 §2). */
   anchorGridM: number;
-  /** 셀 콜라이더 적재 틱 예산(ms): 틱마다 이 안에서 작업(높이장·triMesh 청크)을 하나 이상(08 §4 — 수락 ≤ 8 ms). */
+  /** 셀 콜라이더 적재 조각 예산(ms): 조각마다 이 안에서 작업(높이장 타일·triMesh 조각)을 하나 이상 — step 때와 메시지 사이 빈 시간(08 §4 — 수락 ≤ 8 ms). */
   cellBudgetMs: number;
 }
 
@@ -114,7 +116,7 @@ export interface PhysicsService extends SystemProvider {
   dispose(): void;
 }
 
-/** 워커 대신 쓸 전송(테스트: 같은 스레드의 워커 코어). 없으면 supervisor로 physics.worker를 띄운다. */
+/** 워커 대신 쓸 전송(테스트·도구: `createInlineTransport()` = 같은 스레드의 워커 코어). 없으면 supervisor로 physics.worker를 띄운다. */
 export interface PhysicsTransport {
   post(msg: unknown, transfer?: Transferable[]): void;
   onMessage(h: (data: unknown) => void): () => void;

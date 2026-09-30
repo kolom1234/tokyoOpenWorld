@@ -1,7 +1,16 @@
 // 스냅샷 읽기·보간(08 §9): SAB는 seqlock으로 최신 버퍼를 복사, 폴백은 받은 프레임 그대로. 최근 몇 개를 시뮬레이션 시각 순으로 두고
 // 렌더 시각(지금 − 지연)을 감싸는 두 프레임 사이를 보간한다(위치·속도 선형, 회전 nlerp). 순간 이동(프레임 간 10 m 이상)은 보간하지 않는다.
 import type { Pose } from '../../api.ts';
-import { BODY_ALIVE, BODY_GROUNDED, BODY_STRIDE, FRAME_F64, H_SEQ, H_WRITE_INDEX, META_STRIDE } from '../protocol.ts';
+import {
+  BODY_ALIVE,
+  BODY_ESCALATOR,
+  BODY_GROUNDED,
+  BODY_STRIDE,
+  FRAME_F64,
+  H_SEQ,
+  H_WRITE_INDEX,
+  META_STRIDE,
+} from '../protocol.ts';
 
 const CAPACITY = 6;
 const SNAP_DISTANCE_M = 10;
@@ -44,7 +53,9 @@ function write(out: Pose, a: Float64Array, b: Float64Array, slot: number, k: num
   out.linVel.x = at(7);
   out.linVel.y = at(8);
   out.linVel.z = at(9);
-  out.grounded = (Math.trunc(b[o + 13] ?? 0) & BODY_GROUNDED) !== 0;
+  const flags = Math.trunc(b[o + 13] ?? 0);
+  out.grounded = (flags & BODY_GROUNDED) !== 0;
+  out.escalator = (flags & BODY_ESCALATOR) !== 0;
   out.groundMaterial = b[o + 14] ?? 0;
 }
 
