@@ -75,22 +75,24 @@
     {
       "id": "gsi-photo",
       "url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-      "resource": "XYZ tiles z14–z16 (HLOD 지면 저주파 색 추출용, 다운샘플만 저장)",
+      "resource": "XYZ seamlessphoto z18(≈ 0.49 m/px) — **검증 전용**(M05-T02 횡단보도 위치 대조 `checks/markings-photo.ts`, data/raw/gsi-photo/z18 캐시). 게임 데이터에 굽지 않음. HLOD 지면 색(z14–16)은 미사용",
       "fiscalYear": null,
-      "retrievedAt": null,
+      "retrievedAt": "2026-10-01",
       "sha256": "TBD (타일 목록 매니페스트 해시)",
       "license": "GSI-Content-Terms (CC-BY-4.0 compatible)",
       "attribution": "出典：地理院タイル（全国最新写真（シームレス））を加工して作成"
     },
     {
       "id": "osm-kanto",
-      "url": "https://download.geofabrik.de/asia/japan/kanto-latest.osm.pbf",
-      "resource": "PBF snapshot (retrievedAt 고정)",
+      "url": "https://download.geofabrik.de/asia/japan/kanto-260929.osm.pbf",
+      "resource": "Geofabrik 간토 추출본 PBF 2026-09-29판(515,020,741 B, md5 dfa8add5ab2ead1623bfc7b30d3af6ae = 공개값) → osmium extract(MVP + 500 m)·tags-filter·export(GeoJSONSeq)",
       "fiscalYear": null,
-      "sha256": "TBD",
+      "sha256": "899db89f4dd9132195e825b8255450aaee376213fb5a191b6377df3fd9725f95",
       "license": "ODbL-1.0",
       "attribution": "© OpenStreetMap contributors",
-      "retrievedAt": null
+      "retrievedAt": "2026-10-01",
+      "dataset": "https://download.geofabrik.de/asia/japan/kanto.html",
+      "dataDate": "2026-09-29"
     },
     {
       "id": "ksj-n02",

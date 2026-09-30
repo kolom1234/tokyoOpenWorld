@@ -19,6 +19,7 @@ import { extractTokyo23 } from './stages/hlod/tokyo23-lod1.ts';
 import type { AmbientLock } from './stages/materials/fetch.ts';
 import { readLibrary } from './stages/materials/library.ts';
 import { buildMaterials, installMaterials } from './stages/materials/run.ts';
+import { normalizeOsmFromLock } from './stages/normalize-osm.ts';
 import { normalizePlateau } from './stages/normalize-plateau.ts';
 import { hasDemSources, normalizeTerrain, writeTerrainMeta } from './stages/normalize-terrain.ts';
 import { buildFiles, gcBuilds, publishBuild, verifyViaWorker } from './stages/publish/publish.ts';
@@ -115,6 +116,12 @@ async function normalize(args: string[]): Promise<void> {
   const layer = values.layer;
   if (layer === 'all' || layer === 'plateau') await normalizePlateauLayer(cells, values.source, values.reader);
   if (layer === 'all' || layer === 'terrain') await normalizeTerrainLayer(cells);
+  if (layer === 'all' || layer === 'osm') await normalizeOsmLayer(cells);
+}
+
+/** OSM 간토 PBF → data/normalized/osm(컨테이너 전용, osmium). */
+async function normalizeOsmLayer(cells: CellKey[]): Promise<void> {
+  await normalizeOsmFromLock(REPO_ROOT, lockSources(), cells, log.child('osm'));
 }
 
 async function build(args: string[]): Promise<void> {

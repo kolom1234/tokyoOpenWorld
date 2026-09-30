@@ -27,6 +27,7 @@ const SLOT_OF: Record<string, string> = {
   'terrain.mesh': 'terrain',
   'buildings.mesh': 'buildings',
   'roads.mesh': 'roads',
+  'decals.mesh': 'decals',
 };
 
 test('decode worker: world-mini cells match the pipeline snapshot, cache on 2nd pass, cancel works', async ({

@@ -20,10 +20,13 @@ import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts'
 import { burnOuterEdges, outerEdgesAround } from '../derive/edge-burn.ts';
 import { type FootprintSource, footprintGrid, footprintSources } from '../derive/footprints.ts';
 import type { LocalGrid } from '../derive/grid.ts';
+import { buildMarkings, type MarkingStats } from '../derive/markings/index.ts';
 import { roadIndex, roadRaster } from '../derive/roads.ts';
 import { SHAPE_PAD, type ShapedGround, shapeGround } from '../derive/terrain-shape.ts';
+import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
 import { buildCollision } from './collision.ts';
+import { encodeDecals } from './decals-mesh.ts';
 import {
   CELL_SIZE_M,
   type CellWindow,
@@ -58,6 +61,9 @@ export interface CellBuildStats {
   /** 연석·바깥 가장자리 길이(m). */
   curbM: number;
   walkEdgeM: number;
+  /** 노면 표시(M05-T02). */
+  decalTris: number;
+  markings: MarkingStats | null;
 }
 
 export interface CellBuildInput {
@@ -72,6 +78,8 @@ export interface CellBuildInput {
   roads: readonly RoadRecord[];
   /** 이 셀 도로 조각(보도 메시). 없으면 roads 중 이 셀 안 조각을 쓰지 않는다(메시 없음). */
   cellRoads?: readonly RoadRecord[];
+  /** 이 셀 OSM 레코드(노면 표시, M05-T02). 없으면 decals.mesh 없음. */
+  osm?: readonly OsmRecord[];
   /** 건물이 없는 셀의 meta.json sources(영역의 PLATEAU 소스). */
   metaFallbackSources: readonly string[];
 }
@@ -140,6 +148,19 @@ function shapeCell(input: CellBuildInput, originWF: Vec3Tuple) {
   };
 }
 
+/** 노면 표시(M05-T02): 셀 OSM → decals.mesh(없으면 null). */
+async function markCell(
+  input: CellBuildInput,
+  originWF: Vec3Tuple,
+  terrainAt: (x: number, z: number) => number | undefined,
+) {
+  const marks = input.osm
+    ? buildMarkings({ osm: input.osm, roads: input.roads, ox: originWF[0], oz: originWF[2], terrainAt })
+    : undefined;
+  const decals = marks ? await encodeDecals(marks.decals) : null;
+  return { decals, decalTris: decals && marks ? marks.decals.idx.length / 3 : 0, marks };
+}
+
 function roadSources(records: readonly RoadRecord[]): string[] {
   return [...new Set(records.map((r) => r.source))].sort();
 }
@@ -154,6 +175,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   const own = input.cellRoads ?? [];
   const terrainAt = terrainLookup({ pos: terrain.positions, idx: terrain.indices });
   const roads = await buildRoads(own, sc.index, originWF[0], originWF[2], sc.shaped, terrainAt);
+  const { decals, decalTris, marks } = await markCell(input, originWF, terrainAt);
   const col = await buildCollision(bld.collision.pos, bld.collision.idx, roads.collider);
   const [y0, y1] = yRange(terrain.positions);
   const local = outward(union({ min: [0, y0, 0], max: [CELL_SIZE_M, y1, CELL_SIZE_M] }, bld.aabbLocal));
@@ -167,6 +189,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   ];
   if (bld.glb) sections.push({ type: 'buildings.mesh', sources: bld.sources, data: bld.glb });
   if (roads.glb) sections.push({ type: 'roads.mesh', sources: [TERRAIN_SOURCE, ...roadSources(own)], data: roads.glb });
+  if (decals) sections.push({ type: 'decals.mesh', sources: [OSM_SOURCE, TERRAIN_SOURCE], data: decals });
   if (col.data) {
     const colSources = [
       ...new Set([...bld.sources, ...(roads.collider.idx.length > 0 ? roadSources(own) : [])]),
@@ -181,7 +204,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
       originWF,
       aabbWF: { min: add(local.min), max: add(local.max) },
       materials: bld.glb ? [BUILDING_MATERIAL, TERRAIN_MATERIAL].sort() : [TERRAIN_MATERIAL],
-      stats: { tris: terrainTris + bld.tris + roads.tris, colliderTris: col.tris, instances: 0 },
+      stats: { tris: terrainTris + bld.tris + roads.tris + decalTris, colliderTris: col.tris, instances: 0 },
     },
     sections,
   );
@@ -199,6 +222,8 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
     roadsTris: roads.tris,
     curbM: Math.round(roads.edges.curbM),
     walkEdgeM: Math.round(roads.edges.outerM),
+    decalTris,
+    markings: marks?.stats ?? null,
   };
   return { tkc, stats };
 }
@@ -292,6 +317,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       footprintsAround: files.footprintsAround(key),
       roads: files.roadsAround(key),
       cellRoads: files.roadsOf(key),
+      osm: readLayer<OsmRecord>(input.normalizedDir, 'osm', key),
       metaFallbackSources: input.plateauSources,
     });
     const dir = join(outDir, 'L0', String(ix));
@@ -300,7 +326,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     index.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });
     stats.push(s);
     log.info(
-      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), collider ${s.colliderTris} tris / ${s.colliderShapes}`,
+      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), decals ${s.decalTris} tris ${JSON.stringify(s.markings)}, collider ${s.colliderTris} tris / ${s.colliderShapes}`,
     );
   }
   writeFileSync(join(outDir, 'cells.idx'), writeCellsIndex(index));

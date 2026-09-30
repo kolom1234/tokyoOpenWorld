@@ -69,22 +69,50 @@ export function classifyEdges(r: RoadRecord, ox: number, oz: number, index: Road
   return out;
 }
 
-/** 세로 사각형(바깥 법선 쪽에서 볼 때 CCW) — 정점은 공유하지 않는다(평평한 음영). */
-function quad(m: MeshBuf, e: EdgePiece, top: [number, number], bottom: [number, number], surf: number): void {
-  const base = m.pos.length / 3;
+/** 직전 조각의 b 끝 정점(같은 변·같은 종류면 다음 조각 a 끝으로 재사용 — 정점 절반). */
+interface Tail {
+  x: number;
+  z: number;
+  out: [number, number];
+  surf: number;
+  top: number;
+  bot: number;
+}
+
+function pushVertex(m: MeshBuf, x: number, y: number, z: number, e: EdgePiece, surf: number): number {
+  m.pos.push(x, y, z);
+  m.nrm.push(e.out[0], 0, e.out[1]);
+  m.surf.push(surf);
+  return m.pos.length / 3 - 1;
+}
+
+/** 세로 사각형(바깥 법선 쪽에서 볼 때 CCW) — 같은 변의 연속 조각은 끝점 정점을 공유한다. 반환 = 이번 b 끝. */
+function quad(
+  m: MeshBuf,
+  e: EdgePiece,
+  top: [number, number],
+  bottom: [number, number],
+  surf: number,
+  prev: Tail | undefined,
+): Tail {
   const [ax, az] = e.a;
   const [bx, bz] = e.b;
-  m.pos.push(ax, top[0], az, bx, top[1], bz, bx, bottom[1], bz, ax, bottom[0], az);
-  for (let k = 0; k < 4; k++) {
-    m.nrm.push(e.out[0], 0, e.out[1]);
-    m.surf.push(surf);
-  }
+  const joins =
+    prev !== undefined &&
+    prev.x === ax &&
+    prev.z === az &&
+    prev.surf === surf &&
+    prev.out[0] === e.out[0] &&
+    prev.out[1] === e.out[1];
+  const aTop = joins ? prev.top : pushVertex(m, ax, top[0], az, e, surf);
+  const aBot = joins ? prev.bot : pushVertex(m, ax, bottom[0], az, e, surf);
+  const bTop = pushVertex(m, bx, top[1], bz, e, surf);
+  const bBot = pushVertex(m, bx, bottom[1], bz, e, surf);
   // 바깥에서 볼 때 a→b가 오른쪽이면 (a_top, b_top, b_bot)이 CCW가 아니다 — 법선 방향으로 감기를 맞춘다.
-  const tx = bx - ax;
-  const tz = bz - az;
-  const faceY = tz * e.out[0] - tx * e.out[1];
-  if (faceY > 0) m.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
-  else m.idx.push(base, base + 2, base + 1, base, base + 3, base + 2);
+  const faceY = (bz - az) * e.out[0] - (bx - ax) * e.out[1];
+  if (faceY > 0) m.idx.push(aTop, bTop, bBot, aTop, bBot, aBot);
+  else m.idx.push(aTop, bBot, bTop, aTop, aBot, bBot);
+  return { x: bx, z: bz, out: e.out, surf, top: bTop, bot: bBot };
 }
 
 /** 연석 면·바깥 치마. top = 보행 윗면 높이, base = 기준면 D, outerTop = 바깥 가장자리 윗면(지형 맞춤, 없으면 top). */
@@ -95,12 +123,21 @@ export function addEdges(
   base: HeightAt,
   outerTop: HeightAt = top,
 ): void {
+  let tail: Tail | undefined;
   for (const e of edges) {
     const h = e.kind === 'outer' ? outerTop : top;
     const ta = h(e.a[0], e.a[1]) + TOP_OFFSET_M;
     const tb = h(e.b[0], e.b[1]) + TOP_OFFSET_M;
-    if (e.kind === 'curb') {
-      quad(m, e, [ta, tb], [base(e.a[0], e.a[1]) - CURB_SINK_M, base(e.b[0], e.b[1]) - CURB_SINK_M], SURF_CURB);
-    } else quad(m, e, [ta, tb], [ta - SKIRT_M, tb - SKIRT_M], SURF_WALK);
+    tail =
+      e.kind === 'curb'
+        ? quad(
+            m,
+            e,
+            [ta, tb],
+            [base(e.a[0], e.a[1]) - CURB_SINK_M, base(e.b[0], e.b[1]) - CURB_SINK_M],
+            SURF_CURB,
+            tail,
+          )
+        : quad(m, e, [ta, tb], [ta - SKIRT_M, tb - SKIRT_M], SURF_WALK, tail);
   }
 }

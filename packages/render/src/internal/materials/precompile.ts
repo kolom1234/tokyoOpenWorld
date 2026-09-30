@@ -14,15 +14,16 @@ import {
 import { createHlodFades } from './hlod.ts';
 import { type MaterialRegistry, PRECOMPILE_IDS } from './registry.ts';
 
-/** 실제 셀과 같은 속성 형식(cell-node 변환 후): 지형 f32 위치·f32 `_surf`, 건물 u16 위치·f32 UV·f32 `_bldg`·unorm8×4 `_facade`, HLOD u16 위치·f32 `_child`. */
+/** 실제 셀과 같은 속성 형식(cell-node 변환 후): 지형 f32 위치·f32 `_surf`, 건물 u16 위치·f32 UV·f32 `_bldg`·unorm8×4 `_facade`, 노면 표시 u16 위치·f32 `_paint`, HLOD u16 위치·f32 `_child`. */
 function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
   const g = new BufferGeometry();
-  const quantized = hlod || id === 'facade_default';
+  const quantized = hlod || id === 'facade_default' || id === 'road_marking';
   const pos = quantized ? new Uint16Array([0, 0, 0, 1, 0, 0, 0, 0, 1]) : new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 1]);
   g.setAttribute('position', new BufferAttribute(pos, 3));
   g.setAttribute('normal', new BufferAttribute(new Int8Array([0, 127, 0, 0, 127, 0, 0, 127, 0]), 3, true));
   if (hlod) g.setAttribute('_child', new BufferAttribute(new Float32Array(3), 1));
   else if (id === 'terrain_ground') g.setAttribute('_surf', new BufferAttribute(new Float32Array(3), 1));
+  else if (id === 'road_marking') g.setAttribute('_paint', new BufferAttribute(new Float32Array(3), 1));
   else if (id === 'facade_default') {
     g.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
     g.setAttribute('uv1', new BufferAttribute(new Float32Array(6), 2));

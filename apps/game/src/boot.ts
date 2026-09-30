@@ -14,6 +14,7 @@ import {
 import type { PostEffects, QualityTier, RenderConfig } from '@sanpo/render';
 import type { ClockMode } from '@sanpo/sim';
 import { detectCaps } from './caps.ts';
+import { mountCredits } from './credits.ts';
 import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
 import { createDebugOverlay } from './debug/overlay.ts';
 import { parsePostFlag, parseQualityFlag } from './debug/post-flags.ts';
@@ -239,6 +240,7 @@ async function setupWorldView(
     if (weather && !golden) mountWetSlider(document, weather);
     scheduler.setFrameSource(world.frameSource);
     document.body.classList.add('rendering');
+    mountCredits(document);
     view.setRenderer(world.render.backend, world.render.depth);
     if (flags.debug) {
       const overlay = createDebugOverlay({

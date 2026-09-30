@@ -12,12 +12,12 @@
 | `plateau-tokyo23` | 3D 도시모델 도쿄 23구 (2020년도판: LOD1 전역, LOD2 중점지구 11곳), 건물 176.8만 동 | 동상 | HLOD 원경(L2·L3, 영역 밖 L1): 방향 사각형 박스 + 블록 매스(ADR-0024) | 동상 |
 | `gsi-dem` | 기반지도정보 수치표고모델 **1 m (DEM1A, 항공레이저) 주** + 5 m (DEM5A) 결측 채움. 2025-08-22판(수평 JGD2024 = JGD2011, 표고는 2025 개정 기준) | 국토지리원 | 지형 높이장, 물리 heightfield | 국토지리원 콘텐츠 이용규약(CC BY 4.0 호환). 표기: `出典：国土地理院（基盤地図情報 数値標高モデル）を加工して作成` ⚠ 측량법 승인 필요 여부 |
 | `gsi-dem-tiles` | 지리원 타일 표고 타일 `dem_png` z14(기반지도정보 수치표고모델 기반, ≈ 8 m 화소) | 국토지리원 | HLOD 원경 지형(L2 16 m·L3 64 m·영역 밖 L1) — hlodExtentWF 48 km 정사각형, 676 타일 | 국토지리원 콘텐츠 이용규약(CC BY 4.0 호환). 표기 `出典：国土地理院（地理院タイル 標高タイル）を加工して作成` |
-| `gsi-photo` | 지리원 타일 전국최신사진(seamlessphoto) | 국토지리원 | 원거리 지면 알베도 참고(HLOD 지면 텍스처 저주파 색) | 동 규약. 표기 `出典：地理院タイル（全国最新写真）` |
-| `osm-kanto` | OpenStreetMap 간토 추출본 (Geofabrik `kanto-latest.osm.pbf`) | OSM 기여자 | 도로 속성(차선·일방통행·제한속도), 신호, 철도 선로 상세, 플랫폼, 나무, 공원, POI 이름, 건물 층수 보완 | **ODbL 1.0**. 표기 `© OpenStreetMap contributors`. 파생 DB 공개 의무 → §4 참조 |
+| `gsi-photo` | 지리원 타일 전국최신사진(seamlessphoto) | 국토지리원 | **검증 전용**(M05-T02 횡단보도 위치 대조 z18, `checks/markings-photo.ts` — 게임 데이터에 굽지 않음). 원거리 지면 알베도 참고는 미사용 | 동 규약. 표기 `出典：地理院タイル（全国最新写真）` |
+| `osm-kanto` | OpenStreetMap 간토 추출본 (Geofabrik `kanto-260929.osm.pbf` 고정판, `normalize --layer osm`) | OSM 기여자 | 도로 속성(차선·일방통행·제한속도), 신호, 철도 선로 상세, 플랫폼, 나무, 공원, POI 이름, 건물 층수 보완 | **ODbL 1.0**. 표기 `© OpenStreetMap contributors`. 파생 DB 공개 의무 → §4 참조 |
 | `ksj-n02` | 국토수치정보 철도 데이터(N02, 최신판) | 국토교통성 | 노선 중심선, 역 위치, 사업자·노선명 | 국토수치정보 이용약관 ⚠ 데이터셋별 상용 가능 여부 표시 확인. 표기 `出典：国土数値情報（鉄道データ）` |
 | `estat-small-area` | 국세조사 소지역(町丁・字) 경계 2020 | e-Stat | HUD 지명 표시(○○区 ○○町 ○丁目) | 정부표준이용규약(CC BY 4.0 호환). 표기 `出典：政府統計の総合窓口(e-Stat)` |
 
-- **저장소 커밋 예외(M01-T07)**: `tests/fixtures/`에 `plateau-shibuya`·`gsi-dem`의 소형 가공물만 커밋한다 — `world-mini`(빌드된 L0 셀 4개), `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1 m 창 1셀). 폴더마다 `ATTRIBUTION.json`, 전체 ≤ 5 MB. 그 밖의 원천·중간·빌드 데이터는 커밋 금지(CLAUDE.md 규칙 7). 상세 `tests/fixtures/README.md`.
+- **저장소 커밋 예외(M01-T07)**: `tests/fixtures/`에 `plateau-shibuya`·`gsi-dem`·`osm-kanto`(M05-T02 노면 표시 파생, ODbL)의 소형 가공물만 커밋한다 — `world-mini`(빌드된 L0 셀 4개), `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1 m 창 1셀). 폴더마다 `ATTRIBUTION.json`, 전체 ≤ 6 MB(M05-T02에서 5 → 6). 그 밖의 원천·중간·빌드 데이터는 커밋 금지(CLAUDE.md 규칙 7). 상세 `tests/fixtures/README.md`.
 
 ## 2. 교통·시간표
 | ID | 데이터 | 라이선스 | 사용 여부 |
@@ -56,7 +56,8 @@
 ## 6. ODbL(OSM) 준수 설계
 - 추적성: OSM을 입력으로 쓴 모든 섹션은 헤더 `sources[]`에 `osm-kanto`를 기록한다(05 §3). validate 단계가 목록을 보고서로 출력.
 - 빌드 산출물 중 OSM 파생 DB(정규화 GeoPackage)를 `R2: world/<buildId>/odbl/osm-derived.gpkg`로 공개하고 크레딧 화면에 링크.
-- 게임 화면(Produced Work)에는 `© OpenStreetMap contributors` 상시 표기(크레딧 + 지도 화면 하단).
+- 게임 화면(Produced Work)에는 `© OpenStreetMap contributors` 상시 표기(크레딧 + 지도 화면 하단). M05-T02부터 화면 오른쪽 아래 최소 표기(`apps/game/src/credits.ts`) — M08 크레딧 화면이 대체.
+- ⚠ `osm-derived.gpkg` 공개(파생 DB)는 아직 없음 — 첫 공개 배포 전 M11-T05 라이선스 감사에서(현재 OSM 파생 = 노면 표시 기하, data/normalized/osm은 비커밋).
 
 ## 7. `data/sources.lock.json` 형식 (커밋 대상)
 ```json

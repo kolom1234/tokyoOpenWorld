@@ -107,3 +107,17 @@ body.rendering #app .caps {
 .ground-loading[hidden] {
   display: none;
 }
+
+/* 상시 출처 표기(credits.ts, ODbL) — 게임 입력을 막지 않는다. */
+.credits {
+  position: fixed;
+  right: 6px;
+  bottom: 4px;
+  font:
+    11px / 1.3 system-ui,
+    sans-serif;
+  color: rgba(255, 255, 255, 0.85);
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  z-index: 5;
+}

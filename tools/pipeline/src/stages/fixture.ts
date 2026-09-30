@@ -26,6 +26,11 @@ const I18N: Record<string, { title: string; en: string; ko: string }> = {
     en: 'Source: MLIT Project PLATEAU 3D city model (Shibuya-ku), processed',
     ko: '출처: 국토교통성 Project PLATEAU 3D 도시모델(시부야구)을 가공하여 작성',
   },
+  'osm-kanto': {
+    title: 'OpenStreetMap（Geofabrik 関東抽出 2026-09-29）',
+    en: '© OpenStreetMap contributors (ODbL 1.0) — road markings derived',
+    ko: '© OpenStreetMap contributors(ODbL 1.0) — 노면 표시 파생',
+  },
   'gsi-dem': {
     title: '基盤地図情報 数値標高モデル（DEM1A/5A）',
     en: 'Source: GSI Fundamental Geospatial Data, Digital Elevation Model, processed',
@@ -97,7 +102,7 @@ export async function buildWorldMini(input: FixtureInput): Promise<string> {
   for (const f of ['world.json', 'cells.idx', 'L0']) cpSync(join(buildDir, f), join(out, f), { recursive: true });
   const attribution = fixtureAttribution(
     input.lock,
-    ['gsi-dem', PLATEAU_MINI_SOURCE],
+    ['gsi-dem', PLATEAU_MINI_SOURCE, 'osm-kanto'],
     ['tests/fixtures/world-mini/**'],
   );
   writeJson(join(out, 'ATTRIBUTION.json'), attribution);

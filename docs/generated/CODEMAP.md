@@ -3,11 +3,12 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 270개.
+> 파일 281개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
 - `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
+- `apps/game/src/credits.ts` — 화면 오른쪽 아래 상시 출처 표기(03 §6 ODbL "Produced Work" 표기 — OSM 파생 노면 표시, M05-T02). M08 크레딧 화면·지도 하단 표기가 생기면 그쪽으로. | exports: CREDIT_LINE, mountCredits
 - `apps/game/src/debug/bookmarks.ts` — 골든뷰 북마크(`?view=<id>`, M03-T10): tests/golden/views.json의 고정 시점·시각·날씨·시드 → 시작 포즈·부팅 대기 중심, | exports: GoldenWeather, GoldenView, GoldenViewsFile, GOLDEN_SETTLE_MS, findView, loadGoldenView, viewCenterWF, viewPose, isQuiet, GoldenWatchDeps, createGoldenWatch
 - `apps/game/src/debug/decode-probe.ts` — `?probe=decode` 디버그 프로브(렌더 없이 실행): world-mini 셀을 streaming fetch → 디코드 워커로 두 번(네트워크·Cache Storage) 읽어 | exports: ProbeCell, DecodeProbeReport, runDecodeProbe
 - `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeStreaming, describeMaterials, describeDebug, createDebugOverlay
@@ -114,6 +115,7 @@
 - `packages/render/src/internal/lighting/env-probe.ts` — 환경 조명(07 §6): 하늘에서 동적 큐브맵 → PMREM(`SkyEnvironmentNode`) → scene.environmentNode. | exports: ENV_CUBE_SIZE, EnvProbe, attachEnvProbe
 - `packages/render/src/internal/lighting/shadows.ts` — 태양 그림자(07 §6·§9): 대기 라이트(DirectionalLight)에 CSM(takram `CascadedShadowMapsNode` ⊃ three CSMShadowNode), 캐스케이드 경계 페이드. | exports: ShadowSettings, SHADOW_TIERS, STATIC_REFRESH_FRAMES, ShadowFrame, SunShadows, cascadeDue, enableSunShadows
 - `packages/render/src/internal/lighting/sun.ts` — 태양 방향 규약(WF: +X 동, +Y 위, −Z 도북) + 기본값. 방향은 계산하지 않고 sim(EnvironmentState.sunDirWF)에서 받는다 — 연결 전 기본 방향만 여기. | exports: DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF, sunDirFromAzEl
+- `packages/render/src/internal/materials/decal.ts` — M_DECAL(07 §4, M05-T02): 노면 표시 — 정점 `_PAINT`(0 흰·1 황) 색, 도료 마모 = 노이즈 알파 테스트(벗겨진 곳은 버려 아스팔트가 보임), | exports: createDecalMaterial
 - `packages/render/src/internal/materials/facade/details.ts` — 절차 파사드 ⑤ 디테일(07 §5-8): 층간 줄눈(슬래브 띠), 빗물 얼룩(상단→하단 그라디언트 × 가로 저주파 노이즈), 지면 AO, 모서리 AO, 옥상 두겁 띠. | exports: FacadeDetails, facadeDetails
 - `packages/render/src/internal/materials/facade/grid.ts` — 절차 파사드 ① 입력·층/베이 격자(07 §5-1·2): `_FACADE`(unorm8×4 → class·floors·tint·flags), UV0 = (면 시작점부터 m, 건물 바닥부터 m), | exports: F, I, B, V3, FACADE_CLASS, FACADE_CLASS_COUNT, FACADE_FLAG, RETAIL_FLOOR_M, FacadeInputs, facadeInputs, FacadeGrid, facadeGrid
 - `packages/render/src/internal/materials/facade/index.ts` — 절차 파사드 머티리얼(M_FACADE, 07 §5): 격자(grid) → 벽 재질(walls) + 창(windows) + 1층 상점(retail) + 디테일(details) → PBR. | exports: createFacadeMaterial
@@ -233,6 +235,7 @@
 - `tools/codemap/src/render.ts` — CODEMAP.md 마크다운 렌더링(패키지별 그룹, 타임스탬프 없음 → 재생성 결과가 결정론적). see docs/16-context-protocol.md §5 | exports: CodemapEntry, groupOf, renderLine, renderCodemap
 
 ## tools/pipeline
+- `tools/pipeline/src/checks/markings-photo.ts` — M05-T02 수락 검증: 스크램블 교차로 횡단보도 띠(OSM 횡단 선 + 차도 구간 + 규칙 폭) 위치 vs GSI 항공사진(seamlessphoto z18 ≈ 0.49 m/px).
 - `tools/pipeline/src/checks/terrain-gsi.ts` — M01-T03 수락 검증: dem_1m.tif 표고 vs 地理院地図 표시값(GSI 표고 API) 비교 + GDAL/@sanpo/geo 투영 일치 확인. 네트워크 필요(CI 제외).
 - `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 - `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
@@ -262,6 +265,7 @@
 - `tools/pipeline/src/stages/build/assemble.ts` — L0 셀 조립: 지형 성형(M05-T01) → terrain.mesh + terrain.height + buildings.mesh + roads.mesh(보도·연석) + collision.bin + meta.json → TKC, | exports: BUILD_MARGIN, CellBuildStats, CellBuildInput, buildCell, AreaBuildInput, unionBounds, buildArea
 - `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, boundsOf, quantizePositions, buildBuildings
 - `tools/pipeline/src/stages/build/collision.ts` — collision.bin 섹션(04 §4.4-6, 05 §6): 건물 렌더 면(벽·지붕·부속물) → 1 mm 용접 → meshopt 단순화(절대 오차 0.3 m) → | exports: SIMPLIFY_ERROR_M, MAX_CHUNK_TRIS, LAYER_TERRAIN, GROUND_SIMPLIFY_ERROR_M, CollisionBuild, weld, buildCollision
+- `tools/pipeline/src/stages/build/decals-mesh.ts` — decals.mesh 섹션(M05-T02, 05 §4): 노면 표시 데칼 → glb(머티리얼 road_marking, POSITION u16 + 노드 변환, NORMAL i8, `_PAINT` u8 0 흰·1 황). | exports: DECAL_MATERIAL, encodeDecals
 - `tools/pipeline/src/stages/build/dem-window.ts` — dem_1m.tif에서 셀 빌드용 높이 창 읽기(GDAL) + 셀별 (257+2m)² 부분 창 추출. see docs/04-data-pipeline.md §4.4, §6 | exports: CELL_SIZE_M, DEM_MARGIN, DemWindow, CellWindow, readDemWindow, cellWindow, paddedCellWindow, cropWindow, sampleAt, DemWindowMeta, writeDemWindowFiles, readDemWindowFiles
 - `tools/pipeline/src/stages/build/facade-params.ts` — 절차 파사드 파라미터(M03-T04, 07 §5): PLATEAU 건물 용도 코드·높이·층수 → `_FACADE`(u8×4: class, floors, tintIdx, flags). | exports: FACADE_CLASS, FacadeClass, FACADE_FLAG, FacadeInput, facadeParams
 - `tools/pipeline/src/stages/build/heightfield.ts` — terrain.height 섹션: 셀 창(257²) → 공통 기준·스텝 양자화 → writeHeightfield → gzip. see docs/05-tile-format.md §4 (terrain.height), docs/adr/0018-cell-mesh-build.md | exports: cellHeightfield, encodeTerrainHeight
@@ -275,6 +279,12 @@
 - `tools/pipeline/src/stages/derive/edge-burn.ts` — 보도 바깥 가장자리 새기기(M05-T01): 래스터 분류(1 m)는 PLATEAU 폴리곤 사이 1 m 미만 겹침·틈을 못 가려 가장자리 치마와 지형이 최대 15 cm 어긋났다. | exports: outerEdgesAround, burnOuterEdges
 - `tools/pipeline/src/stages/derive/footprints.ts` — 건물 발자국 래스터(M05-T01 지형 성형 "건물 아래 평탄화", 04 §4.3): 지면(GroundSurface) 링 → 창 격자, 값 = 지면 링 최저점 | exports: FootprintSource, footprintSources, footprintGrid
 - `tools/pipeline/src/stages/derive/grid.ts` — derive 공용 1 m 격자 도구(M05-T01): 셀 로컬 정수 창, 반경 제한 최근접 탐색(정확 유클리드, 거리·(dz, dx) 순 — 결정론), | exports: LocalGrid, Offsets, discOffsets, nearestIn, distOf, maskedBoxMean, bilinear
+- `tools/pipeline/src/stages/derive/markings/common.ts` — 노면 표시 공용(M05-T02): 셀 로컬 2D 사각형·띠 → 지형 메시 위 데칼 삼각형(≤ 1 m 칸으로 잘라 지형을 따름, 높이 = 지형 + 2 cm). | exports: DECAL_LIFT_M, PAINT, DecalBuf, emptyDecals, TerrainAt, MarkCtx, V2, sub, add, mul, len, norm, leftOf, owns, stripe, polylineOf
+- `tools/pipeline/src/stages/derive/markings/crosswalk.ts` — 일본식 횡단보도(M05-T02, 04 §4.3): OSM footway=crossing 선(표시 있는 것) → 측선 없는 사다리형 — 폭 0.45 m 흰 막대를 선을 따라 0.45 m 간격으로, | exports: BAR_M, GAP_M, isMarkedCrossing, crosswalkWidth, addCrosswalk, CrossBand, crossBands, bandDist
+- `tools/pipeline/src/stages/derive/markings/index.ts` — 노면 표시 조립(M05-T02): 셀 OSM 레코드 → 횡단보도·정지선(신호·止まれ)·차선 → 데칼 버퍼 + 통계. 04 §4.3(노면 표시), ADR-0050 | exports: MarkingStats, MarkingInput, buildMarkings
+- `tools/pipeline/src/stages/derive/markings/lanes.ts` — 차선 표시(M05-T02, 04 §4.3): OSM 차도 중심선(lanes ≥ 2) → 1 m마다 PLATEAU 차도 폭(좌우 가장자리까지 행진)을 재 차선 폭 = 폭 ÷ 차로 수. | exports: LINE_W_M, isLaneRoad, edgeDistance, laneLines, laneFrame, addLanes
+- `tools/pipeline/src/stages/derive/markings/stopline.ts` — 정지선·「止まれ」 위치(M05-T02, 04 §4.3): (1) 신호 횡단 띠를 가로지르는 차도 선마다 상류 쪽 횡단 띠 끝 + 2 m에 폭 0.45 m 흰 선 — | exports: STOP_W_M, isVehicleRoad, addSignalStops, addStopSigns
+- `tools/pipeline/src/stages/derive/markings/text.ts` — 노면 문자 「止まれ」(M05-T02): 자체 제작 획 폰트(단위 상자 선분 — 외부 폰트·상표 없음)를 진행 차로 가로로 세 글자, 글자마다 진행 방향 2.5 m로 늘림 | exports: GLYPHS, addStopText
 - `tools/pipeline/src/stages/derive/roads.ts` — 도로 분류(M05-T01): PLATEAU TrafficArea 폴리곤(셀 + 8-이웃, normalize가 셀 경계에서 자른 조각) → 성형용 1 m 래스터(차도 0·보행 1·없음 7)와 | exports: ROAD_CLASS, RoadSide, isWalk, roadRaster, insideRings, RoadIndex, roadIndex
 - `tools/pipeline/src/stages/derive/sidewalks.ts` — 보행면 윗면(M05-T01): 보도·교통섬 폴리곤(이 셀 조각) → earcut → 삼각형을 2 m 격자 칸으로 잘라(볼록 조각 부채꼴) 높이 = 성형 윗면(쌍선형) + 6 mm. | exports: TOP_OFFSET_M, EDGE_PIECE_M, HeightAt, MeshBuf, emptyMesh, TopWriter, topWriter, addWalkTop
 - `tools/pipeline/src/stages/derive/terrain-shape.ts` — 지형 성형(M05-T01, 04 §4.3): 셀 + 여유 1 m 창에서 국소 연산만 — 이웃 셀과 공유하는 샘플은 같은 입력 → 같은 값(04 §6). | exports: SHAPE_PAD, CURB_M, CROSSFALL, CROWN_MAX_M, TOL_TIGHT_M, TOL_DEFAULT_M, ShapedGround, shapeGround
@@ -296,6 +306,7 @@
 - `tools/pipeline/src/stages/materials/interiors.ts` — 실내 큐브맵 생성(M03-T05, 07 §5-4): 방 8종(interior-rooms.ts)을 방 중심에서 6면 광선 추적 → 면 PNG 48장(레이어 = 방 × 6 + 면). | exports: INTERIOR_FACE_SIZE, INTERIOR_VERSION, INTERIOR_FACES, faceDir, renderFace, InteriorImages, writeInteriorFaces
 - `tools/pipeline/src/stages/materials/library.ts` — 머티리얼 라이브러리 정의(content/materials/library.json) 읽기·검사 + 런타임 매니페스트 형식(schemas/materials.schema.json). | exports: LibraryLayer, Library, MaterialsManifest, parseLibrary, readLibrary, groupsOf, zipNameOf, AMBIENTCG_GET
 - `tools/pipeline/src/stages/materials/run.ts` — materials 단계: library.json → ambientCG zip(sha256 고정) → 레이어 PNG → KTX2 배열 3장 + 실내 큐브맵 배열(자체 생성, M03-T05) + manifest.json | exports: MANIFEST_FILE, MaterialsInput, MaterialsResult, materialsHash, buildMaterials, installMaterials
+- `tools/pipeline/src/stages/normalize-osm.ts` — normalize --layer osm(M05-T02, 04 §4.1–4.2): Geofabrik 간토 PBF(sources.lock sha256) → osmium extract(영역 + 500 m, smart) → tags-filter(M05 쓰임 태그) | exports: OSM_SOURCE, OSM_FILTERS, OsmGeom, OsmRecord, ringsOf, cellsOf, OsmNormalizeInput, normalizeOsm, normalizeOsmFromLock
 - `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: PlateauSourceRoot, NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
 - `tools/pipeline/src/stages/normalize-terrain.ts` — normalize 단계(지형): GSI DEM1A(주) + DEM5A(결측 채움) → GDAL 재투영(EPSG:6677, 1 m) → 잔여 결측 보간 → data/normalized/terrain/dem_1m.tif. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: NormalizeTerrainInput, GradeReport, NormalizeTerrainResult, gridOfBounds, normalizeTerrain, writeTerrainMeta, hasDemSources
 - `tools/pipeline/src/stages/publish/publish.ts` — publish: data/build/<buildId> → R2 `world/<buildId>/**`(동시성·재시도) → 매니페스트 → 검증(S3 HEAD 또는 Worker HEAD) → KV 빌드 목록·(선택) 현재 포인터. | exports: CURRENT_KEY, BUILDS_KEY, FILES_KEY, BuildEntry, PublishFile, PublishReport, mapLimit, buildFiles, checkBuildDir, PublishInput, publishBuild, verifyViaWorker, selectGc, GcInput, gcBuilds

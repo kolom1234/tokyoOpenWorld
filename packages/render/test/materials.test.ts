@@ -39,13 +39,13 @@ describe('registry', () => {
   it('builds textured cell materials and flat HLOD variants for every precompiled id', () => {
     const lib = createMaterialLibrary('/basis/');
     const r = createMaterialRegistry(lib, createEnvUniforms());
-    expect(PRECOMPILE_IDS).toEqual(['terrain_ground', 'facade_default']);
+    expect(PRECOMPILE_IDS).toEqual(['terrain_ground', 'facade_default', 'road_marking']);
     for (const id of PRECOMPILE_IDS) {
       expect(r.get(id).name).toBe(id);
       expect(r.getHlod(id).name).toBe(`hlod:${id}`);
       expect(r.get(id)).toBe(r.get(id));
     }
-    expect(r.all()).toHaveLength(4);
+    expect(r.all()).toHaveLength(6); // 셀 3 + HLOD 3
     r.dispose();
     lib.dispose();
   });

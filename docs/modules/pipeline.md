@@ -41,6 +41,10 @@ src/lib/{zip,mesh-lookup}.ts      최소 ZIP 읽기(저장·deflate) / 삼각형
 src/stages/derive/{grid,roads,terrain-shape,edge-burn,curbs,sidewalks,footprints}.ts   M05-T01(ADR-0049): 1 m 창 도구(원반 오프셋 최근접·마스크 평균·쌍선형) / 도로 래스터(차도·보행·없음)·벡터 색인 / 지형 성형(차도 경사·보행 띠·비도로 섞기·건물 평탄화·RTIN 허용 오차) / 바깥 가장자리 새기기 / 연석·치마 변 분류(0.15·0.5·1.0 m 탐침) / 보도 윗면(earcut + 4 m 조각) / 건물 지면 발자국
 src/stages/build/roads-mesh.ts   roads.mesh(보도 윗면 + 연석 + 치마, u16 위치) + 보도 윗면 콜라이더, 바깥 가장자리 지형 맞춤
 src/stages/validate-roads.ts     `validate`의 `road gaps`(교차로 50곳 < 2 cm, 연석 아래 틈) — CLI가 오류로 올린다
+src/stages/normalize-osm.ts      `normalize --layer osm`(M05-T02, ADR-0050): lock osm-kanto(sha256 스트림) → osmium extract·tags-filter·export GeoJSONSeq → WF → data/normalized/osm/<cell>.ndjson.gz(OsmRecord {id, geom, rings(xz), tags, source})
+src/stages/derive/markings/{common,crosswalk,lanes,stopline,text,index}.ts   노면 표시: 1 m 칸 데칼 띠(지형 + 2 cm, 셀 소유) / 일본식 횡단보도 / 차선(좌측통행·폭 행진) / 정지선(신호·stop) / 「止まれ」 획 폰트 / 조립·통계
+src/stages/build/decals-mesh.ts  decals.mesh(road_marking, u16 위치, `_PAINT`)
+src/checks/markings-photo.ts     GSI z18 사진 대조(검증 전용, PHOTO_DEBUG 그림)
 src/stages/avatar/{run,bake,anims}.ts  `avatar`(M05 결정 2, ADR-0048): data/raw Quaternius UBC·UAL zip(sha256 lock, lib/zip.ts) → 몸+머리털 프리미티브 1개·정점색(텍스처 표본 + 스킨 가중치 옷 영역)·클립 4개(회전 + pelvis 이동, _RM 자연 속력) → apps/game/src/assets/avatar-ubc-male.glb(커밋)
 src/stages/materials/{library,fetch,encode,run,interiors,interior-rooms}.ts  `materials`(M03-T01, ADR-0027; 실내 큐브맵 8방 × 6면 광선 추적 → interiors.ktx2 M03-T05, ADR-0034): content/materials/library.json → ambientCG zip(sha256 lock, `--update-lock`) → ImageMagick(리사이즈·ORM 패킹) → toktx KTX2 배열 3장 + manifest → 캐시 data/derived/materials/<hash> → `--build-id` 설치(shared/materials)
 src/stages/validate-materials.ts  manifest 스키마(schemas/materials.schema.json)·파일 크기·KTX2 헤더·그룹 일관성(없으면 건너뜀)

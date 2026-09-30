@@ -634,6 +634,22 @@
         "apps/game/src/assets/avatar-ubc-male.glb"
       ],
       "modified": true
+    },
+    {
+      "id": "osm-kanto",
+      "kind": "data",
+      "title": "OpenStreetMap（Geofabrik 関東抽出 kanto-260929.osm.pbf）→ 노면 표시(횡단보도·정지선·차선·止まれ, M05-T02)",
+      "url": "https://www.openstreetmap.org/copyright",
+      "license": "ODbL-1.0",
+      "attribution": {
+        "ja": "© OpenStreetMap contributors",
+        "en": "© OpenStreetMap contributors",
+        "ko": "© OpenStreetMap contributors"
+      },
+      "files": [
+        "tests/fixtures/world-mini/**"
+      ],
+      "modified": true
     }
   ]
 }

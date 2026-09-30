@@ -2,6 +2,7 @@
 // see docs/07-rendering.md §3–4
 import { type Material, MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import type { EnvUniforms } from '../weather/wetness.ts';
+import { createDecalMaterial } from './decal.ts';
 import { createFacadeMaterial } from './facade/index.ts';
 import { createHlodMaterial } from './hlod.ts';
 import type { MaterialLibrary } from './library.ts';
@@ -11,6 +12,7 @@ import { createTerrainMaterial } from './terrain.ts';
 const CELL_MATERIALS: Readonly<Record<string, (lib: MaterialLibrary, env: EnvUniforms) => Material>> = {
   terrain_ground: createTerrainMaterial,
   facade_default: createFacadeMaterial,
+  road_marking: createDecalMaterial,
 };
 const HLOD_COLORS: Readonly<Record<string, { color: number; roughness: number }>> = {
   terrain_ground: { color: 0x8a8a80, roughness: 0.95 },
