@@ -2,20 +2,24 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T01 완료(e6b9fbc) → MVP 재빌드·publish·staging·걷기 봇 → M05-T02 Road markings
+## Current Task: M05-T02 Road markings (OSM 정규화 완료 — `data/normalized/osm`, 파생 모듈 작성 중)
 - Done in this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
 - 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷).
   in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용.
-- 배포 상태: staging = 0dc0075(M04) 그대로, dev 버킷 current `20260929-99bffa8-ec1646fc`. 옛 빌드 gc는 10/6 이후.
+- 배포 상태(2026-10-01): staging = **b6317ad**(결정 0–3 + T01) + dev 버킷 current **`20260930-6a41591-83074405`**(MVP L0 294 + HLOD + 머티리얼, roads.mesh 포함, 478파일 292.4 MB, Worker HEAD 검증). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
 - In progress: 없음.
-- Next step (정확히 한 걸음): MVP 재빌드(`docker/run.sh … build` → `hlod --build-id` → `materials --build-id` → `validate`) 결과 확인 → dev 버킷 publish → staging → 걷기 봇(연석) → `### M05-T02`.
+- Next step (정확히 한 걸음): `tools/pipeline/src/stages/derive/markings/{crosswalk,stopline,lanes,text}.ts`(common.ts 작성됨) → build/decals-mesh.ts → render `materials/decal.ts`(road_marking).
+- OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
 - Blockers: 없음
 
 ## Recently Completed
 - M05-T01 Roads, sidewalks, curbs, terrain shaping — 셀 + 여유 16 m 창 국소 성형(이웃과 공유 샘플 일치): 차도 = 지형(D + 2 % 경사 ≤ 0.15), 보도·교통섬 = `roads.mesh`
-  (4 m 조각 윗면 S = D + 0.15 + 8 mm, 연석 세로 면, 바깥 치마, u16 위치) + TERRAIN 층 보도 triMesh(tile), 가장자리 새기기·RTIN 샘플별 허용 오차·지형 맞춤, 건물 평탄화(조건부).
-  **수락(스폰 3×3 시험 빌드)**: validate `road gaps` 교차로 50곳 중 **47곳 최대 < 2 cm**, 표본 25,530 중 0.27 % ≥ 2 cm·최대 4.3 cm — ⚠️ 3곳 = 4 m 옹벽 옆(벽 기하 없음 → T08/별도).
-  연석 아래 틈 0. 크기: roads.mesh 184–286 KB/셀, 보도 삼각형 16–66k/셀, 연석 1.7–5.5 km/셀, world-mini 3.74 → 4.98 MB. 테스트 +1파일(9건). ADR-0049 (2026-10-01)
+  (4 m 조각 윗면 S = D + 0.15 + 8 mm, 연석 세로 면, 바깥 치마, u16 위치, 0.5 m 조각) + TERRAIN 층 보도 triMesh(tile), 가장자리 새기기·RTIN 샘플별 허용 오차·지형 맞춤, 건물 평탄화(조건부).
+  세로 면 = 면 접선 투영(연석 줄무늬 수정, b6317ad).
+  **수락(MVP 294셀 `20260930-6a41591-83074405`)**: validate `road gaps` 무작위 교차로 **50/50 최대 < 2 cm**(최대 1.88 cm, 표본 32,940 중 0 초과), 연석 아래 틈 0(75,389), validate 오류 0.
+  **걷기 봇**(실제 GPU, 로컬 MVP, 5분·반경 110 m): 506 m, **낙하 0·끼임 0**(후보 4 = 막다른 곳), 연석 오르내림 9회.
+  예산: L0 합 176.4 MB(294셀), roads.mesh 184–286 KB/셀, 보도 삼각형 16–66k/셀, 콜라이더 ≤ 47k/셀. **첫 로드(staging GOLDEN_BOOT) 21.3 MB·첫 표시 8.7 s**(ADR-0033 12.7–13.4 MB 대비 +8 MB, 예산 60 MB 안).
+  world-mini 3.74 → 4.98 MB. staging = b6317ad + dev 버킷 current `20260930-6a41591-83074405`(478파일 292.4 MB). 골든뷰 docs/screenshots/M05/T01. ADR-0049 (2026-10-01)
 - M05 결정 2 Quaternius 아바타 — UBC Standard(Superhero_Male + Hair_SimpleParted) + UAL Standard(Idle·Walk·Jog_Fwd·Sprint) → `pnpm pipeline avatar`(호스트 Node, `lib/zip.ts`)
   → 프리미티브 1·머티리얼 1·**정점색**(텍스처 표본 + 스킨 가중치 옷 영역: 반팔 셔츠·바지·운동화, 머리털 짙은 갈색) → `apps/game/src/assets/avatar-ubc-male.glb` **709 KB·15,619 삼각형**(커밋, Vite 해시 에셋).
   render `loadAvatar`(속력 매듭 0·1.35·3.0·5.0 블렌드, 위상 공유, 재생 속도 [0.75, 1.6]), 첫 표시 뒤 적재(초기 다운로드 밖), `avatarSettled` → `data-settled`. 실제 GPU: 걷기·달리기 60 FPS.
@@ -89,7 +93,7 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 - [pipeline] 도로 레코드는 TrafficArea 단위로 매우 잘게 나뉨(3×3에 27.7k) → M03 도로 메시 빌드 시 병합/삼각분할 비용 확인.
 - [ci] e2e = 부트·렌더 스모크·디코드·정지 떨림·물리(워커·셀 콜라이더)·걷기(`walk.spec.ts`) — WebGL2/SwiftShader. WebGPU 경로·실제 성능·골목 카메라·3G 보행은 로컬 실제 GPU 스크립트(세션 scratchpad `walkbot/campen/throttle.mjs`)로 확인. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
 - [e2e] 클라우드 세션 Chromium은 Playwright 번들 버전과 달라 `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e`로 실행. 실행 전 떠 있는 `vite preview`가 있으면 `reuseExistingServer`로 **옛 빌드**를 테스트하니 먼저 종료할 것.
-- [perf] 초기 다운로드(첫 표시 시점 전송량) 57–62 MB — 14 §2 예산 60 MB 경계. 부팅 순서상 L3 9·L2 ~36·L1 ~16이 스폰 L0보다 먼저 온다(06 §8). 초과가 이어지면 부팅 whenReady 전 L2 반경 축소 또는 HLOD 크기 조정(M03 perf 하네스 `pnpm perf`에서 판단).
+- [perf] 초기 다운로드(첫 표시 시점 전송량, staging `GOLDEN_BOOT=1`) 21.3 MB(M05-T01 보도·콜라이더로 +8 MB, ADR-0033 12.7–13.4 MB) — 예산 60 MB. L0 셀이 커질수록(소품·나무·표시) 늘어난다 → 태스크마다 기록.
 - [perf] `pnpm perf`(자동 비행 경로·perf-latest.md)는 아직 없음 → 이번 수치는 Playwright + 실제 Chrome 스크립트(세션 scratchpad) 측정. perf 하네스 태스크에서 재현.
 - [render] 셀 추가 프레임의 GPU 업로드(다음 render에서 발생): 큰 L1 셀 1개(≈ 7 MB)가 그 프레임 render를 5–10 ms 늘린다(프레임 드롭은 없음, 18.3 ms 최대). 업로드 분할·HLOD 셀 크기는 `pnpm perf`(M02-T07~) 뒤 판단(ADR-0025). 첫 프레임 render 33–57 ms(초기 업로드) 1회.
 - [render] L0 셀은 페이드 인 없이 즉시 나타나고 부모 그룹이 0.3 s 디더로 사라진다(겹침 0.3 s, 점묘). freecam 관심점엔 forward가 없어 뷰 쐐기 우선순위 미적용(traversal 개선 시).
