@@ -189,7 +189,7 @@ describe('vending machines', () => {
     const vm = instancesOf(out, 'vendingMachine');
     expect(vm.length).toBeGreaterThanOrEqual(2);
     for (const v of vm) {
-      expect(v[2]).toBeCloseTo(94.85, 5);
+      expect(v[2]).toBeCloseTo(94.48, 5);
       expect(Math.cos(v[3] as number)).toBeCloseTo(1, 5);
     }
     const office = buildProps(input({ roads, osm: [], buildings: [{ ...b, usage: '401' }] }));

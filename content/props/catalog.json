@@ -5,7 +5,7 @@
     "streetLamp": { "collider": { "kind": "cylinder", "halfHeight": 3.5, "radius": 0.09, "material": "metal" } },
     "signalVehicle": { "collider": { "kind": "cylinder", "halfHeight": 2.9, "radius": 0.11, "material": "metal" }, "place": { "backM": 0.8 } },
     "signalPedestrian": { "collider": { "kind": "cylinder", "halfHeight": 1.6, "radius": 0.07, "material": "metal" }, "place": { "backM": 0.6 } },
-    "vendingMachine": { "collider": { "kind": "box", "halfExtents": [0.55, 0.92, 0.4], "material": "metal" }, "place": { "perFacadeM": 55, "wallGapM": 0.45, "usage": ["402", "404", "411", "412", "413", "414"] } },
+    "vendingMachine": { "collider": { "kind": "box", "halfExtents": [0.55, 0.92, 0.4], "material": "metal" }, "place": { "perFacadeM": 55, "wallGapM": 0.08, "usage": ["402", "404", "411", "412", "413", "414"] } },
     "guardRail": { "collider": { "kind": "box", "halfExtents": [2.0, 0.4, 0.05], "material": "metal" }, "place": { "moduleM": 4, "insetM": 0.35 } },
     "bollard": { "collider": { "kind": "cylinder", "halfHeight": 0.4, "radius": 0.08, "material": "metal" } },
     "signStop": { "collider": { "kind": "cylinder", "halfHeight": 1.3, "radius": 0.04, "material": "metal" } },

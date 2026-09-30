@@ -1,5 +1,6 @@
 // 자판기(M05-T03, 가상 브랜드 — 로고·상표 없음): 상업·주거 용도(카탈로그 usage) 건물 지면 링의 길가 변(바깥 3 m 안에 보도·차도)을 따라
-// 누적 길이 perFacadeM(± 절반 난수)마다 벽에서 wallGapM 띄워 1–2대(나란히 1.15 m), 정면 = 벽 바깥. 차도 위·다른 건물 안이면 건너뜀. see ADR-0051
+// 누적 길이 perFacadeM(± 절반 난수)마다 벽에 붙여(wallGapM 0.08 — 캐릭터 지름 0.5 m보다 좁은 뒤 틈이 생기면 끼인다) 1–2대(나란히 1.15 m), 정면 = 벽 바깥.
+// 차도 위·다른 건물 안이면 건너뜀. see ADR-0051
 import type { BuildingRecord } from '../../../readers/plateau/types.ts';
 import { type PlaceCtx, place, rngFor, type V2, yawOf } from './context.ts';
 
