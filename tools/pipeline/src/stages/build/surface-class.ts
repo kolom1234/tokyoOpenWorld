@@ -32,14 +32,14 @@ function crossings(rings: readonly (readonly number[])[], z: number, ox: number,
   return xs.sort((a, b) => a - b);
 }
 
-function fillPolygon(
-  grid: Uint8Array,
-  n: number,
+/** 링(WF xyz)을 n×n 격자(원점 WF ox·oz, 1 m, 행 = z)에 짝-홀 규칙으로 긁어 덮이는 샘플 번호마다 visit. */
+export function rasterizeRings(
   rings: readonly (readonly number[])[],
+  n: number,
   ox: number,
   oz: number,
-  v: number,
-) {
+  visit: (k: number) => void,
+): void {
   let zMin = Number.POSITIVE_INFINITY;
   let zMax = Number.NEGATIVE_INFINITY;
   for (const r of rings)
@@ -52,7 +52,7 @@ function fillPolygon(
     for (let k = 0; k + 1 < xs.length; k += 2) {
       const x0 = Math.max(0, Math.ceil(xs[k] as number));
       const x1 = Math.min(n - 1, Math.floor(xs[k + 1] as number));
-      for (let x = x0; x <= x1; x++) grid[z * n + x] = v;
+      for (let x = x0; x <= x1; x++) visit(z * n + x);
     }
   }
 }
@@ -61,7 +61,12 @@ function fillPolygon(
 export function surfaceGrid(roads: readonly RoadRecord[], originX: number, originZ: number, n = 257): Uint8Array {
   const grid = new Uint8Array(n * n).fill(SURF.plaza);
   for (const [fn, v] of PRIORITY) {
-    for (const r of roads) if (r.function === fn) fillPolygon(grid, n, r.polygonWF, originX, originZ, v);
+    for (const r of roads) {
+      if (r.function === fn)
+        rasterizeRings(r.polygonWF, n, originX, originZ, (k) => {
+          grid[k] = v;
+        });
+    }
   }
   return grid;
 }

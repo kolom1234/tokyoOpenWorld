@@ -31,6 +31,8 @@ export interface CellReport {
   terrainTris: number;
   buildingVertices: number;
   buildingTris: number;
+  /** 보도·연석(roads.mesh, M05-T01). */
+  roadsTris: number;
   buildings: number;
   sections: Record<string, number>;
 }
@@ -135,7 +137,8 @@ async function inspectCell(tkc: Uint8Array, id: string, ctx: CellCtx): Promise<[
   }
   const terrain = await meshCounts(r.value.section('terrain.mesh'));
   const bld = await meshCounts(r.value.section('buildings.mesh'));
-  const tris = terrain.t + bld.t;
+  const roads = await meshCounts(r.value.section('roads.mesh'));
+  const tris = terrain.t + bld.t + roads.t;
   if (tris !== r.value.header.stats.tris) ctx.errors.push(`${id}: stats.tris ${r.value.header.stats.tris} ≠ ${tris}`);
   const sections = Object.fromEntries(r.value.header.sections.map((s) => [s.type, s.length]));
   const { ix, iz } = r.value.header.cell;
@@ -147,6 +150,7 @@ async function inspectCell(tkc: Uint8Array, id: string, ctx: CellCtx): Promise<[
     terrainTris: terrain.t,
     buildingVertices: bld.v,
     buildingTris: bld.t,
+    roadsTris: roads.t,
     buildings: meta?.buildings?.length ?? 0,
     sections,
   };

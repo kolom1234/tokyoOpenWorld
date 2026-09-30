@@ -61,6 +61,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 |---|---|
 | 지형 성형 | 건물 footprint 아래 = 건물 최저 지반고로 평탄화. 차도 폴리곤 = 횡단경사 2% 포장면. 보도 = 차도 + 0.15 m(연석). 공원 = 원 DEM 유지 |
 | 연석/가드레일 | 보도–차도 경계 폴리라인 → 연석 메시(높이 0.15 m, 모따기) + 콜라이더. 가드레일은 OSM `barrier=guard_rail` + 규칙(간선도로 보도 측) |
+| ↳ 구현(M05-T01, ADR-0049) | `stages/derive/{terrain-shape,edge-burn,roads,curbs,sidewalks,footprints,grid}.ts` + `build/roads-mesh.ts`: 셀 + 여유 16 m 창 국소 성형(차도 D + 2 % 경사 ≤ 0.15, 보행 바깥 띠 S = D + 0.15·안쪽 D, 비도로 1.5 m → 4 m 섞기, 건물 평탄화 조건부), 차도 = 지형, 보도·교통섬 = `roads.mesh`(4 m 조각 윗면 + 연석 세로 면 + 바깥 치마), 가장자리 새기기 + 지형 맞춤, 보도 윗면 TERRAIN triMesh. 수락 검사 = validate `road gaps`(교차로 50곳 < 2 cm) |
 | 노면 표시 | OSM lanes/turn:lanes + 도로 폴리곤 → 차선(백색 실선/점선, 황색 추월금지), 정지선, 횡단보도(일본식: 측선 없는 사다리형, 폭 0.45 m 줄 간격 0.45 m), 「止まれ」 문자 데칼(자체 폰트 메시) |
 | 신호 | OSM `highway=traffic_signals` + PLATEAU frn → 교차로별 신호기 배치(차량용 3색 가로형, 보행자용 2색) + `signalGroups` |
 | 소품 절차 배치 | 규칙 기반(시드=hash(cellId,'props')): 전신주(폭원 < 15 m 생활도로에만 30–40 m 간격, 간선도로·무전주화 지구 `data/rules/no-poles.geojson` 제외), 가로등, 자판기(상업·주거 건물 전면, 밀도 파라미터), 자전거 거치대(역 반경 300 m), 버스정류장(OSM), 우체통(OSM `amenity=post_box`), 표지판 |

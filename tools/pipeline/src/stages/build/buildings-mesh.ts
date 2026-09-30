@@ -159,7 +159,7 @@ function metaOf(b: BuildingRecord, heightM: number): MetaBuilding {
   return m;
 }
 
-function boundsOf(pos: readonly number[]): Aabb {
+export function boundsOf(pos: readonly number[]): Aabb {
   const min: Vec3Tuple = [Infinity, Infinity, Infinity];
   const max: Vec3Tuple = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < pos.length; i++) {

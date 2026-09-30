@@ -1,4 +1,5 @@
-// L0 셀 조립: terrain.mesh + terrain.height + buildings.mesh + meta.json → TKC, 영역 빌드(cells.idx·world.json). see docs/04-data-pipeline.md §4.4, docs/05-tile-format.md §1–3
+// L0 셀 조립: 지형 성형(M05-T01) → terrain.mesh + terrain.height + buildings.mesh + roads.mesh(보도·연석) + collision.bin + meta.json → TKC,
+// 영역 빌드(cells.idx·world.json). see docs/04-data-pipeline.md §4.3–4.4, docs/05-tile-format.md §1–3
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type CellKey, cellIdString, type Logger, packCellKey, unpackCellKey } from '@sanpo/core';
@@ -13,15 +14,32 @@ import {
   writeCellsIndex,
   writeTkc,
 } from '@sanpo/tile-format';
+import { terrainLookup } from '../../lib/mesh-lookup.ts';
 import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
 import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
+import { burnOuterEdges, outerEdgesAround } from '../derive/edge-burn.ts';
+import { type FootprintSource, footprintGrid, footprintSources } from '../derive/footprints.ts';
+import type { LocalGrid } from '../derive/grid.ts';
+import { roadIndex, roadRaster } from '../derive/roads.ts';
+import { SHAPE_PAD, type ShapedGround, shapeGround } from '../derive/terrain-shape.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
 import { buildCollision } from './collision.ts';
-import { CELL_SIZE_M, type CellWindow, cellWindow, DEM_MARGIN, type DemWindow, readDemWindow } from './dem-window.ts';
+import {
+  CELL_SIZE_M,
+  type CellWindow,
+  cropWindow,
+  DEM_MARGIN,
+  type DemWindow,
+  paddedCellWindow,
+  readDemWindow,
+} from './dem-window.ts';
 import { encodeTerrainHeight } from './heightfield.ts';
 import { type AreaDef, worldJson } from './manifest.ts';
-import { surfaceGrid } from './surface-class.ts';
+import { buildRoads } from './roads-mesh.ts';
 import { buildTerrainGeometry, encodeTerrainMesh, TERRAIN_MATERIAL } from './terrain-mesh.ts';
+
+/** 성형 창 여유(m) = 성형 국소 반경 + 법선 여유. */
+export const BUILD_MARGIN = SHAPE_PAD + DEM_MARGIN;
 
 const TERRAIN_SOURCE = 'gsi-dem';
 
@@ -35,15 +53,25 @@ export interface CellBuildStats {
   buildings: number;
   colliderTris: number;
   colliderShapes: number;
+  roadsVertices: number;
+  roadsTris: number;
+  /** 연석·바깥 가장자리 길이(m). */
+  curbM: number;
+  walkEdgeM: number;
 }
 
 export interface CellBuildInput {
   key: CellKey;
   buildId: string;
+  /** 여유 BUILD_MARGIN 창(paddedCellWindow). */
   window: CellWindow;
   buildings: readonly BuildingRecord[];
-  /** 이 셀과 8-이웃 셀의 도로 조각(`_SURF` 분류, 경계 샘플을 이웃과 같게). */
+  /** 셀 + 8-이웃 건물 발자국(성형 평탄화 — 여유 샘플을 이웃과 같게). 없으면 buildings에서. */
+  footprintsAround?: readonly FootprintSource[];
+  /** 이 셀과 8-이웃 셀의 도로 조각(`_SURF` 분류·성형·연석 판정, 경계 샘플을 이웃과 같게). */
   roads: readonly RoadRecord[];
+  /** 이 셀 도로 조각(보도 메시). 없으면 roads 중 이 셀 안 조각을 쓰지 않는다(메시 없음). */
+  cellRoads?: readonly RoadRecord[];
   /** 건물이 없는 셀의 meta.json sources(영역의 PLATEAU 소스). */
   metaFallbackSources: readonly string[];
 }
@@ -83,16 +111,50 @@ async function encodeMeta(meta: CellMeta): Promise<Uint8Array> {
   return gzip(new TextEncoder().encode(JSON.stringify(ordered)));
 }
 
+/** 넓은 창 배열 → 여유 margin 창(257 + 2·margin)². */
+function crop<T extends Uint8Array | Float32Array>(w: CellWindow, arr: T, margin: number): T {
+  const stride = w.size + 2 * margin;
+  const off = w.margin - margin;
+  const out = new (arr.constructor as new (n: number) => T)(stride * stride);
+  for (let r = 0; r < stride; r++)
+    out.set(arr.subarray((r + off) * w.stride + off, (r + off) * w.stride + off + stride), r * stride);
+  return out;
+}
+
+/** 성형(M05-T01): 넓은 창 → 성형 높이(여유 1 창)·`_SURF`·RTIN 허용 오차(257²). */
+function shapeCell(input: CellBuildInput, originWF: Vec3Tuple) {
+  const wide = input.window;
+  const grid: LocalGrid = { x0: -wide.margin, z0: -wide.margin, n: wide.stride };
+  const cls = roadRaster(input.roads, originWF[0], originWF[2], grid);
+  const fp = input.footprintsAround ?? footprintSources(input.buildings);
+  const flat = footprintGrid(fp, originWF[0], originWF[2], grid);
+  const shaped: ShapedGround = shapeGround(grid, wide.values, cls, flat);
+  const index = roadIndex(input.roads);
+  burnOuterEdges(shaped, outerEdgesAround(input.roads, index, originWF[0], originWF[2], shaped));
+  return {
+    shaped,
+    index,
+    window: cropWindow(wide, shaped.ground, DEM_MARGIN),
+    surf: crop(wide, cls, 0),
+    tol: crop(wide, shaped.tol, 0),
+  };
+}
+
+function roadSources(records: readonly RoadRecord[]): string[] {
+  return [...new Set(records.map((r) => r.source))].sort();
+}
+
 /** 셀 1개 → TKC 바이트 + 통계. 같은 입력 → 같은 바이트. */
 export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Array; stats: CellBuildStats }> {
   const { level, ix, iz } = unpackCellKey(input.key);
   const originWF: Vec3Tuple = [ix * CELL_SIZE_M, 0, iz * CELL_SIZE_M];
-  const terrain = await buildTerrainGeometry(
-    input.window,
-    surfaceGrid(input.roads, originWF[0], originWF[2], input.window.size),
-  );
+  const sc = shapeCell(input, originWF);
+  const terrain = await buildTerrainGeometry(sc.window, sc.surf, sc.tol);
   const bld = await buildBuildings(input.buildings, originWF);
-  const col = await buildCollision(bld.collision.pos, bld.collision.idx);
+  const own = input.cellRoads ?? [];
+  const terrainAt = terrainLookup({ pos: terrain.positions, idx: terrain.indices });
+  const roads = await buildRoads(own, sc.index, originWF[0], originWF[2], sc.shaped, terrainAt);
+  const col = await buildCollision(bld.collision.pos, bld.collision.idx, roads.collider);
   const [y0, y1] = yRange(terrain.positions);
   const local = outward(union({ min: [0, y0, 0], max: [CELL_SIZE_M, y1, CELL_SIZE_M] }, bld.aabbLocal));
   const add = (v: Vec3Tuple): Vec3Tuple => v.map((c, k) => c + (originWF[k] as number)) as Vec3Tuple;
@@ -100,11 +162,17 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   const meta = { buildings: bld.meta, pois: [], placeNames: [], signals: [], interactables: [] };
   const sections: TkcSectionInput[] = [
     { type: 'terrain.mesh', sources: [TERRAIN_SOURCE], data: await encodeTerrainMesh(terrain) },
-    { type: 'terrain.height', sources: [TERRAIN_SOURCE], data: await encodeTerrainHeight(input.window) },
+    { type: 'terrain.height', sources: [TERRAIN_SOURCE], data: await encodeTerrainHeight(sc.window) },
     { type: 'meta.json', sources: metaSources, data: await encodeMeta(meta) },
   ];
   if (bld.glb) sections.push({ type: 'buildings.mesh', sources: bld.sources, data: bld.glb });
-  if (col.data) sections.push({ type: 'collision.bin', sources: bld.sources, data: col.data });
+  if (roads.glb) sections.push({ type: 'roads.mesh', sources: [TERRAIN_SOURCE, ...roadSources(own)], data: roads.glb });
+  if (col.data) {
+    const colSources = [
+      ...new Set([...bld.sources, ...(roads.collider.idx.length > 0 ? roadSources(own) : [])]),
+    ].sort();
+    sections.push({ type: 'collision.bin', sources: colSources, data: col.data });
+  }
   const terrainTris = terrain.indices.length / 3;
   const tkc = writeTkc(
     {
@@ -113,7 +181,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
       originWF,
       aabbWF: { min: add(local.min), max: add(local.max) },
       materials: bld.glb ? [BUILDING_MATERIAL, TERRAIN_MATERIAL].sort() : [TERRAIN_MATERIAL],
-      stats: { tris: terrainTris + bld.tris, colliderTris: col.tris, instances: 0 },
+      stats: { tris: terrainTris + bld.tris + roads.tris, colliderTris: col.tris, instances: 0 },
     },
     sections,
   );
@@ -127,6 +195,10 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
     buildings: bld.meta.length,
     colliderTris: col.tris,
     colliderShapes: col.shapes,
+    roadsVertices: roads.vertices,
+    roadsTris: roads.tris,
+    curbM: Math.round(roads.edges.curbM),
+    walkEdgeM: Math.round(roads.edges.outerM),
   };
   return { tkc, stats };
 }
@@ -157,22 +229,41 @@ export function unionBounds(cells: readonly CellKey[]): CellBoundsWF {
   };
 }
 
-function readBuildings(normalizedDir: string, key: CellKey): BuildingRecord[] {
-  const f = join(normalizedDir, 'buildings', `${cellIdString(key)}.ndjson.gz`);
-  return existsSync(f) ? readNdjsonGz<BuildingRecord>(f) : [];
+function readLayer<T>(normalizedDir: string, layer: string, key: CellKey): T[] {
+  const f = join(normalizedDir, layer, `${cellIdString(key)}.ndjson.gz`);
+  return existsSync(f) ? readNdjsonGz<T>(f) : [];
 }
 
-/** 셀과 8-이웃의 정규화 도로(없는 파일은 건너뜀). */
-function readRoadsAround(normalizedDir: string, key: CellKey): RoadRecord[] {
-  const { level, ix, iz } = unpackCellKey(key);
-  const out: RoadRecord[] = [];
-  for (let dz = -1; dz <= 1; dz++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      const f = join(normalizedDir, 'roads', `${cellIdString(packCellKey(level, ix + dx, iz + dz))}.ndjson.gz`);
-      if (existsSync(f)) out.push(...readNdjsonGz<RoadRecord>(f));
+/** 이웃 셀 파일 캐시(도로 조각·건물 발자국) — 셀마다 8-이웃을 다시 읽지 않게. 행 순서 처리라 최근 3행 남짓이면 충분. */
+const AROUND_CACHE = 64;
+
+function aroundReader(normalizedDir: string) {
+  const roads = new Map<CellKey, RoadRecord[]>();
+  const prints = new Map<CellKey, FootprintSource[]>();
+  const get = <T>(m: Map<CellKey, T>, k: CellKey, load: () => T): T => {
+    let v = m.get(k);
+    if (v === undefined) {
+      v = load();
+      m.set(k, v);
+      if (m.size > AROUND_CACHE) m.delete(m.keys().next().value as CellKey);
     }
-  }
-  return out;
+    return v;
+  };
+  const around = <T>(key: CellKey, one: (k: CellKey) => T[]): T[] => {
+    const { level, ix, iz } = unpackCellKey(key);
+    const out: T[] = [];
+    for (let dz = -1; dz <= 1; dz++)
+      for (let dx = -1; dx <= 1; dx++) out.push(...one(packCellKey(level, ix + dx, iz + dz)));
+    return out;
+  };
+  const roadsOf = (k: CellKey) => get(roads, k, () => readLayer<RoadRecord>(normalizedDir, 'roads', k));
+  const printsOf = (k: CellKey) =>
+    get(prints, k, () => footprintSources(readLayer<BuildingRecord>(normalizedDir, 'buildings', k)));
+  return {
+    roadsOf,
+    roadsAround: (k: CellKey) => around(k, roadsOf),
+    footprintsAround: (k: CellKey) => around(k, printsOf),
+  };
 }
 
 /** 영역 빌드: 셀 TKC(행 = iz, 열 = ix 순) + cells.idx + world.json. */
@@ -181,7 +272,13 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
   const cells = [...input.cells].sort((a, b) => a - b);
   const dem =
     input.dem ??
-    (await readDemWindow(join(input.normalizedDir, 'terrain'), unionBounds(cells), DEM_MARGIN, join(outDir, '.work')));
+    (await readDemWindow(
+      join(input.normalizedDir, 'terrain'),
+      unionBounds(cells),
+      BUILD_MARGIN,
+      join(outDir, '.work'),
+    ));
+  const files = aroundReader(input.normalizedDir);
   rmSync(outDir, { recursive: true, force: true });
   const index: CellsIndexEntry[] = [];
   const stats: CellBuildStats[] = [];
@@ -190,9 +287,11 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     const { tkc, stats: s } = await buildCell({
       key,
       buildId: input.buildId,
-      window: cellWindow(dem, ix, iz),
-      buildings: readBuildings(input.normalizedDir, key),
-      roads: readRoadsAround(input.normalizedDir, key),
+      window: paddedCellWindow(dem, ix, iz, BUILD_MARGIN),
+      buildings: readLayer<BuildingRecord>(input.normalizedDir, 'buildings', key),
+      footprintsAround: files.footprintsAround(key),
+      roads: files.roadsAround(key),
+      cellRoads: files.roadsOf(key),
       metaFallbackSources: input.plateauSources,
     });
     const dir = join(outDir, 'L0', String(ix));
@@ -201,7 +300,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     index.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });
     stats.push(s);
     log.info(
-      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), collider ${s.colliderTris} tris / ${s.colliderShapes}`,
+      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), collider ${s.colliderTris} tris / ${s.colliderShapes}`,
     );
   }
   writeFileSync(join(outDir, 'cells.idx'), writeCellsIndex(index));

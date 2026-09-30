@@ -24,6 +24,7 @@ import { hasDemSources, normalizeTerrain, writeTerrainMeta } from './stages/norm
 import { buildFiles, gcBuilds, publishBuild, verifyViaWorker } from './stages/publish/publish.ts';
 import { createClients, type PublishEnv, readTargets } from './stages/publish/targets.ts';
 import { reportMarkdown, validateBuild, writeReport } from './stages/validate.ts';
+import { checkRoadGaps, GAP_LIMIT_M } from './stages/validate-roads.ts';
 
 const run = promisify(execFile);
 
@@ -148,6 +149,13 @@ async function validate(args: string[]): Promise<void> {
   const buildId = values['build-id'] ?? makeBuildId(REPO_ROOT);
   const dir = join(REPO_ROOT, 'data/build', buildId);
   const report = await validateBuild(dir, join(REPO_ROOT, 'schemas'), new Set(lockSourceIds()));
+  // M05-T01 수락: 무작위 교차로 50곳 보도 가장자리·연석 vs 지형 간극(< 2 cm).
+  const gaps = await checkRoadGaps(dir, join(REPO_ROOT, 'data/normalized'));
+  log.info(`road gaps ${JSON.stringify(gaps)}`);
+  if (gaps.over > 0 || gaps.curbUncovered > 0)
+    report.errors.push(
+      `roads: ${gaps.over} edge samples ≥ ${GAP_LIMIT_M} m, ${gaps.curbUncovered} curb samples uncovered`,
+    );
   writeReport(dir, report);
   process.stdout.write(reportMarkdown(report));
   if (report.errors.length > 0) {

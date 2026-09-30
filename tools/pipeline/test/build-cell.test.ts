@@ -105,7 +105,7 @@ describe('area build + validate', () => {
     writeNdjsonGz(join(root, 'normalized/buildings/L0_-1_-1.ndjson.gz'), [rec('c', -100, -100)]);
     await build('a');
     await build('b');
-  });
+  }, 120_000); // 셀 8개 빌드(지형 성형 거리 탐색 포함 — 병렬 vitest에서 10 s 넘음)
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
   it('passes validate (schemas, hashes, budgets, seams)', async () => {

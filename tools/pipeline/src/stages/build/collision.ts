@@ -1,6 +1,6 @@
 // collision.bin 섹션(04 §4.4-6, 05 §6): 건물 렌더 면(벽·지붕·부속물) → 1 mm 용접 → meshopt 단순화(절대 오차 0.3 m) →
 // 64 m 블록 순으로 삼각형을 정렬해 ≤ MAX_CHUNK_TRIS 청크로 자른다(JCOL triMesh 여러 개 — 물리 워커가 청크 하나를 한 틱에 적재, Jolt 메시 생성 ≈ 1.5 ms/1000 삼각형, ADR-0042).
-// 연석·충돌 소품·나무 줄기 프리미티브는 도로 메시(M04-T04)·소품(M05) 데이터가 생기면 여기서 추가.
+// 보도 윗면·연석(M05-T01)은 같은 방식의 TERRAIN 층 triMesh(재질 tile, 단순화 1 cm) 청크로 뒤에 붙는다. 충돌 소품·나무 줄기는 M05-T03·T04.
 import { gzip, JCOL_MATERIAL, type JcolShape, writeJcol } from '@sanpo/tile-format';
 import { MeshoptSimplifier } from 'meshoptimizer';
 
@@ -10,8 +10,11 @@ export const SIMPLIFY_ERROR_M = 0.3;
 export const MAX_CHUNK_TRIS = 2500;
 /** 청크 정렬 블록(m) — 셀 256 m를 4 × 4. */
 const BLOCK_M = 64;
-/** 08 §3 STATIC_WORLD. */
+/** 08 §3 STATIC_WORLD·TERRAIN. */
 const LAYER_STATIC_WORLD = 0;
+export const LAYER_TERRAIN = 1;
+/** 보도·연석 단순화 절대 오차(m) — 연석 0.15 m 계단은 유지, 보도 곡면은 크게 합친다(1 cm 대비 콜라이더 크기 ≈ 절반, 발 높이 오차 < 3 cm). */
+export const GROUND_SIMPLIFY_ERROR_M = 0.03;
 const WELD_M = 0.001;
 
 export interface CollisionBuild {
@@ -71,7 +74,12 @@ function blockOrder(pos: Float32Array, idx: Uint32Array): number[] {
 }
 
 /** 삼각형 목록 → 쓰인 정점만 모은 triMesh. */
-function chunkShape(pos: Float32Array, idx: Uint32Array, tris: readonly number[]): JcolShape {
+function chunkShape(
+  pos: Float32Array,
+  idx: Uint32Array,
+  tris: readonly number[],
+  kind: { layer: number; material: number } = { layer: LAYER_STATIC_WORLD, material: JCOL_MATERIAL.concrete },
+): JcolShape {
   const local = new Map<number, number>();
   const v: number[] = [];
   const out = new Uint32Array(tris.length * 3);
@@ -89,8 +97,8 @@ function chunkShape(pos: Float32Array, idx: Uint32Array, tris: readonly number[]
   });
   return {
     kind: 'triMesh',
-    layer: LAYER_STATIC_WORLD,
-    material: JCOL_MATERIAL.concrete,
+    layer: kind.layer,
+    material: kind.material,
     flags: 0,
     posLocal: [0, 0, 0],
     quat: [0, 0, 0, 1],
@@ -99,20 +107,41 @@ function chunkShape(pos: Float32Array, idx: Uint32Array, tris: readonly number[]
   };
 }
 
-/** 건물 렌더 스트림(셀 로컬 xyz, 삼각형 인덱스) → collision.bin. 같은 입력 → 같은 바이트. */
-export async function buildCollision(pos: ArrayLike<number>, idx: ArrayLike<number>): Promise<CollisionBuild> {
-  if (idx.length === 0) return { data: null, tris: 0, shapes: 0, sourceTris: 0 };
-  await MeshoptSimplifier.ready;
-  const w = weld(pos, idx);
-  const [simple] = MeshoptSimplifier.simplify(w.idx, w.pos, 3, 0, SIMPLIFY_ERROR_M, ['ErrorAbsolute']);
+/** 한 묶음: 용접 → 단순화 → 블록 순 청크. */
+function chunked(
+  mesh: { pos: ArrayLike<number>; idx: ArrayLike<number> },
+  errorM: number,
+  kind: { layer: number; material: number },
+): { shapes: JcolShape[]; tris: number; sourceTris: number } {
+  if (mesh.idx.length === 0) return { shapes: [], tris: 0, sourceTris: 0 };
+  const w = weld(mesh.pos, mesh.idx);
+  const [simple] = MeshoptSimplifier.simplify(w.idx, w.pos, 3, 0, errorM, ['ErrorAbsolute']);
   const order = blockOrder(w.pos, simple);
   const shapes: JcolShape[] = [];
   for (let i = 0; i < order.length; i += MAX_CHUNK_TRIS)
-    shapes.push(chunkShape(w.pos, simple, order.slice(i, i + MAX_CHUNK_TRIS)));
+    shapes.push(chunkShape(w.pos, simple, order.slice(i, i + MAX_CHUNK_TRIS), kind));
+  return { shapes, tris: simple.length / 3, sourceTris: w.idx.length / 3 };
+}
+
+/**
+ * 건물 렌더 스트림(셀 로컬 xyz, 삼각형 인덱스) + 선택: 보도 윗면·연석(ground, TERRAIN 층·tile) → collision.bin. 같은 입력 → 같은 바이트.
+ */
+export async function buildCollision(
+  pos: ArrayLike<number>,
+  idx: ArrayLike<number>,
+  ground?: { pos: ArrayLike<number>; idx: ArrayLike<number> },
+): Promise<CollisionBuild> {
+  await MeshoptSimplifier.ready;
+  const bld = chunked({ pos, idx }, SIMPLIFY_ERROR_M, { layer: LAYER_STATIC_WORLD, material: JCOL_MATERIAL.concrete });
+  const gnd = ground
+    ? chunked(ground, GROUND_SIMPLIFY_ERROR_M, { layer: LAYER_TERRAIN, material: JCOL_MATERIAL.tile })
+    : { shapes: [], tris: 0, sourceTris: 0 };
+  const shapes = [...bld.shapes, ...gnd.shapes];
+  if (shapes.length === 0) return { data: null, tris: 0, shapes: 0, sourceTris: 0 };
   return {
     data: await gzip(writeJcol(shapes)),
-    tris: simple.length / 3,
+    tris: bld.tris + gnd.tris,
     shapes: shapes.length,
-    sourceTris: w.idx.length / 3,
+    sourceTris: bld.sourceTris + gnd.sourceTris,
   };
 }

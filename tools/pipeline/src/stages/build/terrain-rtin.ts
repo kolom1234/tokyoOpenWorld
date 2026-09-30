@@ -40,11 +40,20 @@ function edgeKeyOf(span: number): ((c: number) => number) | null {
   return null;
 }
 
+/** 분할 판단 입력: 높이·격자 크기 + 선택(분류 경계 세분, 샘플별 허용 오차 m — 있으면 오차를 허용 오차로 나눈 비율로 잰다). */
+interface ErrorInput {
+  h: ArrayLike<number>;
+  n: number;
+  cls?: ArrayLike<number> | undefined;
+  tol?: ArrayLike<number> | undefined;
+}
+
 /**
- * 분할하지 않은 삼각형(a, b, c)의 최대 수직 오차: 내부·경계 격자 샘플 vs 세 꼭짓점 평면 보간.
+ * 분할하지 않은 삼각형(a, b, c)의 최대 수직 오차: 내부·경계 격자 샘플 vs 세 꼭짓점 평면 보간(tol이 있으면 샘플 허용 오차 대비 비율).
  * cls가 있으면 분류 경계를 덮는 큰 삼각형(edgeKeyOf)은 ∞(분할 강제).
  */
-function triangleError(h: ArrayLike<number>, n: number, t: readonly number[], cls?: ArrayLike<number>): number {
+function triangleError(g: ErrorInput, t: readonly number[]): number {
+  const { h, n, cls, tol } = g;
   const [ax, ay, bx, by, cx, cy] = t as [number, number, number, number, number, number];
   const ha = h[ay * n + ax] as number;
   const hb = h[by * n + bx] as number;
@@ -61,7 +70,8 @@ function triangleError(h: ArrayLike<number>, n: number, t: readonly number[], cl
       const l3 = 1 - l1 - l2;
       if (l1 < 0 || l2 < 0 || l3 < 0) continue;
       if (key && key(cls?.[y * n + x] as number) !== k0) return Number.POSITIVE_INFINITY;
-      const e = Math.abs(l1 * ha + l2 * hb + l3 * hc - (h[y * n + x] as number));
+      const d = Math.abs(l1 * ha + l2 * hb + l3 * hc - (h[y * n + x] as number));
+      const e = tol ? d / (tol[y * n + x] as number) : d;
       if (e > err) err = e;
     }
   }
@@ -72,13 +82,8 @@ function triangleError(h: ArrayLike<number>, n: number, t: readonly number[], cl
  * 중점별 분할 필요 오차. 경계선 위 중점 = ∞(경계 정점 1 m 간격 고정, 04 §6).
  * 자식 삼각형(번호가 큼)부터 처리해 errors[중점] = max(두 공유 삼각형의 정확 오차, 자식 중점 오차).
  */
-function midpointErrors(
-  h: ArrayLike<number>,
-  n: number,
-  coords: Uint16Array,
-  parents: number,
-  cls?: ArrayLike<number>,
-): Float64Array {
+function midpointErrors(g: ErrorInput, coords: Uint16Array, parents: number): Float64Array {
+  const { n } = g;
   const tile = n - 1;
   const errors = new Float64Array(n * n);
   const at = (i: number): number => errors[i] as number;
@@ -94,7 +99,7 @@ function midpointErrors(
     const cx = mx + my - ay;
     const cy = my + ax - mx;
     const border = mx === 0 || my === 0 || mx === tile || my === tile;
-    let e = border ? Number.POSITIVE_INFINITY : triangleError(h, n, [ax, ay, bx, by, cx, cy], cls);
+    let e = border ? Number.POSITIVE_INFINITY : triangleError(g, [ax, ay, bx, by, cx, cy]);
     if (i < parents) {
       const left = ((ay + cy) >> 1) * n + ((ax + cx) >> 1);
       const right = ((by + cy) >> 1) * n + ((bx + cx) >> 1);
@@ -110,18 +115,21 @@ function midpointErrors(
  * n×n 높이 격자(n = 2^k + 1, 행 우선 `[y·n + x]`) → 삼각형 인덱스(격자 정점 번호 y·n + x).
  * 모든 격자 샘플에서 수직 오차 ≤ maxError, 경계 정점 전부 포함. 감기는 위(+높이)에서 볼 때 CCW(x→동, y→남 좌표계).
  * cls(같은 격자의 표면 분류)가 있으면 분류 경계 근처 삼각형을 세분한다(차도 경계 1칸, 그 밖 4칸).
+ * tol(샘플별 허용 오차 m, M05-T01 보도·연석 둘레 3 mm)이 있으면 maxError 대신 쓴다.
  */
 export function rtinTriangulate(
   h: ArrayLike<number>,
   n: number,
   maxError: number,
   cls?: ArrayLike<number>,
+  tol?: ArrayLike<number>,
 ): Uint32Array {
   const tile = n - 1;
   if (tile < 2 || (tile & (tile - 1)) !== 0) throw new RangeError(`rtinTriangulate: n − 1 = ${tile} is not 2^k`);
   const count = tile * tile * 2 - 2;
   const coords = triangleCoords(tile, count);
-  const errors = midpointErrors(h, n, coords, count - tile * tile, cls);
+  const errors = midpointErrors({ h, n, cls, tol }, coords, count - tile * tile);
+  const limit = tol ? 1 : maxError;
   const out: number[] = [];
   const emit = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): void => {
     const cross = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
@@ -132,7 +140,7 @@ export function rtinTriangulate(
   const walk = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): void => {
     const mx = (ax + bx) >> 1;
     const my = (ay + by) >> 1;
-    if (Math.abs(ax - cx) + Math.abs(ay - cy) > 1 && (errors[my * n + mx] as number) > maxError) {
+    if (Math.abs(ax - cx) + Math.abs(ay - cy) > 1 && (errors[my * n + mx] as number) > limit) {
       walk(cx, cy, ax, ay, mx, my);
       walk(bx, by, cx, cy, mx, my);
     } else emit(ax, ay, bx, by, cx, cy);
