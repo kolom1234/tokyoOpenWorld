@@ -19,6 +19,8 @@ export default defineConfig({
   // SwiftShader 렌더는 수 FPS라 셀 표시·스크린샷까지 여유를 둔다.
   timeout: 90_000,
   retries: CI ? 1 : 0,
+  // 로컬도 CI(ubuntu-latest 4 vCPU → 기본 2)와 같은 2 — 기본값(코어 절반)은 15 W 노트북에서 SwiftShader 경합으로 시간 초과가 번갈아 났다(M05 결정 3).
+  workers: 2,
   forbidOnly: CI,
   reporter: CI ? [['github'], ['list']] : 'list',
   outputDir: '../../test-results',
