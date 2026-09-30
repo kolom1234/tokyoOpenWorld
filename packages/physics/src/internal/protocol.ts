@@ -43,7 +43,9 @@ export type Command =
   /** 도보 캐릭터(08 §5) 생성 — 위치 = 발(WF). */
   | { c: 'character'; h: number; posWF: Vec3d; yaw: number }
   /** 원하는 수평 속도(m/s, WF)·방향(yaw — 아바타). */
-  | { c: 'charInput'; h: number; moveWF: Vec3; yaw?: number }
+  | { c: 'charInput'; h: number; moveWF: Vec3; yaw?: number; hold?: boolean }
+  /** 앵커 재설정(08 §2): 모든 바디·캐릭터·구간을 −Δ 이동, 브로드페이즈 최적화. */
+  | { c: 'rebase'; anchorWF: Vec3d }
   | { c: 'removeCell'; key: CellKey };
 
 /** 레이캐스트 결과(WF). */

@@ -56,6 +56,14 @@ export async function purgeStaleCaches(caches: CacheStorageLike, buildId: string
   return stale;
 }
 
+/**
+ * 복사본 본문 버리기. 요청이 본문 도중 취소되면 스트림이 취소 사유로 오류 상태 → cancel()이 그 사유로 거부된다
+ * (처리 안 하면 "signal is aborted without reason" 미처리 거부 — M04-T06 3G 스로틀에서 발견).
+ */
+function cancelBody(r: Response): void {
+  r.body?.cancel().catch(() => undefined);
+}
+
 async function attempt(f: FetchLike, url: string, expected: number, n: number, signal?: AbortSignal): Promise<Attempt> {
   let res: Response;
   try {
@@ -72,12 +80,12 @@ async function attempt(f: FetchLike, url: string, expected: number, n: number, s
   try {
     const bytes = await res.arrayBuffer();
     if (bytes.byteLength !== expected) {
-      void cacheCopy.body?.cancel();
+      cancelBody(cacheCopy);
       return err({ code: 'size', message: `${url}: ${bytes.byteLength} B ≠ ${expected}`, attempts: n, retry: true });
     }
     return ok({ bytes, fromCache: false, cacheCopy });
   } catch (e) {
-    void cacheCopy.body?.cancel();
+    cancelBody(cacheCopy);
     if (signal?.aborted) return err({ ...aborted(n), retry: false });
     return err({ code: 'network', message: e instanceof Error ? e.message : String(e), attempts: n, retry: true });
   }
@@ -118,8 +126,8 @@ export function createFetcher(deps: CellFetcherDeps): Fetcher {
         const { retry: _retry, ...e } = r.error;
         return err(e);
       }
-      if (cache) void cache.put(url, r.value.cacheCopy, expectedBytes);
-      else void r.value.cacheCopy.body?.cancel();
+      if (cache) cache.put(url, r.value.cacheCopy, expectedBytes).catch((e: unknown) => log.debug('cache put', e));
+      else cancelBody(r.value.cacheCopy);
       return ok({ bytes: r.value.bytes, fromCache: false });
     },
     invalidate: async (key) => cache?.delete(cellUrl(deps.baseUrl, key)),

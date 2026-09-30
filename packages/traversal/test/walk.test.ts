@@ -1,5 +1,6 @@
 // walk 모드(M04-T03) + 가짜 physics: C로 freecam → walk(하늘 레이로 지붕 아닌 지면에 착지), 걸음 단계·달리기·대각선, 1인칭 눈높이, V 3인칭, C 복귀(바디 유지).
 import { createEventBus, createLogger, type FrameContext, type Vec3, type Vec3d } from '@sanpo/core';
+import { cellOf } from '@sanpo/geo';
 import type { ActionState, AxisAction, ButtonAction, InputContext, InputService } from '@sanpo/input';
 import type { BodyHandle, CharacterInput, PhysicsService, Pose, RayHit } from '@sanpo/physics';
 import { describe, expect, it } from 'vitest';
@@ -43,7 +44,10 @@ function fakePhysics() {
   let spawned = 0;
   /** 카메라 구 캐스트가 맞힐 거리(없으면 막힘 없음). */
   const wall = { distance: undefined as number | undefined };
+  /** 적재 안 된 L0 셀 키(발밑 보호 검사). */
+  const missing = new Set<number>();
   const physics = {
+    hasCell: (key: number) => !missing.has(key),
     sphereCast(o: Vec3d, d: Vec3): Promise<RayHit | null> {
       const t = wall.distance;
       return Promise.resolve(
@@ -99,7 +103,7 @@ function fakePhysics() {
     body.pos.x += body.vel.x * dt;
     body.pos.z += body.vel.z * dt;
   };
-  return { physics, rays, inputs, step, wall, spawned: () => spawned, body: () => body };
+  return { physics, rays, inputs, step, wall, missing, spawned: () => spawned, body: () => body };
 }
 
 const log = createLogger({ sink: () => undefined });
@@ -253,5 +257,35 @@ describe('walk mode', () => {
     expect(s.spawned()).toBe(1);
     expect(s.t.player.posWF.x).toBeCloseTo(500, 6);
     expect(s.t.player.posWF.z).toBeCloseTo(500, 6);
+  });
+
+  it('stops at an unloaded cell ahead and holds in place when the cell underfoot is unloaded', async () => {
+    const s = await setup();
+    s.hits.add('freeCam');
+    s.tick();
+    await flush();
+    s.tick();
+    const feet = { ...s.t.player.posWF };
+    // 앞(북 −Z, yaw 0)으로 걷다가 앞 셀이 없으면 멈춤(입력 0), HUD 표시.
+    s.axes.moveY = 1;
+    const ahead = cellOf(0, feet.x, feet.z - 0.6 - 1.35 ** 2 / 20);
+    const here = cellOf(0, feet.x, feet.z);
+    if (ahead !== here) s.missing.add(ahead);
+    else s.missing.add(cellOf(0, feet.x, feet.z - 256));
+    // 셀 경계까지 걷는다(최대 256 m / 1.35 m/s ≈ 190 s — 가짜 물리는 즉시 이동).
+    for (let i = 0; i < 60 * 200 && !s.t.hud.groundLoading; i++) s.tick();
+    expect(s.t.hud.groundLoading).toBe(true);
+    const stopped = s.inputs.at(-1);
+    expect(stopped?.moveWF.z).toBe(0);
+    expect(stopped?.hold).toBeUndefined();
+    // 발밑 셀이 빠지면 제자리 고정(hold).
+    s.missing.add(cellOf(0, s.t.player.posWF.x, s.t.player.posWF.z));
+    s.tick();
+    expect(s.inputs.at(-1)?.hold).toBe(true);
+    // 다시 적재되면 계속 간다.
+    s.missing.clear();
+    s.tick();
+    expect(s.t.hud.groundLoading).toBe(false);
+    expect(s.inputs.at(-1)?.moveWF.z).toBeCloseTo(-1.35, 9);
   });
 });

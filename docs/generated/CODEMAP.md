@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 253개.
+> 파일 255개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -23,6 +23,7 @@
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라·아바타(phase 20 확정) → render.setCamera·setAvatar(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
 - `apps/game/src/wiring/env.ts` — 배선: sim.environment()(태양·달·날씨, 카메라 위치) → render.setEnvironment. camera(65) 뒤·renderPrep(70) 앞. see docs/modules/game.md, docs/01-architecture.md §5 | exports: ENV_WIRING_PHASE, defaultClock, createEnvWiring
+- `apps/game/src/wiring/ground-loading.ts` — 배선: 발밑·앞 셀 콜라이더 적재 대기(traversal.hud.groundLoading, M04-T06) → 화면 아래 가운데 작은 로딩 표시. HUD(M08 ui) 전까지의 최소 표시. | exports: GROUND_LOADING_PHASE, createGroundLoadingIndicator
 - `apps/game/src/wiring/quality.ts` — 품질 티어 배선(M03-T08): 저장된 티어(localStorage)로 시작 → 없으면 첫 표시 뒤 스트리밍이 조용해지면 render.detectQuality()(detect-gpu + 60프레임). | exports: QUALITY_STORAGE_KEY, loadTier, QualityWiringDeps, startQualityWiring
 - `apps/game/src/wiring/streaming-physics.ts` — 배선: streaming live L0 셀(버스 `cell/ready` — onReady는 렌더 배선 단독 소유) → 물리 반경(08 §4) 안이면 collision.bin + terrain.height를 따로 요청(requestSections)해 physics.addCell, | exports: PHYSICS_WIRING_PHASE, PHYSICS_RADIUS_M, StreamingPhysicsDeps, StreamingPhysicsStats, StreamingPhysicsWiring, cellDistance, createStreamingPhysicsWiring
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
@@ -205,6 +206,7 @@
 - `packages/traversal/src/internal/camera/free-rig.ts` — FreeRig: 6DOF 관성 자유비행(요·피치, 롤 잠금) 순수 계산. WF float64. see docs/09-traversal.md §2 freecam, §3 | exports: FreeRigState, FreeRigIntent, createFreeRigState, clampPitch, forwardOf, rigQuat, lookAtAngles, stepFreeRig
 - `packages/traversal/src/internal/camera/third-person-rig.ts` — ThirdPersonRig(09 §3): 피벗 = 발 + 어깨 높이, 붐 = 오른쪽 어깨 0.4 m − 시선 × 거리 3.5 m(휠 1.5–6). 충돌은 boom.ts(sphereCast)가 붐 길이를 줄인다(M04-T05), | exports: zoomDistance, Boom, createBoom, thirdPersonBoom, thirdPersonCamera, avatarOpacity
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
+- `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → CameraState. physics 불필요. see docs/09-traversal.md §2 freecam | exports: createFreecamMode
 - `packages/traversal/src/internal/modes/walk.ts` — walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도 | exports: isWalkParams, moveVelocity, WalkMode, createWalkMode
 - `packages/traversal/src/internal/service.ts` — createTraversal: FSM + 기본 모드(freecam·walk) 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD·플레이어). see docs/modules/traversal.md | exports: TRAVERSAL_PHASE, createTraversal

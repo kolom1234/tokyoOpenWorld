@@ -66,6 +66,8 @@ export interface CellColliders {
   /** 남은 작업 수. */
   readonly pending: number;
   readonly cells: number;
+  /** 앵커 재설정: 적재된 정적 바디 −Δ(남은 작업은 새 앵커로 만든다). */
+  shift(dx: number, dy: number, dz: number): void;
   dispose(): void;
 }
 
@@ -183,12 +185,50 @@ function jobsOf(
   return jobs;
 }
 
+/** 앵커 재설정: 정적 바디 −Δ. */
+function shiftBodies(w: PhysicsWorld, ids: readonly BodyId[], dx: number, dy: number, dz: number): void {
+  for (const id of ids) {
+    const p = w.bodies.GetPosition(id);
+    const [x, y, z] = [p.GetX() - dx, p.GetY() - dy, p.GetZ() - dz];
+    w.bodies.SetPosition(id, w.scratch.rvec3(x, y, z), w.Jolt.EActivation_DontActivate);
+  }
+}
+
 function destroyBodies(w: PhysicsWorld, ids: readonly BodyId[]): void {
   for (const id of ids) {
     w.bodies.RemoveBody(id);
     w.bodies.DestroyBody(id);
     w.Jolt.destroy(id);
   }
+}
+
+/** 예산 안에서 큐 앞 셀의 작업을 처리(최소 1개). 셀 작업이 끝나면 onLoaded. 반환 = 처리한 작업 수. */
+function pumpQueue(
+  cells: ReadonlyMap<CellKey, CellEntry>,
+  queue: CellKey[],
+  budgetMs: number,
+  onLoaded: (key: CellKey) => void,
+): number {
+  const t0 = performance.now();
+  let n = 0;
+  while (queue.length > 0) {
+    const key = queue[0] as CellKey;
+    const e = cells.get(key);
+    const next = e?.jobs[0];
+    // 남은 예산에 들지 않는 작업은 다음 조각(조각마다 최소 1개).
+    if (next && n > 0 && performance.now() - t0 + next.estMs > budgetMs) break;
+    if (e && next) {
+      e.jobs.shift();
+      const id = next.run();
+      if (id) e.bodies.push(id);
+      n++;
+    }
+    if (!e || e.jobs.length === 0) {
+      queue.shift();
+      if (e) onLoaded(key);
+    }
+  }
+  return n;
 }
 
 export function createCellColliders(
@@ -216,31 +256,12 @@ export function createCellColliders(
       const e: CellEntry = { originWF: { ...originWF }, jobs: [], bodies: [] };
       e.jobs = jobsOf({ w, add, e, key, anchorWF, escalators }, jcol, hf, (m) => warn(`${key} ${m}`));
       cells.set(key, e);
-      queue.push(key);
+      // 작업이 없는 셀(데이터 없음)은 바로 적재 완료 — 큐에 넣으면 pending 0이라 펌프가 돌지 않아 영영 미적재.
+      if (e.jobs.length === 0) onLoaded(key);
+      else queue.push(key);
     },
     remove,
-    pump(budgetMs) {
-      const t0 = performance.now();
-      let n = 0;
-      while (queue.length > 0) {
-        const key = queue[0] as CellKey;
-        const e = cells.get(key);
-        const next = e?.jobs[0];
-        // 남은 예산에 들지 않는 작업은 다음 틱(틱마다 최소 1개).
-        if (next && n > 0 && performance.now() - t0 + next.estMs > budgetMs) break;
-        if (e && next) {
-          e.jobs.shift();
-          const id = next.run();
-          if (id) e.bodies.push(id);
-          n++;
-        }
-        if (!e || e.jobs.length === 0) {
-          queue.shift();
-          if (e) onLoaded(key);
-        }
-      }
-      return n;
-    },
+    pump: (budgetMs) => pumpQueue(cells, queue, budgetMs, onLoaded),
     isLoaded: (key) => cells.has(key) && !queue.includes(key),
     get pending() {
       let n = 0;
@@ -249,6 +270,9 @@ export function createCellColliders(
     },
     get cells() {
       return cells.size;
+    },
+    shift: (dx, dy, dz) => {
+      for (const e of cells.values()) shiftBodies(w, e.bodies, dx, dy, dz);
     },
     dispose() {
       for (const key of [...cells.keys()]) remove(key);

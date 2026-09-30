@@ -2,8 +2,8 @@
 Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
 
 ## Current Milestone: M04 — Physics & Walking (M03 보강 5항목 완료)
-## Current Task: M04-T06 Anchor rebase & ground-missing guard — 큐: M04-T01 ✅ → T02 ✅ → T03 ✅ → T04 ✅(엔진, 육교·연석 데이터 ⚠️ → M05-T01/T08) → T05 ✅(아바타 = 자체 마네킹, Quaternius ⚠️ 승인 대기) → T06
-- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042), M04-T03 캐릭터·walk(ADR-0043), M04-T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044), M04-T05 3인칭 카메라 충돌·아바타(ADR-0045).
+## Current Task: M04 완료(T01–T06) — 다음 마일스톤 M05(Street Detail) 착수 전 사용자 확인: Quaternius 아바타 다운로드 승인, staging 재배포(T04–T06 코드) 여부
+- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042), M04-T03 캐릭터·walk(ADR-0043), M04-T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044), M04-T05 3인칭 카메라 충돌·아바타(ADR-0045), M04-T06 앵커 재설정·발밑 보호(ADR-0046).
 
 - 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
   `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost), `perf.mjs`(무제한 프레임 rAF p50·전력 상한·패스별 GPU, `PROT=1` 회전). 방법은 ADR-0038 Context에 기록.
@@ -11,10 +11,15 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
   인증 = 사용자 환경변수 `CLOUDFLARE_API_TOKEN`(wrangler도 이 토큰 사용 — whoami "User API Token"). 실제 GPU로 staging 부트 → C → 걷기 1.35 m/s 확인. 옛 빌드 gc는 10/6 이후(7일 규칙).
 - ⚠️ 2026-09-30 19:32 PC 재부팅(비정상 종료 추정) → `.git/refs/heads/claude/m03-fixes-m04`가 NUL 41바이트로 손상 → reflog·origin 모두 f031f80이라 파일에 직접 복구(백업 scratchpad `broken-ref.bin`), `git fsck` 오류 없음.
 - 보행 봇(scratchpad `walkbot.mjs <url> <분> <시드>`): 실제 입력(키 W/X/Shift, 합성 포인터 드래그 회전)으로 스폰(스크램블) 반경 110 m 자유 보행, 끼임 후보(10 s < 1 m) → 8방향 탈출 시도로 막다른 곳/끼임 분류.
-- Next step (정확히 한 걸음): M04-T06 physics 앵커 재설정(4096 m, 08 §2) → traversal walk 발밑 셀 미적재 시 이동 정지 + 로딩 표시(`physics.hasCell`).
+- Next step (정확히 한 걸음): staging 재배포(`pnpm build` → `cd apps/worker && pnpm run deploy:staging`, 데이터는 그대로 `20260929-99bffa8-ec1646fc`) → M05-T01(도로·보도·연석·지형 성형) 태스크 블록 읽기.
 - Blockers: 없음
 
 ## Recently Completed
+- M04-T06 Anchor rebase & ground-missing guard — physics `setFocus`(배선 250 ms) → 4096 m 초과면 `rebase` 명령: 워커가 적재된 모든 바디·캐릭터·에스컬레이터 구간 −Δ, 앵커 객체 제자리 갱신, OptimizeBroadPhase.
+  traversal `ground-guard.ts`: 발밑 L0 미적재 = **hold**(캐릭터 입력 — 중력·이동 없음), 제동 거리 + 0.6 m 앞 셀 미적재 = **stop**, `hud.groundLoading` → 게임 `wiring/ground-loading.ts`(0.2 s 넘으면 "지면 불러오는 중…").
+  잠재 버그 2개 수정: 작업 없는 셀이 영영 미적재, streaming 본문 도중 취소 시 `cancel()` 미처리 거부("signal is aborted without reason").
+  **수락**(실제 GPU, MVP, CDP Fast 3G 1.44 Mbps·562 ms): 걷기 31,303 프레임 **낙하 0**, 대기 4회, 1.4–1.6 km 순간이동 = 공중 고정 → 17.6–18.6 s 착지, 북쪽 끝 z −4200 = **앵커 재설정 1회**(0,0,−4096) →
+  Fast 3G 단독 ≈ 32 s 착지(스로틀 없이 2.5 s). ⚠️ 순간이동 연속 시 큐 적체로 발밑 L0 지연(4분+, 낙하 없음) → M08 transition. 테스트 +1파일(rebase-hold) +1건(walk 보호). ADR-0046 (2026-09-30)
 - M04-T05 Camera collision & avatar — physics `sphereCast`(워커 CastShape 구·양면), traversal 3인칭: 카메라 시선 프레임당 ≤ 8° + **부채꼴 5개 sphereCast**(가운데·yaw ±8°·pitch ±8°, r 0.2 m)로
   다음 프레임 붐 한계(1프레임 비동기 보상, 당기기 즉시·풀기 4 m/s), 붐 0.5–1.2 m 아바타 디더 페이드. render `setAvatar`: **자체 절차 마네킹**(캡슐·구, 속도 블렌드 대기·걷기·달리기, 선컴파일) — core `AvatarState`.
   **수락**(실제 GPU, MVP, 봇이 찾은 막다른 골목 8곳 × 25 s, 홱 돌리기·걷기·줌, 매 프레임 피벗 → 카메라 구 0.1 m 캐스트): **12,600 프레임·검사 10,083회 관통 0**
@@ -77,6 +82,7 @@ Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01�
 
 ## Known Issues
 - [physics] 육교·계단·연석·에스컬레이터 **데이터 없음** — 엔진(M04-T04)만. 연석·보도 = M05-T01, 육교·계단 = M05-T08(PLATEAU brid + OSM steps → 램프 프록시), 역 에스컬레이터 = M07 역 오버라이드. 지형 재질 = asphalt 고정(`_SURF` 재질은 M05-T01).
+- [streaming] 순간이동을 이어 하면 이전 목적지 작업이 큐(동시 8·대기 16)에 남아 스로틀에서 새 발밑 L0가 늦게 온다(Fast 3G 3번째 순간이동 뒤 4분+ 공중 고정 — 낙하 없음). 발밑 L0 우선·이전 목적지 취소는 M08 transition(`whenReady`)과 함께(ADR-0046).
 - [e2e] 로컬 `pnpm test:e2e`(기본 워커 = 코어 절반 = 4)는 이 노트북(15 W 전력 상한)에서 SwiftShader 경합으로 불안정(render·flicker·decode·walk가 번갈아 시간 초과) → `--workers=2`(CI 러너와 같음)로 10/10 통과(2026-09-30).
 - [avatar] 3인칭 아바타 = 자체 절차 마네킹(캡슐). Quaternius 베이스 아바타(09 §3)는 외부 다운로드라 사용자 승인 필요(파일·출처·크기 확인 → 03·ATTRIBUTION 갱신) — ADR-0045.
 - [traversal] 게임 시작은 freecam(골든뷰·e2e 결정론) — C로 걷기. 09 §1 "walk = 기본"은 M08 스폰 흐름에서 재검토(ADR-0043).

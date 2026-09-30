@@ -31,6 +31,8 @@ export interface CharacterInput {
   jump?: boolean;
   /** 아바타 방향(yaw, rad). 없으면 그대로. */
   yawRad?: number;
+  /** 발밑 셀 콜라이더 미적재(08 §4 groundMissing): 제자리 고정 — 중력·이동 없음(낙하 방지). */
+  hold?: boolean;
 }
 
 export interface PhysicsConfig {
@@ -44,6 +46,8 @@ export interface PhysicsConfig {
   isolation: 'auto' | 'degraded' | 'shared';
   /** 앵커 격자(m): 세션 시작 앵커 = 첫 위치의 이 격자점(08 §2). */
   anchorGridM: number;
+  /** 앵커 재설정 거리(m): 초점(setFocus)이 앵커에서 이보다 멀면 새 격자점으로(08 §2 = 4096). */
+  rebaseDistanceM: number;
   /** 셀 콜라이더 적재 조각 예산(ms): 조각마다 이 안에서 작업(높이장 타일·triMesh 조각)을 하나 이상 — step 때와 메시지 사이 빈 시간(08 §4 — 수락 ≤ 8 ms). */
   cellBudgetMs: number;
 }
@@ -76,6 +80,8 @@ export interface PhysicsStats {
   loadTickMaxMs: number;
   /** 적재 틱이 8 ms를 넘은 횟수(GC 등 잡음 포함). */
   loadTicksOver8Ms: number;
+  /** 앵커 재설정 횟수. */
+  rebases: number;
   /** 최근 틱(스텝 묶음) 워커 처리 시간 평균(ms). */
   tickMs: number;
   anchorWF: Readonly<Vec3d>;
@@ -112,6 +118,11 @@ export interface PhysicsService extends SystemProvider {
   sphereCast(originWF: Vec3d, dir: Vec3, radius: number, maxDist: number): Promise<RayHit | null>;
   /** 순간 이동(속도 0). */
   teleport(h: BodyHandle, posWF: Vec3d, yawRad: number): void;
+  /**
+   * 물리 초점(보통 플레이어, 배선이 주기적으로). 앵커에서 rebaseDistanceM(4096 m)보다 멀면 앵커 = 초점의 격자점으로 재설정 —
+   * 워커가 모든 바디를 −Δ 옮긴다(WF 명령·스냅샷은 그대로 — 호출 측은 모른다).
+   */
+  setFocus(posWF: Vec3d): void;
   /** 보간 완료 포즈(아직 스냅샷이 없으면 undefined). */
   pose(h: BodyHandle): Readonly<Pose> | undefined;
   stats(): PhysicsStats;

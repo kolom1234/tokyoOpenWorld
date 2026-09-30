@@ -20,6 +20,8 @@ export interface Escalators {
   /** 점(PHYS)을 담은 구간. */
   at(x: number, y: number, z: number): EscalatorVolume | undefined;
   readonly count: number;
+  /** 앵커 재설정: 모든 구간 중심 −Δ. */
+  shift(dx: number, dy: number, dz: number): void;
 }
 
 /** v를 q로 회전(q = 단위). conj = true면 역회전. */
@@ -78,6 +80,14 @@ export function createEscalators(): Escalators {
     },
     get count() {
       return count;
+    },
+    shift(dx, dy, dz) {
+      for (const [key, list] of byCell) {
+        byCell.set(
+          key,
+          list.map((v) => ({ ...v, c: [v.c[0] - dx, v.c[1] - dy, v.c[2] - dz] as const })),
+        );
+      }
     },
   };
 }

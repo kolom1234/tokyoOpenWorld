@@ -31,6 +31,8 @@ export interface CharacterBody {
   escalator: boolean;
   /** 지난 스텝에 더한 에스컬레이터 수직 속도(다음 스텝의 자기 수직 속도에서 뺀다 — 누적 방지). */
   escVy: number;
+  /** 발밑 셀 미적재(08 §4 groundMissing): 제자리 고정 — 중력·이동 없음. */
+  hold: boolean;
 }
 
 export interface Characters {
@@ -39,6 +41,8 @@ export interface Characters {
   remove(handle: number): void;
   /** 순간이동(속도 0). */
   teleport(c: CharacterBody, posPhys: readonly [number, number, number], yaw: number): void;
+  /** 앵커 재설정: 모든 캐릭터 −Δ. */
+  shift(dx: number, dy: number, dz: number): void;
   /** 물리 스텝 전: 모든 캐릭터 이동(ExtendedUpdate — 계단·바닥 붙기). */
   update(dt: number): void;
   /** 접지 여부·지면 재질(지면 바디 userData). */
@@ -117,6 +121,12 @@ function createUpdateCtx(w: PhysicsWorld): UpdateCtx {
 function moveCharacter(u: UpdateCtx, escalators: Escalators, c: CharacterBody, dt: number): void {
   const { Jolt, iface, scratch } = u.w;
   const ch = c.jolt;
+  if (c.hold) {
+    ch.SetLinearVelocity(scratch.vec3(0, 0, 0));
+    c.horizontal.x = c.horizontal.z = 0;
+    c.escVy = 0;
+    return;
+  }
   const p = ch.GetPosition();
   const esc = escalators.at(p.GetX(), p.GetY() + ESC_PROBE_M, p.GetZ());
   c.escalator = esc !== undefined;
@@ -148,11 +158,19 @@ export function createCharacters(w: PhysicsWorld, escalators: Escalators): Chara
         horizontal: { x: 0, y: 0, z: 0 },
         escalator: false,
         escVy: 0,
+        hold: false,
       };
       list.set(handle, c);
       return c;
     },
     get: (h) => list.get(h),
+    shift(dx, dy, dz) {
+      for (const c of list.values()) {
+        const p = c.jolt.GetPosition();
+        const [x, y, z] = [p.GetX() - dx, p.GetY() - dy, p.GetZ() - dz];
+        c.jolt.SetPosition(scratch.rvec3(x, y, z));
+      }
+    },
     teleport(c, p, yaw) {
       c.jolt.SetPosition(scratch.rvec3(p[0], p[1], p[2]));
       c.jolt.SetRotation(scratch.yawQuat(yaw));

@@ -34,6 +34,7 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 - 카메라 출력은 항상 `CameraState`(WF float64). 롤 잠금(쿼터니언 = yaw(Y)·pitch(X), 피치 ±89°).
 - traversal은 render/sim을 직접 호출하지 않는다(출력만 제공, 배선은 apps/game). 열차 정보는 컨텍스트의 `trains()` 함수로만 받음.
 - `physics`가 없으면 `requires: ['physics']` 모드는 진입 불가, freecam만 동작. C 키: freecam ↔ 직전 모드(없으면 walk, 불가면 유지). 전환 파라미터 = 지금 카메라 포즈(ADR-0043).
+- walk 발밑 보호(ADR-0046, `ground-guard.ts`): 발 아래 L0 셀 미적재 = hold(제자리 고정), 제동 거리 + 0.6 m 앞 셀 미적재 = stop(입력 0), `hud.groundLoading`.
 - walk 3인칭(ADR-0045): 카메라 시선은 스무딩 시선을 프레임당 ≤ 8°로 따라가고, 매 프레임 부채꼴 5개(가운데·yaw ±8°·pitch ±8°) 붐 sphereCast(반경 0.2 m) 최솟값으로 다음 프레임 붐 길이를 자른다(당기기 즉시·풀기 4 m/s). 붐 0.5–1.2 m에서 아바타 디더 페이드.
 - walk: 발 높이 변화(연석·계단)는 임계 감쇠 스프링(ω 12)으로 따라가 카메라 프레임당 < 3 cm(ADR-0044), 에스컬레이터 운반 중 헤드밥 끔.
 - walk: 입력 → 카메라 yaw 기준 원하는 수평 속도 → `setCharacterInput`(가감속은 physics). 포즈 = 보간 스냅샷(발). 놓은 직후 옛 스냅샷(2 m 밖)은 무시. 착지점 = 하늘 레이 첫 충돌이 TERRAIN인 후보.
@@ -41,7 +42,7 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 - 바디 없는 모드(freecam)에서는 `player.posWF` = 카메라 위치, `player.yawRad` = 카메라 수평 방위. walk = 발 위치·물리 속도·몸 방향.
 
 ## Files
-api.ts, internal/(fsm, service, settings, walk-placement — 착지점 하늘 레이), internal/modes/(freecam, walk), internal/camera/(free-rig, first-person-rig — 시선 스무딩·발 높이 스프링·헤드밥, third-person-rig — 붐·아바타 페이드, boom — 부채꼴 sphereCast·회전 상한).
+api.ts, internal/(fsm, service, settings, walk-placement — 착지점 하늘 레이, ground-guard — 발밑·앞 셀 적재 확인), internal/modes/(freecam, walk), internal/camera/(free-rig, first-person-rig — 시선 스무딩·발 높이 스프링·헤드밥, third-person-rig — 붐·아바타 페이드, boom — 부채꼴 sphereCast·회전 상한).
 예정: modes/(drive, cycle, train, transition), camera/(chase-rig, attached-rig), interactables.ts, interest.ts.
 
 ## Tests
@@ -50,4 +51,4 @@ test/service.test.ts(시작 포즈·fly 컨텍스트·phase, W 이동·km/h, tel
 test/walk.test.ts(가짜 physics: C → 지붕 아닌 지면 착지·대기 중 카메라 유지, 걸음 단계·달리기·대각선, FP 눈높이, V 3인칭 어깨·뒤·붐 풀림·벽 1 m → 0.95 m 안·아바타 페이드, C 복귀 = 바디, 멀면 다시 놓기).
 
 ## Status
-M01-T06 freecam(physics 없음), M04-T03 walk(ADR-0043), T04 발 높이 스프링(ADR-0044), T05 3인칭 충돌·아바타(ADR-0045) → M07(train), M08(transition·상호작용).
+M01-T06 freecam(physics 없음), M04-T03 walk(ADR-0043), T04 발 높이 스프링(ADR-0044), T05 3인칭 충돌·아바타(ADR-0045), T06 발밑 보호(ADR-0046) → M07(train), M08(transition·상호작용).

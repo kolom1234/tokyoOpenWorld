@@ -26,12 +26,14 @@ export const DEFAULT_PHYSICS_CONFIG: PhysicsConfig = {
   interpolationDelayS: 1 / 60 + 1 / 120,
   isolation: 'auto',
   anchorGridM: 1024,
+  rebaseDistanceM: 4096,
   cellBudgetMs: 3,
 };
 
 /** 08 §2: 앵커 = 첫 위치의 격자점(y = 0 — 도쿄 표고 < 100 m). */
 export function anchorOf(p: Readonly<Vec3d>, gridM: number): Vec3d {
-  return { x: Math.round(p.x / gridM) * gridM, y: 0, z: Math.round(p.z / gridM) * gridM };
+  // + 0: −0 → 0(격자점 비교·로그가 흔들리지 않게).
+  return { x: Math.round(p.x / gridM) * gridM + 0, y: 0, z: Math.round(p.z / gridM) * gridM + 0 };
 }
 
 function workerTransport(supervisor: WorkerSupervisor): PhysicsTransport & { onRestart(h: () => void): void } {
@@ -216,7 +218,13 @@ function bodyApi(
     },
     setCharacterInput(h, i) {
       const moveWF = { x: i.moveWF.x, y: 0, z: i.moveWF.z };
-      queue.push(i.yawRad === undefined ? { c: 'charInput', h, moveWF } : { c: 'charInput', h, moveWF, yaw: i.yawRad });
+      queue.push({
+        c: 'charInput',
+        h,
+        moveWF,
+        ...(i.yawRad === undefined ? {} : { yaw: i.yawRad }),
+        ...(i.hold ? { hold: true } : {}),
+      });
     },
     despawn(h) {
       handles.free(h);
@@ -264,6 +272,7 @@ export function createPhysics(deps: PhysicsDeps): PhysicsService {
   const now = deps.now ?? (() => performance.now());
   const isolation = isolationOf(cfg.isolation);
   const anchorWF = anchorOf(deps.originWF, cfg.anchorGridM);
+  const rebase = { count: 0 };
   const sab = isolation === 'shared' ? new SharedArrayBuffer(SNAPSHOT_BYTES) : null;
   const transport = deps.transport ?? (deps.supervisor ? workerTransport(deps.supervisor) : undefined);
   if (!transport) throw new Error('physics: supervisor or transport required');
@@ -288,7 +297,15 @@ export function createPhysics(deps: PhysicsDeps): PhysicsService {
     isolation,
     ...bodyApi(queue, handles, history, () => now() / 1000 - cfg.interpolationDelayS),
     ...cellApi(transport, queue, track),
-    stats: () => statsOf(history.latest, link.st, isolation, handles.count, anchorWF),
+    setFocus(p) {
+      const d = Math.hypot(p.x - anchorWF.x, p.y - anchorWF.y, p.z - anchorWF.z);
+      if (d <= cfg.rebaseDistanceM) return;
+      Object.assign(anchorWF, anchorOf(p, cfg.anchorGridM));
+      rebase.count++;
+      queue.push({ c: 'rebase', anchorWF: { ...anchorWF } });
+      deps.log.child('physics').info('anchor rebase', anchorWF);
+    },
+    stats: () => ({ ...statsOf(history.latest, link.st, isolation, handles.count, anchorWF), rebases: rebase.count }),
     systems: () => [system],
     dispose: () => system.dispose(),
   };
@@ -310,7 +327,8 @@ function statsOf(
     bodies,
     initMs: st.initMs,
     tickMs: f?.[3] ?? 0,
-    anchorWF,
+    anchorWF: { ...anchorWF },
+    rebases: 0,
     colliderPending: f?.[4] ?? 0,
     colliderCells: f?.[5] ?? 0,
     loadTickMaxMs: f?.[6] ?? 0,

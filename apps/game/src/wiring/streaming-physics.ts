@@ -1,5 +1,5 @@
 // 배선: streaming live L0 셀(버스 `cell/ready` — onReady는 렌더 배선 단독 소유) → 물리 반경(08 §4) 안이면 collision.bin + terrain.height를 따로 요청(requestSections)해 physics.addCell,
-// 반경 × 1.25 밖으로 나가거나 해제되면 physics.removeCell. streaming·physics는 서로 모른다(01 §4). see docs/06-world-streaming.md §1, docs/08-physics.md §4
+// 반경 × 1.25 밖으로 나가거나 해제되면 physics.removeCell, 플레이어 = 물리 초점(setFocus — 앵커 재설정). streaming·physics는 서로 모른다(01 §4). see docs/06-world-streaming.md §1, docs/08-physics.md §2·§4
 import {
   type CellKey,
   type EventBus,
@@ -31,7 +31,7 @@ const INTERVAL_MS = 250;
 export interface StreamingPhysicsDeps {
   streaming: Pick<StreamingService, 'onEvicted' | 'requestSections'>;
   bus: Pick<EventBus, 'on'>;
-  physics: Pick<PhysicsService, 'addCell' | 'removeCell'>;
+  physics: Pick<PhysicsService, 'addCell' | 'removeCell' | 'setFocus'>;
   player: () => { posWF: Readonly<Vec3d>; mode: ModeId };
   log: Logger;
   /** 동시에 요청할 셀 수. */
@@ -96,6 +96,8 @@ export function createStreamingPhysicsWiring(d: StreamingPhysicsDeps): Streaming
     if (t - last < INTERVAL_MS) return;
     last = t;
     const { posWF, mode } = d.player();
+    // 앵커 재설정 판정(08 §2, 4096 m) — 초점 = 플레이어.
+    d.physics.setFocus(posWF);
     const r = PHYSICS_RADIUS_M[mode];
     for (const key of added) {
       const o = live.get(key);

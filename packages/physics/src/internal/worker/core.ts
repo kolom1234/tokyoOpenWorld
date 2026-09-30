@@ -5,7 +5,7 @@ import type { FromWorker, ToWorker } from '../protocol.ts';
 import { type BodySlots, createBodySlots } from './bodies.ts';
 import { type CellColliders, createCellColliders } from './cell-colliders.ts';
 import { type Characters, createCharacters } from './character.ts';
-import { createEscalators } from './escalators.ts';
+import { createEscalators, type Escalators } from './escalators.ts';
 import { warmUpShapes } from './heightfield.ts';
 import { loadJolt } from './jolt-init.ts';
 import { createQueries, type Queries } from './queries.ts';
@@ -19,6 +19,9 @@ const LOAD_TICK_LIMIT_MS = 8;
 
 interface State {
   world: PhysicsWorld;
+  /** 앵커(PHYS = WF − 앵커) — bodies·colliders·queries가 같은 객체를 읽는다(재설정 = 제자리 갱신). */
+  anchor: Vec3d;
+  escalators: Escalators;
   bodies: BodySlots;
   characters: Characters;
   colliders: CellColliders;
@@ -37,6 +40,20 @@ interface State {
 
 export interface PhysicsCore {
   handle(msg: ToWorker): Promise<void>;
+}
+
+/** 앵커 재설정(08 §2): 모든 정적·강체 바디·캐릭터·에스컬레이터 구간을 −Δ, 앵커 제자리 갱신, 브로드페이즈 최적화. */
+function rebase(st: State, to: Readonly<Vec3d>): void {
+  const dx = to.x - st.anchor.x;
+  const dy = to.y - st.anchor.y;
+  const dz = to.z - st.anchor.z;
+  if (dx === 0 && dy === 0 && dz === 0) return;
+  st.colliders.shift(dx, dy, dz);
+  st.bodies.shift(dx, dy, dz);
+  st.characters.shift(dx, dy, dz);
+  st.escalators.shift(dx, dy, dz);
+  Object.assign(st.anchor, to);
+  st.world.system.OptimizeBroadPhase();
 }
 
 /** 적재 한 조각(예산 안, 최소 1작업) + 적재 틱 통계. */
@@ -86,6 +103,8 @@ async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<
   const characters = createCharacters(world, escalators);
   const st: State = {
     world,
+    anchor,
+    escalators,
     characters,
     bodies: createBodySlots(world, anchor, characters),
     colliders: createCellColliders(
@@ -140,6 +159,7 @@ export function createPhysicsCore(send: Send): PhysicsCore {
     if (msg.t === 'step') {
       for (const c of msg.cmds) {
         if (c.c === 'removeCell') st.colliders.remove(c.key);
+        else if (c.c === 'rebase') rebase(st, c.anchorWF);
         else st.bodies.apply(c);
       }
       step(st, msg.targetS);

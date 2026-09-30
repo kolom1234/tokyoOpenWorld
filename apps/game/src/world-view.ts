@@ -21,6 +21,7 @@ import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
+import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
 import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
 import type { LoadedWorld } from './world-load.ts';
@@ -165,7 +166,11 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     gameTimeMs: () => sim.clock.gameTimeMs,
     timeScale: () => sim.clock.timeScale,
   };
-  const wiringSystems = [createCameraWiring(traversal, render), createEnvWiring(sim, render, deps.weather)];
+  const wiringSystems = [
+    createCameraWiring(traversal, render),
+    createEnvWiring(sim, render, deps.weather),
+    createGroundLoadingIndicator(canvas.ownerDocument, traversal),
+  ];
 
   return {
     render,

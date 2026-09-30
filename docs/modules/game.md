@@ -41,7 +41,8 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/debug/stats.ts | `?debug=1` stats-gl 동적 import |
 | src/debug/decode-probe.ts | `?probe=decode`(main.ts가 부트 대신 동적 import): world-mini 셀을 streaming `createFetcher` → `createDecodePool`로 2회(네트워크·Cache Storage) + 동시 4셀 + 취소 → 셀당 시간·정점/인덱스 수·긴 작업 → `globalThis.__SANPO_DECODE_PROBE__`, `#app[data-probe]`(e2e `decode.spec.ts`, ADR-0022) |
 | src/wiring/streaming-render.ts | phase 45 `streaming.setInterest(traversal.interest)`, phase 55 적용(2 ms + 업로드 4 MiB/프레임, 첫 셀 보장): `addCell → ack('render') → 부모 HLOD 자식 숨김`, 해제 = `부모 보임 → removeCell`(M02-T05, ADR-0025). sim/audio/interactables 분배는 해당 태스크 |
-| src/wiring/streaming-physics.ts | 물리 반경 필터, `requestSections` → physics.addCell/removeCell |
+| src/wiring/streaming-physics.ts | 물리 반경 필터, `requestSections` → physics.addCell/removeCell, `physics.setFocus(플레이어)`(앵커 재설정, M04-T06) |
+| src/wiring/ground-loading.ts | phase 66: `traversal.hud.groundLoading`이 0.2 s 넘으면 화면 아래 "지면 불러오는 중…"(M04-T06, M08 HUD 전 최소 표시) |
 | src/wiring/streaming-sim.ts | nav/lanes/meta 전달 |
 | src/wiring/sim-physics.ts | MessageChannel 생성·연결 |
 | src/wiring/env.ts | phase 66 `render.setEnvironment(sim.environment())`(M03-T03, audio는 M10), `defaultClock`(오늘 12:00 JST custom 1배속). world-view가 `createSim`(골든뷰·`?time=` = frozen) 생성, frameSource 시각 = sim 시계 |

@@ -88,3 +88,22 @@ body.rendering #app .caps {
     monospace;
   pointer-events: none;
 }
+
+/* 발밑 셀 콜라이더 적재 대기(M04-T06, wiring/ground-loading.ts). */
+.ground-loading {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.35rem 0.8rem;
+  background: rgb(0 0 0 / 55%);
+  color: #f0f0f0;
+  border-radius: 999px;
+  font:
+    13px / 1.4 system-ui,
+    sans-serif;
+  pointer-events: none;
+}
+.ground-loading[hidden] {
+  display: none;
+}

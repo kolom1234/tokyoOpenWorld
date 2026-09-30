@@ -37,6 +37,8 @@ export interface HudHints {
   nextStationId?: string;
   gear?: string;
   rpm?: number;
+  /** 발밑·앞 셀 콜라이더 적재 대기(이동 멈춤 — 08 §4 groundMissing, M04-T06). */
+  groundLoading?: boolean;
 }
 /** 플레이어 바디가 있는 모드(walk…)의 출력. 없으면 카메라 위치·방위를 플레이어로 본다(freecam). */
 export interface ModePlayer {

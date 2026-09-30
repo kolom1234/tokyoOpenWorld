@@ -20,13 +20,15 @@ type Entry =
   | { handle: number; kind: 'rigid'; id: InstanceType<PhysicsWorld['Jolt']['BodyID']> }
   | { handle: number; kind: 'char'; c: CharacterBody };
 
-export type BodyCommand = Exclude<Command, { c: 'removeCell' }>;
+export type BodyCommand = Exclude<Command, { c: 'removeCell' } | { c: 'rebase' }>;
 
 export interface BodySlots {
   apply(cmd: BodyCommand): void;
   /** 바디 기록(pos WF·quat·vel·angVel·flags·groundMat·handle). 반환 = 슬롯 상한(마지막 사용 슬롯 + 1). */
   fill(frame: Float64Array): number;
   readonly count: number;
+  /** 앵커 재설정: 강체를 −Δ(캐릭터는 characters.shift). */
+  shift(dx: number, dy: number, dz: number): void;
   dispose(): void;
 }
 
@@ -136,7 +138,18 @@ function charInput(w: PhysicsWorld, e: Entry | undefined, c: Extract<Command, { 
   if (e?.kind !== 'char') return;
   e.c.desired.x = c.moveWF.x;
   e.c.desired.z = c.moveWF.z;
+  e.c.hold = c.hold === true;
   if (c.yaw !== undefined) e.c.jolt.SetRotation(w.scratch.yawQuat(c.yaw));
+}
+
+/** 앵커 재설정: 강체 −Δ(캐릭터는 characters.shift). */
+function shiftRigid(w: PhysicsWorld, slots: readonly (Entry | undefined)[], dx: number, dy: number, dz: number): void {
+  for (const e of slots) {
+    if (e?.kind !== 'rigid') continue;
+    const p = w.bodies.GetPosition(e.id);
+    const [x, y, z] = [p.GetX() - dx, p.GetY() - dy, p.GetZ() - dz];
+    w.bodies.SetPosition(e.id, w.scratch.rvec3(x, y, z), w.Jolt.EActivation_DontActivate);
+  }
 }
 
 export function createBodySlots(w: PhysicsWorld, anchorWF: Readonly<Vec3d>, chars: Characters): BodySlots {
@@ -181,6 +194,7 @@ export function createBodySlots(w: PhysicsWorld, anchorWF: Readonly<Vec3d>, char
         if (own(c.h)) remove(slotOf(c.h));
       } else teleport(w, chars, own(c.h), phys(c.posWF), c.yaw);
     },
+    shift: (dx, dy, dz) => shiftRigid(w, slots, dx, dy, dz),
     fill(frame) {
       let top = 0;
       for (let s = 0; s < MAX_BODIES; s++) {

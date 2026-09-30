@@ -1,6 +1,6 @@
 // M04-T04 수락(합성): 실제 Jolt(같은 스레드 전송) + traversal walk + 가짜 입력 — 0.15 m 연석 오르내림에서 1인칭 카메라 프레임당 변화 < 3 cm,
 // 챌면 0.18 m 계단 오르기(카메라 < 3 cm/프레임, 끊김 없음). 실제 연석·육교 데이터는 M05-T01·교량 태스크(ADR-0044).
-import { createEventBus, createLogger, type FrameContext } from '@sanpo/core';
+import { createEventBus, createLogger, type FrameContext, packCellKey } from '@sanpo/core';
 import type { ActionState, AxisAction, ButtonAction, InputContext, InputService } from '@sanpo/input';
 import { createInlineTransport, createPhysics } from '@sanpo/physics';
 import { createTraversal } from '@sanpo/traversal';
@@ -44,6 +44,12 @@ async function setup() {
   await lb.flush();
   await physics.ready;
   // 바닥(윗면 y = 20), 동쪽 x +5… 연석 0.15 m, x +20… 계단(챌면 0.18·디딤 0.3) 5단 + 층계참.
+  // 발밑 보호(M04-T06)는 L0 셀 적재를 본다 → 장면 주변 셀을 데이터 없이 적재 완료로(작업 0 = 즉시 cellLoaded).
+  for (let ix = 2; ix <= 5; ix++) {
+    for (let iz = -5; iz <= -3; iz++)
+      physics.addCell(packCellKey(0, ix, iz), { x: ix * 256, y: 0, z: iz * 256 }, undefined, undefined);
+  }
+  await lb.flush();
   physics.debugSpawnBox({ x: O.x, y: O.y - 0.5, z: O.z }, { x: 60, y: 0.5, z: 20 }, false);
   physics.debugSpawnBox({ x: O.x + 12.5, y: O.y + 0.075, z: O.z }, { x: 7.5, y: 0.075, z: 20 }, false);
   for (let i = 0; i < 5; i++) {

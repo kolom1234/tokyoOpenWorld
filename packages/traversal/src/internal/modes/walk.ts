@@ -32,6 +32,7 @@ import {
   thirdPersonCamera,
   zoomDistance,
 } from '../camera/third-person-rig.ts';
+import { groundGuard } from '../ground-guard.ts';
 import { findStreetSpot } from '../walk-placement.ts';
 
 const MS_TO_KMH = 3.6;
@@ -226,7 +227,11 @@ function drive(rt: Rt, frame: FrameContext, ctx: TraversalContext, physics: Phys
   const v = moveVelocity(s.axis('moveX'), s.axis('moveY'), look.yawRad, speed);
   if (st.view === 'first') st.bodyYaw = look.yawRad;
   else if (Math.hypot(v.x, v.z) > TURN_MIN_MS) st.bodyYaw = Math.atan2(-v.x, -v.z);
-  physics.setCharacterInput(h, { moveWF: { x: v.x, y: 0, z: v.z }, yawRad: st.bodyYaw });
+  // 발밑·앞 셀 콜라이더가 없으면 멈추거나(stop) 제자리 고정(hold) — 낙하 방지(08 §4).
+  const guard = groundGuard(physics, st.feet, v, st.vel);
+  const move = guard.stop ? { x: 0, y: 0, z: 0 } : { x: v.x, y: 0, z: v.z };
+  physics.setCharacterInput(h, { moveWF: move, yawRad: st.bodyYaw, ...(guard.hold ? { hold: true } : {}) });
+  rt.output.hud.groundLoading = guard.stop;
   readPose(st, physics, h);
   const hSpeed = Math.hypot(st.vel.x, st.vel.z);
   const feetY = followFeet(rt.fp, st.feet.y, st.grounded, frame.dtReal, w.eyeFollowPerS);

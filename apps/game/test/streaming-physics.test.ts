@@ -49,7 +49,7 @@ describe('streaming → physics wiring', () => {
     const w = createStreamingPhysicsWiring({
       streaming: s.api,
       bus: s.bus,
-      physics: { addCell: (k) => added.push(k), removeCell: (k) => removed.push(k) },
+      physics: { addCell: (k) => added.push(k), removeCell: (k) => removed.push(k), setFocus: () => undefined },
       player: () => player,
       log: createLogger({ level: 'error' }),
       now: () => t,
