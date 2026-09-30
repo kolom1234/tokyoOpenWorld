@@ -3,7 +3,7 @@
 //  → TAAU(앞 단계 전부 렌더 스케일 해상도 — 동적 해상도 M03-T08) → 출력 변환(AgX·sRGB, renderOutput) → 3D LUT → Sharpen.
 // 효과 스위치 = post/config.ts(품질 티어 + 덮어쓰기).
 // WebGL2 폴백은 직접 렌더(M03-T09가 대체).
-import { aerialPerspective } from '@takram/three-atmosphere/webgpu';
+import { type AtmosphereContext, aerialPerspective } from '@takram/three-atmosphere/webgpu';
 import { bloom } from 'three/examples/jsm/tsl/display/BloomNode.js';
 import { ao as gtao } from 'three/examples/jsm/tsl/display/GTAONode.js';
 import { lut3D } from 'three/examples/jsm/tsl/display/Lut3DNode.js';
@@ -41,11 +41,14 @@ import {
   type PerspectiveCamera,
   RenderPipeline,
   type Scene,
+  type TextureNode,
   type Node as TslNode,
   UnsignedByteType,
   type WebGPURenderer,
 } from 'three/webgpu';
 import type { PostEffects } from '../../api.ts';
+import { composeAerial, LowResAerialNode } from './aerial.ts';
+import { filterAo } from './ao-filter.ts';
 import { type AutoExposure, createAutoExposure } from './exposure.ts';
 import { createGradeLut, LUT_SIZE } from './lut.ts';
 
@@ -110,6 +113,8 @@ function scenePassOf(scene: Scene, camera: Camera, fx: PostEffects): PassNode {
 interface Scalables {
   rtts: { setResolutionScale(s: number): unknown }[];
   ao?: { resolutionScale: number };
+  aoFilter?: { setResolutionScale(s: number): unknown };
+  aerial?: { renderScale: number };
   ssr?: { resolutionScale: number };
 }
 
@@ -150,13 +155,16 @@ function lightingComposite(
   if (fx.ao === 'gtao') {
     const a = gtao(depth, normal, camera);
     a.resolutionScale = fx.aoScale * fx.renderScale;
-    // 도시 규모(미터): 반경 0.5 m(1 m는 +2 ms), 표본 8(TAA가 시간 누적 — 16표본 대비 ≈ 절반 비용).
+    // 도시 규모(미터): 반경 0.5 m(1 m는 +2 ms), 표본 8. 시간 노이즈(useTemporalFiltering)는 TAAU가 다 섞지 못해
+    // 정지 화면이 떨린다 → 고정 노이즈 + 5×5 깊이 인지 블러(ADR-0038).
     a.radius.value = 0.5;
-    a.samples.value = fx.taa ? 8 : 16;
-    a.useTemporalFiltering = fx.taa;
+    a.samples.value = 8;
+    a.useTemporalFiltering = false;
     sc.ao = a;
     nodes.push(a);
-    lit = vec4(color.rgb.mul(a.getTextureNode().sample(screenUV).r), color.a);
+    const f = filterAo(a.getTextureNode(), depth, camera, a.resolutionScale);
+    sc.aoFilter = f;
+    lit = vec4(color.rgb.mul(f.sample(screenUV).r), color.a);
   } else if (fx.ao === 'ssgi') {
     const g = ssgi(color, depth, normal, camera) as unknown as SsgiNode;
     g.sliceCount.value = 2;
@@ -183,6 +191,30 @@ function lightingComposite(
   return { color: lit === color ? color : lowRes(lit, fx, sc), nodes };
 }
 
+/** 대기 공중원근: 'half' = 저해상도 S·T + 깊이 인지 업샘플(ADR-0039), 'full' = takram aerialPerspective(픽셀마다). */
+function aerialOf(
+  renderer: WebGPURenderer,
+  color: V4,
+  depth: TextureNode,
+  camera: PerspectiveCamera,
+  fx: PostEffects,
+  sc: Scalables,
+  nodes: { dispose(): void }[],
+): V4 {
+  if (fx.aerial === 'half') {
+    const low = new LowResAerialNode(depth, fx.renderScale);
+    sc.aerial = low;
+    nodes.push(low);
+    // 대기 컨텍스트 = lighting/atmosphere.ts가 renderer.contextNode에 넣은 것.
+    const atm = (renderer.contextNode.value as { getAtmosphere(): AtmosphereContext }).getAtmosphere();
+    return composeAerial(color, depth, low, camera, atm, renderer.reversedDepthBuffer);
+  }
+  const ap = aerialPerspective(color, depth);
+  // 별(StarsNode)은 기본 데이터를 GitHub에서 받는다 — CSP(connect-src 'self')에 막히고 외부 런타임 의존이라 끈다(밤하늘 자체 에셋은 M09).
+  if (ap.skyNode && 'showStars' in ap.skyNode) (ap.skyNode as { showStars: boolean }).showStars = false;
+  return ap as unknown as V4;
+}
+
 export function createPostPipeline(
   renderer: WebGPURenderer,
   scene: Scene,
@@ -195,14 +227,12 @@ export function createPostPipeline(
   const pipeline = new RenderPipeline(renderer);
   const sc: Scalables = { rtts: [] };
   const { color, nodes } = lightingComposite(scenePass, camera, fx, sc, debugGpuLoad);
-  const ap = aerialPerspective(color, depth);
-  // 별(StarsNode)은 기본 데이터를 GitHub에서 받는다 — CSP(connect-src 'self')에 막히고 외부 런타임 의존이라 끈다(밤하늘 자체 에셋은 M09).
-  if (ap.skyNode && 'showStars' in ap.skyNode) (ap.skyNode as { showStars: boolean }).showStars = false;
+  const ap = aerialOf(renderer, color, depth, camera, fx, sc, nodes);
   const exposure: AutoExposure | undefined = fx.autoExposure
     ? createAutoExposure(scenePass.getTexture('output'))
     : undefined;
   // 자동 노출이 없으면(WebGL2 — 컴퓨트 없음) 골든뷰 평균 배율(맑은 낮 0.8–1.9의 가운데)로 고정.
-  let hdr: V4 = (ap as unknown as V4).mul(exposure ? exposure.scale : float(fx.fixedExposure ?? 1));
+  let hdr: V4 = ap.mul(exposure ? exposure.scale : float(fx.fixedExposure ?? 1));
   if (fx.bloom) {
     const b = bloom(hdr, 0.08, 0.35, 1.2);
     // 넓은 흐림이라 ¼ 해상도로 충분(기본 ½ 대비 ≈ −1.5 ms).
@@ -235,6 +265,8 @@ export function createPostPipeline(
       scenePass.setResolutionScale(scale);
       for (const r of sc.rtts) r.setResolutionScale(scale);
       if (sc.ao) sc.ao.resolutionScale = fx.aoScale * scale;
+      sc.aoFilter?.setResolutionScale(fx.aoScale * scale);
+      if (sc.aerial) sc.aerial.renderScale = scale;
       if (sc.ssr) sc.ssr.resolutionScale = 0.5 * scale;
     },
     dispose() {

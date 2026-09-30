@@ -81,7 +81,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 3. 도로/보도/노면표시: 메시 + 데칼 메시(깊이 오프셋용 별도 프리미티브).
 4. 오버라이드: `content/overrides/<gmlId>/model.glb`가 있으면 해당 건물 대체(원점·스케일 검증).
 5. 인스턴스: 소품/나무 → 타입별 트랜스폼 배열(`props.inst`).
-6. 충돌: 건물 단순화(meshopt simplify 오차 0.3 m) 삼각 메시, 연석·가드레일, `catalog.json`에서 `collider`가 정의된 소품(박스/캡슐/원기둥), 나무 줄기(원기둥, 반경 = 높이×0.02) → 모두 `collision.bin`.
+6. 충돌(`stages/build/collision.ts`, ADR-0042): 건물 렌더 면 1 mm 용접 → 단순화(meshopt simplify 절대 오차 0.3 m) → 64 m 블록 순 ≤ 2500 삼각형 청크(JCOL triMesh 여러 개), 연석·가드레일, `catalog.json`에서 `collider`가 정의된 소품(박스/캡슐/원기둥), 나무 줄기(원기둥, 반경 = 높이×0.02) → 모두 `collision.bin`.
 7. 내비·레인·광원·오디오·POI·meta.
 8. glTF 후처리: `reorder(meshopt) → quantize(직접) → meshopt(encode, gltf-transform core+extensions)` — dedup·weld는 필요 시 추가(ADR-0018); 텍스처는 셀에 넣지 않고 `shared/materials` 참조(머티리얼 ID).
 

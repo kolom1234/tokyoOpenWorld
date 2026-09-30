@@ -1,0 +1,48 @@
+diff --git a/build/three.webgpu.js b/build/three.webgpu.js
+index 48b30e6..80de9a8 100644
+--- a/build/three.webgpu.js
++++ b/build/three.webgpu.js
+@@ -40407,6 +40407,11 @@ const getViewPosition = /*@__PURE__*/ Fn( ( [ screenPosition, depth, projectionM
+ 		screenPosition = vec2( screenPosition.x, screenPosition.y.oneMinus() ).mul( 2.0 ).sub( 1.0 );
+ 		clipSpacePosition = vec4( vec3( screenPosition, depth ), 1.0 );
+ 
++	} else if ( builder.renderer.reversedDepthBuffer === true ) {
++
++		// sanpo patch (M03 보강 4): reversed depth uses a [0, 1] clip range (EXT_clip_control) — depth is already NDC z.
++		clipSpacePosition = vec4( vec2( screenPosition.x, screenPosition.y.oneMinus() ).mul( 2.0 ).sub( 1.0 ), depth, 1.0 );
++
+ 	} else {
+ 
+ 		clipSpacePosition = vec4( vec3( screenPosition.x, screenPosition.y.oneMinus(), depth ).mul( 2.0 ).sub( 1.0 ), 1.0 );
+diff --git a/build/three.webgpu.nodes.js b/build/three.webgpu.nodes.js
+index e96c4ae..ecef7f7 100644
+--- a/build/three.webgpu.nodes.js
++++ b/build/three.webgpu.nodes.js
+@@ -40407,6 +40407,11 @@ const getViewPosition = /*@__PURE__*/ Fn( ( [ screenPosition, depth, projectionM
+ 		screenPosition = vec2( screenPosition.x, screenPosition.y.oneMinus() ).mul( 2.0 ).sub( 1.0 );
+ 		clipSpacePosition = vec4( vec3( screenPosition, depth ), 1.0 );
+ 
++	} else if ( builder.renderer.reversedDepthBuffer === true ) {
++
++		// sanpo patch (M03 보강 4): reversed depth uses a [0, 1] clip range (EXT_clip_control) — depth is already NDC z.
++		clipSpacePosition = vec4( vec2( screenPosition.x, screenPosition.y.oneMinus() ).mul( 2.0 ).sub( 1.0 ), depth, 1.0 );
++
+ 	} else {
+ 
+ 		clipSpacePosition = vec4( vec3( screenPosition.x, screenPosition.y.oneMinus(), depth ).mul( 2.0 ).sub( 1.0 ), 1.0 );
+diff --git a/src/nodes/utils/PostProcessingUtils.js b/src/nodes/utils/PostProcessingUtils.js
+index 09c471b..fa41333 100644
+--- a/src/nodes/utils/PostProcessingUtils.js
++++ b/src/nodes/utils/PostProcessingUtils.js
+@@ -24,6 +24,11 @@ export const getViewPosition = /*@__PURE__*/ Fn( ( [ screenPosition, depth, proj
+ 		screenPosition = vec2( screenPosition.x, screenPosition.y.oneMinus() ).mul( 2.0 ).sub( 1.0 );
+ 		clipSpacePosition = vec4( vec3( screenPosition, depth ), 1.0 );
+ 
++	} else if ( builder.renderer.reversedDepthBuffer === true ) {
++
++		// sanpo patch (M03 보강 4): reversed depth uses a [0, 1] clip range (EXT_clip_control) — depth is already NDC z.
++		clipSpacePosition = vec4( vec2( screenPosition.x, screenPosition.y.oneMinus() ).mul( 2.0 ).sub( 1.0 ), depth, 1.0 );
++
+ 	} else {
+ 
+ 		clipSpacePosition = vec4( vec3( screenPosition.x, screenPosition.y.oneMinus(), depth ).mul( 2.0 ).sub( 1.0 ), 1.0 );

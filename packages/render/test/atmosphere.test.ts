@@ -37,18 +37,27 @@ describe('worldToEcef', () => {
 describe('gpu timer', () => {
   it('averages resolved render time per frame and stays inert when disabled', async () => {
     const timestamps = new Map<string, number>([
-      ['a:f1', 6],
-      ['b:f2', 2],
+      ['r:1:7:f1', 6],
+      ['r:2:9:f2', 2],
     ]);
+    const info = { render: { frameCalls: 0 } };
     const renderer = {
       resolveTimestampsAsync: async () => 0.1,
       backend: { timestampQueryPool: { render: { timestamps } } },
-    } as never;
-    const t = createGpuTimer(renderer, true);
+      info,
+      render: () => {
+        info.render.frameCalls++;
+      },
+    };
+    const t = createGpuTimer(renderer as never, true);
+    // 감싼 render가 순번(호출 뒤 frameCalls) → 이름을 기록한다.
+    const wrapped = renderer.render as unknown as (o: unknown, c: unknown) => void;
+    wrapped({ name: 'scene', type: 'Scene' }, {});
+    wrapped({ isQuadMesh: true, name: 'TAAU' }, {});
     t.afterFrame();
     await Promise.resolve();
     await Promise.resolve();
-    timestamps.set('a:f1', 3);
+    timestamps.set('r:1:7:f3', 3);
     t.afterFrame();
     t.afterFrame(); // 해석 대기 중 → 다음 표본에 2프레임으로 합산
     await new Promise((r) => setTimeout(r, 0));
@@ -57,8 +66,10 @@ describe('gpu timer', () => {
     expect(s.samples).toBeGreaterThanOrEqual(1);
     // 첫 표본 = 1프레임 8 ms(6 + 2, 마지막 frame id만 보는 three 반환값 0.1이 아니라 풀 합).
     expect(s.frameMs).toBeGreaterThan(4);
-    const off = createGpuTimer(renderer, false);
+    expect(s.passes.map((p) => p.label)).toEqual(['scene', 'quad:TAAU']);
+    expect(s.passes[0]?.ms).toBeGreaterThan(s.passes[1]?.ms ?? 0);
+    const off = createGpuTimer(renderer as never, false);
     off.afterFrame();
-    expect(off.stats()).toEqual({ enabled: false, frameMs: 0, samples: 0 });
+    expect(off.stats()).toEqual({ enabled: false, frameMs: 0, samples: 0, passes: [] });
   });
 });

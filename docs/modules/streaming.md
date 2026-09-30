@@ -62,6 +62,7 @@ M02-T01 관심·우선순위, M02-T02 fetch·디코드 워커 풀·로드 큐(AD
 게임 배선(render 어댑터·임시 로더 삭제)은 M02-T05.
 
 ## Gotchas
+- 본문 도중 취소된 응답의 복사본 `body.cancel()`은 취소 사유로 거부된다 → 반드시 catch(`fetcher.cancelBody`, M04-T06 3G 스로틀에서 미처리 거부 발견). 스케줄러 `run()`도 catch.
 - `KTX2Loader`는 render 소관(streaming은 텍스처를 다루지 않음 — 셀에는 텍스처 없음).
 - AbortController 취소 후 늦게 도착한 워커 결과는 폐기(풀이 요청 id로 비교).
 - 워커 기본 팩토리는 `new Worker(new URL('./decode.worker.ts', import.meta.url), {type:'module'})` 리터럴이어야 Vite가 워커 청크를 만든다.

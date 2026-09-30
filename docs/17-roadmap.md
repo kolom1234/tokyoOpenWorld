@@ -12,7 +12,7 @@
 | M02 | Streaming & Deploy | MVP 전역 건물+지형 스트리밍, HLOD, Cloudflare staging 배포 | `roadmap/M02.md` |
 | M03 | Rendering Realism I | 대기·태양·그림자·절차 파사드·유리·포스트·품질 티어·골든뷰 | `roadmap/M03.md` |
 | M04 | Physics & Walking | Jolt 워커, 셀 콜라이더, 1/3인칭 도보(계단·연석·에스컬레이터) | `roadmap/M04.md` |
-| M05 | Street Detail | 도로·연석·노면표시·소품·가로수·랜드마크·가상 간판 | `roadmap/M05.md` |
+| M05 | Street Detail | 도로·연석·노면표시·소품·가로수·랜드마크·가상 간판·육교·계단(T08) | `roadmap/M05.md` |
 | M06 | Life: Crowds & Traffic | 신호·군중(3단 LOD)·교통(IDM)·스크램블 재현 | `roadmap/M06.md` |
 | M07 | Trains | 야마노테 탑승(서기/좌석/전면전망/빨리감기), 병행선 시각 운행 | `roadmap/M07.md` |
 | M08 | Vehicles | 승용차·자전거 물리 + AEB + 소환/독 | `roadmap/M08.md` |

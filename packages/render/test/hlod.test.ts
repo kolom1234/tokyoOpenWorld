@@ -1,10 +1,18 @@
 // HLOD 자식 전환(M02-T05): 숨김 = 0.3 s 페이드, 보임 = 즉시, 부모 도착 전 상태 기억, 페이드 벡터 공유, `_CHILD` → float 속성.
 // see docs/06-world-streaming.md §5, ADR-0024
 import { packCellKey } from '@sanpo/core';
-import { Vector4 } from 'three/webgpu';
+import { Group, Vector4 } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
-import { buildGeometry } from '../src/internal/scene/cell-node.ts';
+import { createMaterialLibrary } from '../src/internal/materials/library.ts';
+import { createMaterialRegistry } from '../src/internal/materials/registry.ts';
+import {
+  buildGeometry,
+  createCellSet,
+  hlodNeedsDither,
+  PREPASS_RENDER_ORDER,
+} from '../src/internal/scene/cell-node.ts';
 import { createHlodSwitch, HLOD_FADE_S } from '../src/internal/scene/hlod-switch.ts';
+import { createEnvUniforms } from '../src/internal/weather/wetness.ts';
 
 const P = packCellKey(1, 0, 0);
 const vecs = () => [new Vector4(1, 1, 1, 1), new Vector4(1, 1, 1, 1), new Vector4(1, 1, 1, 1), new Vector4(1, 1, 1, 1)];
@@ -83,5 +91,84 @@ describe('hlod geometry', () => {
     const f = g.getAttribute('_facade');
     expect(f.array).toBeInstanceOf(Uint8Array);
     expect(f.normalized).toBe(true);
+  });
+});
+
+describe('hlod dither variants & facade depth prepass (ADR-0039)', () => {
+  const prim = (materialId: string) => ({
+    materialId,
+    attributes: { POSITION: { array: new Float32Array(9), itemSize: 3, normalized: false } },
+    index: new Uint16Array([0, 1, 2]),
+    boundsLocal: { min: [0, 0, 0] as [number, number, number], max: [1, 1, 1] as [number, number, number] },
+  });
+  const setup = () => {
+    const lib = createMaterialLibrary('/basis/');
+    const reg = createMaterialRegistry(lib, createEnvUniforms());
+    const roots = Object.fromEntries(
+      ['terrain', 'road', 'building', 'override', 'prop', 'vegetation', 'dynamic', 'light'].map((k) => [
+        k,
+        new Group(),
+      ]),
+    ) as never;
+    const hlod = createHlodSwitch();
+    const cells = createCellSet(reg, roots, hlod);
+    cells.add(
+      {
+        key: P,
+        id: 'L1_0_0',
+        originWF: { x: 0, y: 0, z: 0 },
+        meshes: { buildings: { primitives: [prim('facade_default')] }, hlod: { primitives: [prim('facade_default')] } },
+      } as never,
+      { x: 0, y: 0, z: 0 },
+    );
+    return { reg, roots: roots as Record<string, Group>, hlod, cells, lib };
+  };
+
+  it('needs dither only while a child fade is strictly between 0 and 1', () => {
+    expect(hlodNeedsDither(vecs())).toBe(false);
+    const v = vecs();
+    (v[2] as Vector4).z = 0;
+    expect(hlodNeedsDither(v)).toBe(false);
+    (v[3] as Vector4).w = 0.4;
+    expect(hlodNeedsDither(v)).toBe(true);
+  });
+
+  it('swaps HLOD meshes to the alphaHash variant only during a fade', () => {
+    const { reg, roots, hlod, cells, lib } = setup();
+    const mesh = () =>
+      (roots.building?.children ?? []).flatMap((g) => g.children).find((m) => m.name.includes('/hlod/')) as unknown as {
+        material: { alphaHash: boolean };
+      };
+    expect(mesh().material.alphaHash).toBe(false);
+    hlod.setChildVisible(P, 3, false);
+    hlod.update(HLOD_FADE_S / 2);
+    expect(cells.syncHlodMaterials()).toBe(1);
+    expect(mesh().material.alphaHash).toBe(true);
+    hlod.update(HLOD_FADE_S);
+    expect(cells.syncHlodMaterials()).toBe(0);
+    expect(mesh().material.alphaHash).toBe(false);
+    cells.dispose();
+    reg.dispose();
+    lib.dispose();
+  });
+
+  it('adds a depth-only twin (same geometry, drawn first, no shadows) for building facades only', () => {
+    const { reg, roots, cells, lib } = setup();
+    const all = Object.values(roots).flatMap((r) => r.children.flatMap((g) => g.children)) as unknown as {
+      name: string;
+      geometry: unknown;
+      renderOrder: number;
+      castShadow: boolean;
+      material: { colorWrite: boolean };
+    }[];
+    const twins = all.filter((m) => m.name.endsWith('/prepass'));
+    expect(twins.length).toBe(1);
+    const twin = twins[0] as (typeof all)[number];
+    const main = all.find((m) => m.name === twin.name.replace('/prepass', ''));
+    expect(twin.geometry).toBe(main?.geometry);
+    expect([twin.renderOrder, twin.castShadow, twin.material.colorWrite]).toEqual([PREPASS_RENDER_ORDER, false, false]);
+    cells.dispose();
+    reg.dispose();
+    lib.dispose();
   });
 });

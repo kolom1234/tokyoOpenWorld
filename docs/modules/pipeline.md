@@ -18,7 +18,7 @@ src/readers/{osm,rail,boundary,wikidata}.ts
 src/stages/fetch.ts normalize-*.ts   (normalize-plateau.ts, normalize-terrain.ts 구현)
 src/checks/terrain-gsi.ts       수락 검증: dem_1m vs GSI 표고 API(네트워크, CI 제외)
 src/spike/{plateau-spike,spike-metrics}.ts   M01-T02 A/B 비교 스파이크(재현용 보존)
-src/stages/derive/{roads,sidewalks,curbs,terrain-shape,markings/*,props/*,lanes,navmesh,rail/*,audio-zones,lights,facade-params,pois}.ts
+src/stages/derive/{roads,sidewalks,curbs,terrain-shape,markings/*,props/*,lanes,navmesh,rail/*,audio-zones,lights,collision(건물 충돌: 용접 → simplify 0.3 m → ≤ 2500 삼각형 청크 JCOL, M04-T02 ADR-0042), facade-params,pois}.ts
 src/stages/build/dem-window.ts   dem_1m.tif 창 읽기(gdal_translate -srcwin, 영역 밖 여유 샘플은 가장자리 복제) + 셀별 259² 창 (M01-T05)
 src/stages/build/heightfield.ts  terrain.height(공통 기준 −100 m·0.01 m) (M01-T05)
 src/stages/build/terrain-rtin.ts RTIN 정확 오차 단순화 + 경계 강제 (M01-T05, ADR-0018)

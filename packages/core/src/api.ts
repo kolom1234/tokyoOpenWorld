@@ -75,6 +75,16 @@ export interface PlayerState {
   yawRad: number;
   mode: string;
 }
+/** 플레이어 아바타 표시(traversal 출력 → render.setAvatar, M04-T05). posWF = 발, yaw 0 = −Z(도북). opacity < 1 = 근접 디더 페이드. */
+export interface AvatarState {
+  visible: boolean;
+  posWF: Vec3d;
+  yawRad: number;
+  /** 수평 속력(m/s) — 대기·걷기·달리기 블렌드. */
+  speedMs: number;
+  grounded: boolean;
+  opacity: number;
+}
 export interface FrameContext {
   frameIndex: number;
   /** s, clamp [0, 0.1] */

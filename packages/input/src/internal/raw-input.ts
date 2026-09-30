@@ -5,6 +5,19 @@ import type { MouseAxis } from '../api.ts';
 const WHEEL_PX_PER_NOTCH = 100;
 const WHEEL_LINES_PER_NOTCH = 3;
 
+/** 게임패드 폴링 결과(devices/gamepad.ts). 축은 데드존 적용 뒤, 버튼은 값 0…1. */
+export interface PadRaw {
+  connected: boolean;
+  readonly axes: number[];
+  readonly buttons: number[];
+  /** 마지막 스냅샷 이후 새로 눌린 버튼. */
+  readonly hit: Set<number>;
+}
+
+/** 표준 매핑 축·버튼 수(+ 홈 버튼). */
+export const PAD_AXES = 4;
+export const PAD_BUTTONS = 17;
+
 export interface RawInput {
   readonly keysDown: Set<string>;
   /** 마지막 스냅샷 이후 새로 눌린 키(반복 제외). */
@@ -13,6 +26,7 @@ export interface RawInput {
   readonly buttonsHit: Set<number>;
   /** 마지막 스냅샷 이후 누적(CSS 픽셀, 휠은 노치 — 위로 굴림 +). */
   mouse: Record<MouseAxis, number>;
+  readonly pad: PadRaw;
 }
 
 export function createRawInput(): RawInput {
@@ -22,6 +36,12 @@ export function createRawInput(): RawInput {
     buttonsDown: new Set(),
     buttonsHit: new Set(),
     mouse: { x: 0, y: 0, wheel: 0 },
+    pad: {
+      connected: false,
+      axes: new Array(PAD_AXES).fill(0),
+      buttons: new Array(PAD_BUTTONS).fill(0),
+      hit: new Set(),
+    },
   };
 }
 
@@ -65,6 +85,7 @@ export function releaseAll(raw: RawInput): void {
 export function endFrame(raw: RawInput): void {
   raw.keysHit.clear();
   raw.buttonsHit.clear();
+  raw.pad.hit.clear();
   raw.mouse.x = 0;
   raw.mouse.y = 0;
   raw.mouse.wheel = 0;

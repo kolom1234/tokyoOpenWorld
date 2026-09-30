@@ -116,7 +116,13 @@ function pump(s: State): void {
   while (s.fetching < config.maxConcurrent && s.fetching + s.decoding < config.maxConcurrent + decodeCapacity) {
     const j = nextQueued(s);
     if (!j) return;
-    void run(s, j).finally(() => pump(s));
+    // run은 결과를 finish로 넘긴다 — 예상 못 한 예외(취소 경합 등)도 미처리 거부로 새지 않게.
+    void run(s, j)
+      .catch((e: unknown) => {
+        if (!j.ac.signal.aborted)
+          finish(s, j, err({ stage: 'fetch', error: { code: 'network', message: String(e), attempts: 0 } }));
+      })
+      .finally(() => pump(s));
   }
 }
 

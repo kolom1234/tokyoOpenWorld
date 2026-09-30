@@ -34,7 +34,19 @@ export type Binding =
   | { device: 'mouseButton'; button: number }
   /** 두 키 → 축 −1…1 (둘 다 누르면 0). */
   | { device: 'keyAxis'; negative: string; positive: string }
-  | { device: 'mouseAxis'; axis: MouseAxis };
+  | { device: 'mouseAxis'; axis: MouseAxis }
+  /**
+   * 게임패드 버튼(Gamepad API 표준 매핑: 0 A, 1 B, 2 X, 3 Y, 4 LB, 5 RB, 6 LT, 7 RT, 8 Select, 9 Start, 10 L3, 11 R3, 12–15 D-pad ↑↓←→).
+   * hold = 함께 누르고 있어야 하는 버튼(Select+Y 등 조합).
+   */
+  | { device: 'padButton'; button: number; hold?: number }
+  /**
+   * 게임패드 축(0 L스틱 X 오른쪽 +, 1 L스틱 Y 아래 +, 2·3 R스틱) — 원형 데드존 뒤 값 × scale.
+   * perSecond = 초당 값(× 프레임 dt — 시선·휠처럼 마우스 누적과 더하는 축).
+   */
+  | { device: 'padAxis'; axis: number; scale?: number; perSecond?: boolean }
+  /** 두 버튼 값(트리거 = 아날로그) → 축(양 − 음) × scale. */
+  | { device: 'padButtonAxis'; negative: number; positive: number; scale?: number; perSecond?: boolean };
 export type ContextBindings = Partial<Record<Action, readonly Binding[]>>;
 export type BindingMap = Record<InputContext, ContextBindings>;
 
@@ -52,6 +64,8 @@ export interface InputService extends SystemProvider {
   readonly context: InputContext;
   /** 마우스가 target에 Pointer Lock 되어 있는지. */
   readonly pointerLocked: boolean;
+  /** 게임패드가 연결돼 있는지(마지막 폴링). */
+  readonly gamepadConnected: boolean;
   setContext(c: InputContext): void;
   /** 액션의 바인딩을 b 하나로 교체(기본: 현재 컨텍스트). */
   rebind(a: Action, b: Binding, context?: InputContext): void;

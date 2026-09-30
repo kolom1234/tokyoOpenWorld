@@ -1,93 +1,87 @@
 # PROGRESS
-Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜치 `claude/m03-queue`, draft PR)
+Updated: 2026-09-30 (session #16 — 큐 모드 ① M03 보강 → ② M04 T01–T06, 브랜치 `claude/m03-fixes-m04`, draft PR 1개)
 
-## Current Milestone: M03 — Rendering Realism I (진행 순서: T10 → T01 → T02 → T03 → T04 → T06 → T05 → T07 → T08 → T09)
-## Current Task: M03 큐 완료 — PR #15(draft) 사용자 검토 대기
-- Done in this session: M03-T10(골든뷰 인프라, 앞당김), M03-T01(머티리얼 라이브러리), M03-T02(대기·하늘), M03-T03(태양·그림자·시계), M03-T04(절차 파사드), M03-T06(지면·도로 머티리얼 + staging 첫 반영), M03-T05(유리·실내 매핑), M03-T07(후처리 — 성능 기준 미달), M03-T08(품질 티어·동적 해상도), M03-T09(WebGL2 폴백).
-- In progress: –
-- 골든뷰: `pnpm golden`(tests/golden/README.md) — core 4장 before = `docs/screenshots/M03/base/`. 태스크마다 `GOLDEN_SAVE=M03/<Tnn>`.
-- 배포 상태: staging Worker `tokyo-sanpo-staging` = **75629ce 코드**(M03 전체) + dev 버킷 빌드 **`20260929-b84bfa1-ec1646fc`**(L0 294 + HLOD 177 + shared/materials(실내 큐브맵 포함), 478 파일 248.9 MB, current).
-  dev 버킷 옛 빌드(gc 대기, 7일 규칙): `20260929-c9a28d3-ec1646fc`(T06, 10/6~), `20260928-b2d1e36-7fb58d45`(M02-T07, 10/6~), `20260928-7e215f4-7fb58d45`(10/5~). `pnpm pipeline gc --env dev --apply`(2026-09-29 dry-run = 0).
-  staging 첫 로딩(GOLDEN_BOOT, 최종): **12.68 MB**·첫 표시 11.3 s. 머티리얼(첫 표시 뒤 지연) 18.18 MB. staging 골든 core 4장 = `docs/screenshots/M03/final-staging/`.
-- 로컬 최신 빌드 = staging과 같음(`20260929-b84bfa1-ec1646fc`).
-- Next step (정확히 한 걸음): 사용자가 PR #15를 검토·머지하면 M03 성능 후속 태스크 정리(공중원근 ≈ 6 ms·TAAU ≈ 8 ms 고정 비용, 파사드 ≈ 6 ms 오버드로우 → 깊이 프리패스, WebGL2 금속 파사드 어두움) 후 M04 착수.
+## Current Milestone: M04 — Physics & Walking (M03 보강 5항목 완료)
+## Current Task: M04 완료(T01–T06, draft PR #16) → 다음 = M05-T01 Roads, sidewalks, curbs, terrain shaping (사용자 확인 대기: Quaternius 아바타 다운로드 승인)
+- Done in this session: M03 보강 ① 정지 화면 떨림(ADR-0038), ② 렌더 고정 비용(ADR-0039), ③ 품질 감지 재검증(코드 변경 없음), ④ WebGL2 파사드 어두움·flaky e2e(ADR-0040), ⑤ 밤 창 전부 점등 → Known Issue(M09-T03). M04-T01 물리 워커(ADR-0041), M04-T02 셀 콜라이더(ADR-0042), M04-T03 캐릭터·walk(ADR-0043), M04-T04 계단·에스컬레이터·지면 재질 엔진(ADR-0044), M04-T05 3인칭 카메라 충돌·아바타(ADR-0045), M04-T06 앵커 재설정·발밑 보호(ADR-0046).
+
+- 측정 스크립트(세션 scratchpad, 커밋 안 함): `flicker.mjs`(실제 GPU Chrome, `?debug=1` 핸들로 카메라 고정·회전·이동 → 루프 직후 캔버스 복사 → 연속 프레임 휘도 차),
+  `dynres.mjs`(동적 해상도 시계열), `swflicker.mjs`(SwiftShader forcePost), `perf.mjs`(무제한 프레임 rAF p50·전력 상한·패스별 GPU, `PROT=1` 회전). 방법은 ADR-0038 Context에 기록.
+- 배포 상태(2026-09-30 21:2x): staging = **0dc0075 코드(M04 전체: walk·3인칭·아바타·발밑 보호)** + dev 버킷 current **`20260929-99bffa8-ec1646fc`**(collision.bin 포함, 478파일 260.5 MB, Worker HEAD 전수 검증).
+  인증 = 사용자 환경변수 `CLOUDFLARE_API_TOKEN`(wrangler도 이 토큰 사용 — whoami "User API Token"). 실제 GPU로 staging 부트 → C → 걷기 1.35 m/s 확인. 옛 빌드 gc는 10/6 이후(7일 규칙).
+- ⚠️ 2026-09-30 19:32 PC 재부팅(비정상 종료 추정) → `.git/refs/heads/claude/m03-fixes-m04`가 NUL 41바이트로 손상 → reflog·origin 모두 f031f80이라 파일에 직접 복구(백업 scratchpad `broken-ref.bin`), `git fsck` 오류 없음.
+- 보행 봇(scratchpad `walkbot.mjs <url> <분> <시드>`): 실제 입력(키 W/X/Shift, 합성 포인터 드래그 회전)으로 스폰(스크램블) 반경 110 m 자유 보행, 끼임 후보(10 s < 1 m) → 8방향 탈출 시도로 막다른 곳/끼임 분류.
+- In progress: 없음(모든 변경 커밋·푸시, 작업 트리 깨끗).
+- Next step (정확히 한 걸음): `docs/roadmap/M05.md`의 `### M05-T01` 블록 읽기 → 04 §4.3(지형 성형·연석)·§6 → `tools/pipeline/src/stages/derive/` 신설(도로·보도 폴리곤 = 이미 normalize된 PLATEAU TrafficArea).
+  사용자가 Quaternius 다운로드를 승인하면 먼저 아바타 교체(render `scene/avatar.ts` 자리, 03·ATTRIBUTION 갱신).
 - Blockers: 없음
 
 ## Recently Completed
-- M03-T09 WebGL2 fallback parity — backend-caps 소프트웨어 래스터 판정(SwiftShader·llvmpipe → 직접 렌더 유지), **하드웨어 WebGL2 = 같은 후처리 + 환경 프로브 + CSM 그림자**,
-  Medium 상한(T08), 자동 노출(컴퓨트) 끔 → 고정 1.25, 유리 거칠기 하한 0.16(거울 띠 과다 보정), TSL `packNormalToRGB/unpackRGBToNormal`(r186 이름).
-  **수락**: `?backend=webgl` 실제 GPU 골든 5뷰(`docs/screenshots/M03/T09-webgl2/`) 오류·경고 0, tier medium·GTAO 적용. 남은 차이: 일부 금속·커튼월 파사드가 더 어둡다(후속).
-  e2e(SwiftShader) 5/5 불변. 테스트 +1파일/+1건. ADR-0037, ADR-0028 부록 (2026-09-29)
-- M03-T08 Quality tiers & dynamic resolution — render `quality.ts`(detect-gpu 벤치마크 자체 호스팅 `/detect-gpu/` → low/medium/high, WebGL2 상한 medium, 60프레임 측정 뒤
-  동적 해상도 바닥에서도 느리면 한 단계씩 강등, 버스 `quality/changed` 양방향), `renderer/dynamic-resolution.ts`(EMA 17.5/17.1 ms, ±0.05, 시도-후퇴 백오프),
-  post `setRenderScale`(PassNode·RTT·GTAO·SSR, TAA는 항상 TAAU), API `setQuality`·`detectQuality`·stats `quality`·config `dynamicResolution/gpuBenchmarksPath/debugGpuLoad`.
-  game `wiring/quality.ts`(localStorage `sanpo.quality.v1`, 첫 표시 뒤 감지), `?dynres=0`·`?gpuLoad=n`, vite `sanpo-gpu-benchmarks`. 골든뷰 = High 고정·동적 해상도 끔.
-  **수락**(3050 Laptop): 1080p Medium + gpuLoad 200 — 고정 0.75 = 22.4 ms → 동적 0.5 ≈ 16.7–18.6 ms(렌더 스케일 하강 ✅, 16.6 ms 완전 유지 ✗ — 해상도 무관 고정 비용).
-  1440p High는 0.5에서도 ≈ 23 ms(TAAU 해석 ≈ 8 ms 고정). detect-gpu: RTX 3050 Laptop → tier 3 → high. 테스트 +3파일/+9건. ADR-0036 (2026-09-29)
-- M03-T07 Post pipeline — render `post/{pipeline,config,exposure,lut}.ts`: MRT(output·normal+roughness·velocity·[diffuse+metalness], 24 B) → GTAO/SSGI → SSR(가산) →
-  aerialPerspective → 컴퓨트 자동 노출(부분 적응) → Bloom(¼) → TRAA/TAAU(렌더 스케일) → renderOutput → 절차 3D LUT → Sharpen. API `QualityTier`·`PostEffects`·
-  `RenderConfig.quality/post`·stats `post/exposure`, game `?quality=`·`?post=`(`debug/post-flags.ts`). 티어: Low 0.6 / Medium 0.75 GTAO / High 0.85 GTAO+SSR+Bloom / Ultra 1.0 SSGI+Sharpen.
-  **SSGI는 Ultra만**(r186 해상도 배율 없음, +100 ms↑ — 07 §9 이탈). **성능 미달**: 1440p 3050 Laptop 스크램블 모두 끔 25.9 → High 35.9 ms(3060 환산 순증 ≈ 4.3 ms,
-  공중원근 포함 ≈ 7 ms > 4 ms). 안 빼기: GTAO 3.5·Bloom 3.0·Sharpen 2.2·SSR 1.6·노출 0.6·LUT 0.5, 공중원근 ≈ 6, TRAA ≈ 8.
-  골든 `docs/screenshots/M03/T07/*`(노출 배율 metrics). 테스트 +2파일/+4건. ADR-0035 (2026-09-29)
-- M03-T05 Glass & interior mapping — pipeline `materials/{interior-rooms,interiors}.ts`(방 8종 상자 가구·조명판 → 방 중심 6면 광선 추적 → 256² PNG 48장 →
-  `interiors.ktx2` ETC1S 2D 배열 0.14 MB, manifest `interiors`, 스키마·validate), `lib/png.ts` RGB 인코더. render `facade/interior.ts`(베이×층×깊이 방 상자 교차 →
-  면·LOD, 창별 방·좌우 반전, 유리 픽셀에서만 `If` 분기), `materials/glass.ts`(실내 발광 × (1−프레넬) × 투과율, 블라인드 확산면), library `maps.interiors`·방 평균색.
-  **수락**: `docs/screenshots/M03/T05/shinjuku-curtainwall-close.jpg`(서신주쿠 초고층 근접 — 창마다 실내·블라인드·소등 방), `class-mansion.jpg`(가구 실루엣 깊이감) — 육안.
-  **성능**: 파사드 단색 대비 ≈ 6.0 ms(T04 4.7 → +1.3, 분기 전 +2.7). core GPU 23.8/22.9/24.9/28.7 ms. 새 골든뷰 `shinjuku-curtainwall-close`. 테스트 +1파일/+4건. ADR-0034 (2026-09-29)
-- M03-T06 Terrain & road base materials — pipeline `surface-class.ts`(셀+8이웃 PLATEAU 도로 폴리곤 → 257² 1 m 래스터: 차도·횡단보도 0, 보도·교통섬 1, 나머지 7),
-  RTIN 분류 경계 세분(차도 경계 1 m·그 밖 4 m, `edgeKeyOf`), HLOD 지형 7 고정. render `materials/{terrain,road,noise}.ts` + `weather/wetness.ts`:
-  `_SURF` 원-핫 보간 → 상위 2클래스 반대칭 노이즈 경계, 주 클래스 회전·축척 2표본 분산 보존 혼합(안티타일링), 아스팔트 패치·유분·바램/보도 명암·때, 거시 명암,
-  젖음(`WeatherParams.wetness` core 계약 추가 → `EnvUniforms.wetness`; 흡수율 어두워짐·수막·물웅덩이), triplanar는 `TerrainOptions.triplanar`(기본 끔, T08 티어).
-  game `?wet=0..1` + 슬라이더(`debug/wet-override.ts`), 골든 `weather: 'rain'` = 0.85, 새 골든뷰 `road-ground-30m`.
-  **수락**: `docs/screenshots/M03/T06/road-ground-30m.jpg` — 눈높이 30 m 차도에서 타일 반복 식별 안 됨(육안), 젖음 `M03/T06/wet/*`.
-  **성능**: 첫 구현 +12 ms(ALU 해시 노이즈 ≈ 160회/픽셀) → 노이즈 텍스처·noiseBank 4표본·법선 1표본으로 지형 순증 ≈ +1.2–1.8 ms. core 4뷰 GPU 23.2/21.9/25.0/28.0 ms(T04 21.3/20.8/24.8/26.0).
-  빌드 L0 122.3 → 132.9 MB(+8.6 %). **staging 첫 반영**: publish에 shared/materials 추가, KTX2 트랜스코더 CSP(부트스트랩 워커, ADR-0032), 하늘 별 끔(외부 데이터).
-  픽스처·디코드 스냅샷 재생성. 테스트 +2파일/+6건. e2e 5/5. ADR-0031·0032 (2026-09-29)
-- fix(streaming) 부팅 첫 표시 exclusive whenReady — 대기 중 대상만 요청 → staging 초기 다운로드 79.0 → 12.7–13.4 MB(14 §2 ≤ 60 MB 회복). 테스트 +1건. ADR-0033 (2026-09-29)
-- M03-T04 Procedural facade — pipeline `facade-params.ts`(용도·높이 → class 6종·상점·커튼월·tint·창 시드, L0+HLOD), 벽 UV0 = (평면 묶음 시작점, 건물 바닥) + TEXCOORD_1(면 폭·건물 높이),
-  `wall-planes.ts`(LOD2 벽 띠 군집, 벽에 붙은 부속물 제외), render `materials/facade/{grid,walls,windows,retail,details,index}.ts`(층·베이, 벽 그룹×틴트, 창 SDF·프레임, 1층 쇼윈도·간판 띠·차양·셔터, 슬래브·빗물·AO).
-  버그: 면 상수 보간 오차로 베이 수가 픽셀마다 뒤집힘 → **flat varying**(ADR-0030 §4).
-  **수락**: 클래스 4종 샘플(`docs/screenshots/M03/T04/classes/class-{office,mansion,house,commercial}.jpg`) — 오피스 띠창·맨션 발코니 문·주택 드문 창·상업 1층 상점 구분됨(육안).
-  **파사드 GPU 비용 ≈ 4.7 ms**(1440p 도청 면 가득, 무제한 프레임 A/B 20.4 vs 15.7 ms, RTX 3050 Laptop) — 기준 1.5 ms(RTX 3060, 환산 ≈ 2.1 ms) **미달** → T07 깊이 프리패스 공유·T08 동적 해상도.
-  core 4뷰 GPU 21.3/20.8/24.8/26.0 ms. 빌드 MVP L0 122.3 MB. e2e 5/5(재설정 허용 0.02% z-파이팅). 픽스처 재생성. 테스트 +3파일/+9건. ADR-0030 (2026-09-29)
-- M03-T03 Sun, shadows, clock — sim: `createSim`(WorldClock realtime/custom/frozen·04:00 운행일 요일, `environment()` = suncalc 2.0.2 → 수렴각 → WF, 관측점 1 km 격자 스냅),
-  game `wiring/env.ts`(phase 66, 기본 시계 = 오늘 12:00 JST 1배속, `?time=`·골든뷰 time = frozen), render CSM(takram CascadedShadowMapsNode, 4 × 2048²·600 m·fade, `?shadows=0`),
-  WebGPU 하늘 배경 제거(환경 프로브와 겹쳐 배경 머티리얼 매 프레임 재빌드 → 30 FPS였음), **GPU 타이머 정정**(three 반환값은 마지막 frame id만 → 풀 합산, 무제한 프레임과 일치).
-  **수락**: 2026-06-21 시부야 남중 **11:43 JST 고도 77.782°·방위 180.05°**, 12:00 **77.237°**(테스트). 캐스케이드 경계: 상공 150 m 사선 시점·태양 25°에서 이음새 없음(fade).
-  GPU(1440p): 스크램블 20.1 · 서신주쿠 18.9 · 요요기 23.6 · 주택가 22.9 ms(그림자 끔 17.6/17.2/25.2/22.5 — 잡음 ±2 ms). e2e 5/5(시각 고정). 테스트 +3파일/+13건. ADR-0029 (2026-09-29)
-- M03-T02 Atmosphere & sky — takram three-atmosphere 0.19.1 WebGPU: `lighting/atmosphere.ts`(AtmosphereContext·AtmosphereLight·skyBackground, WF→ECEF = 원점 타원체 위치(TP + 지오이드 36.7 m)·NUE·수렴각 γ, 원점 재설정마다),
-  `env-probe.ts`(SkyEnvironmentNode 64² → PMREM, 라이트 간접 끔), `post/pipeline.ts`(pass MRT → aerialPerspective → AgX, 노출 3; WebGL2는 직접 렌더), `setEnvironment()`, GPU 타이머(`?gpuTiming=1`, `stats().gpu`),
-  game `?sun=az,el`·`?exposure=`·`?gpuTiming=1`, `three-compat.ts` alias. **three r186 호환 패치**(patches/: struct Proxy `.layout.name`, LUT `requestIdleCallback` 타임아웃 — 없으면 조명·하늘이 검다) + precompile에서 LUT 계산 await.
-  **수락**: 요요기 상공 300 m 일출(방위 70°·고도 2°)·정오(180°·70°)·일몰(290°·2°)·황혼(290°·−5°, 노출 40) 4장 — 지평선 붉어짐·정오 원경 청색 연무·황혼 잔광 확인(`docs/screenshots/M03/T02/sky-*.jpg`).
-  GPU 프레임 수치는 타이머 버그로 틀렸음(→ T03에서 정정: 그림자 없이 17.2–25.2 ms). 첫 로딩 증가 0(에셋 없음). e2e 5/5(WebGL2). 테스트 +2파일/+6건. ADR-0028 (2026-09-29)
-- M03-T01 Material library & texture arrays — ambientCG CC0 32종(`content/materials/library.json`: 아스팔트 3·보도 4·콘크리트 4·타일 벽 6·금속 3·미장 2·사이딩 2·ALC·벽돌·지붕 2·잔디 2·흙·자갈; 유리는 T05 절차),
-  pipeline `materials`(`stages/materials/{library,fetch,encode,run}.ts`: zip sha256 lock(`ambientcg`, `--update-lock`) → ImageMagick 리사이즈·ORM 패킹 → toktx 4.4.2 KTX2 배열 → 캐시 `data/derived/materials/<hash>` → `--build-id` 설치) + validate(`validate-materials.ts`, `schemas/materials.schema.json`).
-  크기: albedo 1024² ETC1S 6.3 MB · normal 512² UASTC 7.0 MB · ORM 512² UASTC 4.7 MB = **18.0 MB**(1024² 3장은 55.8 MB → ADR-0027). 인코딩 ≈ 2.5 min.
-  render: `materials/library.ts`(자리표시 배열 → manifest 평균색 → KTX2 교체, 재컴파일 없음), `textured.ts`(지형 `_SURF` 그룹·월드 XZ, 파사드 건물 해시 벽 그룹·UV0), `loadMaterials(url)`·`stats().materials`, context/frame/service 분리.
-  game: 첫 표시 뒤 `loadMaterials(world.json files.materials)`, `three`→`three/webgpu` alias, `/basis/*` 트랜스코더 서빙·복사, 오버레이 머티리얼 줄.
-  **수락**: GPU 텍스처 메모리 **67.1 MB**(BC7, ≤ 400 MB), 적재 0.6–1.4 s, 모든 레이어 출처(ATTRIBUTION `ambientcg-<asset>` 32건, sources.lock sha256 32건 — 테스트가 대조). 첫 표시 전송에 머티리얼 0.08 MB(manifest)만 — 텍스처는 첫 표시 뒤.
-  버그 2건 수정: 큰 float 시드 varying 보간 → 픽셀 노이즈(uint 결합으로), 1성분 정수 속성 WebGL2 타입 불일치(`_SURF`·`_BLDG` f32, `_FACADE` unorm8x4). e2e 5/5(WebGL2) 통과. 테스트 +2파일/+10건. ADR-0027 (2026-09-29)
+- M04-T06 Anchor rebase & ground-missing guard — physics `setFocus`(배선 250 ms) → 4096 m 초과면 `rebase` 명령: 워커가 적재된 모든 바디·캐릭터·에스컬레이터 구간 −Δ, 앵커 객체 제자리 갱신, OptimizeBroadPhase.
+  traversal `ground-guard.ts`: 발밑 L0 미적재 = **hold**(캐릭터 입력 — 중력·이동 없음), 제동 거리 + 0.6 m 앞 셀 미적재 = **stop**, `hud.groundLoading` → 게임 `wiring/ground-loading.ts`(0.2 s 넘으면 "지면 불러오는 중…").
+  잠재 버그 2개 수정: 작업 없는 셀이 영영 미적재, streaming 본문 도중 취소 시 `cancel()` 미처리 거부("signal is aborted without reason").
+  **수락**(실제 GPU, MVP, CDP Fast 3G 1.44 Mbps·562 ms): 걷기 31,303 프레임 **낙하 0**, 대기 4회, 1.4–1.6 km 순간이동 = 공중 고정 → 17.6–18.6 s 착지, 북쪽 끝 z −4200 = **앵커 재설정 1회**(0,0,−4096) →
+  Fast 3G 단독 ≈ 32 s 착지(스로틀 없이 2.5 s). ⚠️ 순간이동 연속 시 큐 적체로 발밑 L0 지연(4분+, 낙하 없음) → M08 transition. 테스트 +1파일(rebase-hold) +1건(walk 보호). ADR-0046 (2026-09-30)
+- M04-T05 Camera collision & avatar — physics `sphereCast`(워커 CastShape 구·양면), traversal 3인칭: 카메라 시선 프레임당 ≤ 8° + **부채꼴 5개 sphereCast**(가운데·yaw ±8°·pitch ±8°, r 0.2 m)로
+  다음 프레임 붐 한계(1프레임 비동기 보상, 당기기 즉시·풀기 4 m/s), 붐 0.5–1.2 m 아바타 디더 페이드. render `setAvatar`: **자체 절차 마네킹**(캡슐·구, 속도 블렌드 대기·걷기·달리기, 선컴파일) — core `AvatarState`.
+  **수락**(실제 GPU, MVP, 봇이 찾은 막다른 골목 8곳 × 25 s, 홱 돌리기·걷기·줌, 매 프레임 피벗 → 카메라 구 0.1 m 캐스트): **12,600 프레임·검사 10,083회 관통 0**
+  (첫 구현 = 목표 방향 1개 질의는 관통 발생 → 부채꼴·회전 상한으로 수정). ⚠️ Quaternius 모델은 외부 다운로드 → 사용자 승인 뒤 교체. 테스트 +2파일(render avatar, sphereCast). ADR-0045 (2026-09-30)
+- M04-T04 Stairs, curbs, escalators, ground material(엔진) — 워커 JCOL 프리미티브(박스·캡슐·원기둥) 정적 바디, userData = 재질 | flags << 8(`groundMaterial` 하위 8비트),
+  **에스컬레이터 = JCOL SENSOR 박스 flags bit2**(05 §6 확장, 로컬 +Z 진행) OBB 목록 → 발이 안이면 진행 방향 0.5 m/s + 걷기 수평 ≤ 0.6, `Pose.escalator`(헤드밥 끔; 수직 속도 누적 버그는 테스트로 잡아 수정),
+  카메라 발 높이 = 임계 감쇠 스프링(ω 12), `createInlineTransport()` 공개. **수락(합성)**: 실제 Jolt + traversal — 연석 0.15 m·계단 0.18 m 카메라 프레임당 **최대 1.58 cm**(< 3 cm ✅),
+  계단 오르내림 1/6 s 창 ≥ 0.9 m/s·접지, 램프 프록시 프레임당 높이 < 1 cm, 에스컬레이터 0.45–0.55 m/s. ⚠️ 시부야 육교 왕복은 **데이터 없음**(PLATEAU brid·OSM steps 미수집, 연석 = M05-T01) → M05-T08 신설. ADR-0044 (2026-09-30)
+  + 워커 **빈 시간 적재**(메시지 사이 setTimeout 조각 — 부록 A의 잘게 나눈 작업이 SwiftShader e2e 60 s를 넘겨 physics·walk e2e가 깨졌던 것 수정, 4 spec 52 → 38 s) + 조각 예산 **3 ms**
+  (실제 GPU 봇 4분: 4 ms = 최대 8.3 ms·초과 1 → 3 ms = **최대 6.19 ms·초과 0**, 끼임·낙하 0, 걷기 1.349 m/s). ADR-0042 부록 B.
+- M04-T02 보강: MVP 보행 중 적재 틱(최대 20.4 ms·8 ms 초과 54회 — Node MVP 30셀 높이장 최대 9.0·2500 삼각형 최대 7.0 ms, 브라우저 렌더 경합 2–3배) →
+  워커가 작업을 더 잘게: 높이장 **4×4 타일**(65², 가장자리 공유), triMesh **≤ 600 삼각형 조각**(쓰는 정점만 압축, `meshSlice`). 실제 GPU 봇 4분: **최대 6.18 ms·초과 0회**(2×2·800은 8.65 ms·1회). 재빌드 불필요. ADR-0042 부록 A (2026-09-30)
+- M04-T03 Character & walk mode — physics `worker/character.ts`(CharacterVirtual r 0.25·키 1.70·경사 50°·계단 0.40·바닥 붙기 0.5·예측 0.1·양면, 가속 8/감속 10, ExtendedUpdate), 슬롯 공유(bodies Entry rigid|char),
+  API `spawnCharacter`·`setCharacterInput`(프레임 마지막 입력만), traversal `modes/walk.ts`(걸음 단계 X 1.35/1.8/3.0·Shift 5.0, FP/TP V, 하늘 레이 착지 `walk-placement.ts`, C 토글 = 카메라 포즈 전달·150 m 안이면 바디 복귀),
+  `camera/{first,third}-person-rig.ts`(시선 스무딩 30 ms·발 높이 추종·헤드밥 / 어깨 0.4·거리 3.5·휠), FSM 요구조건 요청 때 평가(physics getter), input 게임패드(`devices/gamepad.ts` 폴링·원형 데드존·`padButton{hold}`·`padAxis{perSecond}`·`padButtonAxis`).
+  **수락**(실제 GPU Chrome, MVP 재빌드, `?world=local`, 봇 10분 × 2회): 걷기 속도 중앙값 **1.348 / 1.349 m/s**(p10 1.331/1.308·p90 1.359), 낙하 **0 / 0**, 평균 59.7 / 59.8 fps.
+  끼임: 1회차 후보 4(건물 틈, 분류 없음) → 2회차 8방향 탈출 시도로 분류: 후보 7 = **모두 막다른 곳**(0.7–2.6 m 걸어 나옴), **물리 끼임 0**.
+  e2e `walk.spec.ts`(SwiftShader: 착지·눈높이·1.35 m/s·V·C 왕복). 테스트 +4파일. ADR-0043 (2026-09-30)
+- M04-T02 Cell colliders — pipeline `stages/build/collision.ts`(건물 면 1 mm 용접 → meshopt simplify 절대 0.3 m → 64 m 블록 순 **≤ 2500 삼각형 청크** JCOL triMesh, TKC `colliderTris`),
+  워커 `cell-colliders.ts`(셀 = [높이장, 청크…] 작업, 틱 예산 4 ms·예상 비용 판단·워밍업, 정적 바디 userData = 재질), `heightfield.ts`(힙 직접 채움), `queries.ts`(레이캐스트 **양면** — PLATEAU 감김 불일치),
+  API `addCell/removeCell/hasCell/raycast`·stats 적재 지표, 게임 `wiring/streaming-physics.ts`(버스 `cell/ready` — onReady는 렌더 단독, 물리 반경 256 m 등, 동시 2). 픽스처 재생성.
+  **수락**: 실제 GPU Chrome(world-mini) 적재 틱 최대 **5.8 ms**, 8 ms 초과 0. 지면 레이 오차 ≤ 0.4 mm(Node·브라우저), 벽 = JCOL CPU 교차 ±5 cm. 테스트 +3·e2e +1. ADR-0042 (2026-09-30)
+- M04-T01 Physics worker bootstrap — `@sanpo/physics`: jolt-physics 1.1.0 **single-thread**(multithread는 Vite 중첩 pthread 워커 번들 실패·초기화 3 s → 08 §1 이탈),
+  메인 구동 고정 스텝(phase 30 → step(targetS, 명령) → 워커 120 Hz·틱당 ≤ 4), SAB 더블 버퍼 + seqlock / 폴백 postMessage, 보간(지금 − 25 ms, nlerp, 10 m 순간이동 스냅),
+  레이어·충돌 행렬(08 §3), 핸들 = 슬롯 | 세대, `debugSpawnBox`, 게임 `?probe=physics`(+`physicsIsolation=degraded`), vite `worker.format = 'es'`.
+  **수락**: Node 통합(SAB·폴백) 스냅샷 시각 보간 = 워커 값, 사이 = 선형, 바닥 정지 0.48 m. e2e(프로덕션 preview): shared·degraded 초기화 84–90 ms, 3 s 360스텝, 틱 0.03–0.07 ms. 테스트 +9건·e2e +2. ADR-0041 (2026-09-30)
+- M03 보강 ④ WebGL2 파사드 어두움 = **GTAO 위치 복원 오류**(AO 끄면 두 백엔드 동일): three `getViewPosition`이 역-Z(EXT_clip_control 0..1) 깊이를 −1..1로 변환 →
+  `patches/three@0.186.1.patch`로 역-Z 분기(서신주쿠 파사드 36.0 → 56.2, WebGPU 56.4). flaky e2e = 원점 재설정: `rebaseTest`가 1 s 시간만 머물러 저 FPS에서 재설정 없음 +
+  복귀 직후 재적재·페이드 중 캡처 → 재설정 횟수 대기, 오버레이 `data-settled`, 640×360·180 s. 4 병렬 × 8: 8/8 실패 → 8/8 통과. `?post=exp:`. ADR-0040 (2026-09-30)
+- M03 보강 ③ 자동 품질 감지 재검증(15 W, 새 프로필, 회전 120 s, scratchpad `tiercheck.mjs`): 1080p = detect-gpu high → **High 유지**(동적 해상도 0.5–0.85),
+  1440p = High → 18.5 s "0.5에서 21.1 ms" → **Medium 한 단계만**, 이후 유지. High→Low 연쇄 하강 없음(75629ce 워밍업·스트리밍 조용함 대기 + ② 성능 개선) (2026-09-30)
+- M03 보강 ② 렌더 고정 비용 — 그림자 07 §9 티어(Low 2×1024·150 m … Ultra 4×4096·800 m) + 캐스케이드 갱신 스케줄(움직일 때 c0 매 프레임 + 먼 것 하나, 정지 15프레임마다 하나),
+  저해상도 공중원근(`post/aerial.ts` ½×½ MRT S·T → 깊이 인지 업샘플, 윤곽·지평선 급경계는 정확 계산, 태양·달 원반만 렌더 스케일; `PostEffects.aerial`), 파사드 깊이 프리패스 쌍둥이,
+  HLOD 불투명/페이드(alphaHash) 변형 전환, GPU 타이머 패스별 분해. **15 W 실측**(rAF p50, 5뷰): 1080p Medium 정지 18.6–21.6 → 14.3–16.6 ms, 회전 19.1–22.2 → 15.4–17.0,
+  1440p High 정지 33.6–40.0 → 25.9–30.2, 회전 33.8–40.3 → 27.3–31.4. 테스트 +6건. ADR-0039 (2026-09-30)
 
 ## Known Issues
-- [render/webgl2] 하드웨어 WebGL2에서 일부 금속·커튼월 파사드가 WebGPU보다 어둡다(환경 프로브 반사 차이, 원인 미확정 — M03-T09).
-- [e2e] 로컬에서 부하가 있을 때 e2e 1건이 가끔 실패(재실행 통과, 2026-09-29 T07·T08 중 2회) — 어느 스펙인지 미확인. CI에서 재현되면 조사.
-- [render] 그림자 티어화(07 §9 그림자 행: 캐스케이드 수·해상도·거리)는 CSM 재생성이 필요해 미구현 — 모든 티어가 4×2048·600 m.
-- [perf] 후처리 1440p High ≈ 7 ms(3060 환산, 기준 4 ms) — 공중원근(takram) ≈ 6 ms·TRAA/TAAU ≈ 8 ms(3050 Laptop)가 크다. 파사드 ≈ 6 ms(기준 1.5). T08 동적 해상도로 16.6 ms 유지, 근본 절감은 후속(2026-09-29).
-- [perf] gpu-timer(timestamp 합산)는 패스·컴퓨트가 많으면 값이 튄다 → 후처리 비교는 무제한 프레임 p50(scratch cpu.mjs)로. `pnpm perf`(M02-T07~)에 반영 필요.
+- [physics] 육교·계단·연석·에스컬레이터 **데이터 없음** — 엔진(M04-T04)만. 연석·보도 = M05-T01, 육교·계단 = M05-T08(PLATEAU brid + OSM steps → 램프 프록시), 역 에스컬레이터 = M07 역 오버라이드. 지형 재질 = asphalt 고정(`_SURF` 재질은 M05-T01).
+- [streaming] 순간이동을 이어 하면 이전 목적지 작업이 큐(동시 8·대기 16)에 남아 스로틀에서 새 발밑 L0가 늦게 온다(Fast 3G 3번째 순간이동 뒤 4분+ 공중 고정 — 낙하 없음). 발밑 L0 우선·이전 목적지 취소는 M08 transition(`whenReady`)과 함께(ADR-0046).
+- [e2e] 로컬 `pnpm test:e2e`(기본 워커 = 코어 절반 = 4)는 이 노트북(15 W 전력 상한)에서 SwiftShader 경합으로 불안정(render·flicker·decode·walk가 번갈아 시간 초과) → `--workers=2`(CI 러너와 같음)로 10/10 통과(2026-09-30).
+- [avatar] 3인칭 아바타 = 자체 절차 마네킹(캡슐). Quaternius 베이스 아바타(09 §3)는 외부 다운로드라 사용자 승인 필요(파일·출처·크기 확인 → 03·ATTRIBUTION 갱신) — ADR-0045.
+- [traversal] 게임 시작은 freecam(골든뷰·e2e 결정론) — C로 걷기. 09 §1 "walk = 기본"은 M08 스폰 흐름에서 재검토(ADR-0043).
+- [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장만(소품·나무 줄기 = M05). CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱이 길다(기록만).
+- [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).
+- [render] 동적 해상도는 60 Hz 수직 동기에서 여유를 못 재 "시도-후퇴"로 0.05씩 오르내린다(15 W 1080p High: 120 s에 19회, 0.5–0.85). 정지 떨림에는 영향 없음(ADR-0038 측정) — 선명도 변화가 거슬리면 시도 간격·히스테리시스 조정.
+- [perf] **이 PC GPU 전력 상한이 15 W ↔ 30 W로 바뀐다**(LG gram 17 17ZD90R, RTX 3050 4GB Laptop, 기본 30 W·최대 45 W, 전원 모드 최고 성능) — 15 W에선 2배 느림.
+  측정은 행마다 `nvidia-smi enforced.power.limit` 기록. 15 W 기준 1080p Medium 회전 15.4–17.0 ms(2뷰가 16.6 ms 살짝 초과 → 동적 해상도가 흡수), 30 W 8–9 ms(ADR-0039).
+- [perf] WebGPU 타임스탬프 합은 실제 프레임의 ≈ 1/4(클럭 비율) → 비중(`stats().gpu.passes`)만 신뢰, 절대값은 무제한 프레임 rAF p50. `pnpm perf`(M02-T07~)에 반영 필요.
+- [render] TAAU(1080p Medium ≈ 12 %)는 three 패치 없이 경량화 불가 → 동적 해상도로 흡수(ADR-0039). L0 반경 축소(HLOD 우선)도 보류.
+- [render] 정지 화면 원경 수평선 부근 서브픽셀 건물 윤곽의 TAAU 재구성 반짝임 잔존(>12 단계 0.047 % 픽셀, ADR-0038). 대안: TAAU 분산 감마 1.5 패치(−30 %, 고스팅 위험), 원경 윤곽 사전 필터링.
 - [perf] 첫 표시 ≈ 11 s(12 s 목표 근접) — 선컴파일 ≈ 5 s·대기 LUT. 첫 표시 직후 HLOD 1–2 s 디졸브(ADR-0033). T07/T08에서 선컴파일 병렬화 검토.
 - [render] 지면 `_SURF` 7(plaza)이 공원·녹지까지 덮음(요요기 콘크리트색), 도로 가장자리 1 m 계단 — M05 토지이용·도로 메시 전까지.
-- [render] 파사드 셰이더 ≈ 4.7 ms @1440p(RTX 3050 L) — 수락 1.5 ms 미달(ADR-0030). T07 깊이 프리패스(오버드로우 제거)·T08 동적 해상도 후 재측정.
 - [pipeline] PLATEAU 동일 평면 중복 면 z-파이팅 잔존(WebGL2 원점 재설정 e2e ≈ 70 px). 벽–벽 중복 제거는 필요 시 M05-T07.
-- [perf] 1440p GPU 17–25 ms(RTX 3050 Laptop): 씬 패스 12–17 ms + 공중원근 쿼드 5–10 ms. 07 §10(RTX 3060 ≤ 12 ms) 빠듯 → T07(후처리)·T08(동적 해상도)에서 줄일 것.
-- [render] 고정 노출 3(자동 노출 T07 전) → 황혼·밤은 매우 어둡다. WebGL2 폴백은 공중원근 없이 직접 렌더(SwiftShader 1.4 FPS 회피) — T08/T09 품질 티어에서 재결정(ADR-0028).
-- [render] takram 패치(patches/)는 three r186 전용 — three/takram 버전을 올리면 패치 재확인.
+- [render] takram 패치 + three 패치(`getViewPosition` 역-Z, ADR-0040)는 three r186 전용 — three/takram 버전을 올리면 패치 재확인.
 - [pipeline] GSI DEM 2025판 표고는 JGD2024(2025 개정) 기준, PLATEAU는 JGD2011 → LOD3 차도 정점 vs dem_1m 차 중앙값 +0.05 m(IQR −0.03~+0.18, p95 +8.2 m = 고가도로). M01-T05는 도로 메시 없음 → M03 도로 빌드 때 도로면 우선 스냅 여부 결정.
 - [pipeline] `fetch` 미구현 → zip에서 필요한 것만 수동 해제(`data/raw/plateau-{shibuya,shinjuku,meguro}/extracted/`: MVP 24메시 udx/bldg·tran + codelists + schemas, 2026-09-29). 23구 zip은 풀지 않음(hlod-prep 스트림). 標高タイル은 hlod-prep이 받음. fetch 구현 시 lock sha256 검증.
 - [pipeline] `normalizePlateau`는 대상 셀 버킷을 메모리에 모두 보유 → MVP 294셀은 `NODE_OPTIONS=--max-old-space-size=12288`로 통과(2026-09-29). 23구 전체 L0로 넓힐 때 셀별 스필 필요.
 - [pipeline] 건물 셀 배정 중심점 = 모든 면 정점 평균(installation 포함). M01-T05 실측: 셀 밖 돌출 최대 68.2 m(L0_-1_0, 허용 256 m) → 유지. 발자국 기준 전환은 294셀 빌드에서 문제가 보이면.
 - [pipeline] 도로 레코드는 TrafficArea 단위로 매우 잘게 나뉨(3×3에 27.7k) → M03 도로 메시 빌드 시 병합/삼각분할 비용 확인.
-- [ci] e2e = 부트·월드 로드(`boot.spec.ts`) + 렌더 스모크(`render.spec.ts`, WebGL2/SwiftShader 강제) + 디코드 워커(`decode.spec.ts`, `?probe=decode`). WebGPU 경로는 CI에 GPU가 없어 미검증 → 로컬 실제 GPU(Chrome headed, `channel: 'chrome'`)로 확인(2026-09-29). 걷기·모드 전환은 M04 이후. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
+- [ci] e2e = 부트·렌더 스모크·디코드·정지 떨림·물리(워커·셀 콜라이더)·걷기(`walk.spec.ts`) — WebGL2/SwiftShader. WebGPU 경로·실제 성능·골목 카메라·3G 보행은 로컬 실제 GPU 스크립트(세션 scratchpad `walkbot/campen/throttle.mjs`)로 확인. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
 - [e2e] 클라우드 세션 Chromium은 Playwright 번들 버전과 달라 `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e`로 실행. 실행 전 떠 있는 `vite preview`가 있으면 `reuseExistingServer`로 **옛 빌드**를 테스트하니 먼저 종료할 것.
 - [perf] 초기 다운로드(첫 표시 시점 전송량) 57–62 MB — 14 §2 예산 60 MB 경계. 부팅 순서상 L3 9·L2 ~36·L1 ~16이 스폰 L0보다 먼저 온다(06 §8). 초과가 이어지면 부팅 whenReady 전 L2 반경 축소 또는 HLOD 크기 조정(M03 perf 하네스 `pnpm perf`에서 판단).
 - [perf] `pnpm perf`(자동 비행 경로·perf-latest.md)는 아직 없음 → 이번 수치는 Playwright + 실제 Chrome 스크립트(세션 scratchpad) 측정. perf 하네스 태스크에서 재현.
@@ -111,7 +105,6 @@ Updated: 2026-09-29 (session #15 — 큐 모드 M03 Rendering Realism I, 브랜�
 - [tools] `pnpm pipeline`은 `normalize`·`build`·`validate` 구현. terrain normalize·build는 GDAL 필요 → 컨테이너 전용. 재현성(gzip=zlib 버전)은 컨테이너 기준.
 - [geo] 골든 재생성 `--check`는 pyproj가 필요해 CI 미포함 → 파이프라인 CI(M01-T05 이후)에서 pyproj 설치 후 추가 검토.
 - [geo] build가 world.json `crs`를 `WORLD_ORIGIN`에서 생성(validate로 확인), 게임 부트(`world-load.ts checkManifest`)도 `WORLD_ORIGIN`과 대조(M01-T07). 셀 전체 해시(hash32) 검사는 메인 스레드 예산 때문에 M02 디코드 워커로.
-- [root] 외부 런타임 의존(three, jolt 등)은 아직 미설치 — 각 패키지 태스크에서 02 표 버전으로 정확 고정해 추가.
 
 ## Notes (M00-T03 조사 결과)
 - **세션 종료 시 `pnpm codemap` 자동 실행 훅: 적용 안 함.** Claude Code `SessionEnd`는 clear/logout/입력 종료 등에서 발화하고 공유 1.5 s 예산·차단 불가. 클라우드 세션은 명시적 종료 없이 비활성 VM 회수로 끝나 발화가 보장되지 않고, 발화해도 결과가 커밋·푸시되지 않은 채 컨테이너와 함께 사라진다. 대안: `/handoff` 7단계(수동) + CI `records` 잡(커밋본 ≠ 재생성 결과면 실패)이 누락을 막는다. 필요 시 `Stop` 훅(턴마다 codemap 갱신, `stop_hook_active` 가드)을 별도 검토.

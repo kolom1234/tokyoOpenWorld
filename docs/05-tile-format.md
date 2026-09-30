@@ -110,7 +110,7 @@ repeat shapeCount:
   u8 kind (0=triMesh,1=box,2=capsule,3=cylinder,4=convexHull)
   u8 layer (physics ObjectLayer, 08-physics.md §3)
   u8 material (0 concrete,1 asphalt,2 metal,3 glass,4 wood,5 grass,6 soil,7 tile)
-  u8 flags (bit0 = oneSided stairs ramp proxy, bit1 = climbable)
+  u8 flags (bit0 = oneSided stairs ramp proxy, bit1 = climbable, bit2 = escalator — layer SENSOR 박스, 로컬 +Z = 진행 방향, ADR-0044)
   f32 pos[3], f32 quat[4]          (셀 로컬)
   kind 0/4: u32 vCount, u32 iCount, f32[vCount*3], u32[iCount]  (4는 iCount=0)
   kind 1: f32 halfExtents[3]; 2: f32 halfHeight, radius; 3: f32 halfHeight, radius

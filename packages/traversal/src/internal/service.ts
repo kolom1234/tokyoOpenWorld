@@ -1,5 +1,6 @@
-// createTraversal: FSM + 기본 모드 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD). see docs/modules/traversal.md
+// createTraversal: FSM + 기본 모드(freecam·walk) 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD·플레이어). see docs/modules/traversal.md
 import {
+  type AvatarState,
   type CameraState,
   type GameSystem,
   type ModeId,
@@ -13,17 +14,11 @@ import {
 import type { ModeOutput, TraversalContext, TraversalOptions, TraversalService } from '../api.ts';
 import { createModeFsm, type ModeFsm } from './fsm.ts';
 import { createFreecamMode } from './modes/freecam.ts';
+import { createWalkMode } from './modes/walk.ts';
 import { DEFAULT_TRAVERSAL_SETTINGS } from './settings.ts';
 
 /** 01-architecture §5: traversal = phase 20(physics 이전에 의도·카메라 목표). traversalPost(35)는 M04. */
 export const TRAVERSAL_PHASE = 20;
-
-/** C: freecam ↔ 직전 모드. 직전 모드가 없거나 진입 불가(physics 없음)면 그대로 유지. */
-function handleFreecamToggle(fsm: ModeFsm, ctx: TraversalContext): void {
-  if (!ctx.input.state.justPressed('freeCam')) return;
-  if (fsm.current?.id !== 'freecam') fsm.request('freecam');
-  else if (fsm.previous !== undefined) fsm.request(fsm.previous);
-}
 
 const CAMERA_FORWARD: Readonly<Vec3> = { x: 0, y: 0, z: -1 };
 const scratch: Vec3 = { x: 0, y: 0, z: 0 };
@@ -34,21 +29,66 @@ function yawOfQuat(q: CameraState['quat']): number {
   return Math.atan2(-f.x, -f.z);
 }
 
+function pitchOfQuat(q: CameraState['quat']): number {
+  const f = vec3ApplyQuat(scratch, CAMERA_FORWARD, q);
+  return Math.asin(Math.max(-1, Math.min(1, f.y)));
+}
+
+/**
+ * C: freecam ↔ 직전 모드(없으면 walk). 전환 파라미터 = 지금 카메라(freecam은 그 자리에서 시작, walk는 바디 복귀 또는 그 아래 지면).
+ * 진입 불가(physics 없음)면 그대로 유지.
+ */
+function handleFreecamToggle(fsm: ModeFsm, ctx: TraversalContext, camera: Readonly<CameraState>): void {
+  if (!ctx.input.state.justPressed('freeCam')) return;
+  const params = { posWF: { ...camera.posWF }, yawRad: yawOfQuat(camera.quat), pitchRad: pitchOfQuat(camera.quat) };
+  if (fsm.current?.id !== 'freecam') fsm.request('freecam', params);
+  else fsm.request(fsm.previous ?? 'walk', params);
+}
+
 interface OutputState {
   readonly camera: CameraState;
   readonly player: PlayerState;
+  readonly avatar: AvatarState;
   readonly last: ModeOutput;
   apply(o: ModeOutput, mode: ModeId): void;
 }
 
-/** 서비스가 노출하는 카메라·플레이어(참조 고정 — FrameSource가 같은 객체를 계속 읽는다). */
+/**
+ * 아바타: 모드가 주면 복사, 안 주면(freecam) 마지막 것을 대기 자세로 — walk에서 세워 둔 바디가 보인다(한 번도 없었으면 계속 숨김).
+ */
+function applyAvatar(out: AvatarState & { seen?: boolean }, a: Readonly<AvatarState> | undefined): void {
+  if (a) {
+    out.visible = a.visible;
+    vec3Copy(out.posWF, a.posWF);
+    out.yawRad = a.yawRad;
+    out.speedMs = a.speedMs;
+    out.grounded = a.grounded;
+    out.opacity = a.opacity;
+    out.seen = true;
+  } else {
+    out.visible = out.seen === true;
+    out.speedMs = 0;
+    out.opacity = 1;
+  }
+}
+
+/** 서비스가 노출하는 카메라·플레이어·아바타(참조 고정 — FrameSource·배선이 같은 객체를 계속 읽는다). */
 function createOutputState(fovDeg: number, near: number, mode: ModeId): OutputState {
   const camera: CameraState = { posWF: { x: 0, y: 0, z: 0 }, quat: { x: 0, y: 0, z: 0, w: 1 }, fovDeg, near };
   const player: PlayerState = { posWF: { x: 0, y: 0, z: 0 }, velWF: { x: 0, y: 0, z: 0 }, yawRad: 0, mode };
+  const avatar: AvatarState = {
+    visible: false,
+    posWF: { x: 0, y: 0, z: 0 },
+    yawRad: 0,
+    speedMs: 0,
+    grounded: true,
+    opacity: 1,
+  };
   let last: ModeOutput = { camera, interest: [], hud: {} };
   return {
     camera,
     player,
+    avatar,
     get last() {
       return last;
     },
@@ -58,10 +98,18 @@ function createOutputState(fovDeg: number, near: number, mode: ModeId): OutputSt
       quatCopy(camera.quat, o.camera.quat);
       camera.fovDeg = o.camera.fovDeg;
       camera.near = o.camera.near;
-      // physics 전(M04)에는 플레이어 바디가 없다 → 카메라 위치를 플레이어로 보고한다(스트리밍 관심점·HUD용).
-      vec3Copy(player.posWF, o.camera.posWF);
-      player.yawRad = yawOfQuat(o.camera.quat);
+      // 바디가 없는 모드(freecam)는 카메라 위치·방위를 플레이어로 보고한다(스트리밍 관심점·물리 반경·HUD용).
+      if (o.player) {
+        vec3Copy(player.posWF, o.player.posWF);
+        vec3Copy(player.velWF, o.player.velWF);
+        player.yawRad = o.player.yawRad;
+      } else {
+        vec3Copy(player.posWF, o.camera.posWF);
+        player.velWF.x = player.velWF.y = player.velWF.z = 0;
+        player.yawRad = yawOfQuat(o.camera.quat);
+      }
       player.mode = id;
+      applyAvatar(avatar, o.avatar);
     },
   };
 }
@@ -70,6 +118,8 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
   const settings = mergeConfig(DEFAULT_TRAVERSAL_SETTINGS, opts.settings ?? {});
   const fsm = createModeFsm(ctx);
   fsm.register(createFreecamMode(settings));
+  const walk = createWalkMode(settings);
+  fsm.register(walk);
   const initial = opts.initial ?? { mode: 'freecam' };
   if (!fsm.request(initial.mode, initial.params))
     throw new Error(`traversal: initial mode '${initial.mode}' unavailable`);
@@ -80,7 +130,7 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
     id: 'traversal',
     phase: TRAVERSAL_PHASE,
     update(frame) {
-      handleFreecamToggle(fsm, ctx);
+      handleFreecamToggle(fsm, ctx, out.camera);
       const mode = fsm.current;
       if (mode !== undefined) out.apply(mode.update(frame, ctx), mode.id);
     },
@@ -99,6 +149,10 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
     get interest() {
       return out.last.interest;
     },
+    get view() {
+      return walk.view;
+    },
+    avatar: out.avatar,
     request: (to, params) => fsm.request(to, params),
     teleport(posWF, yawRad) {
       fsm.current?.teleport?.(posWF, yawRad);

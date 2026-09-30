@@ -90,6 +90,7 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 - **확정 순서(M03-T07, ADR-0035, `post/pipeline.ts`)**: 씬 패스 MRT(output RGBA16F · normal+roughness RGBA8 · velocity · [diffuse+metalness RGBA8] = 24 B/샘플,
   기본 한도 32 B 안) → GTAO(합성 곱) 또는 SSGI(AO 곱 + diffuse × GI) → SSR(가산, ½ × 렌더 스케일, 비금속 포함) → 공중원근(aerialPerspective, 하늘 포함)
   → 자동 노출(곱) → Bloom(가산, ¼ 해상도) → TRAA(스케일 1) 또는 TAAU(스케일 < 1 — 앞 단계 전부 렌더 스케일 해상도) → renderOutput(AgX·sRGB) → 3D LUT → Sharpen.
+  공중원근은 Low–High = **저해상도**(`post/aerial.ts`, 렌더 스케일 ½×½ MRT S·T → 깊이 인지 업샘플, 태양·달 원반만 렌더 스케일), Ultra = takram 픽셀마다(ADR-0039).
   비·눈 입자·볼류메트릭 구름·비네팅/필름그레인은 해당 태스크(M06·M08)에서 이 순서에 끼운다.
 - 자동 노출(`post/exposure.ts`): 씬 패스 HDR(하늘 제외)을 32² 격자로 컴퓨트 1회 → 로그 평균 EMA(τ 0.8 s, 스토리지 버퍼) →
   배율 = (0.12 / 기하 평균)^0.4, [0.5, 4] — **부분 적응**(완전 적응은 골목 뷰를 8배로 밝혔다). CPU 읽기는 통계용으로 30프레임마다.
@@ -110,13 +111,16 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 |---|---|---|---|---|
 | 렌더 스케일(TAAU) | 0.6 | 0.75 | 0.85 | 1.0 |
 | 그림자 | 2×1024, 150 m | 3×1536, 300 m | 4×2048, 600 m | 4×4096, 800 m |
+| 공중원근 | ½×½ | ½×½ | ½×½ | 픽셀마다 |
 | AO / GI / SSR | – / – / – | GTAO / – / – | GTAO / SSGI(½) / SSR | GTAO / SSGI / SSR |
 | 클러스터 광원 | 64 | 256 | 1024 | 2048 |
 | 구름 | 하늘만 | 2D | 2D | 볼류메트릭 |
 | 보행자(VAT 근거리/총) | 60/200 | 120/500 | 250/1000 | 400/2000 |
 | L0 반경 배율 | 0.75 | 1.0 | 1.0 | 1.25 |
 - **M03-T07 이탈(ADR-0035)**: 1440p RTX 3050 Laptop 실측으로 High의 SSGI(½)를 GTAO로 — r186 SSGINode는 해상도 배율이 없고 +100 ms 이상.
-  High = GTAO(½, 8표본 + 시간 누적) + SSR(½) + Bloom + 자동 노출 + TAAU 0.85 + LUT, Sharpen은 Ultra만(2.2 ms). `RenderConfig.quality`·`post`(`?quality=`·`?post=`).
+  High = GTAO(½, 8표본 — 고정 노이즈 + 5×5 깊이 인지 블러, ADR-0038) + SSR(½) + Bloom + 자동 노출 + TAAU 0.85 + LUT, Sharpen은 Ultra만(2.2 ms). `RenderConfig.quality`·`post`(`?quality=`·`?post=`).
+- 그림자 구현(ADR-0039): 티어 행대로(캐스케이드 수가 바뀌면 받는 머티리얼 재컴파일). 갱신: 움직일 때 가까운 캐스케이드 매 프레임 + 먼 캐스케이드 프레임당 하나,
+  카메라·장면 정지면 15프레임마다 하나(태양 추적). 건물 파사드는 깊이 프리패스 쌍둥이(renderOrder −1), HLOD는 페이드 중에만 alphaHash 변형.
 - 초기 티어: `detect-gpu` 결과 + 60프레임 측정. 실행 중 **동적 해상도**: 목표 프레임 16.6 ms 유지 위해 렌더 스케일 ±0.05(범위 0.5–1.0).
   구현(M03-T08, ADR-0036): 첫 표시 뒤 스트리밍이 조용해지면 `render.detectQuality()`(detect-gpu 벤치마크 JSON 자체 호스팅 `/detect-gpu/`, 0–1 low · 2 medium · 3 high, Ultra는 사용자) →
   저장(localStorage `sanpo.quality.v1`, 다음 부팅은 감지 생략) → 동적 해상도가 0.5 바닥인데 EMA > 20 ms면 한 단계 강등(반복). `?quality=`·골든뷰는 고정.
@@ -126,7 +130,7 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 - WebGL2 폴백: 최대 Medium, compute 입자 → CPU 입자(개수 1/4), 클러스터 광원은 백엔드 지원 여부 확인 후 미지원 시 64개 고정 포워드.
   구현(M03-T09, ADR-0037): **하드웨어 WebGL2** = WebGPU와 같은 후처리(Medium: GTAO·Bloom·TAAU 0.75·LUT) + 환경 프로브 + CSM 그림자, 자동 노출(컴퓨트)만 끄고 고정 배율 1.25,
   유리 거칠기 하한 0.16(프로브만 비쳐 거울 띠가 과함). **소프트웨어 WebGL2**(SwiftShader·llvmpipe — CI, WEBGL_debug_renderer_info로 판정) = 직접 렌더(ADR-0028).
-  남은 차이: 일부 금속·커튼월 파사드가 WebGL2에서 더 어둡다(프로브 반사 차이, 후속).
+  WebGL2 파사드 어두움은 GTAO 위치 복원(three `getViewPosition`이 역-Z 0..1 깊이를 −1..1로 변환) → three 패치로 해결(ADR-0040).
 
 ## 10. 렌더 예산 (High, 1440p, 스크램블 교차로 한낮)
 | 항목 | 예산 |

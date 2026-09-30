@@ -10,16 +10,16 @@ export interface ModeFsm {
   request(to: ModeId, params?: unknown): boolean;
 }
 
-/** M01–M03: physics 없음. trains는 컨텍스트에 함수가 있으면 충족. */
+/** 컨텍스트에 physics·trains가 있으면 충족(요청 때마다 다시 본다 — physics는 월드 로드 뒤 생긴다). */
 export function availableRequirements(ctx: TraversalContext): ReadonlySet<ModeRequirement> {
   const s = new Set<ModeRequirement>();
+  if (ctx.physics !== undefined) s.add('physics');
   if (ctx.trains !== undefined) s.add('trains');
   return s;
 }
 
 export function createModeFsm(ctx: TraversalContext): ModeFsm {
   const modes = new Map<ModeId, TraversalMode>();
-  const available = availableRequirements(ctx);
   let current: TraversalMode | undefined;
   let previous: ModeId | undefined;
 
@@ -36,6 +36,7 @@ export function createModeFsm(ctx: TraversalContext): ModeFsm {
     },
     request(to, params) {
       const next = modes.get(to);
+      const available = availableRequirements(ctx);
       if (next === undefined || !next.requires.every((r) => available.has(r))) return false;
       const from = current?.id ?? to;
       current?.exit(ctx, to);

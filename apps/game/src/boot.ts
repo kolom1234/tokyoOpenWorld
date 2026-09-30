@@ -43,8 +43,10 @@ export interface BootFlags {
   world?: 'mini' | 'local';
   /** `?backend=webgl` → WebGPU가 있어도 WebGL2 백엔드 강제(폴백 경로 확인). */
   backend?: 'webgl';
-  /** `?probe=decode` → 부트 대신 world-mini 디코드 워커 프로브(debug/decode-probe.ts, e2e decode.spec.ts). */
-  probe?: 'decode';
+  /** `?probe=decode|physics` → 부트 대신 디코드 워커(debug/decode-probe.ts) 또는 물리 워커(debug/physics-probe.ts) 프로브(e2e). */
+  probe?: 'decode' | 'physics';
+  /** `?physicsIsolation=degraded` → 격리돼도 물리 스냅샷을 postMessage로(폴백 경로 확인). */
+  physicsIsolation?: 'degraded';
   /** `?view=<id>` → 골든뷰 북마크(tests/golden/views.json, debug/bookmarks.ts). */
   view?: string;
   /** `?exposure=<n>` → 톤매핑 노출 고정값(자동 노출 M03-T07 전 조정·비교용). */
@@ -69,6 +71,8 @@ export interface BootFlags {
   noDynres?: boolean;
   /** `?gpuLoad=<n>` → 디버그 GPU 부하(동적 해상도 확인). */
   gpuLoad?: number;
+  /** `?forcePost=1` → 소프트웨어 래스터에서도 후처리 체인(e2e flicker.spec.ts). */
+  forcePost?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -90,7 +94,10 @@ export function parseFlags(search: string): BootFlags {
     debug: q.get('debug') === '1',
     ...(q.get('world') === 'mini' || q.get('world') === 'local' ? { world: q.get('world') as 'mini' | 'local' } : {}),
     ...(q.get('backend') === 'webgl' ? { backend: 'webgl' as const } : {}),
-    ...(q.get('probe') === 'decode' ? { probe: 'decode' as const } : {}),
+    ...(q.get('probe') === 'decode' || q.get('probe') === 'physics'
+      ? { probe: q.get('probe') as 'decode' | 'physics' }
+      : {}),
+    ...(q.get('physicsIsolation') === 'degraded' ? { physicsIsolation: 'degraded' as const } : {}),
     ...(VIEW_ID.test(q.get('view') ?? '') ? { view: q.get('view') as string } : {}),
     ...(Number(q.get('exposure')) > 0 ? { exposure: Number(q.get('exposure')) } : {}),
     ...sunFlag(q.get('sun')),
@@ -103,6 +110,7 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('post') ? { post: parsePostFlag(q.get('post')) } : {}),
     ...(q.get('dynres') === '0' ? { noDynres: true } : {}),
     ...(Number(q.get('gpuLoad')) > 0 ? { gpuLoad: Math.min(Math.floor(Number(q.get('gpuLoad'))), 4096) } : {}),
+    ...(q.get('forcePost') === '1' ? { forcePost: true } : {}),
   };
 }
 
@@ -178,6 +186,7 @@ function renderConfigOf(flags: BootFlags, golden: GoldenView | undefined): DeepP
     ...(flags.post ? { post: flags.post } : {}),
     ...(flags.noDynres || golden ? { dynamicResolution: false } : {}),
     ...(flags.gpuLoad ? { debugGpuLoad: flags.gpuLoad } : {}),
+    ...(flags.forcePost ? { debugForcePost: true } : {}),
   };
 }
 

@@ -12,6 +12,14 @@ describe('post tiers', () => {
     expect(POST_TIERS.medium.ao).toBe('gtao');
     expect(POST_TIERS.high.ssr).toBe(true);
     expect(POST_TIERS.ultra.ao).toBe('ssgi');
+    // 공중원근: Ultra만 픽셀마다, 나머지 저해상도(ADR-0039).
+    expect([POST_TIERS.low, POST_TIERS.medium, POST_TIERS.high, POST_TIERS.ultra].map((t) => t.aerial)).toEqual([
+      'half',
+      'half',
+      'half',
+      'full',
+    ]);
+    expect(resolvePost('high', { aerial: 'full' }).aerial).toBe('full');
   });
 
   it('applies overrides and keeps SSGI/TAAU consistent without TAA', () => {

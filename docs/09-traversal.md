@@ -17,11 +17,12 @@
 | `drive` | 차량 상호작용(카셰어 스팟 / 편의모드 "차 부르기": 인접 차도 가장자리에 스폰) | F: 운전석 쪽(오른쪽) 보도로 하차. 차량은 30 s 후 디스폰 |
 | `cycle` | 공유자전거 독(역 주변 파이프라인 배치) / 편의모드 소환 | F |
 | `train` | 캐릭터가 열차 내부 센서 안 + 열차 정차 중 | 정차 중 출입구 밖으로 나가면 `walk` |
-| `freecam` | C 키 (어디서나) | C: 원래 모드로 복귀(플레이어 바디는 정지·유령 상태 유지) |
+| `freecam` | C 키 (어디서나) | C: 원래 모드로 복귀(플레이어 바디는 정지·유령 상태 유지). 직전 모드가 없으면 walk, 바디가 카메라에서 150 m 넘게 떨어졌으면 카메라 아래 지면에 새로 놓음(ADR-0043) |
 | `transition` | 지도에서 발견한 역으로 빠른 이동, 설정 변경 후 리스폰 | 로딩 완료 |
 
 - 모드는 `TraversalMode` 구현체 1개 = 파일 1개(`src/internal/modes/<id>.ts`). 새 모드 추가 시 기존 모드 수정 금지(레지스트리 등록만).
 - 모드 전환은 1프레임 안에 원자적으로: `exit(from)` → 물리 핸들 교체 → `enter(to)` → `mode/changed` 발행.
+- walk 착지점(처음·재배치): 기준점 + 링(6·12·24·48 m × 8방위) 후보마다 하늘에서 수직 레이 → 첫 충돌이 TERRAIN인 후보(지붕·건물 셸 안·고가 아래 제외). 게임 시작은 freecam(골든뷰 결정론) — M08 스폰 흐름에서 재검토.
 
 ## 2. 모드별 동작
 ### walk
@@ -53,6 +54,7 @@
 | `AttachedRig` | 차량 보닛/운전석/열차 전면: 부모 바디 로컬 오프셋 + 미세 진동(서스펜션 가속도 기반) |
 | `FreeRig` | 관성(감쇠 3/s), 시네마틱 스무딩 옵션 |
 - 모든 리그 출력은 `CameraState { posWF: Vec3d; quat; fovDeg; near }` → render.setCamera + streaming 관심점.
+- ThirdPersonRig 구현(M04-T05, ADR-0045): 회전 프레임당 ≤ 8°, 부채꼴 5개 sphereCast(1프레임 비동기 보상), 아바타 = 자체 절차 마네킹(Quaternius는 다운로드 승인 뒤).
 
 ## 4. 입력 (`@sanpo/input`)
 - 디바이스: 키보드·마우스(Pointer Lock), 게임패드(Gamepad API 표준 매핑).
@@ -65,7 +67,7 @@
 | Pace(걸음 단계 순환) | X | 스틱 기울기 |
 | Interact | F | X(□) |
 | ToggleView | V | R3 |
-| FreeCam | C | Select+Y |
+| FreeCam | C | Select+Y (조합: Select 누른 채 Y) |
 | Map | M | Select |
 | Photo | P | Start+Y |
 | Pause | Esc | Start |

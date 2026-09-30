@@ -12,3 +12,4 @@ onlyBuiltDependencies:
 patchedDependencies:
   '@takram/three-atmosphere@0.19.1': patches/@takram__three-atmosphere@0.19.1.patch
   '@takram/three-geospatial@0.9.1': patches/@takram__three-geospatial@0.9.1.patch
+  three@0.186.1: patches/three@0.186.1.patch

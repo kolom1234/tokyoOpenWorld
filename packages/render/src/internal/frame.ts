@@ -1,6 +1,6 @@
 // 프레임 시스템: renderPrep(70: 캔버스 크기·원점 재설정·카메라·HLOD 페이드) / render(80). see docs/01-architecture.md §5, docs/07-rendering.md §1–3
 import type { GameSystem } from '@sanpo/core';
-import { type PerspectiveCamera, Vector2, type WebGPURenderer } from 'three/webgpu';
+import { type PerspectiveCamera, Quaternion, Vector2, Vector3, type WebGPURenderer } from 'three/webgpu';
 import type { RenderContext } from './context.ts';
 
 /** 01-architecture §5 phase 표. */
@@ -23,19 +23,44 @@ function syncSize(renderer: WebGPURenderer, camera: PerspectiveCamera, canvas: H
   }
 }
 
+/** 그림자 캐시용 카메라 변화 감지(렌더 좌표 위치·방향·투영). 1 mm·≈ 0.01° 미만은 정지로 본다. */
+function createMotionProbe(camera: PerspectiveCamera): () => boolean {
+  const pos = new Vector3(Number.NaN, 0, 0);
+  const quat = new Quaternion();
+  let proj = '';
+  return () => {
+    const p = `${camera.fov}|${camera.aspect}|${camera.near}`;
+    const moved =
+      camera.position.distanceToSquared(pos) > 1e-6 || 1 - Math.abs(camera.quaternion.dot(quat)) > 1e-8 || p !== proj;
+    pos.copy(camera.position);
+    quat.copy(camera.quaternion);
+    proj = p;
+    return moved;
+  };
+}
+
 export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw: GameSystem } {
   const { renderer, view, cells, library, hlod, counters } = ctx;
+  const moved = createMotionProbe(view.camera);
+  let sceneVersion = -1;
   const prep: GameSystem = {
     id: 'renderPrep',
     phase: RENDER_PREP_PHASE,
     update(f) {
       syncSize(renderer, view.camera, ctx.canvas, ctx.cfg.maxPixelRatio);
+      let rebased = false;
       view.prepare((origin) => {
         cells.placeAll(origin);
         ctx.atmosphere.setOrigin(origin);
+        rebased = true;
       });
       library.setOrigin(view.renderOriginWF);
+      ctx.avatar.update(f.dtReal, view.renderOriginWF);
       counters.fading = hlod.update(f.dtReal);
+      cells.syncHlodMaterials();
+      const sceneChanged = counters.sceneVersion !== sceneVersion || counters.fading > 0;
+      sceneVersion = counters.sceneVersion;
+      counters.shadowUpdates = ctx.shadows?.schedule({ moved: moved(), sceneChanged, rebased }) ?? 0;
     },
     dispose() {},
   };
@@ -50,6 +75,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
     },
     dispose() {
       cells.dispose();
+      ctx.avatar.dispose();
       ctx.quality.dispose();
       ctx.post.dispose();
       ctx.env.dispose();

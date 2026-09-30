@@ -6,6 +6,7 @@ import {
   BufferGeometry,
   type Camera,
   Group,
+  type Material,
   Mesh,
   type Scene,
   type WebGPURenderer,
@@ -42,15 +43,22 @@ export async function precompileMaterials(
   const holder = new Group();
   holder.name = 'precompile';
   const geos: BufferGeometry[] = [];
+  const add = (g: BufferGeometry, material: Material, hlod: boolean): void => {
+    const m = new Mesh(g, material);
+    if (hlod) m.userData.hlodFade = createHlodFades();
+    m.frustumCulled = false;
+    holder.add(m);
+  };
   for (const id of PRECOMPILE_IDS) {
-    for (const hlod of [false, true]) {
-      const g = dummyGeometry(id, hlod);
-      geos.push(g);
-      const m = new Mesh(g, hlod ? materials.getHlod(id) : materials.get(id));
-      if (hlod) m.userData.hlodFade = createHlodFades();
-      m.frustumCulled = false;
-      holder.add(m);
-    }
+    const base = dummyGeometry(id, false);
+    const hl = dummyGeometry(id, true);
+    geos.push(base, hl);
+    add(base, materials.get(id), false);
+    // HLOD: 불투명 + 페이드(디더) 변형(ADR-0039).
+    add(hl, materials.getHlod(id), true);
+    add(hl, materials.getHlod(id, true), true);
+    // 건물 파사드 깊이 프리패스(같은 속성 형식).
+    if (id === 'facade_default') add(base, materials.prepass(), false);
   }
   scene.add(holder);
   try {

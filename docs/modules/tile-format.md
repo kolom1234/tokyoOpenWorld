@@ -10,7 +10,7 @@ TKC 셀 컨테이너, cells.idx, JCOL, lanes.bin, terrain.height의 인코더/�
 TKC_MAGIC = 0x3143_4B54 /*"TKC1" LE*/; FORMAT_VERSION = 1; TKC_ALIGN = 16; TKC_PREAMBLE_BYTES = 16;
 CELLS_INDEX_MAGIC /*"TKCI"*/; JCOL_MAGIC; JCOL_VERSION = 1; LANES_MAGIC; LANES_VERSION = 1; LANE_NO_SIGNAL = 0xFFFF;
 HEIGHTFIELD_SIZE = 257; HEIGHTFIELD_STEP_M = 0.01; HEIGHTFIELD_BASE_M = -100 /*모든 셀 공통 minH, ADR-0018*/; CELL_FLAG = { override: 1, rail: 2 };
-JCOL_MATERIAL = { concrete: 0, …, tile: 7 }; JCOL_FLAG = { rampProxy: 1, climbable: 2 };
+JCOL_MATERIAL = { concrete: 0, …, tile: 7 }; JCOL_FLAG = { rampProxy: 1, climbable: 2, escalator: 4 };   // bit2 = SENSOR 박스 에스컬레이터(로컬 +Z 진행, ADR-0044)
 SECTION_REGISTRY: Record<SectionType, { codec: SectionCodec; levels: CellLevel[] }>   // 05 §4 표와 1:1
 type SectionType = keyof typeof SECTION_REGISTRY;  type SectionCodec = 'glb'|'bin'|'bin+gzip'|'json+gzip';
 // 오류: 리더는 throw 대신 Result<T, TkcError>. writer의 잘못된 입력만 throw(프로그래밍 오류).

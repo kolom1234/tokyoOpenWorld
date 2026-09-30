@@ -3,6 +3,7 @@ import type { GameSystem } from '@sanpo/core';
 import type { ActionState, InputContext, InputDeps, InputService } from '../api.ts';
 import { EMPTY_STATE, snapshotActions } from './action-map.ts';
 import { cloneBindings, DEFAULT_BINDINGS } from './default-bindings.ts';
+import { attachGamepad } from './devices/gamepad.ts';
 import { attachKeyboard } from './devices/keyboard.ts';
 import { attachMouse } from './devices/mouse.ts';
 import { createRawInput, endFrame } from './raw-input.ts';
@@ -18,13 +19,15 @@ export function createInput(deps: InputDeps): InputService {
   const win = deps.target.ownerDocument.defaultView;
   const detachKeyboard = win ? attachKeyboard(win, raw) : () => undefined;
   const mouse = attachMouse(deps.target, raw);
+  const gamepad = win ? attachGamepad(win) : undefined;
   const log = deps.log.child('input');
 
   const system: GameSystem = {
     id: 'input',
     phase: INPUT_PHASE,
-    update() {
-      state = snapshotActions(raw, bindings[context]);
+    update(frame) {
+      gamepad?.poll(raw);
+      state = snapshotActions(raw, bindings[context], frame.dtReal);
       endFrame(raw);
     },
     dispose() {
@@ -42,6 +45,9 @@ export function createInput(deps: InputDeps): InputService {
     },
     get pointerLocked() {
       return mouse.locked;
+    },
+    get gamepadConnected() {
+      return raw.pad.connected;
     },
     setContext(c) {
       if (c !== context) log.debug('context', context, '→', c);

@@ -7,13 +7,21 @@ describe('post flags', () => {
   it('parses tiers and effect overrides, ignoring junk', () => {
     expect(parseQualityFlag('medium')).toBe('medium');
     expect(parseQualityFlag('epic')).toBeUndefined();
-    expect(parsePostFlag('ssr:0,ao:gtao,aoScale:1,scale:0.75,bogus:1,taa:x')).toEqual({
+    expect(parsePostFlag('ssr:0,ao:gtao,aoScale:1,scale:0.75,bogus:1,taa:x,aerial:full')).toEqual({
       ssr: false,
       ao: 'gtao',
       aoScale: 1,
       renderScale: 0.75,
+      aerial: 'full',
     });
+    expect(parsePostFlag('aerial:quarter')).toEqual({});
+    expect(parsePostFlag('autoExposure:0,exp:1.25')).toEqual({ autoExposure: false, fixedExposure: 1.25 });
     const f = parseFlags('?quality=low&post=bloom:1');
     expect([f.quality, f.post]).toEqual(['low', { bloom: true }]);
+  });
+
+  it('forces the post chain only for ?forcePost=1 (static flicker e2e, ADR-0038)', () => {
+    expect(parseFlags('?forcePost=1').forcePost).toBe(true);
+    expect(parseFlags('?forcePost=0').forcePost).toBeUndefined();
   });
 });

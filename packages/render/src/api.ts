@@ -1,6 +1,7 @@
 // @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리.
 // see docs/modules/render.md, docs/07-rendering.md §11
 import type {
+  AvatarState,
   CameraState,
   CellKey,
   DeepPartial,
@@ -41,6 +42,15 @@ export interface PostEffects {
   fixedExposure?: number;
   lut: boolean;
   sharpen: boolean;
+  /** 대기 공중원근 해상도: 'half' = 렌더 스케일의 ½×½에서 산란·투과 + 깊이 인지 업샘플(ADR-0039), 'full' = 픽셀마다(takram). */
+  aerial: 'full' | 'half';
+}
+
+/** 패스별 GPU 시간(`?gpuTiming=1`): 프레임 안 렌더 호출 순번별 평균. label = 씬(`scene`)·그림자(`shadow`)·후처리 쿼드 이름 등. */
+export interface GpuPassTime {
+  index: number;
+  label: string;
+  ms: number;
 }
 
 export interface RenderConfig {
@@ -74,6 +84,8 @@ export interface RenderConfig {
   gpuBenchmarksPath: string;
   /** 디버그 GPU 부하(렌더 스케일 해상도에서 픽셀당 반복 수, `?gpuLoad=`) — 동적 해상도 수락 확인용. 0 = 끔. */
   debugGpuLoad: number;
+  /** 소프트웨어 래스터(SwiftShader — CI)에서도 후처리 체인(GTAO·TAAU 등)을 켠다(`?forcePost=1`, 정지 떨림 e2e). 그림자·동적 해상도는 따로 끈다. */
+  debugForcePost: boolean;
 }
 
 /** 공유 머티리얼 라이브러리 상태(M03-T01). 'manifest' = 평균색만, 'ready' = KTX2 배열 적용. */
@@ -103,13 +115,15 @@ export interface RenderStats {
   hlodFading: number;
   materials: MaterialLibraryStats;
   /** GPU 프레임 시간(렌더 패스 합, gpuTiming일 때만). */
-  gpu: { enabled: boolean; frameMs: number; samples: number };
+  gpu: { enabled: boolean; frameMs: number; samples: number; passes: GpuPassTime[] };
   /** 적용 중 후처리 효과(WebGL2 직접 렌더 = null). */
   post: PostEffects | null;
   /** 자동 노출(기하 평균 휘도·배율, 약 0.5 s마다 갱신). 끔·WebGL2 = null. */
   exposure: { lum: number; scale: number } | null;
   /** 품질 티어·현재 렌더 스케일·프레임 시간 EMA(ms). */
   quality: { tier: QualityTier; renderScale: number; dynamic: boolean; frameMs: number };
+  /** 태양 그림자(07 §9 티어) + 이번 프레임 다시 그린 캐스케이드 수(ADR-0039). 그림자 없음 = null. */
+  shadows: { cascades: number; mapSize: number; maxFarM: number; updated: number } | null;
 }
 
 export interface RenderService extends SystemProvider {
@@ -139,6 +153,8 @@ export interface RenderService extends SystemProvider {
   precompile(): Promise<void>;
   /** WF float64 카메라. 다음 renderPrep(phase 70)에서 원점 재설정·투영에 반영. */
   setCamera(c: Readonly<CameraState>): void;
+  /** 플레이어 아바타(절차 마네킹, M04-T05 — ADR-0045). 매 프레임 renderPrep 전에. */
+  setAvatar(a: Readonly<AvatarState>): void;
   stats(): RenderStats;
   dispose(): void;
 }

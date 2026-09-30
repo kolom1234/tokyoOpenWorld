@@ -16,6 +16,7 @@ import {
 import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
 import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
+import { buildCollision } from './collision.ts';
 import { CELL_SIZE_M, type CellWindow, cellWindow, DEM_MARGIN, type DemWindow, readDemWindow } from './dem-window.ts';
 import { encodeTerrainHeight } from './heightfield.ts';
 import { type AreaDef, worldJson } from './manifest.ts';
@@ -32,6 +33,8 @@ export interface CellBuildStats {
   buildingVertices: number;
   buildingTris: number;
   buildings: number;
+  colliderTris: number;
+  colliderShapes: number;
 }
 
 export interface CellBuildInput {
@@ -89,6 +92,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
     surfaceGrid(input.roads, originWF[0], originWF[2], input.window.size),
   );
   const bld = await buildBuildings(input.buildings, originWF);
+  const col = await buildCollision(bld.collision.pos, bld.collision.idx);
   const [y0, y1] = yRange(terrain.positions);
   const local = outward(union({ min: [0, y0, 0], max: [CELL_SIZE_M, y1, CELL_SIZE_M] }, bld.aabbLocal));
   const add = (v: Vec3Tuple): Vec3Tuple => v.map((c, k) => c + (originWF[k] as number)) as Vec3Tuple;
@@ -100,6 +104,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
     { type: 'meta.json', sources: metaSources, data: await encodeMeta(meta) },
   ];
   if (bld.glb) sections.push({ type: 'buildings.mesh', sources: bld.sources, data: bld.glb });
+  if (col.data) sections.push({ type: 'collision.bin', sources: bld.sources, data: col.data });
   const terrainTris = terrain.indices.length / 3;
   const tkc = writeTkc(
     {
@@ -108,7 +113,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
       originWF,
       aabbWF: { min: add(local.min), max: add(local.max) },
       materials: bld.glb ? [BUILDING_MATERIAL, TERRAIN_MATERIAL].sort() : [TERRAIN_MATERIAL],
-      stats: { tris: terrainTris + bld.tris, colliderTris: 0, instances: 0 },
+      stats: { tris: terrainTris + bld.tris, colliderTris: col.tris, instances: 0 },
     },
     sections,
   );
@@ -120,6 +125,8 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
     buildingVertices: bld.vertices,
     buildingTris: bld.tris,
     buildings: bld.meta.length,
+    colliderTris: col.tris,
+    colliderShapes: col.shapes,
   };
   return { tkc, stats };
 }
@@ -194,7 +201,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     index.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });
     stats.push(s);
     log.info(
-      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v)`,
+      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), collider ${s.colliderTris} tris / ${s.colliderShapes}`,
     );
   }
   writeFileSync(join(outDir, 'cells.idx'), writeCellsIndex(index));

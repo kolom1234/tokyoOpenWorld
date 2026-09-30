@@ -14,4 +14,4 @@ ADR-0028은 WebGL2를 직접 렌더(후처리·그림자·환경 프로브 없�
 
 ## Consequences
 - 하드웨어 WebGL2 골든(`docs/screenshots/M03/T09-webgl2/`): 5뷰 오류 0, Medium(GTAO) 적용, WebGPU와 톤·구도 근접.
-- 남은 차이: 일부 금속·커튼월 파사드가 WebGL2에서 더 어둡다(프로브 반사 차이 — 원인 미확정, 후속). CI(SwiftShader)는 기존 직접 렌더 그대로 → e2e 불변.
+- 남은 차이: 일부 금속·커튼월 파사드가 WebGL2에서 더 어둡다 → 원인은 프로브가 아니라 GTAO 위치 복원(역-Z) — ADR-0040에서 three 패치로 해결. CI(SwiftShader)는 기존 직접 렌더 그대로 → e2e 불변.

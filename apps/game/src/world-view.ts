@@ -1,4 +1,4 @@
-// 부트 7–9단계 조립: render + input + traversal(freecam) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render 배선.
+// 부트 7–9단계 조립: render + input + traversal(freecam, 월드 로드 뒤 walk) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선.
 // 지면 질의는 streaming 높이장(월드 로드 전 = 미적재). see docs/modules/game.md §부트 시퀀스, docs/06-world-streaming.md §8
 import {
   createWorkerSupervisor,
@@ -12,6 +12,7 @@ import {
   type Vec3d,
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
+import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
 import { type ClockMode, createSim, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
@@ -20,6 +21,8 @@ import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
+import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
+import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
 import type { LoadedWorld } from './world-load.ts';
 
@@ -37,6 +40,9 @@ export interface WorldView {
   /** showWorld 뒤에만 있다. */
   readonly streaming: StreamingService | undefined;
   readonly wiring: StreamingRenderWiring | undefined;
+  /** showWorld 뒤에만 있다(물리 워커 — M04-T02 셀 콜라이더). */
+  readonly physics: PhysicsService | undefined;
+  readonly physicsWiring: StreamingPhysicsWiring | undefined;
   /** 머티리얼 라이브러리 적재가 끝났거나(성공·실패) 대상이 없음(골든뷰 안정 조건). */
   readonly materialsSettled: boolean;
   /** streaming 시작 → 스폰 영역 live까지 대기 → 시작 시점으로 이동. 반환 = 스폰 영역 live L0 셀 수. */
@@ -64,6 +70,8 @@ export interface WorldViewDeps {
 interface LateState {
   streaming?: StreamingService;
   wiring?: StreamingRenderWiring;
+  physics?: PhysicsService;
+  physicsWiring?: StreamingPhysicsWiring;
   materialsSettled: boolean;
 }
 
@@ -76,18 +84,32 @@ async function startStreaming(
   late: LateState,
 ): Promise<StreamingService> {
   const { bus, log } = deps;
+  const supervisor = createWorkerSupervisor({ log });
   const s = createStreaming({
     bus,
     log,
     world: { baseUrl: world.baseUrl, buildId: world.buildId, cellsIndex: world.cellsIndex },
-    supervisor: createWorkerSupervisor({ log }),
+    supervisor,
     initialMode: 'freecam',
   });
   late.streaming = s;
   late.wiring = createStreamingRenderWiring({ streaming: s, render, traversal, log: log.child('world') });
+  // 물리(M04-T02): 앵커 = 스폰 격자점. 워커 초기화는 기다리지 않는다(셀 콜라이더는 준비되면 적재).
+  const physics = createPhysics({ bus, log, supervisor, originWF: world.spawnWF });
+  physics.ready.catch((e: unknown) => log.error('physics', e));
+  late.physics = physics;
+  late.physicsWiring = createStreamingPhysicsWiring({
+    streaming: s,
+    bus,
+    physics,
+    player: () => ({ posWF: traversal.player.posWF, mode: traversal.mode }),
+    log: log.child('physics-wiring'),
+  });
   for (const sys of s.systems()) await sys.init?.();
   deps.scheduler.add(s);
   deps.scheduler.add({ systems: () => late.wiring?.systems ?? [] });
+  deps.scheduler.add(physics);
+  deps.scheduler.add({ systems: () => (late.physicsWiring ? [late.physicsWiring.system] : []) });
   return s;
 }
 
@@ -105,6 +127,29 @@ function loadMaterialsLater(render: RenderService, url: string | undefined, late
     });
 }
 
+/** traversal: 시작 = freecam(시작 시점). physics는 월드 로드 뒤 생긴다 → getter(전환 요청 때마다 요구조건을 본다 — walk는 그때부터). */
+function createTraversalFor(
+  deps: WorldViewDeps,
+  input: InputService,
+  ground: GroundQuery,
+  late: LateState,
+): TraversalService {
+  const startPose = deps.start?.pose ?? startFreecamPose;
+  const fov = deps.start?.fovDeg;
+  return createTraversal(
+    {
+      input,
+      bus: deps.bus,
+      log: deps.log,
+      ground,
+      get physics() {
+        return late.physics;
+      },
+    },
+    { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
+  );
+}
+
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
   const config = { ...deps.renderConfig, backend: deps.backend };
@@ -112,12 +157,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const input = createInput({ target: canvas, bus, log });
   const late: LateState = { materialsSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
-  const startPose = deps.start?.pose ?? startFreecamPose;
-  const fov = deps.start?.fovDeg;
-  const traversal = createTraversal(
-    { input, bus, log, ground },
-    { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
-  );
+  const traversal = createTraversalFor(deps, input, ground, late);
   const now = deps.now ?? Date.now;
   const sim = createSim({ bus, log, now, initialClock: deps.clock ?? defaultClock(now()) });
   const frameSource: FrameSource = {
@@ -126,7 +166,11 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     gameTimeMs: () => sim.clock.gameTimeMs,
     timeScale: () => sim.clock.timeScale,
   };
-  const wiringSystems = [createCameraWiring(traversal, render), createEnvWiring(sim, render, deps.weather)];
+  const wiringSystems = [
+    createCameraWiring(traversal, render),
+    createEnvWiring(sim, render, deps.weather),
+    createGroundLoadingIndicator(canvas.ownerDocument, traversal),
+  ];
 
   return {
     render,
@@ -142,6 +186,12 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     get wiring() {
       return late.wiring;
     },
+    get physics() {
+      return late.physics;
+    },
+    get physicsWiring() {
+      return late.physicsWiring;
+    },
     get materialsSettled() {
       return late.materialsSettled;
     },
@@ -153,7 +203,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
       // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
       await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true });
       // 지면 높이를 알게 됐으니 "지면 위 60 m"를 정확히 다시 잡는다.
-      traversal.request('freecam', startPose(ground));
+      traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
       loadMaterialsLater(render, world.materialsUrl, late, wlog);
       return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
     },

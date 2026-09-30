@@ -164,7 +164,8 @@ export const JCOL_MATERIAL = {
   soil: 6,
   tile: 7,
 } as const;
-export const JCOL_FLAG = { rampProxy: 1, climbable: 2 } as const;
+/** bit0 계단 램프 프록시(렌더 = 계단, 충돌 = 경사면), bit1 오를 수 있음, bit2 에스컬레이터 구간(SENSOR 박스, 로컬 +Z = 진행 방향 — ADR-0044). */
+export const JCOL_FLAG = { rampProxy: 1, climbable: 2, escalator: 4 } as const;
 export type JcolKind = 'triMesh' | 'box' | 'capsule' | 'cylinder' | 'convexHull';
 interface JcolShapeBase {
   /** physics ObjectLayer 값(08-physics §3). */

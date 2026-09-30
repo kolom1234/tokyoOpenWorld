@@ -1,6 +1,6 @@
 // 머티리얼 ID → 공유 머티리얼 + HLOD 변형(자식 페이드, M02-T05). 셀 머티리얼은 라이브러리 텍스처 배열을 쓴다(M03-T01, 적재 전 평균색).
 // see docs/07-rendering.md §3–4
-import { type Material, MeshStandardNodeMaterial } from 'three/webgpu';
+import { type Material, MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import type { EnvUniforms } from '../weather/wetness.ts';
 import { createFacadeMaterial } from './facade/index.ts';
 import { createHlodMaterial } from './hlod.ts';
@@ -21,8 +21,10 @@ const FALLBACK = { color: 0xff00ff, roughness: 0.5 };
 
 export interface MaterialRegistry {
   get(materialId: string): Material;
-  /** hlod.mesh용(자식 페이드·붕괴, alphaHash). */
-  getHlod(materialId: string): Material;
+  /** hlod.mesh용(자식 붕괴). fading = alphaHash 디더 변형(페이드 중인 셀만, ADR-0039). */
+  getHlod(materialId: string, fading?: boolean): Material;
+  /** 깊이만 쓰는 프리패스(건물 파사드 먼저 → 가려진 파사드·지면 셰이딩 생략, ADR-0039). */
+  prepass(): Material;
   /** 지금까지 만든 머티리얼(선컴파일 대상). */
   all(): Material[];
   dispose(): void;
@@ -38,6 +40,7 @@ export function createMaterialRegistry(
 ): MaterialRegistry {
   const cache = new Map<string, Material>();
   const hlod = new Map<string, Material>();
+  let prepass: Material | undefined;
   return {
     get(id) {
       let m = cache.get(id);
@@ -55,17 +58,28 @@ export function createMaterialRegistry(
       }
       return m;
     },
-    getHlod(id) {
-      let m = hlod.get(id);
+    getHlod(id, fading = false) {
+      const key = fading ? `${id}:fade` : id;
+      let m = hlod.get(key);
       if (m === undefined) {
         const spec = HLOD_COLORS[id] ?? FALLBACK;
-        m = createHlodMaterial(id, spec.color, spec.roughness);
-        hlod.set(id, m);
+        m = createHlodMaterial(id, spec.color, spec.roughness, fading);
+        hlod.set(key, m);
       }
       return m;
     },
-    all: () => [...cache.values(), ...hlod.values()],
+    prepass() {
+      if (prepass === undefined) {
+        prepass = new MeshBasicNodeMaterial();
+        prepass.name = 'depth_prepass';
+        prepass.colorWrite = false;
+      }
+      return prepass;
+    },
+    all: () => [...cache.values(), ...hlod.values(), ...(prepass ? [prepass] : [])],
     dispose() {
+      prepass?.dispose();
+      prepass = undefined;
       for (const m of [...cache.values(), ...hlod.values()]) m.dispose();
       cache.clear();
       hlod.clear();

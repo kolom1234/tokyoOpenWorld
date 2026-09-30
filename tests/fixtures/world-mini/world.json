@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "formatVersion": 1,
-  "buildId": "20260929-c9a28d3-ec1646fc",
+  "buildId": "20260929-f15f6e1-ec1646fc",
   "crs": {
     "projected": "EPSG:6677",
     "E0": -12000,

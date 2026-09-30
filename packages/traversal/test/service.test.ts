@@ -17,6 +17,7 @@ function fakeInput(axes: Partial<Record<AxisAction, number>> = {}, hits: ButtonA
       return context;
     },
     pointerLocked: false,
+    gamepadConnected: false,
     setContext: (c) => {
       context = c;
     },
@@ -74,8 +75,8 @@ describe('createTraversal (freecam only, no physics)', () => {
     const changes: string[] = [];
     bus.on('mode/changed', (e) => changes.push(`${e.from}->${e.to}`));
     const t = createTraversal({ input, bus, log, ground: { groundHeightAt: () => undefined } });
-    const walk: TraversalMode = {
-      id: 'walk',
+    const drive: TraversalMode = {
+      id: 'drive',
       requires: ['physics'],
       enter: () => undefined,
       exit: () => undefined,
@@ -83,13 +84,14 @@ describe('createTraversal (freecam only, no physics)', () => {
         throw new Error('unreachable');
       },
     };
-    t.register(walk);
+    t.register(drive);
     expect(t.request('walk')).toBe(false);
     expect(t.request('drive')).toBe(false);
+    expect(t.request('train')).toBe(false);
     hits.push('freeCam');
     t.systems()[0]?.update(frame(0.016));
     expect(t.mode).toBe('freecam');
     expect(changes).toEqual([]);
-    expect(() => t.register(walk)).toThrow(/already registered/);
+    expect(() => t.register(drive)).toThrow(/already registered/);
   });
 });
