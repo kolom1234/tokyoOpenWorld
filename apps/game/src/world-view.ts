@@ -1,4 +1,4 @@
-// 부트 7–9단계 조립: render + input + traversal(freecam, 월드 로드 뒤 walk) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선.
+// 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선.
 // 지면 질의는 streaming 높이장(월드 로드 전 = 미적재). see docs/modules/game.md §부트 시퀀스, docs/06-world-streaming.md §8
 import {
   createWorkerSupervisor,
@@ -18,7 +18,7 @@ import { type ClockMode, createSim, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import type { WeatherOverride } from './debug/wet-override.ts';
-import { startFreecamPose } from './start-view.ts';
+import { startFreecamPose, startWalkParams } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
 import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
@@ -58,8 +58,10 @@ export interface WorldViewDeps {
   /** render 설정 덮어쓰기(`?exposure=`·`?gpuTiming=1`). */
   renderConfig?: DeepPartial<RenderConfig>;
   now?: () => number;
-  /** 시작 시점 재정의(골든뷰 북마크 `?view=`): 부팅 대기 중심과 지면 확인 뒤 포즈. 없으면 스폰·startFreecamPose. */
+  /** 시작 시점 재정의(골든뷰 북마크 `?view=`): 부팅 대기 중심과 지면 확인 뒤 포즈(freecam). 없으면 스폰·startMode. */
   start?: { centerWF: Vec3d; pose: (ground: GroundQuery) => FreecamParams; fovDeg?: number };
+  /** 첫 표시 모드(`start`가 없을 때): walk(기본 — 스폰에서 걷기) | freecam(`?mode=freecam` — 스폰 위 60 m 시작 시점). */
+  startMode?: 'walk' | 'freecam';
   /** 시계 시작(골든뷰·`?time=` = frozen). 없으면 오늘 정오 JST부터 1배속(wiring/env.ts). */
   clock?: ClockMode;
   /** 디버그 날씨 덮어쓰기(`?wet=`). */
@@ -90,7 +92,7 @@ async function startStreaming(
     log,
     world: { baseUrl: world.baseUrl, buildId: world.buildId, cellsIndex: world.cellsIndex },
     supervisor,
-    initialMode: 'freecam',
+    initialMode: traversal.mode,
   });
   late.streaming = s;
   late.wiring = createStreamingRenderWiring({ streaming: s, render, traversal, log: log.child('world') });
@@ -127,7 +129,7 @@ function loadMaterialsLater(render: RenderService, url: string | undefined, late
     });
 }
 
-/** traversal: 시작 = freecam(시작 시점). physics는 월드 로드 뒤 생긴다 → getter(전환 요청 때마다 요구조건을 본다 — walk는 그때부터). */
+/** traversal: 로딩 중 = freecam(시작 시점). physics는 월드 로드 뒤 생긴다 → getter(전환 요청 때마다 요구조건을 본다 — walk는 그때부터). */
 function createTraversalFor(
   deps: WorldViewDeps,
   input: InputService,
@@ -202,8 +204,10 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
       const centerWF = deps.start?.centerWF ?? world.spawnWF;
       // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
       await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true });
-      // 지면 높이를 알게 됐으니 "지면 위 60 m"를 정확히 다시 잡는다.
-      traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
+      // 지면 높이를 알게 됐으니 시작 포즈를 정확히 다시 잡는다(freecam "지면 위 60 m" 또는 스폰에서 걷기 — 착지점은 walk가 콜라이더로 찾는다).
+      if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
+        traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
+      else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
       loadMaterialsLater(render, world.materialsUrl, late, wlog);
       return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
     },

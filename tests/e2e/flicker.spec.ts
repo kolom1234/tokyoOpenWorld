@@ -7,7 +7,7 @@ import { expect, type Page, test } from '@playwright/test';
 
 const HIDE_UI = 'body > :not(#view) { visibility: hidden !important; }';
 const QUERY =
-  '/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&forcePost=1&quality=medium&dynres=0&shadows=0';
+  '/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&mode=freecam&forcePost=1&quality=medium&dynres=0&shadows=0';
 /** TAAU 수렴(현재 프레임 가중 0.025) 대기 프레임. */
 const WARMUP_FRAMES = 40;
 const CAPTURE_FRAMES = 8;

@@ -73,6 +73,8 @@ export interface BootFlags {
   gpuLoad?: number;
   /** `?forcePost=1` → 소프트웨어 래스터에서도 후처리 체인(e2e flicker.spec.ts). */
   forcePost?: boolean;
+  /** `?mode=freecam` → 첫 표시를 freecam 시작 시점으로(기본 = walk, 09 §1). 렌더 e2e·비교용. */
+  mode?: 'freecam';
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -111,6 +113,7 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('dynres') === '0' ? { noDynres: true } : {}),
     ...(Number(q.get('gpuLoad')) > 0 ? { gpuLoad: Math.min(Math.floor(Number(q.get('gpuLoad'))), 4096) } : {}),
     ...(q.get('forcePost') === '1' ? { forcePost: true } : {}),
+    ...(q.get('mode') === 'freecam' ? { mode: 'freecam' as const } : {}),
   };
 }
 
@@ -223,6 +226,7 @@ async function setupWorldView(
       renderConfig: renderConfigOf(flags, golden),
       ...clockOf(flags, golden),
       ...(weather ? { weather } : {}),
+      ...(flags.mode ? { startMode: flags.mode } : {}),
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),

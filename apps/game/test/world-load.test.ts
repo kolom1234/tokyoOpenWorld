@@ -59,6 +59,7 @@ describe('startWorld', () => {
     const loaded = await startWorld(flags, (s) => states.push(s), fn);
     expect(loaded?.spawnCells.map(cellIdString)).toEqual(['L0_-1_-1', 'L0_0_-1', 'L0_-1_0', 'L0_0_0']);
     expect(loaded?.spawnWF).toEqual({ x: -22.3, y: 0, z: 8.6 });
+    expect(loaded?.spawnYawRad).toBe(0);
     expect(seen.some((u) => u.startsWith('/api/'))).toBe(false);
     expect(states).toEqual([{ kind: 'loaded', source: 'fixture', buildId: expect.any(String), cells: 4, indexed: 4 }]);
   });

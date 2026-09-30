@@ -1,4 +1,4 @@
-// M04-T03: world-mini 부트 → C(freecam → walk: 카메라 아래 지면에 캐릭터) → W 걷기(물리 속도 1.35 m/s, 발 = 지면) → V 3인칭 → C 복귀(바디 유지).
+// M04-T03 · M05 결정 1: world-mini 부트 = walk(스폰 주변 지면에 캐릭터) → W 걷기(물리 속도 1.35 m/s, 발 = 지면) → V 3인칭 → C freecam → C 복귀(바디 유지).
 // 실제 입력 경로(키보드 이벤트 → input → traversal → physics 워커). SwiftShader는 프레임이 느려 이동 거리 대신 물리 속도로 판정.
 // 대기는 시간 창이 아니라 상태: 키 탭 = 2프레임 처리 뒤 바로 확인, 속도 = 연속 프레임 표본, 착지·붐 = 조건 poll(game.ts).
 import { expect, type Page, test } from '@playwright/test';
@@ -57,18 +57,17 @@ function speedsOverFrames(page: Page, n: number): Promise<{ speed: number; mode:
   }, n);
 }
 
-/** 부트 → 안정(첫 품질 티어 등) → 셀 콜라이더 4셀 적재 → C → walk·착지(발 = 지면 ±5 cm). */
+/** 부트(첫 표시 = walk) → 셀 콜라이더 4셀 적재 → 착지(발 = 지면 ±5 cm) → 안정(첫 품질 티어 등). */
 async function bootAndLand(page: Page): Promise<void> {
   await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
   await expect(page.locator('#app')).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
+  expect((await state(page)).mode).toBe('walk');
   const colliders = async () => {
     const s = (await state(page)).stats;
     return s.colliderCells >= 4 && s.colliderPending === 0;
   };
   await expect.poll(colliders, { timeout: STATE_TIMEOUT_MS }).toBe(true);
   await waitSettled(page);
-  await press(page, 'KeyC');
-  expect((await state(page)).mode).toBe('walk');
   const landed = async () => {
     const s = await state(page);
     return s.stats.bodies === 1 && s.ground !== undefined && Math.abs(s.pos.y - s.ground) < 0.05;
@@ -76,7 +75,7 @@ async function bootAndLand(page: Page): Promise<void> {
   await expect.poll(landed, { timeout: STATE_TIMEOUT_MS }).toBe(true);
 }
 
-test('walk: C lands the character on the ground, W walks at 1.35 m/s, V third person, C returns to the body', async ({
+test('walk: boot lands the character near the spawn, W walks at 1.35 m/s, V third person, C returns to the body', async ({
   page,
 }) => {
   const errors: string[] = [];

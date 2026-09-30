@@ -16,7 +16,7 @@ interface WorldManifest {
   formatVersion: number;
   buildId: string;
   crs: { projected: string; E0: number; N0: number };
-  spawn: { posWF: [number, number, number] };
+  spawn: { posWF: [number, number, number]; yawDeg?: number };
   files: { cellsIndex: string; materials?: string };
 }
 
@@ -26,6 +26,8 @@ export interface LoadedWorld {
   buildId: string;
   /** world.json spawn.posWF(WF m). */
   spawnWF: Vec3d;
+  /** world.json spawn.yawDeg(0 = 북(−Z), 반시계 +) → rad. 없으면 0. */
+  spawnYawRad: number;
   /** cells.idx 레코드 수(모든 레벨). */
   indexed: number;
   /** 파싱된 cells.idx(streaming 입력). */
@@ -98,6 +100,7 @@ export async function loadWorld(
     baseUrl,
     buildId: m.value.buildId,
     spawnWF,
+    spawnYawRad: ((m.value.spawn.yawDeg ?? 0) * Math.PI) / 180,
     indexed: index.value.size,
     cellsIndex: index.value,
     spawnCells,

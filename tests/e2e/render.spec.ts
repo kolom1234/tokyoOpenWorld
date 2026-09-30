@@ -58,7 +58,7 @@ test('start view renders Scramble Square and surrounding buildings (WebGL2 fallb
     if (m.type() === 'error') errors.push(m.text());
   });
   mkdirSync(SHOTS, { recursive: true });
-  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
+  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&mode=freecam');
   const app = page.locator('#app');
   await expect(app).toHaveAttribute('data-backend', 'webgl2', { timeout: 30_000 });
   await expect(app).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
@@ -92,7 +92,7 @@ test.describe('origin rebase', () => {
   test('forced origin rebase (+4096 m and back) leaves the view pixel-identical (≤ 0.02% z-fight)', async ({
     page,
   }) => {
-    await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
+    await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&mode=freecam');
     await expect(page.locator('#app')).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
     const overlay = page.locator(OVERLAY);
     // 안정(HLOD 페이드·스트리밍 0·첫 품질 티어) 뒤에 비교 — 부하가 있으면 캡처가 페이드·재적재·티어 재구성 도중에 걸려 가끔 실패했다(M03 보강 4, M05 결정 0).

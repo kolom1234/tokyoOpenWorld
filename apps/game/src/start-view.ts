@@ -1,6 +1,7 @@
-// 시작 시점(M01-T06): 스크램블 교차로 북서쪽 상공 약 60 m에서 Shibuya Scramble Square를 바라본다. 골든뷰 북마크(M03)가 생기면 그쪽으로 이동.
+// 시작 시점: 기본 = walk(09 §1 — world.json 스폰에서 걷기 시작, M05 결정 1). 로딩 중·`?mode=freecam`·골든뷰 = freecam
+// (M01-T06: 스크램블 교차로 북서쪽 상공 약 60 m에서 Shibuya Scramble Square를 바라본다).
 import type { GroundQuery, Vec3d } from '@sanpo/core';
-import { type FreecamParams, lookAtAngles } from '@sanpo/traversal';
+import { type FreecamParams, lookAtAngles, type WalkParams } from '@sanpo/traversal';
 
 /** 시점 xz: 스크램블 교차로 WF(−22.3, 8.6)(01-architecture §7)에서 북서로 약 45 m — 교차로와 타워가 한 화면에 들어오게. */
 export const START_EYE_XZ_WF = { x: -60, z: -15 } as const;
@@ -18,4 +19,13 @@ export function startFreecamPose(ground: GroundQuery): FreecamParams {
   const { x, z } = START_EYE_XZ_WF;
   const posWF = { x, y: (ground.groundHeightAt(x, z) ?? FALLBACK_GROUND_M) + START_HEIGHT_AGL_M, z };
   return { posWF, ...lookAtAngles(posWF, SCRAMBLE_SQUARE_LOOK_WF) };
+}
+
+/** 걷기 시작 기준점의 눈높이(m) — 착지점 레이가 도는 동안 카메라가 그 자리 눈높이에서 기다린다. */
+const START_EYE_M = 1.6;
+
+/** walk 시작: 스폰 xz(착지점은 walk가 주변 지면에서 찾는다), 방위 = world.json spawn.yawDeg, 수평 시선. */
+export function startWalkParams(spawnWF: Readonly<Vec3d>, yawRad: number, ground: GroundQuery): WalkParams {
+  const y = (ground.groundHeightAt(spawnWF.x, spawnWF.z) ?? FALLBACK_GROUND_M) + START_EYE_M;
+  return { posWF: { x: spawnWF.x, y, z: spawnWF.z }, yawRad, pitchRad: 0 };
 }
