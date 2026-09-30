@@ -14,7 +14,7 @@
    한계·지금 길이 중 짧은 쪽, 두 스텝 넘으면 최소 0.25 m. 당기기 즉시, 풀기 4 m/s(튀지 않게). 시점 전환·재배치 때 0.25 m에서 다시.
 4. **아바타 = 자체 제작 절차 마네킹**(render `scene/avatar.ts`: 캡슐 몸통·팔다리, 구 머리, 외부 에셋·라이선스 없음). 속력으로 연속 블렌드: 팔다리 진자 진폭 0.32·v(≤ 0.75 rad),
    주기 = v / 1.4 m(≤ 1.6 Hz), 1.8 m/s부터 앞 기울기(≤ 0.18 rad), 대기 호흡. 붐 0.5 → 1.2 m에서 opacity 0 → 1(alphaHash 디더). 1인칭에선 숨김, freecam에선 세워 둔 바디를 대기 자세로.
-   공개 계약: core `AvatarState`, traversal `TraversalService.avatar`, render `setAvatar` — 배선 `wiring/camera.ts`. Quaternius 모델 교체는 **다운로드 승인 뒤**(파일·출처·크기 확인, 03·ATTRIBUTION 갱신).
+   공개 계약: core `AvatarState`, traversal `TraversalService.avatar`, render `setAvatar` — 배선 `wiring/camera.ts`. Quaternius 모델 교체는 **다운로드 승인 뒤**(파일·출처·크기 확인, 03·ATTRIBUTION 갱신). **→ ADR-0048(2026-10-01): Quaternius 모델로 교체, 마네킹은 적재 전·실패 시 대체.**
 
 ## Consequences
 - 수락(실제 GPU, MVP `?world=local`, 보행 봇이 찾은 막다른 골목 8곳 × 25 s — 느린 회전·한 프레임 90–180° 홱 돌리기·걷기·휠 줌, 매 프레임 피벗 → 실제 카메라 구(0.1 m) 캐스트):

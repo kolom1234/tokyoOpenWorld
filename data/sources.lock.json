@@ -175,6 +175,28 @@
       "license": "CC0-1.0",
       "attribution": "Materials from ambientCG.com, licensed under CC0 1.0 Universal",
       "retrievedAt": "2026-09-29"
+    },
+    {
+      "id": "quaternius-ubc",
+      "url": "https://quaternius.itch.io/universal-base-characters",
+      "dataset": "https://quaternius.com/packs/universalbasecharacters.html",
+      "resource": "Universal Base Characters[Standard].zip (128,968,391 B, 무료판 — Superhero 남·여 + 머리털 8종, glTF/FBX). 아바타 = Superhero_Male_FullBody(glTF)",
+      "fiscalYear": null,
+      "sha256": "fdbf1804c90dfc1ea03e992bff7da2dfd1a79318e13270a660180f9308455f40",
+      "license": "CC0-1.0",
+      "attribution": "Universal Base Characters by Quaternius (CC0 1.0)",
+      "retrievedAt": "2026-09-30"
+    },
+    {
+      "id": "quaternius-ual",
+      "url": "https://quaternius.itch.io/universal-animation-library",
+      "dataset": "https://quaternius.com/packs/universalanimationlibrary.html",
+      "resource": "Universal Animation Library[Standard].zip (15,904,933 B, 무료판 — 43클립, UBC와 같은 65관절 골격, 루트 모션판 _RM 포함). 아바타 = Idle_Loop·Walk_Loop·Jog_Fwd_Loop·Sprint_Loop",
+      "fiscalYear": null,
+      "sha256": "cc73fc4e495b82958207316596317a3f40b9fa38065bde1027937452da537724",
+      "license": "CC0-1.0",
+      "attribution": "Universal Animation Library by Quaternius (CC0 1.0)",
+      "retrievedAt": "2026-09-30"
     }
   ]
 }

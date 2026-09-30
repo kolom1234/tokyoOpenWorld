@@ -153,8 +153,13 @@ export interface RenderService extends SystemProvider {
   precompile(): Promise<void>;
   /** WF float64 카메라. 다음 renderPrep(phase 70)에서 원점 재설정·투영에 반영. */
   setCamera(c: Readonly<CameraState>): void;
-  /** 플레이어 아바타(절차 마네킹, M04-T05 — ADR-0045). 매 프레임 renderPrep 전에. */
+  /** 플레이어 아바타 상태(절차 마네킹 M04-T05 → 모델 ADR-0048). 매 프레임 renderPrep 전에. */
   setAvatar(a: Readonly<AvatarState>): void;
+  /**
+   * 아바타 모델 GLB(파이프라인 `avatar` — Quaternius UBC + UAL 클립, ADR-0048) 적재 → 선컴파일 → 마네킹 교체. 첫 표시 뒤에 부른다.
+   * 실패하면 reject하고 절차 마네킹을 계속 쓴다.
+   */
+  loadAvatar(url: string): Promise<void>;
   stats(): RenderStats;
   dispose(): void;
 }

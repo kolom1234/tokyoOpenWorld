@@ -3,6 +3,7 @@ import type { RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
 import { createFrameSystems } from './frame.ts';
 import { precompileMaterials } from './materials/precompile.ts';
+import { loadAvatarModel } from './scene/avatar-model.ts';
 
 export { RENDER_PHASE, RENDER_PREP_PHASE } from './frame.ts';
 
@@ -60,6 +61,15 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
         .compileAsync(ctx.avatar.group, view.camera, graph.scene)
         .catch((e: unknown) => log.warn('avatar precompile', e));
       ctx.avatar.group.visible = false;
+    },
+    async loadAvatar(url) {
+      const model = await loadAvatarModel(url, ctx.avatar.opacity);
+      // 붙이기 전에 파이프라인을 만든다(3인칭 전환 첫 프레임 끊김 방지) — 보이지 않는 그룹으로 컴파일.
+      await renderer
+        .compileAsync(model.root, view.camera, graph.scene)
+        .catch((e: unknown) => log.warn('avatar compile', e));
+      ctx.avatar.attach(model);
+      log.info('avatar model attached');
     },
     setCamera: (c) => view.setCamera(c),
     setAvatar: (a) => ctx.avatar.set(a),

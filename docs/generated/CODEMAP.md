@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 255개.
+> 파일 260개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -29,7 +29,7 @@
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
-- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
+- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, AVATAR_URL, createWorldView
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
@@ -142,7 +142,8 @@
 - `packages/render/src/internal/renderer/dynamic-resolution.ts` — 동적 해상도(07 §9, M03-T08): 프레임 시간 EMA로 렌더 스케일 ±0.05(0.5–1.0) — 목표 16.6 ms. | exports: DynResConfig, DYNRES_DEFAULTS, DynamicResolution, createDynamicResolution
 - `packages/render/src/internal/renderer/gpu-timer.ts` — GPU 타이머(M03 성능 표): WebGPU timestamp-query(three `trackTimestamp`)로 렌더 패스 GPU 시간을 모아 프레임당 평균(ms). | exports: GpuTimerStats, GpuTimer, createGpuTimer
 - `packages/render/src/internal/renderer/init.ts` — WebGPURenderer 초기화(WebGL2 폴백) + 깊이 전략 결정(reversed-Z 우선, 불가 시 logarithmic — ADR-0006). see docs/07-rendering.md §1 | exports: InitializedRenderer, resolveDepthMode, initRenderer
-- `packages/render/src/internal/scene/avatar.ts` — 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리 — 외부 에셋 없음. Quaternius 모델 교체는 다운로드 승인 뒤), | exports: Avatar, createAvatar
+- `packages/render/src/internal/scene/avatar-model.ts` — 플레이어 아바타 모델(M05 결정 2, ADR-0048): Quaternius UBC 베이스 캐릭터 GLB(파이프라인 `avatar` — 정점색 1머티리얼, 클립 idle·walk·jog·sprint) | exports: AVATAR_HEIGHT_M, AvatarClipName, AvatarModelMeta, blendWeights, clipRate, AvatarModel, createAvatarModel, loadAvatarModel
+- `packages/render/src/internal/scene/avatar.ts` — 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리)으로 시작 → `attach`로 Quaternius 모델(ADR-0048, | exports: Avatar, createAvatar
 - `packages/render/src/internal/scene/cell-node.ts` — 셀 → 렌더 노드: DecodedMesh 프리미티브 → BufferGeometry(TypedArray 그대로) + 공유 머티리얼, 슬롯별 Group(위치 = originWF − renderOrigin). see docs/07-rendering.md §2–3 | exports: CellRenderNode, threeAttributeName, buildGeometry, cellSeedOf, PREPASS_RENDER_ORDER, hlodNeedsDither, createCellNode, placeCellNode, disposeCellNode, CellSet, createCellSet
 - `packages/render/src/internal/scene/hlod-switch.ts` — HLOD 자식 표시 상태: 자식 셀이 live면 부모의 그 자식 영역을 0.3 s 디더로 숨기고, 자식이 해제되면 즉시 다시 보인다(구멍 없음). | exports: HLOD_CHILDREN, HLOD_FADE_S, HlodSwitch, createHlodSwitch
 - `packages/render/src/internal/scene/origin.ts` — 렌더 원점 재설정 순수 계산: 판정(거리 ≥ 2048 m), 256 m 격자 스냅, 노드 위치 = WF − renderOrigin(float64 → 대입 시 float32). see docs/01-architecture.md §7, docs/07-rendering.md §2 | exports: needsRebase, snapOrigin, toRender
@@ -242,6 +243,7 @@
 - `tools/pipeline/src/lib/raster.ts` — 래스터 유틸: 투영 격자 정의(PRJ 정수 m = 픽셀 중심), Float32 raw 입출력, GDAL VRT 기록, 결측 병합·통계. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: PrjGrid, geoTransformOf, targetExtentOf, readFloat32, writeGridVrt, FillStats, mergeWithFallback, ValueStats, valueStats
 - `tools/pipeline/src/lib/sigv4.ts` — AWS Signature V4(헤더 서명) — R2 S3 호환 API용 최소 구현(node:crypto). see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-create-signed-request.html | exports: SigV4Credentials, SignInput, EMPTY_SHA256, sha256Hex, uriEncode, signV4
 - `tools/pipeline/src/lib/triangulate.ts` — 3D 평면 폴리곤(외곽 + 구멍) 삼각분할: Newell 법선 → 지배 축 투영 → earcut → 법선 방향으로 감기 정렬. see docs/04-data-pipeline.md §4.4-2 | exports: Vec3, Triangulated, newellNormal, triangulateRings
+- `tools/pipeline/src/lib/zip.ts` — 최소 ZIP 읽기(끝 레코드 → 중앙 디렉터리 → 저장·deflate 항목): 외부 에셋 zip에서 필요한 파일만 꺼낸다(아바타 M05). ZIP64·암호화 미지원. | exports: ZipEntry, readZip
 - `tools/pipeline/src/readers/dem.ts` — GSI 基盤地図情報 数値標高モデル(JPGIS GML, DEM1A/5A 등) 리더: zip 속 3차 메시 xml → Float32 격자 + GDAL용 VRT. see docs/04-data-pipeline.md §4.2(terrain) | exports: DEM_NODATA, DemTile, parseFgdDem, listDemZip, meshOfMember, readZipMember, writeTileVrt
 - `tools/pipeline/src/readers/plateau/citygml-assemble.ts` — SAX 파서가 모은 건물·도로 컨텍스트 → 정규화 레코드(LOD 선택 규칙). see docs/04-data-pipeline.md §4.2 | exports: BuildingCtx, AreaCtx, RoadCtx, finishBuilding, finishRoad
 - `tools/pipeline/src/readers/plateau/citygml-sax-state.ts` — B안 CityGML 스트리밍 파서의 상태기계: SAX 이벤트 → 건물·도로 레코드. 드라이버는 citygml-sax.ts. see docs/adr/0007-plateau-reader.md | exports: SaxStats, CityGmlState
@@ -253,6 +255,9 @@
 - `tools/pipeline/src/readers/plateau/types.ts` — PLATEAU 리더 공통 계약: 정규화 레코드 타입 + `PlateauReader` 인터페이스(구현 교체 가능). see docs/04-data-pipeline.md §4.2, docs/adr/0007-plateau-reader.md | exports: SurfaceKind, RoadFunction, RingsWF, SurfaceRecord, BuildingRecord, RoadRecord, NormalizedFeature, PlateauReadOptions, PlateauReader
 - `tools/pipeline/src/spike/plateau-spike.ts` — M01-T02 스파이크 CLI: A안(nusamai)·B안(citygml-sax)을 같은 3×3 셀로 돌려 비교한다. 결과 요약은 docs/adr/0007-plateau-reader.md | exports: SPIKE_CELLS
 - `tools/pipeline/src/spike/spike-metrics.ts` — M01-T02 스파이크 비교 지표: 보존(gml:id·속성·면 종류·텍스처·도로 기능), 좌표 일치, 규모. see docs/adr/0007-plateau-reader.md | exports: RunStats, compareOutputs
+- `tools/pipeline/src/stages/avatar/anims.ts` — 아바타 애니메이션(M05 결정 2): Quaternius UAL(같은 65관절 골격) 클립 중 대기·걷기·조깅·달리기를 몸 문서로 복사한다. | exports: AVATAR_CLIPS, AvatarClip, rootSpeed, ClipInfo, copyAvatarClips
+- `tools/pipeline/src/stages/avatar/bake.ts` — 아바타 메시 굽기(M05 결정 2): Quaternius UBC 베이스 캐릭터의 프리미티브(몸·머리털·눈)를 하나로 합치고, 텍스처 대신 정점색(COLOR_0)을 굽는다 — | exports: Region, OUTFIT_SRGB, srgbToLinear, sampleLinear, outfitAt, BakeInput, HAIR_SRGB, quantizeWeights, mergeAndBake
+- `tools/pipeline/src/stages/avatar/run.ts` — `pnpm pipeline avatar`(M05 결정 2): Quaternius UBC Standard(Superhero_Male) + UAL Standard zip(data/raw, sources.lock sha256 검사) → | exports: UBC_ZIP, UAL_ZIP, AVATAR_BODY, AVATAR_HAIR, AVATAR_OUT, AvatarLock, AvatarStats, buildAvatar
 - `tools/pipeline/src/stages/build/assemble.ts` — L0 셀 조립: terrain.mesh + terrain.height + buildings.mesh + meta.json → TKC, 영역 빌드(cells.idx·world.json). see docs/04-data-pipeline.md §4.4, docs/05-tile-format.md §1–3 | exports: CellBuildStats, CellBuildInput, buildCell, AreaBuildInput, unionBounds, buildArea
 - `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, quantizePositions, buildBuildings
 - `tools/pipeline/src/stages/build/collision.ts` — collision.bin 섹션(04 §4.4-6, 05 §6): 건물 렌더 면(벽·지붕·부속물) → 1 mm 용접 → meshopt 단순화(절대 오차 0.3 m) → | exports: SIMPLIFY_ERROR_M, MAX_CHUNK_TRIS, CollisionBuild, weld, buildCollision

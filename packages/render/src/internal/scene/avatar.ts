@@ -1,8 +1,18 @@
-// 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리 — 외부 에셋 없음. Quaternius 모델 교체는 다운로드 승인 뒤),
-// 속도 블렌드 대기·걷기·달리기(팔다리 진자 진폭·주기·몸 기울기가 속력에 연속), 근접 디더 페이드(opacity → alphaHash). 위치 = WF − 렌더 원점(renderPrep).
+// 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리)으로 시작 → `attach`로 Quaternius 모델(ADR-0048,
+// avatar-model.ts)이 붙으면 교체. 마네킹 = 속도 블렌드 대기·걷기·달리기(팔다리 진자 진폭·주기·몸 기울기가 속력에 연속), 근접 디더 페이드(opacity → alphaHash).
+// 위치 = WF − 렌더 원점(renderPrep).
 import type { AvatarState, Vec3d } from '@sanpo/core';
 import { uniform } from 'three/tsl';
-import { CapsuleGeometry, Group, type Material, Mesh, MeshStandardNodeMaterial, SphereGeometry } from 'three/webgpu';
+import {
+  CapsuleGeometry,
+  Group,
+  type Material,
+  Mesh,
+  MeshStandardNodeMaterial,
+  SphereGeometry,
+  type UniformNode,
+} from 'three/webgpu';
+import type { AvatarModel } from './avatar-model.ts';
 import { toRender } from './origin.ts';
 
 /** 한 걸음 보폭(m) — 주기(두 걸음) = 속력 / (2 × 보폭), 최대 1.6 Hz. */
@@ -24,7 +34,12 @@ export interface Avatar {
   set(a: Readonly<AvatarState>): void;
   /** renderPrep: 위치(원점 기준)·자세. */
   update(dt: number, originWF: Readonly<Vec3d>): void;
+  /** 그림자 캐스케이드 갱신 대상(모델이 붙으면 모델 머티리얼). */
   readonly materials: readonly Material[];
+  /** 마네킹과 같은 opacity uniform(모델 머티리얼이 공유). */
+  readonly opacity: UniformNode<'float', number>;
+  /** 모델로 교체(마네킹 숨김). 다시 부르면 이전 모델 폐기. */
+  attach(model: AvatarModel): void;
   dispose(): void;
 }
 
@@ -71,6 +86,30 @@ function buildRig(cloth: Material, pants: Material, skin: Material): Rig {
   return { group, body, legL, legR, armL, armR };
 }
 
+/** 마네킹 걸음 상태(위상·진폭·호흡 시간). */
+interface Gait {
+  phase: number;
+  amp: number;
+  time: number;
+}
+
+/** 마네킹 자세: 팔다리 진자·몸 기울기·호흡·걸음 오르내림. */
+function poseRig(r: Rig, g: Gait, st: Readonly<AvatarState>, dt: number): void {
+  g.time += dt;
+  g.phase += Math.min(st.speedMs / (2 * STRIDE_M), MAX_CYCLE_HZ) * dt;
+  const want = Math.min(st.speedMs * LEG_PER_MS, LEG_MAX) * (st.grounded ? 1 : 0.3);
+  g.amp += (want - g.amp) * (1 - Math.exp(-BLEND_PER_S * dt));
+  const s = Math.sin(2 * Math.PI * g.phase);
+  r.legL.rotation.x = g.amp * s;
+  r.legR.rotation.x = -g.amp * s;
+  r.armL.rotation.x = -g.amp * ARM_RATIO * s;
+  r.armR.rotation.x = g.amp * ARM_RATIO * s;
+  r.body.rotation.x = -Math.min(Math.max((st.speedMs - LEAN_FROM_MS) * LEAN_PER_MS, 0), LEAN_MAX);
+  // 대기 호흡(1 % 세로), 걸음마다 몸 1.5 cm 오르내림.
+  r.body.scale.y = 1 + 0.01 * Math.sin(g.time * 1.6);
+  r.body.position.y = 0.9 + 0.015 * g.amp * Math.abs(s);
+}
+
 export function createAvatar(): Avatar {
   const opacity = uniform(1);
   const mat = (color: number, roughness: number): MeshStandardNodeMaterial => {
@@ -82,7 +121,8 @@ export function createAvatar(): Avatar {
   const cloth = mat(0x3b4a5e, 0.85);
   const pants = mat(0x2a2d33, 0.9);
   const skin = mat(0xd4a888, 0.6);
-  const { group, body, legL, legR, armL, armR } = buildRig(cloth, pants, skin);
+  const rig = buildRig(cloth, pants, skin);
+  const { group } = rig;
   const st: AvatarState = {
     visible: false,
     posWF: { x: 0, y: 0, z: 0 },
@@ -91,12 +131,21 @@ export function createAvatar(): Avatar {
     grounded: true,
     opacity: 1,
   };
-  let phase = 0;
-  let amp = 0;
-  let time = 0;
+  const gait: Gait = { phase: 0, amp: 0, time: 0 };
+  let model: AvatarModel | undefined;
   return {
     group,
-    materials: [cloth, pants, skin],
+    opacity,
+    get materials() {
+      return model ? [model.material] : [cloth, pants, skin];
+    },
+    attach(m) {
+      model?.dispose();
+      if (model) group.remove(model.root);
+      model = m;
+      group.add(m.root);
+      for (const o of [rig.body, rig.legL, rig.legR]) o.visible = false;
+    },
     set(a) {
       st.visible = a.visible;
       Object.assign(st.posWF, a.posWF);
@@ -111,21 +160,11 @@ export function createAvatar(): Avatar {
       opacity.value = Math.min(1, st.opacity);
       toRender(group.position, st.posWF, originWF);
       group.rotation.y = st.yawRad;
-      time += dt;
-      phase += Math.min(st.speedMs / (2 * STRIDE_M), MAX_CYCLE_HZ) * dt;
-      const want = Math.min(st.speedMs * LEG_PER_MS, LEG_MAX) * (st.grounded ? 1 : 0.3);
-      amp += (want - amp) * (1 - Math.exp(-BLEND_PER_S * dt));
-      const s = Math.sin(2 * Math.PI * phase);
-      legL.rotation.x = amp * s;
-      legR.rotation.x = -amp * s;
-      armL.rotation.x = -amp * ARM_RATIO * s;
-      armR.rotation.x = amp * ARM_RATIO * s;
-      body.rotation.x = -Math.min(Math.max((st.speedMs - LEAN_FROM_MS) * LEAN_PER_MS, 0), LEAN_MAX);
-      // 대기 호흡(1 % 세로), 걸음마다 몸 1.5 cm 오르내림.
-      body.scale.y = 1 + 0.01 * Math.sin(time * 1.6);
-      body.position.y = 0.9 + 0.015 * amp * Math.abs(s);
+      if (model) model.update(dt, st.grounded ? st.speedMs : 0);
+      else poseRig(rig, gait, st, dt);
     },
     dispose() {
+      model?.dispose();
       group.traverse((o) => {
         if (o instanceof Mesh) o.geometry.dispose();
       });

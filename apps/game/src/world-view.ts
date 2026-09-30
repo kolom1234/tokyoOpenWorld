@@ -45,6 +45,8 @@ export interface WorldView {
   readonly physicsWiring: StreamingPhysicsWiring | undefined;
   /** 머티리얼 라이브러리 적재가 끝났거나(성공·실패) 대상이 없음(골든뷰 안정 조건). */
   readonly materialsSettled: boolean;
+  /** 아바타 모델 적재·선컴파일이 끝났다(성공·실패 — e2e 안정 조건, ADR-0048). */
+  readonly avatarSettled: boolean;
   /** streaming 시작 → 스폰 영역 live까지 대기 → 시작 시점으로 이동. 반환 = 스폰 영역 live L0 셀 수. */
   showWorld(world: LoadedWorld): Promise<number>;
 }
@@ -75,6 +77,7 @@ interface LateState {
   physics?: PhysicsService;
   physicsWiring?: StreamingPhysicsWiring;
   materialsSettled: boolean;
+  avatarSettled: boolean;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -129,6 +132,19 @@ function loadMaterialsLater(render: RenderService, url: string | undefined, late
     });
 }
 
+/** 플레이어 아바타 GLB(파이프라인 `avatar`, Quaternius CC0 — ADR-0048). Vite가 해시 에셋으로 만든다(/assets/*, immutable). */
+export const AVATAR_URL = new URL('./assets/avatar-ubc-male.glb', import.meta.url).href;
+
+/** 아바타 모델도 첫 표시 뒤(초기 다운로드 예산 밖). 실패하면 절차 마네킹. */
+function loadAvatarLater(render: RenderService, late: LateState, log: Logger): void {
+  void render
+    .loadAvatar(AVATAR_URL)
+    .catch((e: unknown) => log.warn('avatar', e))
+    .finally(() => {
+      late.avatarSettled = true;
+    });
+}
+
 /** traversal: 로딩 중 = freecam(시작 시점). physics는 월드 로드 뒤 생긴다 → getter(전환 요청 때마다 요구조건을 본다 — walk는 그때부터). */
 function createTraversalFor(
   deps: WorldViewDeps,
@@ -152,12 +168,36 @@ function createTraversalFor(
   );
 }
 
+/**
+ * 첫 표시: 선컴파일 → streaming 시작 → 스폰 영역 whenReady → 시작 모드 → 머티리얼·아바타(비동기). 반환 = 스폰 영역 live L0 셀 수.
+ * 지면 높이를 알게 된 뒤 시작 포즈를 다시 잡는다(freecam "지면 위 60 m" 또는 스폰에서 걷기 — 착지점은 walk가 콜라이더로 찾는다).
+ */
+async function showWorldWith(
+  deps: WorldViewDeps,
+  v: { render: RenderService; traversal: TraversalService; ground: GroundQuery; late: LateState },
+  world: LoadedWorld,
+): Promise<number> {
+  const { render, traversal, ground, late } = v;
+  const wlog = deps.log.child('world');
+  await render.precompile().catch((e: unknown) => wlog.warn('precompile', e));
+  const s = await startStreaming(deps, render, traversal, world, late);
+  const centerWF = deps.start?.centerWF ?? world.spawnWF;
+  // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
+  await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true });
+  if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
+    traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
+  else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
+  loadMaterialsLater(render, world.materialsUrl, late, wlog);
+  loadAvatarLater(render, late, wlog);
+  return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
+}
+
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
   const config = { ...deps.renderConfig, backend: deps.backend };
   const render = await createRender({ canvas, bus, log, config });
   const input = createInput({ target: canvas, bus, log });
-  const late: LateState = { materialsSettled: false };
+  const late: LateState = { materialsSettled: false, avatarSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
   const traversal = createTraversalFor(deps, input, ground, late);
   const now = deps.now ?? Date.now;
@@ -197,19 +237,9 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     get materialsSettled() {
       return late.materialsSettled;
     },
-    async showWorld(world) {
-      const wlog = log.child('world');
-      await render.precompile().catch((e: unknown) => wlog.warn('precompile', e));
-      const s = await startStreaming(deps, render, traversal, world, late);
-      const centerWF = deps.start?.centerWF ?? world.spawnWF;
-      // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
-      await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true });
-      // 지면 높이를 알게 됐으니 시작 포즈를 정확히 다시 잡는다(freecam "지면 위 60 m" 또는 스폰에서 걷기 — 착지점은 walk가 콜라이더로 찾는다).
-      if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
-        traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
-      else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
-      loadMaterialsLater(render, world.materialsUrl, late, wlog);
-      return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
+    get avatarSettled() {
+      return late.avatarSettled;
     },
+    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late }, world),
   };
 }

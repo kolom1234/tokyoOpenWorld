@@ -602,6 +602,38 @@
         "content/materials/library.json"
       ],
       "modified": true
+    },
+    {
+      "id": "quaternius-ubc",
+      "kind": "model",
+      "title": "Quaternius Universal Base Characters [Standard] — Superhero_Male_FullBody + Hair_SimpleParted → 플레이어 아바타(정점색 굽기·옷 영역 칠함)",
+      "url": "https://quaternius.com/packs/universalbasecharacters.html",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "キャラクターモデル・アニメーション：Quaternius（CC0）",
+        "en": "Character model & animations: Quaternius (CC0)",
+        "ko": "캐릭터 모델·애니메이션: Quaternius (CC0)"
+      },
+      "files": [
+        "apps/game/src/assets/avatar-ubc-male.glb"
+      ],
+      "modified": true
+    },
+    {
+      "id": "quaternius-ual",
+      "kind": "model",
+      "title": "Quaternius Universal Animation Library [Standard] — Idle_Loop·Walk_Loop·Jog_Fwd_Loop·Sprint_Loop → 플레이어 아바타 클립",
+      "url": "https://quaternius.com/packs/universalanimationlibrary.html",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "キャラクターモデル・アニメーション：Quaternius（CC0）",
+        "en": "Character model & animations: Quaternius (CC0)",
+        "ko": "캐릭터 모델·애니메이션: Quaternius (CC0)"
+      },
+      "files": [
+        "apps/game/src/assets/avatar-ubc-male.glb"
+      ],
+      "modified": true
     }
   ]
 }
