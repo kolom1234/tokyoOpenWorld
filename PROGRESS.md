@@ -2,17 +2,23 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T02 Road markings (OSM 정규화 완료 — `data/normalized/osm`, 파생 모듈 작성 중)
-- Done in this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
+## Current Task: M05-T02 완료(8bb5c6a, ⚠️ 위치) → M05-T03 Street props (self-made) & placement rules
+- Done in this session: M05-T02 노면 표시(8bb5c6a, ADR-0050).
+- Earlier this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
 - 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷).
   in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용.
 - 배포 상태(2026-10-01): staging = **b6317ad**(결정 0–3 + T01) + dev 버킷 current **`20260930-6a41591-83074405`**(MVP L0 294 + HLOD + 머티리얼, roads.mesh 포함, 478파일 292.4 MB, Worker HEAD 검증). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
 - In progress: 없음.
-- Next step (정확히 한 걸음): `tools/pipeline/src/stages/derive/markings/{crosswalk,stopline,lanes,text}.ts`(common.ts 작성됨) → build/decals-mesh.ts → render `materials/decal.ts`(road_marking).
+- Next step (정확히 한 걸음): `### M05-T03` → 04 §4.3(소품)·03 §4–5 → 소품 카탈로그(`content/props/catalog.json`, 자체 절차 모델) + `derive/props/*`(OSM 점 + 규칙 배치) + props.inst 인코더/디코더 + render 인스턴스.
 - OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
 - Blockers: 없음
 
 ## Recently Completed
+- M05-T02 Road markings (Japan) — OSM 간토 고정판(osmium, `normalize --layer osm`) → 일본식 횡단보도(0.45 m 막대, 신호 6 m), 차선(좌측통행·PLATEAU 차도 폭 행진·중앙 황색 ≥ 4차로·점선 5/5),
+  정지선(신호 횡단 상류·stop 점), 「止まれ」 자체 획 폰트 → `decals.mesh` + render `road_marking`(알파 테스트 마모). 화면 상시 ODbL 표기(credits.ts), ATTRIBUTION, world-mini 한도 6 MB.
+  연석·치마 연속 조각 정점 공유(roads.mesh −30 %). 스폰 3×3: 데칼 1.1–5.6k 삼각형·21–47 KB/셀. e2e 10/10.
+  ⚠️ **수락 ≤ 0.5 m 미달**: GSI z18 대조(검증 전용 `checks/markings-photo.ts`)에서 OSM 횡단 선이 대각선 ≈ 2 m·동쪽 ≈ 1.5 m 어긋남(서·북·남 ≈ 0.5 m 안), 자동 지표 1.3–2.8 m(0.49 m/px라 불안정).
+  대안 = OSM 원본 수정 기여(사용자 결정)·T05 스크램블 오버라이드·고해상도 정사영상. ADR-0050 (2026-10-01)
 - M05-T01 Roads, sidewalks, curbs, terrain shaping — 셀 + 여유 16 m 창 국소 성형(이웃과 공유 샘플 일치): 차도 = 지형(D + 2 % 경사 ≤ 0.15), 보도·교통섬 = `roads.mesh`
   (4 m 조각 윗면 S = D + 0.15 + 8 mm, 연석 세로 면, 바깥 치마, u16 위치, 0.5 m 조각) + TERRAIN 층 보도 triMesh(tile), 가장자리 새기기·RTIN 샘플별 허용 오차·지형 맞춤, 건물 평탄화(조건부).
   세로 면 = 면 접선 투영(연석 줄무늬 수정, b6317ad).
@@ -71,7 +77,8 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 
 ## Known Issues
 - [physics] 육교·계단·에스컬레이터 **데이터 없음** — 연석·보도는 M05-T01(보도 윗면 TERRAIN triMesh). 육교·계단 = M05-T08, 역 에스컬레이터 = M07. 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
-- [roads] 옹벽(DEM 2 m 안 4 m 급락) 옆 보도 가장자리 간극 ≤ 4.3 cm(교차로 3/50), 횡단보도 앞 연석 낮춤 없음(M05-T02 OSM 횡단보도 뒤), 보도 윗면 가장자리 정점 4 m 간격 → 치마 사이 ≤ 1 cm 선(ADR-0049).
+- [roads] 옹벽(DEM 급락) 옆 보도는 벽 기하 없이 1.5 m 띠 뒤 급경사 흙면, 횡단보도 앞 연석 낮춤 없음, 보도 윗면 가장자리 정점 4 m 간격 → 치마 사이 ≤ 1 cm 선(ADR-0049).
+- [markings] OSM 횡단 선 위치 오차(스크램블 대각선 ≈ 2 m), 회전 화살표·버스 정류장·자전거 표시 없음, 차선은 OSM lanes 태그 의존(ADR-0050). ⚠ ODbL 파생 DB(osm-derived.gpkg) 공개는 M11-T05.
 - [streaming] 순간이동을 이어 하면 이전 목적지 작업이 큐(동시 8·대기 16)에 남아 스로틀에서 새 발밑 L0가 늦게 온다(Fast 3G 3번째 순간이동 뒤 4분+ 공중 고정 — 낙하 없음). 발밑 L0 우선·이전 목적지 취소는 M08 transition(`whenReady`)과 함께(ADR-0046).
 - [avatar] 무료판 체형 Superhero만(근육질) — 도심 보행자로 과장됨. 유료 Source(Regular·Teen, CC0) 도입 여부는 사용자 결정(ADR-0048). 발 IK 없음(재생 속도 자르기로 약간의 발 미끄럼).
 - [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장만(소품·나무 줄기 = M05). CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱이 길다(기록만).
