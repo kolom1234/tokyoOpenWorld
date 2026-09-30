@@ -195,6 +195,39 @@ describe('vending machines', () => {
     const office = buildProps(input({ roads, osm: [], buildings: [{ ...b, usage: '401' }] }));
     expect(instancesOf(office, 'vendingMachine')).toHaveLength(0);
   });
+
+  it('keep clear of building corners and walls beside them (no gap narrower than the walker)', () => {
+    const roads = [road('c', 'carriageway', -50, 100, 306, 120), road('s1', 'sidewalk', -50, 96, 306, 100)];
+    const ring = [20, 10, 84, 240, 10, 84, 240, 10, 94, 20, 10, 94];
+    const pillars = [40, 60, 80, 100, 120, 140, 160, 180, 200, 220].map((x, i) => ({
+      layer: 'buildings' as const,
+      gmlId: `p${i}`,
+      buildingId: null,
+      lod: 2 as const,
+      measuredHeightM: 3,
+      storeys: 1,
+      storeysBelow: 0,
+      usage: '401',
+      surfaces: [{ kind: 'ground' as const, ringsWF: [[x, 10, 94, x + 1, 10, 94, x + 1, 10, 95.5, x, 10, 95.5]] }],
+      source: 'plateau-shibuya',
+    }));
+    const b: BuildingRecord = {
+      ...pillars[0],
+      gmlId: 'b1',
+      usage: '411',
+      surfaces: [{ kind: 'ground', ringsWF: [ring] }],
+    } as BuildingRecord;
+    const out = buildProps(input({ roads, osm: [], buildings: [b, ...pillars] }));
+    expect(instancesOf(out, 'vendingMachine').length).toBeGreaterThan(0);
+    for (const v of instancesOf(out, 'vendingMachine')) {
+      expect(v[0] as number).toBeGreaterThanOrEqual(20 + 1.5 - 1e-3);
+      expect(v[0] as number).toBeLessThanOrEqual(240 - 1.5 + 1e-3);
+      for (const p of pillars) {
+        const px = (p.surfaces[0]?.ringsWF[0]?.[0] as number) + 0.5;
+        expect(Math.abs((v[0] as number) - px)).toBeGreaterThan(0.5 + 0.55 + 0.6 - 1e-3);
+      }
+    }
+  });
 });
 
 describe('props.inst', () => {
