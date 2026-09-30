@@ -8,8 +8,8 @@ import type { RoadRecord } from '../../readers/plateau/types.ts';
 export const TOP_OFFSET_M = 0.008;
 /** 윗면 조각 격자(m): 4 m = 2 m 대비 삼각형 ≈ 40 %(곡률 오차는 보도 안쪽 지형을 연석 높이만큼 낮춰 흡수). */
 const CELL_M = 4;
-/** 연석·치마 조각 간격(m, curbs.ts). 윗면 가장자리는 세분하지 않는다(1 m 세분 = 삼각형 +140 %, 간극 지표 변화 없음). */
-export const EDGE_PIECE_M = 1;
+/** 연석·치마 조각 간격(m, curbs.ts) — 조각 끝마다 지형 맞춤(0.5 m: 1 m 대비 옹벽·급경사 간극 절반). 윗면 가장자리는 세분하지 않는다(삼각형 +140 %). */
+export const EDGE_PIECE_M = 0.5;
 const KEY_M = 1e-4;
 
 export type HeightAt = (x: number, z: number) => number;

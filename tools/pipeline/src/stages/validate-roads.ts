@@ -16,7 +16,8 @@ const INTERSECTIONS = 50;
 const RADIUS_M = 30;
 const CLUSTER_M = 25;
 const STEP_M = 0.25;
-const PROBE_M = 0.05;
+/** 가장자리 바깥 탐침(m) — 간극 = 가장자리 선에서의 수직 거리(5 cm면 바깥 경사 × 5 cm가 섞였다). */
+const PROBE_M = 0.02;
 const CELL = 256;
 /** 車道交差部(PLATEAU TrafficArea_function 1020) — 횡단보도는 tran에 없다(OSM, M05-T02). */
 const INTERSECTION_CODE = 'TrafficArea:1020';
