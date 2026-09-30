@@ -2,16 +2,20 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T01 Roads, sidewalks, curbs, terrain shaping (다음)
-- Done in this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048).
+## Current Task: M05-T01 완료(e6b9fbc) → MVP 재빌드·publish·staging·걷기 봇 → M05-T02 Road markings
+- Done in this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
 - 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷).
   in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용.
 - 배포 상태: staging = 0dc0075(M04) 그대로, dev 버킷 current `20260929-99bffa8-ec1646fc`. 옛 빌드 gc는 10/6 이후.
 - In progress: 없음.
-- Next step (정확히 한 걸음): `docs/roadmap/M05.md` `### M05-T01` → 04 §4.3·§6 → `tools/pipeline/src/stages/derive/` 신설(도로·보도 폴리곤 = normalize된 PLATEAU TrafficArea).
+- Next step (정확히 한 걸음): MVP 재빌드(`docker/run.sh … build` → `hlod --build-id` → `materials --build-id` → `validate`) 결과 확인 → dev 버킷 publish → staging → 걷기 봇(연석) → `### M05-T02`.
 - Blockers: 없음
 
 ## Recently Completed
+- M05-T01 Roads, sidewalks, curbs, terrain shaping — 셀 + 여유 16 m 창 국소 성형(이웃과 공유 샘플 일치): 차도 = 지형(D + 2 % 경사 ≤ 0.15), 보도·교통섬 = `roads.mesh`
+  (4 m 조각 윗면 S = D + 0.15 + 8 mm, 연석 세로 면, 바깥 치마, u16 위치) + TERRAIN 층 보도 triMesh(tile), 가장자리 새기기·RTIN 샘플별 허용 오차·지형 맞춤, 건물 평탄화(조건부).
+  **수락(스폰 3×3 시험 빌드)**: validate `road gaps` 교차로 50곳 중 **47곳 최대 < 2 cm**, 표본 25,530 중 0.27 % ≥ 2 cm·최대 4.3 cm — ⚠️ 3곳 = 4 m 옹벽 옆(벽 기하 없음 → T08/별도).
+  연석 아래 틈 0. 크기: roads.mesh 184–286 KB/셀, 보도 삼각형 16–66k/셀, 연석 1.7–5.5 km/셀, world-mini 3.74 → 4.98 MB. 테스트 +1파일(9건). ADR-0049 (2026-10-01)
 - M05 결정 2 Quaternius 아바타 — UBC Standard(Superhero_Male + Hair_SimpleParted) + UAL Standard(Idle·Walk·Jog_Fwd·Sprint) → `pnpm pipeline avatar`(호스트 Node, `lib/zip.ts`)
   → 프리미티브 1·머티리얼 1·**정점색**(텍스처 표본 + 스킨 가중치 옷 영역: 반팔 셔츠·바지·운동화, 머리털 짙은 갈색) → `apps/game/src/assets/avatar-ubc-male.glb` **709 KB·15,619 삼각형**(커밋, Vite 해시 에셋).
   render `loadAvatar`(속력 매듭 0·1.35·3.0·5.0 블렌드, 위상 공유, 재생 속도 [0.75, 1.6]), 첫 표시 뒤 적재(초기 다운로드 밖), `avatarSettled` → `data-settled`. 실제 GPU: 걷기·달리기 60 FPS.
@@ -62,7 +66,8 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
   1440p High 정지 33.6–40.0 → 25.9–30.2, 회전 33.8–40.3 → 27.3–31.4. 테스트 +6건. ADR-0039 (2026-09-30)
 
 ## Known Issues
-- [physics] 육교·계단·연석·에스컬레이터 **데이터 없음** — 엔진(M04-T04)만. 연석·보도 = M05-T01, 육교·계단 = M05-T08(PLATEAU brid + OSM steps → 램프 프록시), 역 에스컬레이터 = M07 역 오버라이드. 지형 재질 = asphalt 고정(`_SURF` 재질은 M05-T01).
+- [physics] 육교·계단·에스컬레이터 **데이터 없음** — 연석·보도는 M05-T01(보도 윗면 TERRAIN triMesh). 육교·계단 = M05-T08, 역 에스컬레이터 = M07. 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
+- [roads] 옹벽(DEM 2 m 안 4 m 급락) 옆 보도 가장자리 간극 ≤ 4.3 cm(교차로 3/50), 횡단보도 앞 연석 낮춤 없음(M05-T02 OSM 횡단보도 뒤), 보도 윗면 가장자리 정점 4 m 간격 → 치마 사이 ≤ 1 cm 선(ADR-0049).
 - [streaming] 순간이동을 이어 하면 이전 목적지 작업이 큐(동시 8·대기 16)에 남아 스로틀에서 새 발밑 L0가 늦게 온다(Fast 3G 3번째 순간이동 뒤 4분+ 공중 고정 — 낙하 없음). 발밑 L0 우선·이전 목적지 취소는 M08 transition(`whenReady`)과 함께(ADR-0046).
 - [avatar] 무료판 체형 Superhero만(근육질) — 도심 보행자로 과장됨. 유료 Source(Regular·Teen, CC0) 도입 여부는 사용자 결정(ADR-0048). 발 IK 없음(재생 속도 자르기로 약간의 발 미끄럼).
 - [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장만(소품·나무 줄기 = M05). CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱이 길다(기록만).
@@ -74,7 +79,7 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 - [render] TAAU(1080p Medium ≈ 12 %)는 three 패치 없이 경량화 불가 → 동적 해상도로 흡수(ADR-0039). L0 반경 축소(HLOD 우선)도 보류.
 - [render] 정지 화면 원경 수평선 부근 서브픽셀 건물 윤곽의 TAAU 재구성 반짝임 잔존(>12 단계 0.047 % 픽셀, ADR-0038). 대안: TAAU 분산 감마 1.5 패치(−30 %, 고스팅 위험), 원경 윤곽 사전 필터링.
 - [perf] 첫 표시 ≈ 11 s(12 s 목표 근접) — 선컴파일 ≈ 5 s·대기 LUT. 첫 표시 직후 HLOD 1–2 s 디졸브(ADR-0033). T07/T08에서 선컴파일 병렬화 검토.
-- [render] 지면 `_SURF` 7(plaza)이 공원·녹지까지 덮음(요요기 콘크리트색), 도로 가장자리 1 m 계단 — M05 토지이용·도로 메시 전까지.
+- [render] 지면 `_SURF` 7(plaza)이 공원·녹지까지 덮음(요요기 콘크리트색) — M05-T04(식생). 차도–비도로(광장·주차장) 경계 `_SURF` 1 m 계단 잔존(차도–보도 경계는 보도 메시가 덮음, M05-T01).
 - [pipeline] PLATEAU 동일 평면 중복 면 z-파이팅 잔존(WebGL2 원점 재설정 e2e ≈ 70 px). 벽–벽 중복 제거는 필요 시 M05-T07.
 - [render] takram 패치 + three 패치(`getViewPosition` 역-Z, ADR-0040)는 three r186 전용 — three/takram 버전을 올리면 패치 재확인.
 - [pipeline] GSI DEM 2025판 표고는 JGD2024(2025 개정) 기준, PLATEAU는 JGD2011 → LOD3 차도 정점 vs dem_1m 차 중앙값 +0.05 m(IQR −0.03~+0.18, p95 +8.2 m = 고가도로). M01-T05는 도로 메시 없음 → M03 도로 빌드 때 도로면 우선 스냅 여부 결정.
