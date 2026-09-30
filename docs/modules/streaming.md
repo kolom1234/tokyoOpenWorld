@@ -23,7 +23,7 @@ Layer: L2 | Depends: core, geo, tile-format, meshoptimizer(디코더) | Used by:
   `createDecodePool(DecodePoolDeps{supervisor, log, config, createWorker?}) → DecodePool{decode(bytes, DecodeRequest, signal) → Result<DecodeResult{payload, workerMs}, DecodeError>, stats, dispose}`,
   `DEFAULT_STREAMING_CONFIG`. 테스트 대역용 `FetchLike`·`CacheStorageLike`.
 - 내부: `scheduler.ts` `createLoadScheduler({index, fetcher, pool, …, onStage, onDone}) → {request(key, score, sections?), cancel, stageOf, stats}`,
-  워커 쪽 `decode.ts` `decodeCell`·`glb.ts` `decodeGlb`·`decode-host.ts`·`protocol.ts`.
+  워커 쪽 `decode.ts` `decodeCell`(기본 섹션에 `props.inst` → `payload.instances.props`, 버퍼 전송 목록 포함 — M05-T03)·`glb.ts` `decodeGlb`·`decode-host.ts`·`protocol.ts`.
   T03: `service.ts`(조립·프레임 update), `planner.ts` `recompute`(원하는 셀 → 취소 → 순위 요청 → 해제 계획), `lifecycle.ts` `createLifecycle`(상태·보류 payload·ack),
   `ground.ts` `createGroundStore`·`sampleHeightfield`, `waiters.ts`(whenReady·pinned·exclusive), `cell-cache.ts`(Cache Storage 계층)·`cache-lru.ts`(상한 LRU),
   `interest.ts` `inLoadZone`(미룬 해제 재확인).

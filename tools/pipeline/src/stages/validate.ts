@@ -89,10 +89,13 @@ async function gunzipJson(bytes: Uint8Array | undefined): Promise<unknown> {
 
 async function meshCounts(bytes: Uint8Array | undefined): Promise<{ positions: Float32Array; v: number; t: number }> {
   if (!bytes) return { positions: new Float32Array(0), v: 0, t: 0 };
-  const p = (await decodeGlb(bytes)).primitives[0];
+  const prims = (await decodeGlb(bytes)).primitives;
+  const p = prims[0];
   const pos = p?.attributes.POSITION?.array;
   const v = pos ? pos.length / 3 : 0;
-  return { positions: pos instanceof Float32Array ? pos : new Float32Array(0), v, t: (p?.indices.length ?? 0) / 3 };
+  // 삼각형 = 모든 프리미티브(decals.mesh 전선 등 M05-T03), 위치·정점 수는 첫 프리미티브.
+  const t = prims.reduce((n, q) => n + q.indices.length / 3, 0);
+  return { positions: pos instanceof Float32Array ? pos : new Float32Array(0), v, t };
 }
 
 interface CellCtx {

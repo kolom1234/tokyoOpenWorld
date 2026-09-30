@@ -26,6 +26,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     exposure: ctx.post.exposure(),
     quality: ctx.quality.stats(),
     shadows: ctx.shadows ? { ...ctx.shadows.settings, updated: ctx.counters.shadowUpdates } : null,
+    props: ctx.props.stats(),
   };
 }
 
@@ -41,10 +42,12 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     depth: ctx.depth,
     addCell: (p) => {
       cells.add(p, view.renderOriginWF);
+      ctx.props.addCell(p.key, p.originWF, p.instances?.props);
       ctx.counters.sceneVersion++;
     },
     removeCell: (key) => {
       cells.remove(key);
+      ctx.props.removeCell(key);
       ctx.counters.sceneVersion++;
     },
     setHlodChildVisible: (parent, child, visible) => {
@@ -54,7 +57,13 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     loadMaterials: (url) => library.load(url, renderer, log),
     async precompile() {
       await ctx.atmosphere.prepare();
-      await precompileMaterials(renderer, graph.scene, view.camera, ctx.materials, log);
+      // 소품 풀(한 머티리얼 × 인스턴싱): 종류별 LOD0 풀에 1개씩 잠깐 채워 같은 compileAsync로.
+      const restore = ctx.props.primeForCompile();
+      try {
+        await precompileMaterials(renderer, graph.scene, view.camera, ctx.materials, log);
+      } finally {
+        restore();
+      }
       // 아바타(3인칭 첫 표시 끊김 방지): 잠깐 보이게 해 파이프라인만 만든다.
       ctx.avatar.group.visible = true;
       await renderer

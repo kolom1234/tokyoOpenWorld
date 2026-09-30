@@ -44,6 +44,7 @@
 | Noto Sans JP / Noto Sans KR | UI 폰트 (자체 호스팅, 서브셋) | SIL OFL 1.1 |
 | Freesound (CC0 필터만) / 자체 녹음·합성 | 환경음·효과음 | CC0 / 자체 |
 | 자체 제작 (Blender) | 랜드마크 오버라이드, 일본 특유 소품(자판기·전신주·신호등·가드레일·표지판) | 프로젝트 소유 |
+| 자체 제작 (코드) | 거리 소품 15종 절차 모델(M05-T03, `packages/render/src/internal/props/models.ts` — 상자·원기둥 정점색, 로고·글자·실존 상호 없음) + 배치 카탈로그 `content/props/catalog.json`. 외부 에셋 없음 | 프로젝트 소유(출처 표기 불필요) |
 
 ## 5. 사용 금지 목록
 - Google/Apple/Mapbox/Zenrin 등 상용 지도·3D 타일 (약관: 캐싱·추출·게임 사용 제한)

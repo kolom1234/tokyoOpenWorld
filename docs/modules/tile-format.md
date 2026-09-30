@@ -36,6 +36,9 @@ writeLanes(g): Uint8Array;  parseLanes(bytes): Result<LaneGraphChunk, TkcError>
 // terrain.height (gzip 해제 후)
 writeHeightfield(hf: HeightfieldData): Uint8Array;  parseHeightfield(bytes): Result<HeightfieldData, TkcError>
 quantizeHeightfield(heightsM: ArrayLike<number>, size, step = 0.01, minH = HEIGHTFIELD_BASE_M): HeightfieldData  // 범위 밖·비유한 throw
+// props.inst (gzip 해제 후, M05-T03 ADR-0051): 반복 {u16 typeId, u16 pad, u32 count, f32[count×5]} — 길이 부족 = Truncated, count 0·비유한 = Corrupt
+writeProps(batches: PropBatch[]): Uint8Array;  parseProps(bytes): Result<PropBatch[], TkcError>
+PROP_TYPE = { utilityPole: 1, streetLamp: 2, signalVehicle: 3, signalPedestrian: 4, vendingMachine: 5, guardRail: 6, bollard: 7, signStop: 8, postBox: 9, bicycleRack: 10, busStop: 11, manhole: 12, bench: 13, phoneBooth: 14, wasteBasket: 15 }; PropTypeName  // 번호는 추가만
 // gzip (Compression/DecompressionStream)
 gzip(bytes): Promise<Uint8Array>   // mtime 0, OS 바이트 0xFF → 같은 런타임에서 결정론
 gunzip(bytes): Promise<Result<Uint8Array, TkcError>>
@@ -63,13 +66,13 @@ indexEntries.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash
 
 ## Files
 src/api.ts(계약·레지스트리·모델), src/index.ts, src/internal/: tkc-writer.ts, tkc-reader.ts, header-check.ts(구조 검사·정규 직렬화), sections.ts(레지스트리 조회·해시·정렬),
-cells-index.ts, jcol.ts, lanes.ts, heightfield.ts, gzip.ts, xxh64.ts, bytes.ts(LE 읽기/쓰기). 모델 타입은 Hard Rule 4에 따라 api.ts에(별도 model.ts 없음).
+cells-index.ts, jcol.ts, lanes.ts, heightfield.ts, props.ts(M05-T03), gzip.ts, xxh64.ts, bytes.ts(LE 읽기/쓰기). 모델 타입은 Hard Rule 4에 따라 api.ts에(별도 model.ts 없음).
 
 ## Tests
-test/tkc.test.ts(round-trip 바이트 동일·결정론·정렬·손상 거부·미지 섹션), schema.test.ts(ajv: cell-header·cell-meta), binary.test.ts(cells.idx·JCOL·lanes·heightfield·gzip), hash.test.ts(XXH64 골든). 픽스처는 합성(test/fixtures.ts).
+test/tkc.test.ts(round-trip 바이트 동일·결정론·정렬·손상 거부·미지 섹션), schema.test.ts(ajv: cell-header·cell-meta), binary.test.ts(cells.idx·JCOL·lanes·heightfield·gzip), hash.test.ts(XXH64 골든), props.test.ts(props.inst 왕복·손상 거부). 픽스처는 합성(test/fixtures.ts).
 
 ## Status
-구현 완료 (M01-T04). M01-T05: terrain.height 공통 기준(ADR-0018). props.inst·trees.inst·lights.bin 인코더는 해당 태스크(M04~)에서 추가.
+구현 완료 (M01-T04). M01-T05: terrain.height 공통 기준(ADR-0018). props.inst = M05-T03(ADR-0051). trees.inst·lights.bin 인코더는 해당 태스크에서 추가.
 
 ## Gotchas
 - 섹션 추가 시 05 문서 §4 레지스트리 표와 `SECTION_REGISTRY`(api.ts) 동시 갱신.

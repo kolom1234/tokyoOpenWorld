@@ -16,7 +16,7 @@ PhysicsService extends SystemProvider {   // system 'physics', phase 30 — 프�
   setCharacterInput(h, CharacterInput { moveWF 원하는 수평 속도 m/s; jump?(무시 — 08 §5 기본 OFF); yawRad?; hold?(발밑 셀 미적재 — 제자리 고정) });   // 가속 8·감속 10은 워커, 같은 프레임은 마지막 것만
   setFocus(posWF);                          // 물리 초점(배선 250 ms) — 앵커에서 4096 m 초과면 재설정(08 §2, ADR-0046)
   despawn(h); teleport(h, posWF, yawRad);   // 캐릭터도(속도 0)
-  addCell(key, originWF, jcol?: ArrayBuffer, heightfield?: HeightfieldData); removeCell(key); hasCell(key)   // M04-T02 셀 콜라이더(적재 큐, ADR-0042)
+  addCell(key, originWF, jcol?: ArrayBuffer, heightfield?: HeightfieldData); removeCell(key); hasCell(key)   // M04-T02 셀 콜라이더(적재 큐, ADR-0042). JCOL 프리미티브 = (층·재질·flags·64 m 블록)별 StaticCompoundShape(작업당 ≤ 24, M05-T03 소품 — ADR-0051)
   raycast(originWF, dir, maxDist): Promise<RayHit | null>   // RayHit { posWF, normal, distance, layer, material } — 삼각형 양면
   sphereCast(originWF, dir, radius, maxDist): Promise<RayHit | null>   // 구 캐스트(3인칭 카메라 충돌, M04-T05) — distance = 구 중심 이동, 시작 겹침 = 0
   pose(h): Readonly<Pose> | undefined;     // Pose { posWF, quat, linVel, grounded, groundMaterial, escalator } — 렌더 시각(지금 − 지연) 보간. 캐릭터 = 발, 지면 재질 = 지면 바디 userData 하위 8비트

@@ -5,6 +5,7 @@ export { gunzip, gzip } from './internal/gzip.ts';
 export { parseHeightfield, quantizeHeightfield, writeHeightfield } from './internal/heightfield.ts';
 export { parseJcol, writeJcol } from './internal/jcol.ts';
 export { parseLanes, writeLanes } from './internal/lanes.ts';
+export { parseProps, writeProps } from './internal/props.ts';
 export { isSectionType, sectionHash } from './internal/sections.ts';
 export { readTkc, verifyTkc } from './internal/tkc-reader.ts';
 export { writeTkc } from './internal/tkc-writer.ts';

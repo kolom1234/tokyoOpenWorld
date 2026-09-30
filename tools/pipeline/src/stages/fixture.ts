@@ -8,6 +8,7 @@ import { createPlateauReader } from '../readers/plateau/index.ts';
 import { buildArea } from './build/assemble.ts';
 import { DEM_MARGIN, readDemWindow, readDemWindowFiles, writeDemWindowFiles } from './build/dem-window.ts';
 import type { AreaDef } from './build/manifest.ts';
+import { readCatalog } from './derive/props/context.ts';
 import { extractPlateauMini } from './fixture-plateau.ts';
 import { normalizePlateau } from './normalize-plateau.ts';
 import { validateBuild, writeReport } from './validate.ts';
@@ -92,6 +93,7 @@ export async function buildWorldMini(input: FixtureInput): Promise<string> {
     outDir: buildDir,
     plateauSources: [PLATEAU_MINI_SOURCE],
     log: log.child('world-mini'),
+    props: readCatalog(repoRoot),
   });
   const report = await validateBuild(buildDir, join(repoRoot, 'schemas'), new Set(input.lock.map((l) => l.id)));
   writeReport(buildDir, report);

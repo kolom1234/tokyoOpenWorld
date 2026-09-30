@@ -124,6 +124,8 @@ export interface RenderStats {
   quality: { tier: QualityTier; renderScale: number; dynamic: boolean; frameMs: number };
   /** 태양 그림자(07 §9 티어) + 이번 프레임 다시 그린 캐스케이드 수(ADR-0039). 그림자 없음 = null. */
   shadows: { cascades: number; mapSize: number; maxFarM: number; updated: number } | null;
+  /** 거리 소품(M05-T03): 적재 인스턴스·보이는 인스턴스·쓰는 풀(= 드로우콜, ≤ 종류 × 3)·풀 재작성 횟수. */
+  props: { instances: number; visible: number; pools: number; rebuilds: number };
 }
 
 export interface RenderService extends SystemProvider {

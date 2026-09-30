@@ -1,6 +1,6 @@
 {
   "L0_-1_-1": {
-    "tris": 161096,
+    "tris": 162376,
     "sections": {
       "buildings.mesh": [
         {
@@ -59,7 +59,7 @@
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 2509819796
+              "hash": 292052937
             },
             "NORMAL": {
               "itemSize": 3,
@@ -72,6 +72,32 @@
               "type": "Uint8Array",
               "normalized": false,
               "hash": 1763154745
+            }
+          }
+        },
+        {
+          "materialId": "power_wire",
+          "vertices": 2560,
+          "indices": 3840,
+          "indexHash": 3060955613,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 3091945397
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3722789015
+            },
+            "_OFF": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3777128143
             }
           }
         }
@@ -135,7 +161,7 @@
     }
   },
   "L0_0_-1": {
-    "tris": 119011,
+    "tris": 119971,
     "sections": {
       "buildings.mesh": [
         {
@@ -194,7 +220,7 @@
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3000762780
+              "hash": 1177832317
             },
             "NORMAL": {
               "itemSize": 3,
@@ -207,6 +233,32 @@
               "type": "Uint8Array",
               "normalized": false,
               "hash": 1591031744
+            }
+          }
+        },
+        {
+          "materialId": "power_wire",
+          "vertices": 1920,
+          "indices": 2880,
+          "indexHash": 1027872761,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 955018850
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 4017710365
+            },
+            "_OFF": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3074420263
             }
           }
         }
@@ -270,7 +322,7 @@
     }
   },
   "L0_-1_0": {
-    "tris": 134401,
+    "tris": 135681,
     "sections": {
       "buildings.mesh": [
         {
@@ -344,6 +396,32 @@
               "hash": 34602767
             }
           }
+        },
+        {
+          "materialId": "power_wire",
+          "vertices": 2560,
+          "indices": 3840,
+          "indexHash": 3060955613,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 2293131841
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 1949965610
+            },
+            "_OFF": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 1166466175
+            }
+          }
         }
       ],
       "roads.mesh": [
@@ -405,7 +483,7 @@
     }
   },
   "L0_0_0": {
-    "tris": 106746,
+    "tris": 106906,
     "sections": {
       "buildings.mesh": [
         {
@@ -477,6 +555,32 @@
               "type": "Uint8Array",
               "normalized": false,
               "hash": 1406325592
+            }
+          }
+        },
+        {
+          "materialId": "power_wire",
+          "vertices": 320,
+          "indices": 480,
+          "indexHash": 2067149586,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 3701090676
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 2200133003
+            },
+            "_OFF": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3952612834
             }
           }
         }

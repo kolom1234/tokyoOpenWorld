@@ -30,6 +30,7 @@ scene
 - `DecodedMesh` → `BufferGeometry` (TypedArray 그대로 `BufferAttribute`), 머티리얼 클래스별 공유 머티리얼 인스턴스.
 - 셀당 드로우콜 목표: L0 ≤ 30, L1 ≤ 8, L2/L3 ≤ 4. HLOD는 머티리얼별 1개(현재 지형·건물 = 2, ADR-0025).
 - 소품/나무: 타입별 **전역 InstancedMesh 풀**(셀별이 아님) + 셀별 인스턴스 범위 할당 → 드로우콜 = 타입 수 × LOD 수.
+  구현(M05-T03, ADR-0051) `props/{geo,models,pools}.ts`: 코드 절차 모델(정점색, LOD 0/1/2), 64 m 블록 거리 LOD(0 ≤ 40·1 ≤ 150·2 ≤ 종류별 80–600 m, 히스테리시스 2 m, 카메라 1 m 이동마다), 띠가 바뀐 종류만 재작성.
 - 컬링: 셀 AABB 프러스텀 컬링(CPU) + 인스턴스는 거리 LOD 선택(CPU, 셀 단위 매 4프레임).
 
 ## 4. 머티리얼 클래스 (고정 목록 — 부팅 시 선컴파일)
@@ -42,7 +43,7 @@ scene
 | `M_ROOF` | 지붕 | 콘크리트/방수시트/금속 변형, 옥상 설비 인스턴스는 별도 |
 | `M_GLASS` | 커튼월/대형 유리 | 프레넬 반사(SSR + 환경 프로브), 내부 매핑, 멀리언 패턴 — 셰이딩 함수 `materials/glass.ts`(파사드 창·커튼월·상점 유리 공유, M03-T05) |
 | `M_OVERRIDE` | 랜드마크 수작업 | `MeshPhysicalNodeMaterial` 표준 PBR |
-| `M_PROP` | 소품 | PBR + 텍스처 배열, 발광 마스크(자판기 등) |
+| `M_PROP` | 소품 | PBR + 텍스처 배열, 발광 마스크(자판기 등). **구현(M05-T03)** `materials/prop.ts` `street_prop` = 정점색 × 인스턴스 색(자판기 가상 브랜드), 텍스처·발광 없음(야간 = M09-T03). 전선 `power_wire` = 중심선 + `_OFF` 거리 비례 최소 폭(≈ 1.5 px) |
 | `M_FOLIAGE` | 잎 | alpha-to-coverage/해시 알파, 투과광, 바람 흔들림, 계절 틴트 |
 | `M_IMPOSTOR` | 원거리 나무/소품 | 옥타헤드럴 임포스터 |
 | `M_CHARACTER` | 보행자 | VAT(정점 애니메이션 텍스처) + 인스턴스 색 변형 + 소지품(우산) |

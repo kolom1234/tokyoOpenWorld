@@ -41,5 +41,6 @@ export function transferList(p: CellPayload): ArrayBuffer[] {
   add(p.collision);
   add(p.nav);
   add(p.lanes);
+  for (const b of p.instances?.props ?? []) add(b.transforms.buffer);
   return [...out];
 }

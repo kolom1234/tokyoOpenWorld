@@ -1,6 +1,6 @@
 // collision.bin 섹션(04 §4.4-6, 05 §6): 건물 렌더 면(벽·지붕·부속물) → 1 mm 용접 → meshopt 단순화(절대 오차 0.3 m) →
 // 64 m 블록 순으로 삼각형을 정렬해 ≤ MAX_CHUNK_TRIS 청크로 자른다(JCOL triMesh 여러 개 — 물리 워커가 청크 하나를 한 틱에 적재, Jolt 메시 생성 ≈ 1.5 ms/1000 삼각형, ADR-0042).
-// 보도 윗면·연석(M05-T01)은 같은 방식의 TERRAIN 층 triMesh(재질 tile, 단순화 1 cm) 청크로 뒤에 붙는다. 충돌 소품·나무 줄기는 M05-T03·T04.
+// 보도 윗면·연석(M05-T01)은 같은 방식의 TERRAIN 층 triMesh(재질 tile, 단순화 1 cm) 청크로 뒤에 붙는다. 충돌 소품(M05-T03)은 그 뒤 프리미티브. 나무 줄기는 M05-T04.
 import { gzip, JCOL_MATERIAL, type JcolShape, writeJcol } from '@sanpo/tile-format';
 import { MeshoptSimplifier } from 'meshoptimizer';
 
@@ -130,13 +130,15 @@ export async function buildCollision(
   pos: ArrayLike<number>,
   idx: ArrayLike<number>,
   ground?: { pos: ArrayLike<number>; idx: ArrayLike<number> },
+  /** 소품 프리미티브(M05-T03, 박스·원기둥 — 물리 워커가 64 m 블록별 합성 셰이프로 묶는다). */
+  extra: readonly JcolShape[] = [],
 ): Promise<CollisionBuild> {
   await MeshoptSimplifier.ready;
   const bld = chunked({ pos, idx }, SIMPLIFY_ERROR_M, { layer: LAYER_STATIC_WORLD, material: JCOL_MATERIAL.concrete });
   const gnd = ground
     ? chunked(ground, GROUND_SIMPLIFY_ERROR_M, { layer: LAYER_TERRAIN, material: JCOL_MATERIAL.tile })
     : { shapes: [], tris: 0, sourceTris: 0 };
-  const shapes = [...bld.shapes, ...gnd.shapes];
+  const shapes = [...bld.shapes, ...gnd.shapes, ...extra];
   if (shapes.length === 0) return { data: null, tris: 0, shapes: 0, sourceTris: 0 };
   return {
     data: await gzip(writeJcol(shapes)),

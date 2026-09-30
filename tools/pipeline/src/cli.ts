@@ -12,6 +12,7 @@ import { createPlateauReader } from './readers/plateau/index.ts';
 import { type AvatarLock, buildAvatar } from './stages/avatar/run.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
+import { readCatalog } from './stages/derive/props/context.ts';
 import { buildPlateauMini, buildWorldMini, type LockSource } from './stages/fixture.ts';
 import { fetchDemTiles, resampleFarDem, writeFarDem } from './stages/hlod/dem-far.ts';
 import { runHlod } from './stages/hlod/run.ts';
@@ -146,6 +147,7 @@ async function build(args: string[]): Promise<void> {
     outDir,
     plateauSources: plateauSources(),
     log: log.child('build'),
+    props: readCatalog(REPO_ROOT),
   });
   const bytes = stats.reduce((a, s) => a + s.bytes, 0);
   log.info(`build ${buildId}: ${stats.length} cells, ${bytes} B in ${((performance.now() - t0) / 1000).toFixed(1)} s`);

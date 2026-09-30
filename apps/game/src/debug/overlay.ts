@@ -74,6 +74,7 @@ export function describeDebug(
     `셀 ${s.cells} · draw ${s.drawCalls} · tris ${s.triangles.toLocaleString('en-US')}`,
     describeStreaming(st, s),
     describeMaterials(s.materials),
+    `소품 ${s.props.visible}/${s.props.instances} · 풀 ${s.props.pools}`,
     `[클릭] 마우스 잠금 · WASD 이동 · E/Q 상승/하강 · 휠 속도 · Shift ×4 · [O] 원점 재설정 테스트`,
   ];
 }

@@ -6,6 +6,7 @@ import { createDecalMaterial } from './decal.ts';
 import { createFacadeMaterial } from './facade/index.ts';
 import { createHlodMaterial } from './hlod.ts';
 import type { MaterialLibrary } from './library.ts';
+import { createWireMaterial } from './prop.ts';
 import { createTerrainMaterial } from './terrain.ts';
 
 /** 파이프라인 머티리얼 ID(ADR-0018 §5 glTF extras.materialId)별 생성기. HLOD는 단색(원거리 — 07 §3). */
@@ -13,6 +14,7 @@ const CELL_MATERIALS: Readonly<Record<string, (lib: MaterialLibrary, env: EnvUni
   terrain_ground: createTerrainMaterial,
   facade_default: createFacadeMaterial,
   road_marking: createDecalMaterial,
+  power_wire: createWireMaterial,
 };
 const HLOD_COLORS: Readonly<Record<string, { color: number; roughness: number }>> = {
   terrain_ground: { color: 0x8a8a80, roughness: 0.95 },

@@ -66,6 +66,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 | ↳ 노면 표시 구현(M05-T02, ADR-0050) | `stages/normalize-osm.ts`(osmium extract·tags-filter·GeoJSONSeq → data/normalized/osm) + `derive/markings/{common,crosswalk,lanes,stopline,text,index}.ts` → `build/decals-mesh.ts`(decals.mesh). 횡단 = OSM crossing 선 + 차도 구간, 차선 = OSM lanes + PLATEAU 차도 폭 행진, 정지선 = 신호 횡단 상류·stop 점, 「止まれ」 자체 획 폰트. 검증 = `checks/markings-photo.ts`(GSI 사진 대조, 검증 전용) |
 | 신호 | OSM `highway=traffic_signals` + PLATEAU frn → 교차로별 신호기 배치(차량용 3색 가로형, 보행자용 2색) + `signalGroups` |
 | 소품 절차 배치 | 규칙 기반(시드=hash(cellId,'props')): 전신주(폭원 < 15 m 생활도로에만 30–40 m 간격, 간선도로·무전주화 지구 `data/rules/no-poles.geojson` 제외), 가로등, 자판기(상업·주거 건물 전면, 밀도 파라미터), 자전거 거치대(역 반경 300 m), 버스정류장(OSM), 우체통(OSM `amenity=post_box`), 표지판 |
+| ↳ 소품 구현(M05-T03, ADR-0051) | `stages/derive/props/{context,signals,poles,points,vending,linear,wires,index}.ts` + `build/props-cell.ts` → `props.inst` + 소품 콜라이더(`collision.bin` 프리미티브) + 전선(`decals.mesh` `power_wire`). 우선순위 = 신호(교차로 건너편 왼쪽) → 전신주·전선(선 id 시드 정거장) → OSM 점 → 자판기(가상 브랜드) → 가드 파이프(간선) → 맨홀, 셀 예산 5k(`content/props/catalog.json`). ⚠️ PLATEAU frn·무전주화 지구 미사용 |
 | 나무 | PLATEAU veg 위치·높이 우선, OSM 보완. 수종 매핑: 가로수 기본 규칙(간선=은행나무/느티나무 가중, 공원=혼합) → `species` |
 | 파사드 파라미터 | 건물별: 층수(`storeys` 또는 `measuredHeight/3.2`), 용도→파사드 클래스(office_curtain, office_punched, retail_podium, residential_mansion, house_wood, house_mortar, station, temple…), PLATEAU 텍스처 평균색→틴트, 1층 상점 여부(용도·도로 인접) |
 | 레인 그래프 | OSM 도로 중심선 + 차선 수 → 차선 중심 폴리라인, 교차로 연결(좌회전/우회전 곡선), 제한속도, 신호 그룹 참조 |
@@ -82,7 +83,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 2. 건물: 머티리얼 클래스별 병합, 정점 속성 `_BLDG`(u16), `_FACADE(u8x4: class, floors, tint idx, flags)` — `stages/build/facade-params.ts`(용도·높이 → 클래스·상점·커튼월, ADR-0030), 벽 평면 묶기(`wall-planes.ts`)·TEXCOORD_1(면 폭·건물 높이). LOD2 텍스처는 **사용하지 않고** 틴트만 추출(항공사진 기반 텍스처는 그림자가 구워져 있어 동적 조명과 충돌).
 3. 도로/보도/노면표시: 메시 + 데칼 메시(깊이 오프셋용 별도 프리미티브).
 4. 오버라이드: `content/overrides/<gmlId>/model.glb`가 있으면 해당 건물 대체(원점·스케일 검증).
-5. 인스턴스: 소품/나무 → 타입별 트랜스폼 배열(`props.inst`).
+5. 인스턴스: 소품/나무 → 타입별 트랜스폼 배열(`props.inst`, 카탈로그가 있을 때만 — `buildArea({ props })`).
 6. 충돌(`stages/build/collision.ts`, ADR-0042): 건물 렌더 면 1 mm 용접 → 단순화(meshopt simplify 절대 오차 0.3 m) → 64 m 블록 순 ≤ 2500 삼각형 청크(JCOL triMesh 여러 개), 연석·가드레일, `catalog.json`에서 `collider`가 정의된 소품(박스/캡슐/원기둥), 나무 줄기(원기둥, 반경 = 높이×0.02) → 모두 `collision.bin`.
 7. 내비·레인·광원·오디오·POI·meta.
 8. glTF 후처리: `reorder(meshopt) → quantize(직접) → meshopt(encode, gltf-transform core+extensions)` — dedup·weld는 필요 시 추가(ADR-0018); 텍스처는 셀에 넣지 않고 `shared/materials` 참조(머티리얼 ID).

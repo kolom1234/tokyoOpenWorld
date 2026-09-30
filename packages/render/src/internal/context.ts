@@ -10,9 +10,11 @@ import { enableSunShadows, type SunShadows } from './lighting/shadows.ts';
 import { DEFAULT_MOON_DIR_WF, DEFAULT_SUN_DIR_WF } from './lighting/sun.ts';
 import { glassRoughness } from './materials/glass.ts';
 import { createMaterialLibrary, type MaterialLibrary } from './materials/library.ts';
+import { createPropMaterial } from './materials/prop.ts';
 import { createMaterialRegistry, type MaterialRegistry } from './materials/registry.ts';
 import { resolvePost } from './post/config.ts';
 import { createDirectRender, createPostPipeline, type PostPipeline } from './post/pipeline.ts';
+import { createPropField, type PropField } from './props/pools.ts';
 import { createQualityManager, type QualityManager } from './quality.ts';
 import { createGpuTimer, type GpuTimer } from './renderer/gpu-timer.ts';
 import { initRenderer } from './renderer/init.ts';
@@ -38,6 +40,8 @@ export interface RenderContext {
   readonly cells: CellSet;
   /** 플레이어 아바타(dynamic 루트, M04-T05). */
   readonly avatar: Avatar;
+  /** 거리 소품 인스턴스 풀(prop 루트, M05-T03). */
+  readonly props: PropField;
   readonly atmosphere: AtmosphereRig;
   readonly env: EnvProbe;
   /** 전역 환경 유니폼(젖음 등, 07 §3). */
@@ -85,6 +89,24 @@ function attachQuality(
   });
 }
 
+/** 대기·태양광(light 루트) — 기본 해·달 방향, 렌더 원점. */
+function attachAtmosphere(renderer: WebGPURenderer, graph: SceneGraph, view: RenderView, sky: boolean): AtmosphereRig {
+  const atmosphere = createAtmosphere(renderer, graph.scene, view.camera, sky);
+  graph.roots.light.add(atmosphere.light, atmosphere.light.target);
+  atmosphere.setOrigin(view.renderOriginWF);
+  atmosphere.setBodies(DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF);
+  return atmosphere;
+}
+
+/** 아바타(dynamic 루트)·거리 소품 풀(prop 루트, M05-T03). */
+function attachActors(graph: SceneGraph): { avatar: Avatar; props: PropField } {
+  const avatar = createAvatar();
+  graph.roots.dynamic.add(avatar.group);
+  const props = createPropField(createPropMaterial());
+  graph.roots.prop.add(props.root);
+  return { avatar, props };
+}
+
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
   const cfg = mergeConfig(DEFAULT_RENDER_CONFIG, deps.config ?? {});
   const log = deps.log.child('render');
@@ -99,14 +121,11 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   // 하드웨어(WebGPU·WebGL2) = 후처리(공중원근이 하늘까지) + 환경 프로브 + 그림자, 소프트웨어 WebGL2(SwiftShader — CI) = 직접 렌더 + 하늘 배경(ADR-0028, M03-T09).
   // `debugForcePost` = CI 정지 떨림 e2e(SwiftShader에서 후처리 체인 검증).
   const post = !software || cfg.debugForcePost;
-  const atmosphere = createAtmosphere(renderer, graph.scene, view.camera, !post);
-  graph.roots.light.add(atmosphere.light, atmosphere.light.target);
-  atmosphere.setOrigin(view.renderOriginWF);
-  atmosphere.setBodies(DEFAULT_SUN_DIR_WF, DEFAULT_MOON_DIR_WF);
+  const atmosphere = attachAtmosphere(renderer, graph, view, !post);
   if (backend === 'webgl2') glassRoughness.value = WEBGL2_GLASS_ROUGHNESS;
   const postFor = postEffectsFor(cfg, backend);
-  const avatar = createAvatar();
-  graph.roots.dynamic.add(avatar.group);
+  const { avatar, props } = attachActors(graph);
+  const casters = () => [...materials.all(), ...avatar.materials, props.material];
   const makePost = (tier: QualityTier): PostPipeline =>
     post
       ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad)
@@ -125,13 +144,11 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     hlod,
     cells: createCellSet(materials, graph.roots, hlod),
     avatar,
+    props,
     atmosphere,
     envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },
-    shadows:
-      post && cfg.shadows
-        ? enableSunShadows(renderer, atmosphere.light, cfg.quality, () => [...materials.all(), ...avatar.materials])
-        : undefined,
+    shadows: post && cfg.shadows ? enableSunShadows(renderer, atmosphere.light, cfg.quality, casters) : undefined,
     post: makePost(cfg.quality),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
