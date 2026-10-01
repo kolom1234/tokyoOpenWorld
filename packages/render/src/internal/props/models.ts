@@ -2,7 +2,7 @@
 // 전주 전선 부착(통신 5.6/6.1 m, 배전 8.6/9.1/9.6 m)·차도 쪽(+Z) 오프셋은 content/props/catalog.json(wireHeightsM·wireLateralM)과 맞춘다. 차량 신호 팔 = 로컬 +X(차도 위).
 // 자판기 몸체는 흰색 — 인스턴스 색(가상 브랜드 팔레트)이 곱해진다. see ADR-0051, docs/07-rendering.md §5
 import { PROP_TYPE } from '@sanpo/tile-format';
-import type { BufferGeometry } from 'three/webgpu';
+import { BufferAttribute, BufferGeometry } from 'three/webgpu';
 import { PartBuilder } from './geo.ts';
 
 export type PropLod = 0 | 1 | 2;
@@ -178,4 +178,41 @@ export function buildPropGeometry(typeId: number, lod: PropLod): BufferGeometry 
   const b = new PartBuilder();
   model(b, lod, SEG[lod]);
   return b.build();
+}
+
+/**
+ * LOD 하나의 전 종류 합친 기하 + 정점 속성 `_ptype`(종류 번호) — 풀 1개가 모든 종류를 그리고 셰이더가 인스턴스 `_itype`과 다른 정점을 퇴화시킨다
+ * (three r186은 InstancedMesh마다 노드 빌드(≈ 140 ms)를 따로 해서 종류 × LOD 풀이면 부팅·첫 표시 끊김이 커진다 — ADR-0051).
+ */
+export function buildMergedPropGeometry(lod: PropLod): BufferGeometry {
+  const parts = PROP_TYPE_IDS.map((t) => ({ t, g: buildPropGeometry(t, lod) as BufferGeometry }));
+  const nv = parts.reduce((n, p) => n + p.g.getAttribute('position').count, 0);
+  const ni = parts.reduce((n, p) => n + (p.g.index?.count ?? 0), 0);
+  const pos = new Float32Array(nv * 3);
+  const nrm = new Float32Array(nv * 3);
+  const col = new Float32Array(nv * 3);
+  const typ = new Float32Array(nv);
+  const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
+  let v = 0;
+  let k = 0;
+  for (const { t, g } of parts) {
+    const n = g.getAttribute('position').count;
+    pos.set(g.getAttribute('position').array as Float32Array, v * 3);
+    nrm.set(g.getAttribute('normal').array as Float32Array, v * 3);
+    col.set(g.getAttribute('color').array as Float32Array, v * 3);
+    typ.fill(t, v, v + n);
+    const gi = g.index?.array ?? [];
+    for (let i = 0; i < gi.length; i++) idx[k + i] = (gi[i] as number) + v;
+    k += gi.length;
+    v += n;
+    g.dispose();
+  }
+  const out = new BufferGeometry();
+  out.setAttribute('position', new BufferAttribute(pos, 3));
+  out.setAttribute('normal', new BufferAttribute(nrm, 3));
+  out.setAttribute('color', new BufferAttribute(col, 3));
+  out.setAttribute('_ptype', new BufferAttribute(typ, 1));
+  out.setIndex(new BufferAttribute(idx, 1));
+  out.computeBoundingSphere();
+  return out;
 }

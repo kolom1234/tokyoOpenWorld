@@ -12,7 +12,7 @@ import {
   type WebGPURenderer,
 } from 'three/webgpu';
 import { createHlodFades } from './hlod.ts';
-import { type MaterialRegistry, PRECOMPILE_IDS } from './registry.ts';
+import { HLOD_MATERIAL_IDS, type MaterialRegistry, PRECOMPILE_IDS } from './registry.ts';
 
 /** 실제 셀과 같은 속성 형식(cell-node 변환 후): 지형 f32 위치·f32 `_surf`, 건물 u16 위치·f32 UV·f32 `_bldg`·unorm8×4 `_facade`, 노면 표시 u16 위치·f32 `_paint`, 전선 u16 위치·snorm8 `_off`, HLOD u16 위치·f32 `_child`. */
 function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
@@ -53,12 +53,15 @@ export async function precompileMaterials(
   };
   for (const id of PRECOMPILE_IDS) {
     const base = dummyGeometry(id, false);
-    const hl = dummyGeometry(id, true);
-    geos.push(base, hl);
+    geos.push(base);
     add(base, materials.get(id), false);
-    // HLOD: 불투명 + 페이드(디더) 변형(ADR-0039).
-    add(hl, materials.getHlod(id), true);
-    add(hl, materials.getHlod(id, true), true);
+    // HLOD: 불투명 + 페이드(디더) 변형(ADR-0039) — hlod.mesh에 나오는 ID만.
+    if (HLOD_MATERIAL_IDS.includes(id)) {
+      const hl = dummyGeometry(id, true);
+      geos.push(hl);
+      add(hl, materials.getHlod(id), true);
+      add(hl, materials.getHlod(id, true), true);
+    }
     // 건물 파사드 깊이 프리패스(같은 속성 형식).
     if (id === 'facade_default') add(base, materials.prepass(), false);
   }

@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 296개.
+> 파일 297개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -129,8 +129,8 @@
 - `packages/render/src/internal/materials/library.ts` — 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + 실내 큐브맵 배열(M03-T05) + manifest(그룹·타일 크기·평균색). | exports: MATERIAL_GROUPS, MaterialGroup, MAX_LAYERS, MAX_ROOMS, MaterialsManifest, LibraryState, LibraryStats, MaterialLibrary, createMaterialLibrary
 - `packages/render/src/internal/materials/noise.ts` — 셰이더 2D 값 노이즈(TSL): 지형 안티타일링·아스팔트 변형·물웅덩이 마스크(M03-T06). 입력 = 월드 고정 좌표(worldOffset 적용, m). | exports: noiseTexture, NoiseBank, noiseBank
 - `packages/render/src/internal/materials/precompile.ts` — 셰이더 선컴파일(06 §6): 고정 머티리얼 ID별 기본·HLOD 변형을 작은 더미 메시로 씬에 잠깐 붙여 `compileAsync` → 스트리밍 중 첫 사용 끊김 제거. | exports: precompileMaterials
-- `packages/render/src/internal/materials/prop.ts` — 소품 머티리얼(M05-T03, 07 §4): 절차 모델 정점색 × 인스턴스 색(자판기 가상 브랜드, 그 밖 흰색) — 전 종류 한 머티리얼·한 파이프라인. | exports: createPropMaterial, createWireMaterial
-- `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼 + HLOD 변형(자식 페이드, M02-T05). 셀 머티리얼은 라이브러리 텍스처 배열을 쓴다(M03-T01, 적재 전 평균색). | exports: MaterialRegistry, PRECOMPILE_IDS, createMaterialRegistry
+- `packages/render/src/internal/materials/prop.ts` — 소품 머티리얼(M05-T03, 07 §4): 절차 모델 정점색 × 인스턴스 색(자판기 가상 브랜드, 그 밖 흰색) — 전 종류 한 머티리얼·LOD당 풀 1개. | exports: createPropMaterial, createWireMaterial
+- `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼 + HLOD 변형(자식 페이드, M02-T05). 셀 머티리얼은 라이브러리 텍스처 배열을 쓴다(M03-T01, 적재 전 평균색). | exports: MaterialRegistry, PRECOMPILE_IDS, HLOD_MATERIAL_IDS, createMaterialRegistry
 - `packages/render/src/internal/materials/road.ts` — M_ROAD 변형(07 §4, M03-T06): 아스팔트 보수 패치·유분 얼룩·바랜 구간, 보도 명암·때, 공통 거시 명암. 추가 표본 없이 noiseBank 채널만. | exports: Variation, NO_VARIATION, macroTint, asphaltVariation, pavingVariation
 - `packages/render/src/internal/materials/terrain.ts` — M_TERRAIN(07 §4, M03-T06): `_SURF` 스플랫 — 정점 원-핫(8클래스, 보간) → 픽셀마다 상위 2클래스 노이즈 경계 혼합. | exports: TerrainOptions, createTerrainMaterial
 - `packages/render/src/internal/materials/textured.ts` — 라이브러리 텍스처 표본 함수(sampleLayer·법선 변환, M03-T01). 지형은 terrain.ts(M03-T06), 파사드는 facade/(M03-T04). | exports: LayerSample, sampleLayer, tsToWorld, worldToView, perturbWorld
@@ -140,9 +140,10 @@
 - `packages/render/src/internal/post/exposure.ts` — 자동 노출(07 §7): 씬 패스 HDR(하늘·공중원근 전)을 32² 격자로 읽어 로그 휘도 평균 → EMA → 노출 배율. 전부 GPU(컴퓨트 1회/프레임, | exports: REF_LUM, ADAPT, AutoExposure, createAutoExposure
 - `packages/render/src/internal/post/lut.ts` — 3D LUT 그레이딩(07 §7, M03-T07): 톤매핑·sRGB 뒤에 적용. 외부 .cube 대신 결정론 절차 LUT(라이선스 무관) — 약한 S 커브·채도 +6 %, | exports: LUT_SIZE, grade, createGradeLut
 - `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness]) | exports: PostPipeline, createDirectRender, createPostPipeline
+- `packages/render/src/internal/props/blocks.ts` — 소품 블록·LOD 띠(M05-T03): 셀 소품을 64 m 블록으로 나눠 종류별 조각(셀 로컬 행렬·색)을 만들고, 블록 AABB 3D 거리로 LOD 띠(히스테리시스 2 m)를 정한다. | exports: FAR_M, DEFAULT_FAR_M, TypeSlice, Block, blocksOf, distanceTo, bandOf
 - `packages/render/src/internal/props/geo.ts` — 소품 절차 모델 조립기(M05-T03): 상자·원기둥(축 x/y/z)·삼각 기둥 → 정점색 BufferGeometry(위치·법선 f32, 색 f32 선형). | exports: PartBuilder
-- `packages/render/src/internal/props/models.ts` — 소품 절차 모델(M05-T03, 자체 제작 — 로고·상표·실존 상호 없음): PROP_TYPE별 LOD 0–2 기하. 원점 = 바닥 중심, 로컬 +Z = 정면. | exports: PropLod, PROP_TYPE_IDS, buildPropGeometry
-- `packages/render/src/internal/props/pools.ts` — 소품 인스턴싱(M05-T03): 전역 풀 = (종류 × LOD 3) InstancedMesh — 드로우콜 ≤ 종류 × 3(수락 기준). 셀 소품은 64 m 블록으로 나눠 | exports: PropFieldStats, PropField, bandOf, createPropField
+- `packages/render/src/internal/props/models.ts` — 소품 절차 모델(M05-T03, 자체 제작 — 로고·상표·실존 상호 없음): PROP_TYPE별 LOD 0–2 기하. 원점 = 바닥 중심, 로컬 +Z = 정면. | exports: PropLod, PROP_TYPE_IDS, buildPropGeometry, buildMergedPropGeometry
+- `packages/render/src/internal/props/pools.ts` — 소품 인스턴싱(M05-T03): 전역 풀 = LOD마다 InstancedMesh 1개(전 종류 합친 기하, 인스턴스 `_itype`) — 드로우콜 ≤ 3(수락 ≤ 종류 × 3). | exports: PROP_POOL_CAPACITY, PropFieldStats, PropField, createPropField
 - `packages/render/src/internal/quality.ts` — 품질 티어·동적 해상도(07 §9, M03-T08): 초기 티어 = detect-gpu(벤치마크 JSON 자체 호스팅 — 외부 CDN·CSP 없이) → 적용 후 60프레임 측정해 | exports: QualityDeps, QualityStats, QualityManager, tierFromDetect, createQualityManager
 - `packages/render/src/internal/renderer/backend-caps.ts` — 초기화 전 백엔드·깊이 기능 예측: WebGPU 어댑터 유무, WebGL2 EXT_clip_control(reversed-Z 필요조건). see docs/07-rendering.md §1, ADR-0006 | exports: BackendProbe, isSoftwareRenderer, probeWebgl2, probeBackend
 - `packages/render/src/internal/renderer/dynamic-resolution.ts` — 동적 해상도(07 §9, M03-T08): 프레임 시간 EMA로 렌더 스케일 ±0.05(0.5–1.0) — 목표 16.6 ms. | exports: DynResConfig, DYNRES_DEFAULTS, DynamicResolution, createDynamicResolution

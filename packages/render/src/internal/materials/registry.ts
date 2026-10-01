@@ -36,6 +36,8 @@ export interface MaterialRegistry {
 
 /** 부팅 시 선컴파일할 ID(06 §6). */
 export const PRECOMPILE_IDS = Object.keys(CELL_MATERIALS);
+/** hlod.mesh에 나오는 ID(지형·건물) — HLOD 변형은 이것만 선컴파일(노면 표시·전선은 L0 전용). */
+export const HLOD_MATERIAL_IDS: readonly string[] = Object.keys(HLOD_COLORS);
 
 export function createMaterialRegistry(
   lib: MaterialLibrary,
