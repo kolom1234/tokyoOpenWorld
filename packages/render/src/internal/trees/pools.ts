@@ -57,7 +57,8 @@ export function makeTreePool(
     m.frustumCulled = false;
     m.matrixAutoUpdate = false;
     m.castShadow = shadow;
-    m.receiveShadow = true;
+    // 그림자 받기도 상세 LOD만 — 간략·임포스터는 화소마다 4단 캐스케이드 표본이 숲 비용의 큰 몫(측정), 멀리선 안 보인다.
+    m.receiveShadow = shadow;
     return m;
   });
   return { meshes, geos, ipos, iext };

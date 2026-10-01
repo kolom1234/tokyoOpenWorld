@@ -44,8 +44,8 @@ scene
 | `M_GLASS` | 커튼월/대형 유리 | 프레넬 반사(SSR + 환경 프로브), 내부 매핑, 멀리언 패턴 — 셰이딩 함수 `materials/glass.ts`(파사드 창·커튼월·상점 유리 공유, M03-T05) |
 | `M_OVERRIDE` | 랜드마크 수작업 | `MeshPhysicalNodeMaterial` 표준 PBR |
 | `M_PROP` | 소품 | PBR + 텍스처 배열, 발광 마스크(자판기 등). **구현(M05-T03)** `materials/prop.ts` `street_prop` = 정점색 × 인스턴스 색(자판기 가상 브랜드), 텍스처·발광 없음(야간 = M09-T03). 전선 `power_wire` = 중심선 + `_OFF` 거리 비례 최소 폭(≈ 1.5 px) |
-| `M_FOLIAGE` | 잎 | alpha-to-coverage/해시 알파, 투과광, 바람 흔들림, 계절 틴트 |
-| `M_IMPOSTOR` | 원거리 나무/소품 | 옥타헤드럴 임포스터 |
+| `M_FOLIAGE` | 잎 | alpha-to-coverage/해시 알파, 투과광, 바람 흔들림, 계절 틴트. **구현(M05-T04, ADR-0052)** `trees/materials.ts` `tree_leaf`: 자체 잎 아틀라스 알파 테스트, Lambert + 태양 + 하늘 간접광(보조 AtmosphereLight) + 투과 22 %, 높이² 흔들림·떨림, 수종 계절 표. 인스턴싱 = InstancedBufferGeometry 속성(`_ipos`·`_iext`) |
+| `M_IMPOSTOR` | 원거리 나무/소품 | 옥타헤드럴 임포스터. **구현(M05-T04)** `tree_impostor`: 반팔면체 8 × 8 틀(CPU 굽기), 나무 로컬 방향으로 틀 선택, 구면 법선, 수종 타일 3 × 2 |
 | `M_CHARACTER` | 보행자 | VAT(정점 애니메이션 텍스처) + 인스턴스 색 변형 + 소지품(우산) |
 | `M_VEHICLE` | 차량 | 클리어코트 도장, 유리, 라이트 발광 |
 | `M_WATER` | 강·연못 | 법선 스크롤 + SSR + 빗방울 파문 |
@@ -105,7 +105,7 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 | 흐림/안개 | 태양 조도 감쇠, 하늘 산란 파라미터, 안개 밀도 |
 | 눈(희귀) | `snowCover` 상향면 블렌드, 입자 |
 | 구름 | Ultra: TSL 레이마치 볼류메트릭(1/4 해상도 + 시간 재투영). High/Medium: 2D 레이어 구름(조명 반영). Low: 하늘만 |
-| 계절 | 나무 틴트 테이블: 은행나무 황엽 11/15–12/10, 벚꽃 3/25–4/8, 느티나무 갈색 11월, 겨울 낙엽수 가지만. 보행자 옷 팔레트(겨울 코트, 여름 반팔) |
+| 계절 | 나무 틴트 테이블: 은행나무 황엽 11/15–12/10, 벚꽃 3/25–4/8, 느티나무 갈색 11월, 겨울 낙엽수 가지만. 보행자 옷 팔레트(겨울 코트, 여름 반팔). 나무 구현 = `trees/season.ts`(dayOfYear → 수종 색·잎 밀도, M05-T04) |
 
 ## 9. 품질 티어
 | 항목 | Low | Medium | High | Ultra |

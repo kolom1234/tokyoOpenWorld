@@ -160,6 +160,7 @@ class PropFieldImpl implements PropField {
     for (const m of primed) m.count = 1;
     return () => {
       for (const m of primed) m.count = 0;
+      for (const lod of LODS) this.dirty.add(lod);
     };
   }
 

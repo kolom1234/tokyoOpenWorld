@@ -119,6 +119,8 @@ function placeNode(u: TreeUniforms, flutter: boolean) {
 
 const leafRow = (u: TreeUniforms) => vec4(u.season.element(int(iext.z)));
 const tintOf = () => iext.y.mul(0.3).add(0.85);
+/** 잎 자체발광 비율(투과광 근사). */
+const LEAF_TRANSLUCENCY = 0.22;
 
 export function createBarkMaterial(u: TreeUniforms): Material {
   const m = new MeshStandardNodeMaterial({ roughness: 0.9, metalness: 0 });
@@ -128,9 +130,23 @@ export function createBarkMaterial(u: TreeUniforms): Material {
   return m;
 }
 
-export function createLeafMaterial(u: TreeUniforms, leaves: Texture): Material {
-  // 잎·임포스터 = Lambert(정반사 없음 — 알파 테스트 잎은 겹쳐 그려져 셰이딩 비용이 크다, 숲 GPU 측정).
+/**
+ * 잎·임포스터 조명: Lambert(정반사·환경맵 표본 없음 — 겹쳐 그려지는 알파 테스트 잎에서 Standard는 숲 시점 +4 ms) + 태양 직사 + 하늘 간접광
+ * (보조 AtmosphereLight indirect — LUT 조회 1회, Lambert만으로는 그늘이 새까맣다). lightsNode가 없으면(소프트웨어 경로) 장면 조명 그대로.
+ */
+export interface FoliageLighting {
+  lightsNode?: TslNode<'vec3'> | object;
+}
+
+const withFoliageLights = (m: MeshLambertNodeMaterial, l: FoliageLighting): void => {
+  if (l.lightsNode) (m as unknown as { lightsNode: unknown }).lightsNode = l.lightsNode;
+};
+/** NodeMaterial.setupLighting은 모든 노드 머티리얼의 emissiveNode를 읽는다(Lambert 타입 정의에만 없음). */
+const emissiveOf = (m: MeshLambertNodeMaterial) => m as MeshLambertNodeMaterial & { emissiveNode: unknown };
+
+export function createLeafMaterial(u: TreeUniforms, leaves: Texture, l: FoliageLighting = {}): Material {
   const m = new MeshLambertNodeMaterial({ side: DoubleSide });
+  withFoliageLights(m, l);
   m.name = 'tree_leaf';
   m.positionNode = placeNode(u, true);
   const tex = texture(leaves, uv());
@@ -140,7 +156,10 @@ export function createLeafMaterial(u: TreeUniforms, leaves: Texture): Material {
     'v_leafPatch',
   );
   // 잎은 투과광·하늘빛을 받아 밝다 → 1.25배(실사 가로수 대비 맞춤).
-  m.colorNode = tex.rgb.mul(row.xyz).mul(tintOf()).mul(1.25);
+  const leafColor = tex.rgb.mul(row.xyz).mul(tintOf()).mul(1.25);
+  m.colorNode = leafColor;
+  // 투과광·수관 안 산란 근사: 잎 색의 일부를 자체발광(그늘·뒷면 잎이 검게 죽지 않게 — 실제 GPU 확인).
+  emissiveOf(m).emissiveNode = leafColor.mul(LEAF_TRANSLUCENCY);
   m.opacityNode = tex.a.mul(step(patch, row.w));
   m.alphaTest = 0.5;
   return m;
@@ -161,8 +180,14 @@ export interface ImpostorLayout {
   rows: number;
 }
 
-export function createImpostorMaterial(u: TreeUniforms, atlas: Texture, L: ImpostorLayout): Material {
+export function createImpostorMaterial(
+  u: TreeUniforms,
+  atlas: Texture,
+  L: ImpostorLayout,
+  l: FoliageLighting = {},
+): Material {
   const m = new MeshLambertNodeMaterial();
+  withFoliageLights(m, l);
   m.name = 'tree_impostor';
   const vR = varyingProperty('vec3', 'v_impR');
   const vU = varyingProperty('vec3', 'v_impU');
@@ -203,14 +228,22 @@ export function createImpostorMaterial(u: TreeUniforms, atlas: Texture, L: Impos
   const smp = texture(atlas, vec2(X, float(1).sub(Y)));
   const row = leafRow(u);
   const patch = hash(dot(floor(local.mul(10)), vec2(1, 57)).add(iext.y.mul(97)));
-  m.colorNode = smp.r
-    .mul(mix(barkTable.element(int(iext.z)), row.xyz, smp.g))
-    .mul(tintOf())
-    .mul(1.6);
+  // 굽기 명암(수피 ≈ 0.4, 잎 ≈ 0.6)을 상세 LOD 밝기에 맞춘다 — 수피는 ×1.5(하늘 간접광과 함께 상세 LOD 줄기 밝기), 잎은 ×1.6.
+  const impColor = mix(barkOf().mul(smp.r.mul(1.5)), row.xyz.mul(smp.r.mul(1.6)), smp.g).mul(tintOf());
+  m.colorNode = impColor;
+  emissiveOf(m).emissiveNode = impColor.mul(smp.g).mul(LEAF_TRANSLUCENCY);
   m.opacityNode = smp.a.mul(mix(float(1), step(patch, row.w), smp.g));
   m.alphaTest = 0.5;
   const q = local.mul(2).sub(1);
   const nz = sqrt(max(float(1).sub(dot(q, q)), 0.09));
-  m.normalNode = transformNormalToView(normalize(vR.mul(q.x).add(vU.mul(q.y)).add(vD.mul(nz))));
+  // 구면 법선 — 단, 아래 절반(줄기·수관 밑)은 수직 성분을 빼 원기둥형으로(아래를 향하면 해를 못 받아 줄기가 새까맣다).
+  m.normalNode = transformNormalToView(
+    normalize(
+      vR
+        .mul(q.x)
+        .add(vU.mul(max(q.y, 0)))
+        .add(vD.mul(nz)),
+    ),
+  );
   return m;
 }

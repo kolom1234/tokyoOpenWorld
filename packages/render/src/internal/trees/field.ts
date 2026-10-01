@@ -145,8 +145,10 @@ class TreeFieldImpl implements TreeField {
       (p.iext.array as Float32Array).set([1, 0, 1, 0], 0);
       for (const g of p.geos) g.instanceCount = 1;
     }
+    // 복원 = 다음 update에서 전부 다시 채움(컴파일을 기다리는 동안 채워진 풀을 0으로 되돌리면 정지 카메라에선 영영 비어 있다 — 골든뷰).
     return () => {
       for (const p of primed) for (const g of p.geos) g.instanceCount = 0;
+      for (const k of this.pools.keys()) this.dirty.add(k);
     };
   }
 

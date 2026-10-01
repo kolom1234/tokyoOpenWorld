@@ -11,7 +11,7 @@ L0/<ix>/<iz>.tkc              상세 셀 (256 m)
 L1/<ix>/<iz>.tkc … L3/…       HLOD 셀
 shared/materials/manifest.json + *.ktx2    머티리얼 라이브러리 (텍스처 배열 레이어 정의)
 shared/props/<typeId>.glb     소품 프로토타입 (LOD0/1/2 포함) — M05-T03은 렌더 코드 절차 모델(ADR-0051), 파일 없음
-shared/trees/<species>.glb    나무 프로토타입 + 임포스터 아틀라스
+shared/trees/<species>.glb    나무 프로토타입 + 임포스터 아틀라스 — M05-T04는 게임 해시 에셋(apps/game/src/assets/trees, ADR-0052)
 shared/characters/*.glb       보행자 베이스 메시 + VAT 텍스처
 shared/vehicles/*.glb         차량 (교통/플레이어)
 global/rail.bin               전 노선 선로 스플라인·역·정차위치
@@ -79,7 +79,7 @@ credits.json                  출처 표기
 | `decals.mesh` | glb | 노면 표시 (별도 폴리곤 오프셋) | render | L0 |
 | `overrides.mesh` | glb | 랜드마크 수작업 모델 (PBR, 텍스처 참조는 shared) | render | L0 |
 | `props.inst` | bin+gzip | 반복 `{u16 typeId, u16 pad, u32 count, f32[count*5] (x,y,z,yawRad,scale)}` — typeId = `PROP_TYPE`(1–15, 추가만), 셀 로컬, yaw = 로컬 +Z(정면)를 `atan2(fx, fz)`로 | render (충돌 있는 소품은 파이프라인이 `collision.bin`에 프리미티브로 굽는다, ADR-0051) | L0 |
-| `trees.inst` | bin+gzip | `{u32 count}` + 레코드 `{u8 species, u8 seed, u16 pad, f32 x,y,z, f32 height, f32 crownR}` | render (줄기 충돌은 `collision.bin`의 원기둥) | L0–L1 |
+| `trees.inst` | bin+gzip | `{u32 count}` + 레코드 `{u8 species, u8 seed, u16 pad, f32 x,y,z, f32 height, f32 crownR}` — species = `TREE_SPECIES`(1–6, 0 금지), seed → yaw·색 변형 | render (줄기 충돌은 `collision.bin`의 원기둥, ADR-0052) | L0–L1(L1은 미구현) |
 | `collision.bin` | bin+gzip | §6 JCOL 포맷 | physics | L0 |
 | `nav.bin` | bin | Detour NavMesh 타일 16개 연결 바이트열 (`{u32 count, (u32 len, u8[len])*}`) | sim | L0 |
 | `lanes.bin` | bin+gzip | 차선 그래프 §7 | sim | L0 |

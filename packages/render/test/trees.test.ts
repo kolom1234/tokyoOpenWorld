@@ -44,7 +44,6 @@ describe('treeBandOf', () => {
     expect(treeBandOf(31, TREE_EDGES, 0)).toBe(0);
     expect(treeBandOf(28, TREE_EDGES, 1)).toBe(1);
   });
-
 });
 
 const batch = (pts: [number, number, number][]) => {
@@ -102,6 +101,41 @@ describe('tree blocks and pools', () => {
     expect(pool.geos.map((g) => g.instanceCount)).toEqual([2, 2]);
     expect((pool.ipos.array as Float32Array)[0]).toBeCloseTo(266, 5);
     expect(pool.geos[0]?.getAttribute('_ipos')).toBe(pool.geos[1]?.getAttribute('_ipos'));
+  });
+
+  it('refills pools after the compile priming is restored (static camera)', () => {
+    const geo = () => {
+      const g = new BufferGeometry();
+      g.setAttribute('position', new BufferAttribute(new Float32Array(9), 3));
+      g.setAttribute('normal', new BufferAttribute(new Float32Array(9), 3));
+      g.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
+      return g;
+    };
+    const parts = new Map<string, BufferGeometry>();
+    for (const lod of [0, 1]) for (const part of ['bark', 'leaf']) parts.set(`1:${lod}:${part}`, geo());
+    const mat = new MeshStandardNodeMaterial();
+    const f = createTreeField();
+    f.addCell(
+      packCellKey(0, 0, 0),
+      { x: 0, y: 0, z: 0 },
+      batch([
+        [10, 10, 1],
+        [20, 12, 1],
+      ]),
+    );
+    const cam = { x: 10, y: 12, z: 10 };
+    f.update(cam, { x: 0, y: 0, z: 0 }, false);
+    f.attach(
+      { manifest: {} as never, parts, leaves: {} as never, impostor: {} as never },
+      { bark: mat, leaf: mat, impostor: mat },
+    );
+    const restore = f.primeForCompile();
+    f.update(cam, { x: 0, y: 0, z: 0 }, false);
+    expect(f.stats().visible).toBe(2);
+    restore();
+    f.update(cam, { x: 0, y: 0, z: 0 }, false);
+    expect(f.stats()).toMatchObject({ visible: 2, ready: true });
+    f.dispose();
   });
 
   it('remembers cells before assets arrive and reports stats', () => {

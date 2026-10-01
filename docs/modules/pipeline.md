@@ -48,6 +48,8 @@ src/checks/markings-photo.ts     GSI z18 사진 대조(검증 전용, PHOTO_DEBU
 src/stages/derive/props/{context,signals,poles,points,vending,linear,wires,index}.ts   거리 소품(M05-T03, ADR-0051): 카탈로그·배치 문맥(셀 소유·표면 높이·예산) / 신호(교차로 건너편 왼쪽·보행 양끝) / 전신주(선 id 시드 정거장)·전선 경간 / OSM 점 / 자판기(가상 브랜드, 길가 벽) / 가드 파이프·맨홀 / 전선 리본(중심선 + `_OFF`) / 조립(우선순위·예산 5k)
 src/stages/build/props-cell.ts   셀 소품: 표면 높이(보도 윗면·지형)·교차부·건물 발자국 → buildProps → props.inst(gzip)·콜라이더·전선
 src/stages/build/area-reader.ts  영역 빌드 입력(셀별 ndjson.gz, 8-이웃 캐시)
+src/stages/derive/vegetation.ts · derive/trees/{species,place,street,fill,index}.ts   녹지 `_SURF` 잔디 / 나무 배치(OSM 점·열, 규칙 가로수, 녹지 격자, 수종, 줄기 콜라이더, 셀 4k) — M05-T04 ADR-0052
+src/stages/trees/{generate,leaf-atlas,impostor,run}.ts · src/cli-assets.ts   `pnpm pipeline trees`(ez-tree 수종 → GLB, 자체 잎 아틀라스, CPU 반팔면체 임포스터 → apps/game/src/assets/trees) / 에셋 CLI(materials·avatar·trees)
 src/stages/avatar/{run,bake,anims}.ts  `avatar`(M05 결정 2, ADR-0048): data/raw Quaternius UBC·UAL zip(sha256 lock, lib/zip.ts) → 몸+머리털 프리미티브 1개·정점색(텍스처 표본 + 스킨 가중치 옷 영역)·클립 4개(회전 + pelvis 이동, _RM 자연 속력) → apps/game/src/assets/avatar-ubc-male.glb(커밋)
 src/stages/materials/{library,fetch,encode,run,interiors,interior-rooms}.ts  `materials`(M03-T01, ADR-0027; 실내 큐브맵 8방 × 6면 광선 추적 → interiors.ktx2 M03-T05, ADR-0034): content/materials/library.json → ambientCG zip(sha256 lock, `--update-lock`) → ImageMagick(리사이즈·ORM 패킹) → toktx KTX2 배열 3장 + manifest → 캐시 data/derived/materials/<hash> → `--build-id` 설치(shared/materials)
 src/stages/validate-materials.ts  manifest 스키마(schemas/materials.schema.json)·파일 크기·KTX2 헤더·그룹 일관성(없으면 건너뜀)

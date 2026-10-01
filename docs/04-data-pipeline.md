@@ -68,6 +68,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 | 소품 절차 배치 | 규칙 기반(시드=hash(cellId,'props')): 전신주(폭원 < 15 m 생활도로에만 30–40 m 간격, 간선도로·무전주화 지구 `data/rules/no-poles.geojson` 제외), 가로등, 자판기(상업·주거 건물 전면, 밀도 파라미터), 자전거 거치대(역 반경 300 m), 버스정류장(OSM), 우체통(OSM `amenity=post_box`), 표지판 |
 | ↳ 소품 구현(M05-T03, ADR-0051) | `stages/derive/props/{context,signals,poles,points,vending,linear,wires,index}.ts` + `build/props-cell.ts` → `props.inst` + 소품 콜라이더(`collision.bin` 프리미티브) + 전선(`decals.mesh` `power_wire`). 우선순위 = 신호(교차로 건너편 왼쪽) → 전신주·전선(선 id 시드 정거장) → OSM 점 → 자판기(가상 브랜드) → 가드 파이프(간선) → 맨홀, 셀 예산 5k(`content/props/catalog.json`). ⚠️ PLATEAU frn·무전주화 지구 미사용 |
 | 나무 | PLATEAU veg 위치·높이 우선, OSM 보완. 수종 매핑: 가로수 기본 규칙(간선=은행나무/느티나무 가중, 공원=혼합) → `species` |
+| ↳ 나무 구현(M05-T04, ADR-0052) | `stages/derive/{vegetation,trees/*}.ts`: OSM 녹지 면 → `_SURF` 잔디, OSM 나무 점·열 → 규칙 가로수(간선 보도) → 녹지 격자 채우기(숲 6.5 m), 수종 = 태그·도로 이름·해시 가중, 줄기 원기둥 콜라이더, 셀 4k → `trees.inst`. 수종 에셋 = `pnpm pipeline trees`(ez-tree + 자체 잎 아틀라스 + CPU 임포스터 → `apps/game/src/assets/trees/`). ⚠️ PLATEAU veg 미사용 |
 | 파사드 파라미터 | 건물별: 층수(`storeys` 또는 `measuredHeight/3.2`), 용도→파사드 클래스(office_curtain, office_punched, retail_podium, residential_mansion, house_wood, house_mortar, station, temple…), PLATEAU 텍스처 평균색→틴트, 1층 상점 여부(용도·도로 인접) |
 | 레인 그래프 | OSM 도로 중심선 + 차선 수 → 차선 중심 폴리라인, 교차로 연결(좌회전/우회전 곡선), 제한속도, 신호 그룹 참조 |
 | 보행 그래프 + 내비메시 | 보도·횡단보도·광장 폴리곤 + 계단/육교(OSM `highway=steps/footway bridge=yes`) → Recast 타일(64 m, 셀당 4×4), 에이전트 반경 0.3 m |

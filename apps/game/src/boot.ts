@@ -279,7 +279,8 @@ function addGoldenWatch(scheduler: Scheduler, world: WorldView, golden: GoldenVi
     root,
     streaming: () => world.streaming?.stats(),
     render: () => world.render.stats(),
-    extra: () => world.materialsSettled,
+    // 나무 에셋(M05-T04)도 첫 표시 뒤 적재 — 붙기 전에 찍으면 나무가 빠진다(오모테산도 골든뷰).
+    extra: () => world.materialsSettled && world.treesSettled,
   });
   scheduler.add({ systems: () => [watch.system] });
   Object.assign(globalThis, { __SANPO_GOLDEN__: { view: golden, render: () => world.render.stats() } });
