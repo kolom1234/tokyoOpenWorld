@@ -2,18 +2,26 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T02 완료(8bb5c6a, ⚠️ 위치) → M05-T03 Street props (self-made) & placement rules
-- Done in this session: M05-T02 노면 표시(8bb5c6a, ADR-0050).
+## Current Task: M05-T03 완료(037028e…c2c0cc0) → M05-T04 Trees & vegetation
+- Done in this session: M05-T03 거리 소품(037028e·7a6252b·e6a76e9·0ce9949·d4e82c5, ADR-0051), M05-T02 노면 표시(8bb5c6a, ADR-0050).
 - Earlier this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
-- 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷).
+- 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷),
+  `walkbot.mjs`(드래그 전 `exitPointerLock` — 잠금 중 복귀 이동이 회전을 상쇄하던 버그 수정), `lookat.mjs`(절대 시점 스크린샷), `stuckprobe/wedge.mjs`(끼임 재현), `bootlog.mjs`(부팅 단계 시각).
   in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용.
-- 배포 상태(2026-10-01): staging = **b6317ad**(결정 0–3 + T01) + dev 버킷 current **`20260930-6a41591-83074405`**(MVP L0 294 + HLOD + 머티리얼, roads.mesh 포함, 478파일 292.4 MB, Worker HEAD 검증). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
+- 배포 상태(2026-10-01): staging = **d4e82c5**(T01–T03) + dev 버킷 current **`20260930-e6a76e9-9c667fa9`**(MVP L0 294 + HLOD + 머티리얼, 데칼·소품 포함, 478파일 300.6 MB, Worker HEAD 검증). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
+  로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 빌드 id 문자열 정렬이 아님(`ls | tail` 금지).
 - In progress: 없음.
-- Next step (정확히 한 걸음): `### M05-T03` → 04 §4.3(소품)·03 §4–5 → 소품 카탈로그(`content/props/catalog.json`, 자체 절차 모델) + `derive/props/*`(OSM 점 + 규칙 배치) + props.inst 인코더/디코더 + render 인스턴스.
+- Next step (정확히 한 걸음): `### M05-T04` → 07 §4(M_FOLIAGE·M_IMPOSTOR)·§8 → `pnpm add` ez-tree 1.1.0(tools/pipeline, MIT — Node에선 텍스처 모듈이 document를 써서 스텁 필요) → 수종 5 + 관목 생성·임포스터·배치(OSM 나무 1,688점·tree_row·공원 면).
 - OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
 - Blockers: 없음
 
 ## Recently Completed
+- M05-T03 Street props — `content/props/catalog.json` + `derive/props/*`: 신호(교차로 건너편 왼쪽·보행 양끝), 전신주(생활도로 30–40 m, 선 id 시드 정거장)·전선 5가닥(`decals.mesh` `power_wire`),
+  OSM 점(가로등·우체통·자판기·거치대·벤치·전화·휴지통·버스·볼라드·止まれ 표지), 자판기(**가상 브랜드**, 길가 벽에 붙임·모서리 1.5 m), 가드 파이프(간선)·맨홀 → `props.inst` + JCOL 프리미티브.
+  render: 코드 절차 모델 15종 × LOD 3, **LOD당 풀 1개**(합친 기하 + 인스턴스 종류 — three가 InstancedMesh마다 노드 빌드 ≈ 140 ms), 64 m 블록 거리 LOD. physics: 프리미티브 64 m 블록 합성 셰이프.
+  **수락(MVP `20260930-e6a76e9-9c667fa9`)**: 셀당 소품 최대 **594 ≤ 5k**(총 40,120, 절단 0), 소품 드로우콜 **≤ 3**(≤ 종류 × 3 = 45). 걷기 봇 5분 × 2: **낙하 0·끼임 0**.
+  예산: L0 합 184.6 MB(T01 176.4), validate 오류 0·road gaps 50/50 < 2 cm 유지. **첫 로드(staging) 19.5–20.9 MB·첫 표시 12.1–12.7 s** ⚠️(T01 8.7 s, 선컴파일 5.3 → 6.5 s).
+  골든뷰 docs/screenshots/M05/T03. ⚠️ PLATEAU frn·무전주화 지구 미사용(MVP 원천 없음). ADR-0051 (2026-10-01)
 - M05-T02 Road markings (Japan) — OSM 간토 고정판(osmium, `normalize --layer osm`) → 일본식 횡단보도(0.45 m 막대, 신호 6 m), 차선(좌측통행·PLATEAU 차도 폭 행진·중앙 황색 ≥ 4차로·점선 5/5),
   정지선(신호 횡단 상류·stop 점), 「止まれ」 자체 획 폰트 → `decals.mesh` + render `road_marking`(알파 테스트 마모). 화면 상시 ODbL 표기(credits.ts), ATTRIBUTION, world-mini 한도 6 MB.
   연석·치마 연속 조각 정점 공유(roads.mesh −30 %). 스폰 3×3: 데칼 1.1–5.6k 삼각형·21–47 KB/셀. e2e 10/10.
@@ -77,11 +85,13 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 
 ## Known Issues
 - [physics] 육교·계단·에스컬레이터 **데이터 없음** — 연석·보도는 M05-T01(보도 윗면 TERRAIN triMesh). 육교·계단 = M05-T08, 역 에스컬레이터 = M07. 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
+- [props] 전선은 전주 사이 직선(5가닥, 110–170 m에서 사라짐), 가로등 규칙 배치 없음(OSM 희소), 차량 신호 방향당 1개, 소품 야간 발광 없음(M09-T03), PLATEAU frn·무전주화 지구 미사용(ADR-0051).
+  three `stats.triangles`가 합친 풀의 퇴화 삼각형까지 센다(+0.5M). 첫 표시 12.1–12.7 s ⚠️ — 선컴파일 병렬화·소품 풀 지연 컴파일 검토(T07/T08).
 - [roads] 옹벽(DEM 급락) 옆 보도는 벽 기하 없이 1.5 m 띠 뒤 급경사 흙면, 횡단보도 앞 연석 낮춤 없음, 보도 윗면 가장자리 정점 4 m 간격 → 치마 사이 ≤ 1 cm 선(ADR-0049).
 - [markings] OSM 횡단 선 위치 오차(스크램블 대각선 ≈ 2 m), 회전 화살표·버스 정류장·자전거 표시 없음, 차선은 OSM lanes 태그 의존(ADR-0050). ⚠ ODbL 파생 DB(osm-derived.gpkg) 공개는 M11-T05.
 - [streaming] 순간이동을 이어 하면 이전 목적지 작업이 큐(동시 8·대기 16)에 남아 스로틀에서 새 발밑 L0가 늦게 온다(Fast 3G 3번째 순간이동 뒤 4분+ 공중 고정 — 낙하 없음). 발밑 L0 우선·이전 목적지 취소는 M08 transition(`whenReady`)과 함께(ADR-0046).
 - [avatar] 무료판 체형 Superhero만(근육질) — 도심 보행자로 과장됨. 유료 Source(Regular·Teen, CC0) 도입 여부는 사용자 결정(ADR-0048). 발 IK 없음(재생 속도 자르기로 약간의 발 미끄럼).
-- [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장만(소품·나무 줄기 = M05). CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱이 길다(기록만).
+- [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장 + 보도 triMesh + 소품 프리미티브(M05-T03, 64 m 블록 합성). 나무 줄기 = M05-T04. CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱이 길다(기록만).
 - [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).
 - [render] 동적 해상도는 60 Hz 수직 동기에서 여유를 못 재 "시도-후퇴"로 0.05씩 오르내린다(15 W 1080p High: 120 s에 19회, 0.5–0.85). 정지 떨림에는 영향 없음(ADR-0038 측정) — 선명도 변화가 거슬리면 시도 간격·히스테리시스 조정.
 - [perf] **이 PC GPU 전력 상한이 15 W ↔ 30 W로 바뀐다**(LG gram 17 17ZD90R, RTX 3050 4GB Laptop, 기본 30 W·최대 45 W, 전원 모드 최고 성능) — 15 W에선 2배 느림.
@@ -114,7 +124,7 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 - [worker] miniflare 통합 테스트는 `wrangler dev`를 띄워 ≈ 15–25 s(CI 포함). 느리면 `SANPO_SKIP_MINIFLARE=1`. 이 PC에 9/26–27부터 떠 있는 workerd 8개는 이번 세션 것이 아님(건드리지 않음).
 - [publish] R2 S3 키가 없어 `api` 업로더(REST) 사용 중 — HEAD 검증은 Worker 경유. S3 키를 발급하면(대시보드 R2 → API 토큰, 두 버킷 Object Read & Write) 자동으로 `s3` 업로더.
 - [ci] Biome `noExcessiveLinesPerFunction`이 일부 함수(예: 객체 반환 팩토리)를 놓침 → `scripts/check-size.ts`가 정본(docs/15 §2).
-- [tile-format] `props.inst`·`trees.inst`·`lights.bin`·`audio.json` 인코더/디코더 미구현(레지스트리·모델 타입만) → 해당 태스크(M04~)에서 추가. 헤더 gzip(flags bit0)은 v1 미지원(ADR-0017).
+- [tile-format] `trees.inst`·`lights.bin`·`audio.json` 인코더/디코더 미구현(props.inst = M05-T03)(레지스트리·모델 타입만) → 해당 태스크(M04~)에서 추가. 헤더 gzip(flags bit0)은 v1 미지원(ADR-0017).
 - [pipeline] validate 미구현 항목: 랜드마크 20곳 정확도 샘플, report.html(현재 report.json·report.md), world.json·셀 간 교차 검사 일부. 증분 캐시(`data/build/.cache`)도 미구현 → 매 빌드 전체 재생성(3×3 ≈ 5 s).
 - [pipeline] terrain `_SURF`는 전부 7(plaza) 임시값 → M03 도로·녹지 분류. buildings.mesh는 면별 정점(weld 없음, 정점/삼각형 ≈ 1.9) → 크기 문제 시 weld.
 - [pipeline] world.json의 `files.materials/rail/map`은 아직 없는 파일을 가리킨다(스키마 필수 필드) → 각 태스크(M03/M07/M08)에서 생성.
