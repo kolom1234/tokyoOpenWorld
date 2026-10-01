@@ -60,6 +60,7 @@ const ID = {
   granite: 11,
   gravel: 12,
   fins: 13,
+  green: 14,
 };
 
 /** 화면 밝기(발광 배율) — 낮에도 보이는 LED 전광판. */
@@ -162,9 +163,10 @@ export function createLandmarkMaterial(): Material {
   const isGranite = is(id, ID.granite);
   albedo = select(isGranite, mix(albedo.mul(darkCol), vec3(0.04, 0.05, 0.06), win), albedo);
   rough = select(isGranite, mix(rough, float(0.1), win), rough);
-  // 자갈·나뭇결·청동 녹: 저주파 + 고주파 노이즈.
+  // 자갈·녹지·나뭇결·청동 녹: 저주파 + 고주파 노이즈.
   const speck = n1.x.mul(0.5).add(n9.y.mul(0.5)).sub(0.5);
   albedo = albedo.mul(select(is(id, ID.gravel), float(1).add(speck.mul(0.5)), float(1)));
+  albedo = albedo.mul(select(is(id, ID.green), float(1).add(speck.mul(0.9)), float(1)));
   const grain = lattice(vec2(p.x.mul(9), p.y.mul(0.4))).z.sub(0.5);
   albedo = albedo.mul(select(is(id, ID.wood), float(1).add(grain.mul(0.35)), float(1)));
   const patina = smoothstep(0.15, 0.45, n9.w.mul(n1.y));

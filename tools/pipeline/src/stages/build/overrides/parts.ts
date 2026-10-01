@@ -79,6 +79,9 @@ export function emitPart(c: PartCtx, p: PartSpec): void {
       case 'railing':
         railing(c, s, p.path, p.closed ?? false, p.h ?? 1.1, p.y ?? 0, m, p.glass ?? false);
         break;
+      case 'curb':
+        curb(c, s, p.path, p.h, p.w, p.y ?? 0, m);
+        break;
       case 'ribbon':
         if (s === c.out) ribbon(c, p.path, p.width, m);
         break;
@@ -147,6 +150,16 @@ function railing(
     face(s, q, LMAT.clear_glass);
     face(s, [q[3], q[2], q[1], q[0]] as Vec3[], LMAT.clear_glass);
   }
+}
+
+/** 닫힌 테두리(화단 경계석): 1 m 간격으로 지면을 따라가는 직사각 단면 스윕(바닥 0.2 m 묻힘). */
+function curb(c: PartCtx, s: LStream, path: number[], h: number, w: number, y: number, m: number): void {
+  let last = 0;
+  const pts = resample(c, path, true, 1).map(([x, z]): Vec3 => {
+    last = groundOr(c, x, z, last);
+    return [x, last + y + (h - 0.2) / 2, z];
+  });
+  sweep(s, pts, w, h + 0.2, m);
 }
 
 /** 지면 띠(참도 자갈): 2 m 간격 단면, 양끝도 지면에 붙여(경사 따라) 4 cm 띄운다. */

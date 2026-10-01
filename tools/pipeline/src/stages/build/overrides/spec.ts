@@ -78,6 +78,15 @@ export interface ExtrudePart extends PartBase {
   h: number;
 }
 
+export interface CurbPart extends PartBase {
+  type: 'curb';
+  /** 닫힌 링(화단 테두리 등) WF xz — 중심선. */
+  path: number[];
+  /** 높이·두께(m). */
+  h: number;
+  w: number;
+}
+
 export interface RailingPart extends PartBase {
   type: 'railing';
   path: number[];
@@ -129,7 +138,16 @@ export interface DogPart extends PartBase {
   height: number;
 }
 
-export type PartSpec = BoxPart | CylPart | ExtrudePart | RailingPart | RibbonPart | ScreenPart | ToriiPart | DogPart;
+export type PartSpec =
+  | BoxPart
+  | CylPart
+  | ExtrudePart
+  | CurbPart
+  | RailingPart
+  | RibbonPart
+  | ScreenPart
+  | ToriiPart
+  | DogPart;
 
 export interface LandmarkSpec {
   id: string;

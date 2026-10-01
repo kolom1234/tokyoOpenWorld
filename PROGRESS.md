@@ -2,7 +2,7 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T05 Landmark overrides — 1/7 시부야역 일대 완료, 다음 2/7 하치코 광장
+## Current Task: M05-T05 Landmark overrides — 2/7 완료(시부야역 일대·하치코 광장), 다음 3/7 스크램블 교차로 대형 비전
 - Done in this session: M05-T04 나무·식생(7095297·fc5c680·3678f57·57d57f5·a82d5fd·ebc7974, ADR-0052), M05-T03 거리 소품(037028e·7a6252b·e6a76e9·0ce9949·d4e82c5, ADR-0051), M05-T02 노면 표시(8bb5c6a, ADR-0050).
 - Earlier this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
 - 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷),
@@ -13,11 +13,12 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
   로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 빌드 id 문자열 정렬이 아님(`ls | tail` 금지).
 - In progress: M05-T05 랜드마크(ADR-0053, 목록 순서 하나씩 커밋). 완료 1) 시부야역 일대 = 틀(`content/overrides/<id>/meta.json` 셸 + 부품 → `tools/pipeline/src/stages/build/overrides/*`
   → overrides.mesh `_LMAT`, render `materials/landmark.ts`) + 스크램블 스퀘어(bldg_7b006717 핀 커튼월·크라운) + 마크시티 동단 연결부(bldg_84560e8a 유리·석재). 오차 0 m(셸 = PLATEAU 면).
-  남음: 2) 하치코 광장(OSM 동상 노드 (−15.3, 57.4)) 3) 스크램블 교차로 대형 비전(가상 영상 화면 부품 `screen`) 4) 요요기 국립경기장 5) 메이지 신궁 도리이(大鳥居 OSM 면 x47–50 z−1619…−1602 height 12, 北参道 도리이 점 (126.1, −2145.1))·참도(南参道·正参道 width 10·北参道 width 8 — `ribbon`)
+  2) 하치코 광장 = OSM 동상 노드(−15.3, 57.4) 화강암 3단 받침 + 앉은 청동 아키타견(동쪽 역 방향) + OSM 잔디 면 3개 화단 경계석(0.45 m)·녹지 덮개(부품 `curb`·`extrude`, 충돌 포함).
+  남음: 3) 스크램블 교차로 대형 비전(가상 영상 화면 부품 `screen`) 4) 요요기 국립경기장 5) 메이지 신궁 도리이(大鳥居 OSM 면 x47–50 z−1619…−1602 height 12, 北参道 도리이 점 (126.1, −2145.1))·참도(南参道·正参道 width 10·北参道 width 8 — `ribbon`)
   6) 도쿄도청(후보 bldg_94caaf2f L0_-4_-14 / 243 m 건물 L0_-5_-11 확인) 7) 신주쿠역 서쪽 출구 광장(OSM 면 x −340…−110 z −3680…−3380). 끝나면 MVP 재빌드 → dev publish → staging → 골든뷰·걷기 봇·첫 로드.
   조사 스크립트 = `tools/pipeline/.tmp/`(gitignore): tmp-bq(셀 건물 bbox 검색)·tmp-shape(높이 띠 단면)·tmp-ov(셀 오버라이드 생성)·tmp-lm(랜드마크 OSM 추출 → WF)·tmp-near(반경 OSM).
   로컬 확인: `build --cells … --build-id t05-local` 후 `shared/` 복사(scratchpad cpshared.mjs) → `?world=local`, scratchpad `ovcheck.mjs`(시점 스크린샷).
-- Next step (정확히 한 걸음): M05-T05 2) 하치코 광장 — `content/overrides/hachiko-square/meta.json`(dog 부품 + 화강암 받침, 광장 화단·벤치 압출) → tmp-ov 확인 → 로컬 3×3 빌드 시각 확인 → check·test → 커밋.
+- Next step (정확히 한 걸음): M05-T05 3) 스크램블 교차로 대형 비전 — 교차로(≈ −40…40, 0…90) 둘레 건물 벽(QFRONT 등 PLATEAU gmlId를 tmp-bq로)에 `screen` 부품(가상 영상) → tmp-ov → 로컬 3×3 확인 → 커밋.
 - OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
 - Blockers: 없음
 
