@@ -1,24 +1,30 @@
 # PROGRESS
-Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
+Updated: 2026-10-02 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
-## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T07 완료(ddcda76·26b6603) → M05-T08 Bridges, footbridges & stairs 진행 중
-- Done in this session: M05-T07 옥상·파사드 디테일(ADR-0055), M05-T06 가상 간판(ADR-0054), M05-T05 랜드마크(ADR-0053), M05-T04 나무(ADR-0052), M05-T03 소품(ADR-0051), M05-T02 노면 표시(ADR-0050).
+## Current Milestone: M05 — Street Detail **완료(T01–T08)** → 다음 M06
+## Current Task: M05-T08 완료(b779645·2993754) — M05 큐 끝. 다음 = M06 시작 전 사용자 결정(아래 Decisions Pending)
+- Done in this session: M05-T08 교량·보도육교·계단(ADR-0056), T07 옥상·파사드(ADR-0055), T06 가상 간판(ADR-0054), T05 랜드마크(ADR-0053), T04 나무(ADR-0052), T03 소품(ADR-0051), T02 노면 표시(ADR-0050).
 - Earlier this session: 결정 0–3, M05-T01(ADR-0049).
-- 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed), `walkbot.mjs`(**URL에 `&debug=1` 필수** — 없으면 walk 대기 시간 초과),
-  `lookat.mjs`·`ovcheck.mjs`(시점 스크린샷 — ovcheck는 카메라 이동 뒤 settled 대기, 부분 빌드도 됨), `bootprobe.mjs`(부팅 진행), `treecost.mjs`, `cpshared.mjs`(로컬 부분 빌드에 shared/ 복사).
+- 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, `open(url, { init })` = addInitScript), `walkbot.mjs`(**URL에 `&debug=1` 필수**, `START=x,z`로 시작 위치),
+  `stairbot.mjs`(계단 왕복: 순간이동 → W + 포인터 조향, **rAF를 감싸 프레임마다 최종 상태 기록** — 별도 rAF 기록은 게임 루프와 순서가 섞여 프레임 2개가 한 표본에 들어간다),
+  `lookat.mjs`·`ovcheck.mjs`(시점 스크린샷 — 카메라 이동 뒤 settled 대기, 부분 빌드도 됨), `viewshot.mjs`(URL 첫 표시 스크린샷), `bootprobe.mjs`, `cpshared.mjs`(로컬 부분 빌드에 shared/ 복사), `t08build.sh`(T08 시험 영역 빌드).
   in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용. 로컬 부분 빌드는 스폰 3×3(L0_-1..1_-1..1)도 넣어야 첫 표시가 끝난다.
-- 배포 상태(2026-10-02): staging = **26b6603**(T01–T07) + dev 버킷 current **`20261001-ddcda76-03883ce7`**(478파일 352.7 MB). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
-  로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 다른 빌드를 쓰려면 node `fs.utimesSync`로 그 폴더를 최신으로. 빌드 id = `node tools/pipeline/.tmp/tmp-bid.ts`.
-- In progress: M05-T08(작업 트리, 커밋 전): PLATEAU brid 리더(citygml-sax-state THEME_KIND brid·INSTALLATION·GEOM_RE, BridgeRecord layer 'bridges') + normalize `--plateau-layer brid`
-  (data/raw/<plateau>/extracted/udx/brid 압축 해제 완료, normalized/bridges 86동·41셀). 시부야역 일대 PLATEAU 교량 = 상판(≈ 28 m)뿐, 계단은 OSM `highway=steps`(예: 渋谷駅西口歩道橋 w17620008 (4.1,271)→(−28.8,285.1)).
-  남은 일: build — 교량 면 렌더(overrides 스트림, LMAT 종류별, plainUv)·충돌(지면 스트림 = 정밀 단순화) / `derive/stairs.ts`(OSM steps: 끝점 높이 = 교량 상판 또는 지형, 높이차 ≥ 0.5 m만 → 챌면 ≤ 0.20 m 계단 메시 + JCOL 램프 프록시 bit0 + 옆 난간 벽) /
-  계단 봇(`stairbot.mjs` 왕복, 1/6 s 수평 ≥ 0.9 m/s·낙하 0·카메라 프레임당 < 3 cm) / ADR-0056 / MVP 재빌드·publish·staging·골든·걷기 봇.
-- Next step (정확히 한 걸음): `tools/pipeline/src/stages/build/overrides/bridges.ts`(교량 면 → 스트림·정밀 충돌) + assemble에서 셀 bridges 레이어 읽기.
+- 배포 상태(2026-10-02): staging = **2993754**(T01–T08) + dev 버킷 current **`20261001-b779645-03883ce7`**(478파일 354.2 MB). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
+  로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 다른 빌드를 쓰려면 node `fs.utimesSync`로 그 폴더를 최신으로. 빌드 id = `cd tools/pipeline && node .tmp/tmp-bid.ts`(저장소 루트에서 실행하면 경로 오류).
+  골든뷰 좌표(`tests/golden/views.json`)는 게임 번들 청크 → 바꾸면 staging 재배포 뒤 캡처.
+- PLATEAU brid 원천: `data/raw/plateau-{shibuya,shinjuku}/extracted/udx/brid/*_op.gml`(zip에서 수동 해제, fetch 미구현) → `normalize --layer plateau --plateau-layer brid` → normalized/bridges 86동·41셀.
+- Next step (정확히 한 걸음): 사용자 결정(Quaternius 유료 Source 여부) 확인 뒤 `docs/roadmap/M06.md`의 첫 태스크 블록 읽기.
 - OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
-- Blockers: 없음
+- Blockers: 없음(M06 체형 결정은 사용자 몫)
 
 ## Recently Completed
+- M05-T08 Bridges, footbridges & stairs — PLATEAU brid 리더(`BridgeRecord`, 상판 윗면 = OuterFloorSurface) + `normalize --plateau-layer brid`, 교량 면 = overrides 스트림(UV 0) + 정밀 지면 충돌,
+  계단 = PLATEAU 상판에 닿는 OSM `highway=steps`(높이 차 0.5–10 m·경사 ≤ 45°, 상판 가장자리에서 자름, 착지판) → 챌면 ≤ 0.20 m 메시 + JCOL 램프 프록시(bit0) + 옆 벽 박스,
+  계단 통로 안 PLATEAU 블록 면 버림·위 끝 난간 자르기(`overrides/carve.ts`). physics: 램프 프록시 위 수평 속력 유지(접촉 투영만이면 오르막 ≈ v·cos²θ), traversal: 공중 프레임 카메라 오프셋 유지·착지 속도 ≤ 1 m/s·헤드밥 0.3 s 유지.
+  **수락(계단 봇, 로컬 실제 GPU, 왕복 2회)**: 시부야역 동쪽 보도육교 수평 최소 1.17 m/s·카메라 1.54 cm/프레임(60 fps)·낙하 0, 新都心歩道橋 직선 1.15·1.52, 곡선 1.21·2.53 — 낙하 0(수정 전 0.86 m/s·11.8 cm).
+  MVP `20261001-b779645-03883ce7`: 교량 86·계단 65(챌면 1,620)·교량 면 3,105 걷어냄/자름, overrides 482만 삼각형, L0 238.2 MB(+0.6 %), validate 0. **첫 로드 21.4 MB·첫 표시 13.8 s**.
+  걷기 봇 5분 × 3(스폰 seed 3·11 + 시부야 동쪽 보도육교 반경 45 m seed 5): **낙하 0·끼임 0**(233·405·327 m, 연석 5·14·23회).
+  골든뷰 docs/screenshots/M05/T08(`footbridge-shibuya`·`footbridge-shinjuku` + 코어 4). ⚠️ `footway bridge=yes` 단독 육교 미구현(MVP는 PLATEAU), freecam 상판 슬래브 안 검은 화면(별도 작업). ADR-0056 (2026-10-02)
 - M05-T07 Rooftops & facade details — 옥상 설비(塔屋·물탱크·실외기·난간·안테나)·소형 건물 외부 비상계단 = overrides.mesh 절차 기하(대체 안 한 모든 건물, UV 0, LOD2 옥상 부속물 있으면 생략),
   맨션 발코니 = 파사드 시차 셰이더(난간판·슬래브·칸막이 + 깊이 1.2 m), 평지붕 방수 마감 색(L0 + HLOD). MVP 실외기 130,876·塔屋 5,681·비상계단 5,234, L0 236.7 MB(+27 %),
   **첫 로드 20.9 MB·첫 표시 12.9–14.1 s**. 수락: 골든뷰 `aerial-shinjuku-400m` 전·후(docs/screenshots/M05/T07) — HLOD 지붕 색 변화로 원경 평지붕 인상 감소(리뷰 체크리스트). ADR-0055 (2026-10-02)
@@ -59,54 +65,13 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
   render `loadAvatar`(속력 매듭 0·1.35·3.0·5.0 블렌드, 위상 공유, 재생 속도 [0.75, 1.6]), 첫 표시 뒤 적재(초기 다운로드 밖), `avatarSettled` → `data-settled`. 실제 GPU: 걷기·달리기 60 FPS.
   M06 군중: CC0·같은 골격·43클립 OK, 단순화 1k 삼각형 오차 1.4 cm → LOD 가능. ⚠️ 무료판 체형 = Superhero 남·여뿐 → Regular·Teen은 유료 Source($20, CC0) — **사용자 결정 필요(M06 전)**. ADR-0048 (2026-10-01)
 - M05 결정 1 시작 모드 walk — 로딩 중 freecam → 첫 표시에 world.json 스폰(yawDeg) 눈높이에서 walk 요청(착지점 = walk 링 탐색). `?mode=freecam`·골든뷰 = freecam 유지(render·flicker e2e). ADR-0047 (2026-09-30)
-- M05 결정 0·3 e2e — 원인: 첫 표시 ≈ 2 s 뒤 detect-gpu가 판정용 WebGL 컨텍스트 생성 → SwiftShader GPU 프로세스와 동기 IPC로 **메인 스레드 16 s 정지**(walk C 무시·render 스크린샷 시간 초과).
-  render: 소프트웨어 래스터 = detect-gpu 생략 → Low. 오버레이 `data-settled`에 머티리얼·첫 품질 티어(·아바타), `tests/e2e/game.ts`(프레임 수·키 탭 2프레임·게임 루프 직후 캔버스 캡처). 로컬 워커 2(CI 동일).
-  로컬 CI=1 재시도 0: 10/10, walk·render ×3 9/9.
-- M04-T06 Anchor rebase & ground-missing guard — physics `setFocus`(배선 250 ms) → 4096 m 초과면 `rebase` 명령: 워커가 적재된 모든 바디·캐릭터·에스컬레이터 구간 −Δ, 앵커 객체 제자리 갱신, OptimizeBroadPhase.
-  traversal `ground-guard.ts`: 발밑 L0 미적재 = **hold**(캐릭터 입력 — 중력·이동 없음), 제동 거리 + 0.6 m 앞 셀 미적재 = **stop**, `hud.groundLoading` → 게임 `wiring/ground-loading.ts`(0.2 s 넘으면 "지면 불러오는 중…").
-  잠재 버그 2개 수정: 작업 없는 셀이 영영 미적재, streaming 본문 도중 취소 시 `cancel()` 미처리 거부("signal is aborted without reason").
-  **수락**(실제 GPU, MVP, CDP Fast 3G 1.44 Mbps·562 ms): 걷기 31,303 프레임 **낙하 0**, 대기 4회, 1.4–1.6 km 순간이동 = 공중 고정 → 17.6–18.6 s 착지, 북쪽 끝 z −4200 = **앵커 재설정 1회**(0,0,−4096) →
-  Fast 3G 단독 ≈ 32 s 착지(스로틀 없이 2.5 s). ⚠️ 순간이동 연속 시 큐 적체로 발밑 L0 지연(4분+, 낙하 없음) → M08 transition. 테스트 +1파일(rebase-hold) +1건(walk 보호). ADR-0046 (2026-09-30)
-- M04-T05 Camera collision & avatar — physics `sphereCast`(워커 CastShape 구·양면), traversal 3인칭: 카메라 시선 프레임당 ≤ 8° + **부채꼴 5개 sphereCast**(가운데·yaw ±8°·pitch ±8°, r 0.2 m)로
-  다음 프레임 붐 한계(1프레임 비동기 보상, 당기기 즉시·풀기 4 m/s), 붐 0.5–1.2 m 아바타 디더 페이드. render `setAvatar`: **자체 절차 마네킹**(캡슐·구, 속도 블렌드 대기·걷기·달리기, 선컴파일) — core `AvatarState`.
-  **수락**(실제 GPU, MVP, 봇이 찾은 막다른 골목 8곳 × 25 s, 홱 돌리기·걷기·줌, 매 프레임 피벗 → 카메라 구 0.1 m 캐스트): **12,600 프레임·검사 10,083회 관통 0**
-  (첫 구현 = 목표 방향 1개 질의는 관통 발생 → 부채꼴·회전 상한으로 수정). ⚠️ Quaternius 모델은 외부 다운로드 → 사용자 승인 뒤 교체. 테스트 +2파일(render avatar, sphereCast). ADR-0045 (2026-09-30)
-- M04-T04 Stairs, curbs, escalators, ground material(엔진) — 워커 JCOL 프리미티브(박스·캡슐·원기둥) 정적 바디, userData = 재질 | flags << 8(`groundMaterial` 하위 8비트),
-  **에스컬레이터 = JCOL SENSOR 박스 flags bit2**(05 §6 확장, 로컬 +Z 진행) OBB 목록 → 발이 안이면 진행 방향 0.5 m/s + 걷기 수평 ≤ 0.6, `Pose.escalator`(헤드밥 끔; 수직 속도 누적 버그는 테스트로 잡아 수정),
-  카메라 발 높이 = 임계 감쇠 스프링(ω 12), `createInlineTransport()` 공개. **수락(합성)**: 실제 Jolt + traversal — 연석 0.15 m·계단 0.18 m 카메라 프레임당 **최대 1.58 cm**(< 3 cm ✅),
-  계단 오르내림 1/6 s 창 ≥ 0.9 m/s·접지, 램프 프록시 프레임당 높이 < 1 cm, 에스컬레이터 0.45–0.55 m/s. ⚠️ 시부야 육교 왕복은 **데이터 없음**(PLATEAU brid·OSM steps 미수집, 연석 = M05-T01) → M05-T08 신설. ADR-0044 (2026-09-30)
-  + 워커 **빈 시간 적재**(메시지 사이 setTimeout 조각 — 부록 A의 잘게 나눈 작업이 SwiftShader e2e 60 s를 넘겨 physics·walk e2e가 깨졌던 것 수정, 4 spec 52 → 38 s) + 조각 예산 **3 ms**
-  (실제 GPU 봇 4분: 4 ms = 최대 8.3 ms·초과 1 → 3 ms = **최대 6.19 ms·초과 0**, 끼임·낙하 0, 걷기 1.349 m/s). ADR-0042 부록 B.
-- M04-T02 보강: MVP 보행 중 적재 틱(최대 20.4 ms·8 ms 초과 54회 — Node MVP 30셀 높이장 최대 9.0·2500 삼각형 최대 7.0 ms, 브라우저 렌더 경합 2–3배) →
-  워커가 작업을 더 잘게: 높이장 **4×4 타일**(65², 가장자리 공유), triMesh **≤ 600 삼각형 조각**(쓰는 정점만 압축, `meshSlice`). 실제 GPU 봇 4분: **최대 6.18 ms·초과 0회**(2×2·800은 8.65 ms·1회). 재빌드 불필요. ADR-0042 부록 A (2026-09-30)
-- M04-T03 Character & walk mode — physics `worker/character.ts`(CharacterVirtual r 0.25·키 1.70·경사 50°·계단 0.40·바닥 붙기 0.5·예측 0.1·양면, 가속 8/감속 10, ExtendedUpdate), 슬롯 공유(bodies Entry rigid|char),
-  API `spawnCharacter`·`setCharacterInput`(프레임 마지막 입력만), traversal `modes/walk.ts`(걸음 단계 X 1.35/1.8/3.0·Shift 5.0, FP/TP V, 하늘 레이 착지 `walk-placement.ts`, C 토글 = 카메라 포즈 전달·150 m 안이면 바디 복귀),
-  `camera/{first,third}-person-rig.ts`(시선 스무딩 30 ms·발 높이 추종·헤드밥 / 어깨 0.4·거리 3.5·휠), FSM 요구조건 요청 때 평가(physics getter), input 게임패드(`devices/gamepad.ts` 폴링·원형 데드존·`padButton{hold}`·`padAxis{perSecond}`·`padButtonAxis`).
-  **수락**(실제 GPU Chrome, MVP 재빌드, `?world=local`, 봇 10분 × 2회): 걷기 속도 중앙값 **1.348 / 1.349 m/s**(p10 1.331/1.308·p90 1.359), 낙하 **0 / 0**, 평균 59.7 / 59.8 fps.
-  끼임: 1회차 후보 4(건물 틈, 분류 없음) → 2회차 8방향 탈출 시도로 분류: 후보 7 = **모두 막다른 곳**(0.7–2.6 m 걸어 나옴), **물리 끼임 0**.
-  e2e `walk.spec.ts`(SwiftShader: 착지·눈높이·1.35 m/s·V·C 왕복). 테스트 +4파일. ADR-0043 (2026-09-30)
-- M04-T02 Cell colliders — pipeline `stages/build/collision.ts`(건물 면 1 mm 용접 → meshopt simplify 절대 0.3 m → 64 m 블록 순 **≤ 2500 삼각형 청크** JCOL triMesh, TKC `colliderTris`),
-  워커 `cell-colliders.ts`(셀 = [높이장, 청크…] 작업, 틱 예산 4 ms·예상 비용 판단·워밍업, 정적 바디 userData = 재질), `heightfield.ts`(힙 직접 채움), `queries.ts`(레이캐스트 **양면** — PLATEAU 감김 불일치),
-  API `addCell/removeCell/hasCell/raycast`·stats 적재 지표, 게임 `wiring/streaming-physics.ts`(버스 `cell/ready` — onReady는 렌더 단독, 물리 반경 256 m 등, 동시 2). 픽스처 재생성.
-  **수락**: 실제 GPU Chrome(world-mini) 적재 틱 최대 **5.8 ms**, 8 ms 초과 0. 지면 레이 오차 ≤ 0.4 mm(Node·브라우저), 벽 = JCOL CPU 교차 ±5 cm. 테스트 +3·e2e +1. ADR-0042 (2026-09-30)
-- M04-T01 Physics worker bootstrap — `@sanpo/physics`: jolt-physics 1.1.0 **single-thread**(multithread는 Vite 중첩 pthread 워커 번들 실패·초기화 3 s → 08 §1 이탈),
-  메인 구동 고정 스텝(phase 30 → step(targetS, 명령) → 워커 120 Hz·틱당 ≤ 4), SAB 더블 버퍼 + seqlock / 폴백 postMessage, 보간(지금 − 25 ms, nlerp, 10 m 순간이동 스냅),
-  레이어·충돌 행렬(08 §3), 핸들 = 슬롯 | 세대, `debugSpawnBox`, 게임 `?probe=physics`(+`physicsIsolation=degraded`), vite `worker.format = 'es'`.
-  **수락**: Node 통합(SAB·폴백) 스냅샷 시각 보간 = 워커 값, 사이 = 선형, 바닥 정지 0.48 m. e2e(프로덕션 preview): shared·degraded 초기화 84–90 ms, 3 s 360스텝, 틱 0.03–0.07 ms. 테스트 +9건·e2e +2. ADR-0041 (2026-09-30)
-- M03 보강 ④ WebGL2 파사드 어두움 = **GTAO 위치 복원 오류**(AO 끄면 두 백엔드 동일): three `getViewPosition`이 역-Z(EXT_clip_control 0..1) 깊이를 −1..1로 변환 →
-  `patches/three@0.186.1.patch`로 역-Z 분기(서신주쿠 파사드 36.0 → 56.2, WebGPU 56.4). flaky e2e = 원점 재설정: `rebaseTest`가 1 s 시간만 머물러 저 FPS에서 재설정 없음 +
-  복귀 직후 재적재·페이드 중 캡처 → 재설정 횟수 대기, 오버레이 `data-settled`, 640×360·180 s. 4 병렬 × 8: 8/8 실패 → 8/8 통과. `?post=exp:`. ADR-0040 (2026-09-30)
-- M03 보강 ③ 자동 품질 감지 재검증(15 W, 새 프로필, 회전 120 s, scratchpad `tiercheck.mjs`): 1080p = detect-gpu high → **High 유지**(동적 해상도 0.5–0.85),
-  1440p = High → 18.5 s "0.5에서 21.1 ms" → **Medium 한 단계만**, 이후 유지. High→Low 연쇄 하강 없음(75629ce 워밍업·스트리밍 조용함 대기 + ② 성능 개선) (2026-09-30)
-- M03 보강 ② 렌더 고정 비용 — 그림자 07 §9 티어(Low 2×1024·150 m … Ultra 4×4096·800 m) + 캐스케이드 갱신 스케줄(움직일 때 c0 매 프레임 + 먼 것 하나, 정지 15프레임마다 하나),
-  저해상도 공중원근(`post/aerial.ts` ½×½ MRT S·T → 깊이 인지 업샘플, 윤곽·지평선 급경계는 정확 계산, 태양·달 원반만 렌더 스케일; `PostEffects.aerial`), 파사드 깊이 프리패스 쌍둥이,
-  HLOD 불투명/페이드(alphaHash) 변형 전환, GPU 타이머 패스별 분해. **15 W 실측**(rAF p50, 5뷰): 1080p Medium 정지 18.6–21.6 → 14.3–16.6 ms, 회전 19.1–22.2 → 15.4–17.0,
-  1440p High 정지 33.6–40.0 → 25.9–30.2, 회전 33.8–40.3 → 27.3–31.4. 테스트 +6건. ADR-0039 (2026-09-30)
 
 ## Known Issues
-- [physics] 육교·계단·에스컬레이터 **데이터 없음** — 연석·보도는 M05-T01(보도 윗면 TERRAIN triMesh). 육교·계단 = M05-T08, 역 에스컬레이터 = M07. 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
+- [physics] 역 에스컬레이터 **데이터 없음**(M07). 육교·계단 = M05-T08(ADR-0056, 램프 프록시 위 수평 속력 유지). 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
+- [bridges] 교량·계단은 L0 overrides에만(HLOD 없음). OSM `footway bridge=yes` 단독 육교·공원 비탈 계단(두 끝 지형) 메시 없음. 계단 블록을 걷어낸 자리에 PLATEAU 옆벽이 일부 남을 수 있음. freecam이 상판 슬래브 안이면 검은 면(블룸 켜면 화면 전체 — NaN 의심, 별도 작업 칩).
 - [trees] L1 HLOD 나무 카드·HLOD 지면 녹지 색 미구현 → L0 반경(384–768 m) 밖 공원은 회색 지면(요요기 상공 골든뷰). PLATEAU veg 원천 없음. 규칙 가로수는 PLATEAU LOD1 도로 구역(보도 분류 없음)에선 안 생김.
   빽빽한 숲 나무 GPU 3–6 ms(상세 LOD 잎·그림자) — 대안 ADR-0052. 잎은 알파 테스트 계단(TAAU 완화). `?trees=0` = 나무 끔(비용 비교·flicker e2e).
+- [props] 차량 신호(signalVehicle)가 같은 위치에 중복 인스턴스로 놓이는 경우가 있다(M05 세션 중 관찰, 미수정 — 교차로 접근 방향 중복 제거 필요).
 - [props] 전선은 전주 사이 직선(5가닥, 110–170 m에서 사라짐), 가로등 규칙 배치 없음(OSM 희소), 차량 신호 방향당 1개, 소품 야간 발광 없음(M09-T03), PLATEAU frn·무전주화 지구 미사용(ADR-0051).
   three `stats.triangles`가 합친 풀의 퇴화 삼각형까지 센다(+0.5M). 첫 표시 12.1–12.7 s ⚠️ — 선컴파일 병렬화·소품 풀 지연 컴파일 검토(T07/T08).
 - [roads] 옹벽(DEM 급락) 옆 보도는 벽 기하 없이 1.5 m 띠 뒤 급경사 흙면, 횡단보도 앞 연석 낮춤 없음, 보도 윗면 가장자리 정점 4 m 간격 → 치마 사이 ≤ 1 cm 선(ADR-0049).
@@ -126,7 +91,7 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 - [pipeline] PLATEAU 동일 평면 중복 면 z-파이팅 잔존(WebGL2 원점 재설정 e2e ≈ 70 px). 벽–벽 중복 제거는 필요 시 M05-T07.
 - [render] takram 패치 + three 패치(`getViewPosition` 역-Z, ADR-0040)는 three r186 전용 — three/takram 버전을 올리면 패치 재확인.
 - [pipeline] GSI DEM 2025판 표고는 JGD2024(2025 개정) 기준, PLATEAU는 JGD2011 → LOD3 차도 정점 vs dem_1m 차 중앙값 +0.05 m(IQR −0.03~+0.18, p95 +8.2 m = 고가도로). M01-T05는 도로 메시 없음 → M03 도로 빌드 때 도로면 우선 스냅 여부 결정.
-- [pipeline] `fetch` 미구현 → zip에서 필요한 것만 수동 해제(`data/raw/plateau-{shibuya,shinjuku,meguro}/extracted/`: MVP 24메시 udx/bldg·tran + codelists + schemas, 2026-09-29). 23구 zip은 풀지 않음(hlod-prep 스트림). 標高タイル은 hlod-prep이 받음. fetch 구현 시 lock sha256 검증.
+- [pipeline] `fetch` 미구현 → zip에서 필요한 것만 수동 해제(`data/raw/plateau-{shibuya,shinjuku,meguro}/extracted/`: MVP 24메시 udx/bldg·tran + codelists + schemas, 2026-09-29; udx/brid는 시부야·신주쿠 2026-10-02). 23구 zip은 풀지 않음(hlod-prep 스트림). 標高タイル은 hlod-prep이 받음. fetch 구현 시 lock sha256 검증.
 - [pipeline] `normalizePlateau`는 대상 셀 버킷을 메모리에 모두 보유 → MVP 294셀은 `NODE_OPTIONS=--max-old-space-size=12288`로 통과(2026-09-29). 23구 전체 L0로 넓힐 때 셀별 스필 필요.
 - [pipeline] 건물 셀 배정 중심점 = 모든 면 정점 평균(installation 포함). M01-T05 실측: 셀 밖 돌출 최대 68.2 m(L0_-1_0, 허용 256 m) → 유지. 발자국 기준 전환은 294셀 빌드에서 문제가 보이면.
 - [pipeline] 도로 레코드는 TrafficArea 단위로 매우 잘게 나뉨(3×3에 27.7k) → M03 도로 메시 빌드 시 병합/삼각분할 비용 확인.
@@ -161,6 +126,8 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 
 ## Decisions Pending
 - 라이선스 ⚠ 항목 → M11-T05 (단, 공개 배포 전 필수)
+- **M06 전**: 군중 체형 — Quaternius 무료판(Superhero 남·여)만 쓸지, 유료 Source($20, CC0, Regular·Teen 체형) 도입할지(ADR-0048).
+- M05-T02 ⚠️: OSM 횡단보도 선 위치 오차(스크램블 대각선 ≈ 2 m) — OSM 원본 수정 기여 여부(사용자 계정 작업)·고해상도 정사영상 도입 여부.
 
 ## Pre-flight (사람이 해야 할 일)
 - [x] GitHub 저장소 + Actions 시크릿(`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`)
