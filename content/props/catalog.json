@@ -1,0 +1,24 @@
+{
+  "$comment": "M05-T03 소품 카탈로그(ADR-0051): typeId = @sanpo/tile-format PROP_TYPE. 모델은 렌더가 코드로 절차 생성(render instances/prop-models.ts, 자체 제작·로고 없음). collider = JCOL 프리미티브(소품 원점 = 바닥 중심, 로컬 +Z = 정면). place = 배치 규칙 매개변수(derive/props). 크기 m.",
+  "types": {
+    "utilityPole": { "collider": { "kind": "cylinder", "halfHeight": 5.5, "radius": 0.17, "material": "concrete" }, "place": { "spacingM": [30, 40], "maxRoadWidthM": 15, "offsetM": 0.35, "wireHeightsM": [5.6, 6.1, 8.6, 9.1, 9.6], "wireLateralM": [0.3, 0.3, -0.25, 0.2, 0.55], "wireSagM": 0.45 } },
+    "streetLamp": { "collider": { "kind": "cylinder", "halfHeight": 3.5, "radius": 0.09, "material": "metal" } },
+    "signalVehicle": { "collider": { "kind": "cylinder", "halfHeight": 2.9, "radius": 0.11, "material": "metal" }, "place": { "backM": 0.8 } },
+    "signalPedestrian": { "collider": { "kind": "cylinder", "halfHeight": 1.6, "radius": 0.07, "material": "metal" }, "place": { "backM": 0.6 } },
+    "vendingMachine": { "collider": { "kind": "box", "halfExtents": [0.55, 0.92, 0.4], "material": "metal" }, "place": { "perFacadeM": 55, "wallGapM": 0.08, "usage": ["402", "404", "411", "412", "413", "414"] } },
+    "guardRail": { "collider": { "kind": "box", "halfExtents": [2.0, 0.4, 0.05], "material": "metal" }, "place": { "moduleM": 4, "insetM": 0.35 } },
+    "bollard": { "collider": { "kind": "cylinder", "halfHeight": 0.4, "radius": 0.08, "material": "metal" } },
+    "signStop": { "collider": { "kind": "cylinder", "halfHeight": 1.3, "radius": 0.04, "material": "metal" } },
+    "postBox": { "collider": { "kind": "box", "halfExtents": [0.24, 0.62, 0.24], "material": "metal" } },
+    "bicycleRack": { "place": { "perPoint": 3, "gapM": 0.7 } },
+    "busStop": { "collider": { "kind": "cylinder", "halfHeight": 1.25, "radius": 0.05, "material": "metal" } },
+    "manhole": { "place": { "spacingM": [25, 45] } },
+    "bench": { "collider": { "kind": "box", "halfExtents": [0.8, 0.22, 0.25], "material": "wood" } },
+    "phoneBooth": { "collider": { "kind": "box", "halfExtents": [0.45, 1.1, 0.45], "material": "glass" } },
+    "wasteBasket": { "collider": { "kind": "cylinder", "halfHeight": 0.4, "radius": 0.2, "material": "metal" } },
+    "signProjecting": { "place": { "usage": ["401", "402", "404", "413", "414"], "perFacadeM": 9, "minHeightM": 8 } },
+    "signStanding": { "collider": { "kind": "box", "halfExtents": [0.3, 0.5, 0.25], "material": "metal" }, "place": { "usage": ["402", "404", "413", "414"], "perFacadeM": 10, "minHeightM": 0, "p": 0.45 } },
+    "signRooftop": { "place": { "usage": ["401", "402", "404"], "perFacadeM": 0, "minHeightM": 14, "p": 0.3 } }
+  },
+  "budget": { "maxInstancesPerCell": 5000 }
+}

@@ -1,4 +1,4 @@
-// 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용 + RGB 인코더(실내 큐브맵 생성, M03-T05). 외부 의존 없음(node:zlib).
+// 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용 + RGB·RGBA 인코더(실내 큐브맵 M03-T05, 나무 아틀라스 M05-T04). 외부 의존 없음(node:zlib).
 // see https://www.w3.org/TR/png/ §7–9 (필터 0–4)
 import { deflateSync, inflateSync } from 'node:zlib';
 
@@ -96,16 +96,17 @@ function chunk(type: string, data: Uint8Array): Uint8Array {
   return out;
 }
 
-/** 8비트 RGB(행 우선, 위 → 아래) → PNG 바이트(필터 0, 결정론). */
-export function encodePngRgb(width: number, height: number, rgb: Uint8Array): Uint8Array {
-  if (rgb.length !== width * height * 3) throw new RangeError('encodePngRgb: size mismatch');
-  const raw = new Uint8Array((width * 3 + 1) * height);
-  for (let y = 0; y < height; y++) raw.set(rgb.subarray(y * width * 3, (y + 1) * width * 3), y * (width * 3 + 1) + 1);
+/** 8비트 RGB(3)·RGBA(4)(행 우선, 위 → 아래) → PNG 바이트(필터 0, 결정론). */
+function encodePng(width: number, height: number, px: Uint8Array, channels: 3 | 4): Uint8Array {
+  if (px.length !== width * height * channels) throw new RangeError('encodePng: size mismatch');
+  const row = width * channels;
+  const raw = new Uint8Array((row + 1) * height);
+  for (let y = 0; y < height; y++) raw.set(px.subarray(y * row, (y + 1) * row), y * (row + 1) + 1);
   const ihdr = new Uint8Array(13);
   const v = new DataView(ihdr.buffer);
   v.setUint32(0, width);
   v.setUint32(4, height);
-  ihdr.set([8, 2, 0, 0, 0], 8);
+  ihdr.set([8, channels === 4 ? 6 : 2, 0, 0, 0], 8);
   const parts = [
     Uint8Array.from(SIGNATURE),
     chunk('IHDR', ihdr),
@@ -120,3 +121,9 @@ export function encodePngRgb(width: number, height: number, rgb: Uint8Array): Ui
   }
   return out;
 }
+
+export const encodePngRgb = (width: number, height: number, rgb: Uint8Array): Uint8Array =>
+  encodePng(width, height, rgb, 3);
+/** RGBA(M05-T04 나무 아틀라스). */
+export const encodePngRgba = (width: number, height: number, rgba: Uint8Array): Uint8Array =>
+  encodePng(width, height, rgba, 4);

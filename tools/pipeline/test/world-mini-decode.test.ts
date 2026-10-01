@@ -16,7 +16,7 @@ const CELLS = [
   [-1, 0],
   [0, 0],
 ] as const;
-const MESH_SECTIONS = ['buildings.mesh', 'terrain.mesh'] as const;
+const MESH_SECTIONS = ['buildings.mesh', 'decals.mesh', 'roads.mesh', 'terrain.mesh'] as const;
 
 const bytesOf = (a: ArrayBufferView) => new Uint8Array(a.buffer, a.byteOffset, a.byteLength);
 

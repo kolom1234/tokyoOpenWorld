@@ -1,6 +1,6 @@
 {
   "L0_-1_-1": {
-    "tris": 79127,
+    "tris": 162376,
     "sections": {
       "buildings.mesh": [
         {
@@ -48,30 +48,112 @@
           }
         }
       ],
-      "terrain.mesh": [
+      "decals.mesh": [
         {
-          "materialId": "terrain_ground",
-          "vertices": 24026,
-          "indices": 141078,
-          "indexHash": 2823405878,
+          "materialId": "road_marking",
+          "vertices": 6288,
+          "indices": 9432,
+          "indexHash": 1952946383,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3626885985
+              "hash": 292052937
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1717790964
+              "hash": 3416897050
+            },
+            "_PAINT": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 1763154745
+            }
+          }
+        },
+        {
+          "materialId": "power_wire",
+          "vertices": 2560,
+          "indices": 3840,
+          "indexHash": 3060955613,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 3091945397
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3722789015
+            },
+            "_OFF": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3777128143
+            }
+          }
+        }
+      ],
+      "roads.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 57282,
+          "indices": 189831,
+          "indexHash": 3031213567,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1830412761
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3297803576
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 993683551
+              "hash": 3662032244
+            }
+          }
+        }
+      ],
+      "terrain.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 31800,
+          "indices": 187722,
+          "indexHash": 795850763,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 2213208552
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 2204049024
+            },
+            "_SURF": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 3703819261
             }
           }
         }
@@ -79,7 +161,7 @@
     }
   },
   "L0_0_-1": {
-    "tris": 66917,
+    "tris": 119971,
     "sections": {
       "buildings.mesh": [
         {
@@ -127,30 +209,112 @@
           }
         }
       ],
-      "terrain.mesh": [
+      "decals.mesh": [
         {
-          "materialId": "terrain_ground",
-          "vertices": 24132,
-          "indices": 141714,
-          "indexHash": 1865938063,
+          "materialId": "road_marking",
+          "vertices": 4984,
+          "indices": 7476,
+          "indexHash": 1518826926,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 1807496863
+              "hash": 1177832317
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 3511237120
+              "hash": 1763706273
+            },
+            "_PAINT": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 1591031744
+            }
+          }
+        },
+        {
+          "materialId": "power_wire",
+          "vertices": 1920,
+          "indices": 2880,
+          "indexHash": 1027872761,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 955018850
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 4017710365
+            },
+            "_OFF": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3074420263
+            }
+          }
+        }
+      ],
+      "roads.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 37246,
+          "indices": 123900,
+          "indexHash": 3330891364,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 1316470238
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3904713853
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 2866743344
+              "hash": 339855343
+            }
+          }
+        }
+      ],
+      "terrain.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 28283,
+          "indices": 166620,
+          "indexHash": 4037599788,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 2218865242
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3073737132
+            },
+            "_SURF": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 3280906943
             }
           }
         }
@@ -158,7 +322,7 @@
     }
   },
   "L0_-1_0": {
-    "tris": 73164,
+    "tris": 135681,
     "sections": {
       "buildings.mesh": [
         {
@@ -206,30 +370,112 @@
           }
         }
       ],
-      "terrain.mesh": [
+      "decals.mesh": [
         {
-          "materialId": "terrain_ground",
-          "vertices": 23968,
-          "indices": 140730,
-          "indexHash": 82162257,
+          "materialId": "road_marking",
+          "vertices": 7496,
+          "indices": 11244,
+          "indexHash": 1620568909,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 942913170
+              "hash": 113621465
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1158149211
+              "hash": 2213246171
+            },
+            "_PAINT": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 34602767
+            }
+          }
+        },
+        {
+          "materialId": "power_wire",
+          "vertices": 2560,
+          "indices": 3840,
+          "indexHash": 3060955613,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 2293131841
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 1949965610
+            },
+            "_OFF": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 1166466175
+            }
+          }
+        }
+      ],
+      "roads.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 40812,
+          "indices": 144423,
+          "indexHash": 90028612,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 174136897
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 2335061399
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 964933374
+              "hash": 2121694596
+            }
+          }
+        }
+      ],
+      "terrain.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 28642,
+          "indices": 168774,
+          "indexHash": 2561448673,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 5112374
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3430897469
+            },
+            "_SURF": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 430534125
             }
           }
         }
@@ -237,7 +483,7 @@
     }
   },
   "L0_0_0": {
-    "tris": 50490,
+    "tris": 106922,
     "sections": {
       "buildings.mesh": [
         {
@@ -285,30 +531,112 @@
           }
         }
       ],
-      "terrain.mesh": [
+      "decals.mesh": [
         {
-          "materialId": "terrain_ground",
-          "vertices": 19117,
-          "indices": 111624,
-          "indexHash": 4162318039,
+          "materialId": "road_marking",
+          "vertices": 5328,
+          "indices": 7992,
+          "indexHash": 3629661653,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3080395491
+              "hash": 3732611756
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1772742045
+              "hash": 1854696025
+            },
+            "_PAINT": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 1406325592
+            }
+          }
+        },
+        {
+          "materialId": "power_wire",
+          "vertices": 320,
+          "indices": 480,
+          "indexHash": 2067149586,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 3701090676
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 2200133003
+            },
+            "_OFF": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 3952612834
+            }
+          }
+        }
+      ],
+      "roads.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 38380,
+          "indices": 139614,
+          "indexHash": 1916741033,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 477208092
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 2059444674
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 3372982976
+              "hash": 382915486
+            }
+          }
+        }
+      ],
+      "terrain.mesh": [
+        {
+          "materialId": "terrain_ground",
+          "vertices": 22652,
+          "indices": 132834,
+          "indexHash": 3569884208,
+          "attributes": {
+            "POSITION": {
+              "itemSize": 3,
+              "type": "Float32Array",
+              "normalized": false,
+              "hash": 4131815293
+            },
+            "NORMAL": {
+              "itemSize": 3,
+              "type": "Int8Array",
+              "normalized": true,
+              "hash": 4053347668
+            },
+            "_SURF": {
+              "itemSize": 1,
+              "type": "Uint8Array",
+              "normalized": false,
+              "hash": 1223966880
             }
           }
         }

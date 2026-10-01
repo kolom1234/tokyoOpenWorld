@@ -1,12 +1,14 @@
 // 렌더 스모크(M01-T06): `?world=mini&debug=1&backend=webgl` 시작 화면에 건물이 보이는지(하늘이 아닌 픽셀 비율),
-// 원점 재설정 강제 테스트(+4096 m → 복귀) 전후 화면이 픽셀 단위로 같은지(떨림·누적 오차 없음). 시계는 `?time=`으로 고정(M03-T03 — 태양이 움직이면 하늘이 바뀜). 스크린샷은 test-results/screenshots/. see docs/14-testing-perf.md §1
-import { mkdirSync } from 'node:fs';
+// 원점 재설정 강제 테스트(+4096 m → 복귀) 전후 화면이 픽셀 단위로 같은지(떨림·누적 오차 없음). 시계는 `?time=`으로 고정(M03-T03 — 태양이 움직이면 하늘이 바뀜).
+// 캡처는 안정(`data-settled` — 첫 품질 티어·스트리밍·HLOD 페이드) 뒤 게임 루프 직후 캔버스(game.ts). 스크린샷은 test-results/screenshots/. see docs/14-testing-perf.md §1
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { captureCanvas, OVERLAY, waitSettled } from './game.ts';
 
 const SHOTS = join(import.meta.dirname, '../../test-results/screenshots');
-/** 오버레이·패널을 숨긴 캔버스만의 화면. */
-const HIDE_UI = 'body > :not(#view) { visibility: hidden !important; }';
+// SwiftShader 병렬(워커 2)에서 부트 → 안정까지 수십 초. 판정은 상태 대기, 이 값은 안전망.
+test.setTimeout(180_000);
 
 interface Region {
   x0: number;
@@ -49,13 +51,6 @@ async function nonSkyRatio(page: Page, png: Buffer, r: Region): Promise<PixelSta
   );
 }
 
-async function waitFrames(page: Page, more: number): Promise<void> {
-  const start = Number(await page.locator('.debug-overlay').getAttribute('data-frames'));
-  await expect
-    .poll(async () => Number(await page.locator('.debug-overlay').getAttribute('data-frames')), { timeout: 30_000 })
-    .toBeGreaterThanOrEqual(start + more);
-}
-
 test('start view renders Scramble Square and surrounding buildings (WebGL2 fallback)', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -63,19 +58,17 @@ test('start view renders Scramble Square and surrounding buildings (WebGL2 fallb
     if (m.type() === 'error') errors.push(m.text());
   });
   mkdirSync(SHOTS, { recursive: true });
-  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
+  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&mode=freecam');
   const app = page.locator('#app');
   await expect(app).toHaveAttribute('data-backend', 'webgl2', { timeout: 30_000 });
   await expect(app).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
-  const overlay = page.locator('.debug-overlay');
+  const overlay = page.locator(OVERLAY);
   await expect(overlay).toHaveAttribute('data-cells', '4');
   await expect(overlay).toHaveAttribute('data-depth', /^(reversed-z|logarithmic)$/);
-  await waitFrames(page, 3);
-  await page.screenshot({ path: join(SHOTS, 'start-debug.png') });
-
-  await page.addStyleTag({ content: HIDE_UI });
-  await waitFrames(page, 2);
-  const png = await page.screenshot({ path: join(SHOTS, 'start.png') });
+  await waitSettled(page);
+  test.info().annotations.push({ type: 'overlay', description: (await overlay.textContent()) ?? '' });
+  const png = await captureCanvas(page);
+  writeFileSync(join(SHOTS, 'start.png'), png);
   // 화면 중앙 세로 띠(타워가 서 있는 곳, 위 15–50%)는 대부분 건물이어야 한다.
   const tower = await nonSkyRatio(page, png, { x0: 0.45, y0: 0.15, x1: 0.55, y1: 0.5 });
   expect(tower.nonSky).toBeGreaterThan(0.6);
@@ -95,21 +88,18 @@ const Z_FIGHT_PX = 184;
 
 test.describe('origin rebase', () => {
   test.use({ viewport: REBASE_VIEW });
-  test.setTimeout(180_000);
 
   test('forced origin rebase (+4096 m and back) leaves the view pixel-identical (≤ 0.02% z-fight)', async ({
     page,
   }) => {
-    await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
+    await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&mode=freecam');
     await expect(page.locator('#app')).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
-    await page.addStyleTag({ content: HIDE_UI });
-    const overlay = page.locator('.debug-overlay');
-    // 안정(HLOD 페이드·스트리밍 0) 뒤에 비교 — 부하가 있으면 캡처가 페이드·재적재 도중에 걸려 가끔 실패했다(M03 보강 4).
-    await expect(overlay).toHaveAttribute('data-settled', 'true', { timeout: 30_000 });
-    await waitFrames(page, 3);
+    const overlay = page.locator(OVERLAY);
+    // 안정(HLOD 페이드·스트리밍 0·첫 품질 티어) 뒤에 비교 — 부하가 있으면 캡처가 페이드·재적재·티어 재구성 도중에 걸려 가끔 실패했다(M03 보강 4, M05 결정 0).
+    await waitSettled(page);
     await expect(overlay).toHaveAttribute('data-rebases', '0');
     const cells = await overlay.getAttribute('data-cells');
-    const before = await page.screenshot();
+    const before = await captureCanvas(page);
 
     await page.evaluate(async () => {
       const d = (globalThis as unknown as { __SANPO_DEBUG__: { rebaseTest(): Promise<void> } }).__SANPO_DEBUG__;
@@ -117,10 +107,11 @@ test.describe('origin rebase', () => {
     });
     await expect(overlay).toHaveAttribute('data-rebases', '2');
     // 4 km 밖에 있던 동안 해제된 셀이 돌아오고 HLOD 페이드가 끝날 때까지.
-    await expect(overlay).toHaveAttribute('data-cells', cells ?? '', { timeout: 30_000 });
-    await expect(overlay).toHaveAttribute('data-settled', 'true', { timeout: 30_000 });
-    await waitFrames(page, 3);
-    const after = await page.screenshot({ path: join(SHOTS, 'after-rebase.png') });
+    await expect(overlay).toHaveAttribute('data-cells', cells ?? '', { timeout: 60_000 });
+    await waitSettled(page);
+    const after = await captureCanvas(page);
+    mkdirSync(SHOTS, { recursive: true });
+    writeFileSync(join(SHOTS, 'after-rebase.png'), after);
     const diff = await page.evaluate(
       async ({ a, b }) => {
         const load = async (s: string) => {

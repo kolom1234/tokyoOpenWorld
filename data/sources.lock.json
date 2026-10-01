@@ -75,22 +75,24 @@
     {
       "id": "gsi-photo",
       "url": "https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg",
-      "resource": "XYZ tiles z14–z16 (HLOD 지면 저주파 색 추출용, 다운샘플만 저장)",
+      "resource": "XYZ seamlessphoto z18(≈ 0.49 m/px) — **검증 전용**(M05-T02 횡단보도 위치 대조 `checks/markings-photo.ts`, data/raw/gsi-photo/z18 캐시). 게임 데이터에 굽지 않음. HLOD 지면 색(z14–16)은 미사용",
       "fiscalYear": null,
-      "retrievedAt": null,
+      "retrievedAt": "2026-10-01",
       "sha256": "TBD (타일 목록 매니페스트 해시)",
       "license": "GSI-Content-Terms (CC-BY-4.0 compatible)",
       "attribution": "出典：地理院タイル（全国最新写真（シームレス））を加工して作成"
     },
     {
       "id": "osm-kanto",
-      "url": "https://download.geofabrik.de/asia/japan/kanto-latest.osm.pbf",
-      "resource": "PBF snapshot (retrievedAt 고정)",
+      "url": "https://download.geofabrik.de/asia/japan/kanto-260929.osm.pbf",
+      "resource": "Geofabrik 간토 추출본 PBF 2026-09-29판(515,020,741 B, md5 dfa8add5ab2ead1623bfc7b30d3af6ae = 공개값) → osmium extract(MVP + 500 m)·tags-filter·export(GeoJSONSeq)",
       "fiscalYear": null,
-      "sha256": "TBD",
+      "sha256": "899db89f4dd9132195e825b8255450aaee376213fb5a191b6377df3fd9725f95",
       "license": "ODbL-1.0",
       "attribution": "© OpenStreetMap contributors",
-      "retrievedAt": null
+      "retrievedAt": "2026-10-01",
+      "dataset": "https://download.geofabrik.de/asia/japan/kanto.html",
+      "dataDate": "2026-09-29"
     },
     {
       "id": "ksj-n02",
@@ -175,6 +177,39 @@
       "license": "CC0-1.0",
       "attribution": "Materials from ambientCG.com, licensed under CC0 1.0 Universal",
       "retrievedAt": "2026-09-29"
+    },
+    {
+      "id": "quaternius-ubc",
+      "url": "https://quaternius.itch.io/universal-base-characters",
+      "dataset": "https://quaternius.com/packs/universalbasecharacters.html",
+      "resource": "Universal Base Characters[Standard].zip (128,968,391 B, 무료판 — Superhero 남·여 + 머리털 8종, glTF/FBX). 아바타 = Superhero_Male_FullBody(glTF)",
+      "fiscalYear": null,
+      "sha256": "fdbf1804c90dfc1ea03e992bff7da2dfd1a79318e13270a660180f9308455f40",
+      "license": "CC0-1.0",
+      "attribution": "Universal Base Characters by Quaternius (CC0 1.0)",
+      "retrievedAt": "2026-09-30"
+    },
+    {
+      "id": "quaternius-ual",
+      "url": "https://quaternius.itch.io/universal-animation-library",
+      "dataset": "https://quaternius.com/packs/universalanimationlibrary.html",
+      "resource": "Universal Animation Library[Standard].zip (15,904,933 B, 무료판 — 43클립, UBC와 같은 65관절 골격, 루트 모션판 _RM 포함). 아바타 = Idle_Loop·Walk_Loop·Jog_Fwd_Loop·Sprint_Loop",
+      "fiscalYear": null,
+      "sha256": "cc73fc4e495b82958207316596317a3f40b9fa38065bde1027937452da537724",
+      "license": "CC0-1.0",
+      "attribution": "Universal Animation Library by Quaternius (CC0 1.0)",
+      "retrievedAt": "2026-09-30"
+    },
+    {
+      "id": "noto-sans-jp",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/Sans2.004/Sans/SubsetOTF/JP/NotoSansJP-Bold.otf",
+      "dataset": "https://github.com/notofonts/noto-cjk (태그 Sans2.004)",
+      "resource": "NotoSansJP-Bold.otf(4,656,448 B, 일본어 서브셋 OTF/CFF) — M05-T06 가상 간판 아틀라스 글자 윤곽(파이프라인에서 래스터 굽기, 글꼴 파일 자체는 배포하지 않음)",
+      "fiscalYear": null,
+      "sha256": "1b0edfb500b73a4fa8a4fcaae1bbbd403994e08e73e3e0da37e70d3853f42c5f",
+      "license": "OFL-1.1",
+      "attribution": "Noto Sans JP © 2014-2021 Adobe (http://www.adobe.com/), SIL Open Font License 1.1",
+      "retrievedAt": "2026-10-01"
     }
   ]
 }

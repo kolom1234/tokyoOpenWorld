@@ -122,6 +122,8 @@ export function summarizeMeshes(p: CellPayload): { tris: number; sections: Recor
   const sections: Record<string, unknown> = {};
   const slots = [
     ['buildings.mesh', p.meshes.buildings],
+    ['decals.mesh', p.meshes.decals],
+    ['roads.mesh', p.meshes.roads],
     ['terrain.mesh', p.meshes.terrain],
   ] as const;
   for (const [type, mesh] of slots) {

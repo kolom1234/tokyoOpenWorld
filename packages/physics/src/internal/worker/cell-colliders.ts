@@ -2,13 +2,14 @@
 // pump(예산 ms): 예산 안에서 작업을 하나 이상 처리. 작업 = 높이장 4×4 타일 하나, triMesh ≤ 600 삼각형 조각 하나(파이프라인 청크 2500을 여기서 더 자름 —
 // 렌더 경합에서 wasm이 2–3배 느려져도 한 작업 ≤ 8 ms, ADR-0042 부록).
 // 셀의 모든 작업이 끝나면 onLoaded(key). 바디 = 작업마다 정적 바디 1개(셀 원점 + 셰이프 posLocal), userData = 재질 | JCOL flags << 8.
-// 프리미티브(박스·캡슐·원기둥)도 정적 바디, 에스컬레이터(SENSOR 박스 flags bit2)는 바디 없이 구간 목록에(ADR-0044). 그 밖의 SENSOR 셰이프는 아직 무시.
+// 프리미티브(박스·캡슐·원기둥)는 (층·재질·flags·64 m 블록)별 StaticCompoundShape 정적 바디(≤ 24개씩 — 소품 수백 개가 바디 상한을 넘지 않게, ADR-0051),
+// 에스컬레이터(SENSOR 박스 flags bit2)는 바디 없이 구간 목록에(ADR-0044). 그 밖의 SENSOR 셰이프는 아직 무시.
 import type { CellKey, Vec3d } from '@sanpo/core';
 import { type HeightfieldData, JCOL_FLAG, type JcolShape, parseJcol } from '@sanpo/tile-format';
 import { type Escalators, escalatorVolume } from './escalators.ts';
 import { createHeightfieldShape, createMeshShape } from './heightfield.ts';
 import { OBJ } from './layers.ts';
-import { createPrimitiveShape, PRIMITIVE_MS } from './primitives.ts';
+import { createPrimitiveCompound, PRIMITIVE_MS } from './primitives.ts';
 import type { PhysicsWorld } from './world.ts';
 
 type BodyId = InstanceType<PhysicsWorld['Jolt']['BodyID']>;
@@ -25,6 +26,9 @@ const MESH_MS_PER_TRI = 0.002;
 /** 높이장 타일 수(축당)·작업당 삼각형 상한. */
 const HF_TILES = 4;
 export const MAX_JOB_TRIS = 600;
+/** 프리미티브 묶음(M05-T03 소품): 64 m 블록, 작업당 개수 상한(≈ 1.2 ms — 메시 작업 600 삼각형과 같은 크기). */
+const BLOCK_M = 64;
+export const PRIMITIVES_PER_JOB = 24;
 
 /** 인덱스 [t0, t1) 삼각형만 쓰는 정점으로 압축한 조각. */
 export function meshSlice(
@@ -142,15 +146,7 @@ function shapeJobs(c: JobCtx, sh: JcolShape): Job[] {
     c.escalators.add(c.key, escalatorVolume(center, sh.quat, sh.halfExtents));
     return [];
   }
-  if (sh.layer === OBJ.SENSOR) return [];
-  if (sh.kind !== 'triMesh') {
-    const shape = () => createPrimitiveShape(c.w.Jolt, sh);
-    const run = (): BodyId | undefined => {
-      const s = shape();
-      return s ? c.add(s, c.e, sh.posLocal, sh.quat, sh.layer, userData) : undefined;
-    };
-    return [{ run, estMs: PRIMITIVE_MS }];
-  }
+  if (sh.layer === OBJ.SENSOR || sh.kind !== 'triMesh') return [];
   const jobs: Job[] = [];
   const nt = sh.indices.length / 3;
   for (let t0 = 0; t0 < nt; t0 += MAX_JOB_TRIS) {
@@ -167,7 +163,36 @@ function shapeJobs(c: JobCtx, sh: JcolShape): Job[] {
   return jobs;
 }
 
-/** 셀 작업: 높이장 타일 → JCOL 셰이프들(triMesh 조각·프리미티브, 에스컬레이터 구간 등록). */
+/** 묶을 수 있는 프리미티브(에스컬레이터·SENSOR 제외). */
+const groupable = (sh: JcolShape): boolean =>
+  sh.kind !== 'triMesh' && sh.layer !== OBJ.SENSOR && (sh.flags & JCOL_FLAG.escalator) === 0;
+
+/** 프리미티브 → (층·재질·flags·64 m 블록)별 합성 셰이프 작업(작업당 ≤ PRIMITIVES_PER_JOB). 바디 = 셀 원점. */
+function primitiveJobs(c: JobCtx, prims: readonly JcolShape[]): Job[] {
+  const groups = new Map<string, JcolShape[]>();
+  for (const sh of prims) {
+    const k = `${sh.layer}|${sh.material}|${sh.flags}|${Math.floor(sh.posLocal[0] / BLOCK_M)}|${Math.floor(sh.posLocal[2] / BLOCK_M)}`;
+    const g = groups.get(k);
+    if (g) g.push(sh);
+    else groups.set(k, [sh]);
+  }
+  const jobs: Job[] = [];
+  for (const g of groups.values()) {
+    const head = g[0] as JcolShape;
+    const userData = head.material | (head.flags << 8);
+    for (let i = 0; i < g.length; i += PRIMITIVES_PER_JOB) {
+      const part = g.slice(i, i + PRIMITIVES_PER_JOB);
+      const run = (): BodyId | undefined => {
+        const s = createPrimitiveCompound(c.w.Jolt, part);
+        return s ? c.add(s, c.e, [0, 0, 0], [0, 0, 0, 1], head.layer, userData) : undefined;
+      };
+      jobs.push({ run, estMs: PRIMITIVE_MS * part.length });
+    }
+  }
+  return jobs;
+}
+
+/** 셀 작업: 높이장 타일 → JCOL 셰이프들(triMesh 조각, 에스컬레이터 구간 등록) → 프리미티브 묶음. */
 function jobsOf(
   c: JobCtx,
   jcol: ArrayBuffer | undefined,
@@ -181,7 +206,12 @@ function jobsOf(
     warn(`collision.bin: ${r.error.message}`);
     return jobs;
   }
-  for (const sh of r.value) jobs.push(...shapeJobs(c, sh));
+  const prims: JcolShape[] = [];
+  for (const sh of r.value) {
+    if (groupable(sh)) prims.push(sh);
+    else jobs.push(...shapeJobs(c, sh));
+  }
+  jobs.push(...primitiveJobs(c, prims));
   return jobs;
 }
 

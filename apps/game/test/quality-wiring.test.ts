@@ -26,7 +26,7 @@ describe('quality wiring', () => {
     const detectQuality = vi.fn(async (): Promise<QualityTier> => 'medium');
     const timers: (() => void)[] = [];
     let idle = false;
-    startQualityWiring({
+    const q = startQualityWiring({
       render: { detectQuality },
       bus,
       log,
@@ -38,12 +38,15 @@ describe('quality wiring', () => {
     // 스트리밍이 바쁘면 기다린다.
     for (let i = 0; i < 3; i++) (timers.shift() as () => void)();
     expect(detectQuality).not.toHaveBeenCalled();
+    expect(q.settled).toBe(false);
     idle = true;
     for (let i = 0; i < 2; i++) (timers.shift() as () => void)();
     await Promise.resolve();
     await Promise.resolve();
     expect(detectQuality).toHaveBeenCalledTimes(1);
     expect(loadTier(storage)).toBe('medium');
+    await Promise.resolve();
+    expect(q.settled).toBe(true);
     bus.emit('quality/changed', { tier: 'low' });
     expect(storage.getItem(QUALITY_STORAGE_KEY)).toBe('low');
   });
@@ -51,15 +54,16 @@ describe('quality wiring', () => {
   it('skips detection when a tier is stored or the tier is fixed', () => {
     const detectQuality = vi.fn(async (): Promise<QualityTier> => 'high');
     const bus = createEventBus(log);
-    startQualityWiring({
+    const stored = startQualityWiring({
       render: { detectQuality },
       bus,
       log,
       storage: memStorage({ [QUALITY_STORAGE_KEY]: 'low' }),
       fixed: false,
     });
-    startQualityWiring({ render: { detectQuality }, bus, log, storage: memStorage(), fixed: true });
+    const fixed = startQualityWiring({ render: { detectQuality }, bus, log, storage: memStorage(), fixed: true });
     expect(detectQuality).not.toHaveBeenCalled();
+    expect([stored.settled, fixed.settled]).toEqual([true, true]);
     expect(loadTier(memStorage({ [QUALITY_STORAGE_KEY]: 'bogus' }))).toBeUndefined();
     expect(loadTier(undefined)).toBeUndefined();
   });

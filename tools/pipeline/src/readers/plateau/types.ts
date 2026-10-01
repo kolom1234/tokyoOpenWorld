@@ -48,7 +48,12 @@ export interface RoadRecord {
   source: string;
 }
 
-export type NormalizedFeature = BuildingRecord | RoadRecord;
+/** 교량(PLATEAU brid, M05-T08): 건물과 같은 면 구조 — 상판 윗면(OuterFloorSurface) = roof, 구조재·난간(BridgeConstructionElement·Installation) = installation. */
+export interface BridgeRecord extends Omit<BuildingRecord, 'layer'> {
+  layer: 'bridges';
+}
+
+export type NormalizedFeature = BuildingRecord | RoadRecord | BridgeRecord;
 
 export interface PlateauReadOptions {
   /** `data/sources.lock.json`의 소스 ID(레코드 `source`에 기록). */

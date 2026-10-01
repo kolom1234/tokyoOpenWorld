@@ -22,7 +22,7 @@
 
 - 모드는 `TraversalMode` 구현체 1개 = 파일 1개(`src/internal/modes/<id>.ts`). 새 모드 추가 시 기존 모드 수정 금지(레지스트리 등록만).
 - 모드 전환은 1프레임 안에 원자적으로: `exit(from)` → 물리 핸들 교체 → `enter(to)` → `mode/changed` 발행.
-- walk 착지점(처음·재배치): 기준점 + 링(6·12·24·48 m × 8방위) 후보마다 하늘에서 수직 레이 → 첫 충돌이 TERRAIN인 후보(지붕·건물 셸 안·고가 아래 제외). 게임 시작은 freecam(골든뷰 결정론) — M08 스폰 흐름에서 재검토.
+- walk 착지점(처음·재배치): 기준점 + 링(6·12·24·48 m × 8방위) 후보마다 하늘에서 수직 레이 → 첫 충돌이 TERRAIN인 후보(지붕·건물 셸 안·고가 아래 제외). 게임 시작 = **walk**(world.json 스폰 주변 착지, 로딩 중만 freecam) — 골든뷰·`?mode=freecam`은 freecam(ADR-0047).
 
 ## 2. 모드별 동작
 ### walk
@@ -48,13 +48,13 @@
 ## 3. 카메라 리그 (`src/internal/camera/`)
 | 리그 | 파라미터 |
 |---|---|
-| `FirstPersonRig` | 눈높이 1.60 m, FOV 기본 70°(설정 55–95), 헤드밥 수직 1.2 cm·측면 0.6 cm(끌 수 있음), 룩 스무딩 30 ms |
+| `FirstPersonRig` | 눈높이 1.60 m, FOV 기본 70°(설정 55–95), 헤드밥 수직 1.2 cm·측면 0.6 cm(끌 수 있음), 룩 스무딩 30 ms. 발 높이 = 임계 감쇠 스프링(ω 12, ADR-0044) — 공중에선 남은 오프셋을 둔 채 몸과 함께(스냅 없음, 착지 첫 프레임 속도 ≤ 1 m/s), 헤드밥은 공중 0.3 s 미만이면 유지(ADR-0056) |
 | `ThirdPersonRig` | 어깨 오프셋 0.4 m, 거리 3.5 m(휠 1.5–6), sphereCast 충돌, 가까우면 아바타 디더 페이드 |
 | `ChaseRig` | 차량 뒤 5.5 m·위 1.6 m, 위치 스프링 ω=6, 회전 지연, 고속 시 FOV +5° |
 | `AttachedRig` | 차량 보닛/운전석/열차 전면: 부모 바디 로컬 오프셋 + 미세 진동(서스펜션 가속도 기반) |
 | `FreeRig` | 관성(감쇠 3/s), 시네마틱 스무딩 옵션 |
 - 모든 리그 출력은 `CameraState { posWF: Vec3d; quat; fovDeg; near }` → render.setCamera + streaming 관심점.
-- ThirdPersonRig 구현(M04-T05, ADR-0045): 회전 프레임당 ≤ 8°, 부채꼴 5개 sphereCast(1프레임 비동기 보상), 아바타 = 자체 절차 마네킹(Quaternius는 다운로드 승인 뒤).
+- ThirdPersonRig 구현(M04-T05, ADR-0045): 회전 프레임당 ≤ 8°, 부채꼴 5개 sphereCast(1프레임 비동기 보상), 아바타 = Quaternius UBC + UAL 굽기 GLB(정점색·옷 영역, 속력 블렌드 idle·walk·jog·sprint — ADR-0048), 적재 전·실패 시 자체 절차 마네킹.
 
 ## 4. 입력 (`@sanpo/input`)
 - 디바이스: 키보드·마우스(Pointer Lock), 게임패드(Gamepad API 표준 매핑).

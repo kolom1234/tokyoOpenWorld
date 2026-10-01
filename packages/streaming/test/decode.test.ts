@@ -59,7 +59,7 @@ describe('decodeCell (world-mini)', () => {
     const list = transferList(r.value);
     expect(new Set(list).size).toBe(list.length);
     expect(list).not.toContain(bytes);
-    // 2 메시 × (속성 + index) + heightfield
+    // 메시(건물·보도·지형) × (속성 + index) + heightfield
     const arrays = Object.values(r.value.meshes).flatMap((m) =>
       (m?.primitives ?? []).flatMap((p) => [...Object.values(p.attributes).map((a) => a.array), p.index]),
     );
@@ -67,7 +67,7 @@ describe('decodeCell (world-mini)', () => {
     expect(list).toContain(r.value.heightfield?.data.buffer);
     // 실제 transfer가 가능한지(중복·공유 버퍼면 DataCloneError).
     const moved = structuredClone(r.value, { transfer: list });
-    expect(moved.meshes.terrain?.primitives[0]?.index?.length).toBe(140730);
+    expect(moved.meshes.terrain?.primitives[0]?.index?.length).toBe(168774);
   });
 
   it('decodes only requested sections (requestSections path)', async () => {
@@ -87,7 +87,7 @@ describe('decodeCell (world-mini)', () => {
     expect(await bad(worldMiniCell(0, 0), req(-1, 0))).toBe('mismatch'); // hash가 다른 셀 것
     expect(await bad(worldMiniCell(0, 0), { ...req(-1, 0), hash32: req(0, 0).hash32 })).toBe('mismatch'); // 헤더 셀
     expect(await bad(worldMiniCell(0, 0), { ...req(0, 0), buildId: 'other' })).toBe('mismatch');
-    const cut = worldMiniCell(0, 0).slice(0, 1000);
+    const cut = worldMiniCell(0, 0).slice(0, 4000); // 헤더(섹션 6개) 뒤, 첫 섹션 도중
     expect(await decodeCell(cut, { ...req(0, 0) }, { ...opts, verifyHash: false })).toMatchObject({
       ok: false,
       error: { code: 'range' },

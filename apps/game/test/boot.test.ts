@@ -101,6 +101,9 @@ describe('status rows', () => {
     expect(parseFlags('').debug).toBe(false);
     expect(parseFlags('?world=mini&debug=1&backend=webgl')).toEqual({ debug: true, world: 'mini', backend: 'webgl' });
     expect(parseFlags('?backend=webgpu')).toEqual({ debug: false });
+    // 첫 표시 모드: 기본 walk(플래그 없음), `?mode=freecam`만 인정(M05 결정 1).
+    expect(parseFlags('?mode=freecam').mode).toBe('freecam');
+    expect(parseFlags('?mode=walk')).toEqual({ debug: false });
   });
 
   it('describes the renderer row (backend · depth · shown cells)', () => {

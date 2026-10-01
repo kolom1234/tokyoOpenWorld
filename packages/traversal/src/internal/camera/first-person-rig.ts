@@ -28,7 +28,14 @@ export interface FirstPersonState {
   feetY: number;
   /** 스무딩 스프링 속도(m/s). */
   feetVy: number;
+  /** 지난 프레임 원래 발 높이(공중 오프셋 감쇠 기준). */
+  lastY: number;
+  /** 연속 공중 시간(s) — 비탈 끝에서 몇 프레임 뜨는 동안 헤드밥을 끊지 않는다(BOB_AIR_GRACE_S). */
+  airS: number;
 }
+
+/** 이보다 짧은 공중(비탈 끝·꺾임점에서 뜨는 순간)은 헤드밥을 이어 간다 — 끊으면 진폭만큼(≈ 3 cm) 한 프레임에 튄다. */
+export const BOB_AIR_GRACE_S = 0.3;
 
 export function createLookState(yawRad: number, pitchRad: number): LookState {
   const p = clampPitch(pitchRad);
@@ -36,7 +43,7 @@ export function createLookState(yawRad: number, pitchRad: number): LookState {
 }
 
 export function createFirstPersonState(): FirstPersonState {
-  return { stepPhase: 0, feetY: Number.NaN, feetVy: 0 };
+  return { stepPhase: 0, feetY: Number.NaN, feetVy: 0, lastY: Number.NaN, airS: 0 };
 }
 
 /** 입력(rad) 누적 + 지수 스무딩(시간 상수 tau). yaw는 감긴 차이로 따라간다. */
@@ -54,19 +61,36 @@ export function stepLook(s: LookState, dYaw: number, dPitch: number, dt: number,
   }
 }
 
-/** 발 높이 스무딩(ADR-0044): 지면 위 작은 변화(연석·계단)는 임계 감쇠 스프링(ω = omega)으로, 공중·0.6 m 넘는 변화는 즉시. */
+/** 착지 첫 프레임 스프링에 넘기는 카메라 수직 속도 상한(m/s) — 낙하 속도를 그대로 넘기면 카메라가 몸 아래로 파고든다. */
+const LAND_VY_MS = 1;
+
+/**
+ * 발 높이 스무딩(ADR-0044): 지면 위 작은 변화(연석·계단)는 임계 감쇠 스프링(ω = omega)으로, 0.6 m 넘는 변화(순간이동)는 즉시.
+ * 공중(낙하·비탈 끝에서 몇 프레임 뜨는 순간)은 남은 오프셋을 그대로 둔 채 몸과 함께 움직인다 — 비탈 위 스프링 지연(≈ 2v/ω, 28° 계단 11 cm)이
+ * 한 프레임에 튀지 않고(위치 연속), 착지 뒤 스프링이 푼다(ADR-0056).
+ */
 export function followFeet(s: FirstPersonState, y: number, grounded: boolean, dt: number, omega: number): number {
-  if (!Number.isFinite(s.feetY) || !grounded || Math.abs(y - s.feetY) > SNAP_M) {
+  const landing = grounded && s.airS > 0;
+  s.airS = grounded ? 0 : s.airS + dt;
+  if (!Number.isFinite(s.feetY) || !Number.isFinite(s.lastY) || Math.abs(y - s.feetY) > SNAP_M) {
     s.feetY = y;
     s.feetVy = 0;
+    s.lastY = y;
     return y;
+  }
+  if (!grounded) {
+    s.feetY = y + (s.feetY - s.lastY);
+    s.feetVy = dt > 0 ? (y - s.lastY) / dt : 0;
+    s.lastY = y;
+    return s.feetY;
   }
   // 임계 감쇠 스프링 정확해: x(t) = (x0 + (v0 + ωx0)t)e^(−ωt). 0.15 m 연석의 최대 속도 ≈ 0.15ω/e(ω 12 → 0.66 m/s = 60 fps 1.1 cm/프레임).
   const x0 = s.feetY - y;
-  const v0 = s.feetVy;
+  const v0 = landing ? Math.max(-LAND_VY_MS, Math.min(LAND_VY_MS, s.feetVy)) : s.feetVy;
   const e = Math.exp(-omega * dt);
   s.feetY = y + (x0 + (v0 + omega * x0) * dt) * e;
   s.feetVy = (v0 - omega * (v0 + omega * x0) * dt) * e;
+  s.lastY = y;
   return s.feetY;
 }
 

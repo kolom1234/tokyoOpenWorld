@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseCityGmlString } from '../src/readers/plateau/index.ts';
-import type { BuildingRecord, RoadRecord } from '../src/readers/plateau/types.ts';
+import type { BridgeRecord, BuildingRecord, RoadRecord } from '../src/readers/plateau/types.ts';
 
 // 스크램블 교차로 부근의 합성 CityGML(EPSG:6697: 위도 경도 표고 순). 1e-5° ≈ 1 m.
 const LAT = 35.6595;
@@ -130,5 +130,34 @@ describe('citygml-sax: roads', () => {
   it('TrafficArea가 없으면 LOD1 도로면을 carriageway로', () => {
     const r1 = roads.filter((r) => r.roadId === 'road_1');
     expect(r1.map((r) => [r.id, r.lod, r.function, r.functionCode])).toEqual([['road_1', 1, 'carriageway', 'Road:3']]);
+  });
+});
+
+function bridTheme(tag: string, id: string, pts: [number, number, number][]): string {
+  return `<brid:boundedBy><brid:${tag} gml:id="${id}-s"><brid:lod2MultiSurface><gml:MultiSurface><gml:surfaceMember>${polygon(id, pts)}</gml:surfaceMember></gml:MultiSurface></brid:lod2MultiSurface></brid:${tag}></brid:boundedBy>`;
+}
+
+// 보도육교(M05-T08): 상판 윗면 = OuterFloorSurface, 아랫면 = OuterCeilingSurface, 난간·기둥 = BridgeConstructionElement.
+const BRIDGE = `<core:CityModel>
+<core:cityObjectMember><brid:Bridge gml:id="brid_1">
+  ${bridTheme('OuterFloorSurface', 'deck', ROOF)}${bridTheme('OuterCeilingSurface', 'under', GROUND)}${bridTheme('WallSurface', 'side', WALL)}
+  <brid:outerBridgeConstruction><brid:BridgeConstructionElement gml:id="pier"><brid:lod2Geometry><gml:MultiSurface><gml:surfaceMember>${polygon('pier1', WALL)}</gml:surfaceMember></gml:MultiSurface></brid:lod2Geometry></brid:BridgeConstructionElement></brid:outerBridgeConstruction>
+</brid:Bridge></core:cityObjectMember>
+</core:CityModel>`;
+
+describe('citygml-sax: bridges', () => {
+  const [br] = parseCityGmlString(BRIDGE, 'test') as BridgeRecord[];
+
+  it('brid:Bridge → bridges 층, 상판·아랫면·옆면·구조재 종류', () => {
+    expect(br?.layer).toBe('bridges');
+    expect(br?.gmlId).toBe('brid_1');
+    expect(br?.lod).toBe(2);
+    expect(br?.surfaces.map((s) => [s.kind, s.gmlId])).toEqual([
+      ['roof', 'deck'],
+      ['ground', 'under'],
+      ['wall', 'side'],
+      ['installation', 'pier1'],
+    ]);
+    expect(br?.surfaces[0]?.ringsWF[0]?.[1]).toBe(10);
   });
 });

@@ -1,6 +1,6 @@
 // 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 // 구현된 단계: normalize(--layer plateau: 건물·도로, terrain: dem_1m.tif), build(L0: 지형·건물·meta → TKC),
-// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열), validate, publish·gc(R2 + KV).
+// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열)·avatar(Quaternius → 게임 GLB)·trees(수종 에셋 — cli-assets.ts), validate, publish·gc(R2 + KV).
 // TODO: fetch | derive.
 import { execFile } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -8,21 +8,23 @@ import { join, resolve } from 'node:path';
 import { parseArgs, promisify } from 'node:util';
 import { type CellKey, createLogger, packCellKey } from '@sanpo/core';
 import { FORMAT_VERSION } from '@sanpo/tile-format';
+import * as assetStages from './cli-assets.ts';
 import { createPlateauReader } from './readers/plateau/index.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
+import { readOverrides } from './stages/build/overrides/index.ts';
+import { readCatalog } from './stages/derive/props/context.ts';
 import { buildPlateauMini, buildWorldMini, type LockSource } from './stages/fixture.ts';
 import { fetchDemTiles, resampleFarDem, writeFarDem } from './stages/hlod/dem-far.ts';
 import { runHlod } from './stages/hlod/run.ts';
 import { extractTokyo23 } from './stages/hlod/tokyo23-lod1.ts';
-import type { AmbientLock } from './stages/materials/fetch.ts';
-import { readLibrary } from './stages/materials/library.ts';
-import { buildMaterials, installMaterials } from './stages/materials/run.ts';
-import { normalizePlateau } from './stages/normalize-plateau.ts';
+import { normalizeOsmFromLock } from './stages/normalize-osm.ts';
+import { normalizePlateau, type PlateauLayer } from './stages/normalize-plateau.ts';
 import { hasDemSources, normalizeTerrain, writeTerrainMeta } from './stages/normalize-terrain.ts';
 import { buildFiles, gcBuilds, publishBuild, verifyViaWorker } from './stages/publish/publish.ts';
 import { createClients, type PublishEnv, readTargets } from './stages/publish/targets.ts';
 import { reportMarkdown, validateBuild, writeReport } from './stages/validate.ts';
+import { checkRoadGaps, GAP_LIMIT_M } from './stages/validate-roads.ts';
 
 const run = promisify(execFile);
 
@@ -62,7 +64,12 @@ function readArea(id: string): AreaDef {
   return JSON.parse(readFileSync(join(REPO_ROOT, `data/areas/${id}.json`), 'utf8')) as AreaDef;
 }
 
-async function normalizePlateauLayer(cells: CellKey[], source: string | undefined, reader: string): Promise<void> {
+async function normalizePlateauLayer(
+  cells: CellKey[],
+  source: string | undefined,
+  reader: string,
+  layers?: PlateauLayer[],
+): Promise<void> {
   const readerName = reader === 'nusamai' ? 'nusamai' : 'citygml-sax';
   const ids = source ? [source] : plateauSources();
   const res = await normalizePlateau({
@@ -71,11 +78,12 @@ async function normalizePlateauLayer(cells: CellKey[], source: string | undefine
     outDir: join(REPO_ROOT, 'data/normalized'),
     reader: createPlateauReader(readerName),
     log: log.child('plateau'),
+    ...(layers ? { layers } : {}),
   });
   const perSource = ids.map((id) => `${id} ${res.files.filter((f) => f.sourceId === id).length}`).join(', ');
   log.info(
     `plateau: files (${perSource}), ${res.features} features → ${res.buildings} buildings, ` +
-      `${res.roadPieces} road pieces, ${res.written.length} cell files`,
+      `${res.roadPieces} road pieces, ${res.bridges} bridges, ${res.written.length} cell files`,
   );
 }
 
@@ -104,6 +112,7 @@ async function normalize(args: string[]): Promise<void> {
       area: { type: 'string', default: 'mvp-shibuya-shinjuku' },
       cells: { type: 'string' },
       layer: { type: 'string', default: 'all' },
+      'plateau-layer': { type: 'string' },
       source: { type: 'string' },
       reader: { type: 'string', default: 'citygml-sax' },
     },
@@ -111,8 +120,15 @@ async function normalize(args: string[]): Promise<void> {
   const area = readArea(values.area);
   const cells = values.cells ? values.cells.split(',').map(parseCellId) : areaCells(area);
   const layer = values.layer;
-  if (layer === 'all' || layer === 'plateau') await normalizePlateauLayer(cells, values.source, values.reader);
+  const only = values['plateau-layer']?.split(',') as PlateauLayer[] | undefined;
+  if (layer === 'all' || layer === 'plateau') await normalizePlateauLayer(cells, values.source, values.reader, only);
   if (layer === 'all' || layer === 'terrain') await normalizeTerrainLayer(cells);
+  if (layer === 'all' || layer === 'osm') await normalizeOsmLayer(cells);
+}
+
+/** OSM 간토 PBF → data/normalized/osm(컨테이너 전용, osmium). */
+async function normalizeOsmLayer(cells: CellKey[]): Promise<void> {
+  await normalizeOsmFromLock(REPO_ROOT, lockSources(), cells, log.child('osm'));
 }
 
 async function build(args: string[]): Promise<void> {
@@ -137,6 +153,8 @@ async function build(args: string[]): Promise<void> {
     outDir,
     plateauSources: plateauSources(),
     log: log.child('build'),
+    props: readCatalog(REPO_ROOT),
+    overrides: readOverrides(REPO_ROOT),
   });
   const bytes = stats.reduce((a, s) => a + s.bytes, 0);
   log.info(`build ${buildId}: ${stats.length} cells, ${bytes} B in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
@@ -147,6 +165,13 @@ async function validate(args: string[]): Promise<void> {
   const buildId = values['build-id'] ?? makeBuildId(REPO_ROOT);
   const dir = join(REPO_ROOT, 'data/build', buildId);
   const report = await validateBuild(dir, join(REPO_ROOT, 'schemas'), new Set(lockSourceIds()));
+  // M05-T01 수락: 무작위 교차로 50곳 보도 가장자리·연석 vs 지형 간극(< 2 cm).
+  const gaps = await checkRoadGaps(dir, join(REPO_ROOT, 'data/normalized'));
+  log.info(`road gaps ${JSON.stringify(gaps)}`);
+  if (gaps.over > 0 || gaps.curbUncovered > 0)
+    report.errors.push(
+      `roads: ${gaps.over} edge samples ≥ ${GAP_LIMIT_M} m, ${gaps.curbUncovered} curb samples uncovered`,
+    );
   writeReport(dir, report);
   process.stdout.write(reportMarkdown(report));
   if (report.errors.length > 0) {
@@ -230,46 +255,6 @@ async function hlod(args: string[]): Promise<void> {
   log.info(`hlod ${buildId}: ${stats.length} cells in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 }
 
-const LOCK_PATH = join(REPO_ROOT, 'data/sources.lock.json');
-
-/** 머티리얼 라이브러리(M03-T01): content/materials/library.json → data/derived/materials/<hash> → (--build-id) 빌드 shared/materials. 컨테이너 전용. */
-async function materials(args: string[]): Promise<void> {
-  const { values } = parseArgs({
-    args,
-    options: {
-      'build-id': { type: 'string' },
-      'update-lock': { type: 'boolean', default: false },
-      force: { type: 'boolean', default: false },
-    },
-  });
-  const lockFile = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) as { sources: (LockSource | AmbientLock)[] };
-  const lock = lockFile.sources.find((s) => s.id === 'ambientcg') as AmbientLock | undefined;
-  if (!lock) throw new Error('sources.lock.json: no "ambientcg" source');
-  const mlog = log.child('materials');
-  const r = await buildMaterials({
-    library: readLibrary(join(REPO_ROOT, 'content/materials/library.json')),
-    lock,
-    updateLock: values['update-lock'],
-    rawDir: join(REPO_ROOT, 'data/raw/ambientcg'),
-    derivedDir: join(REPO_ROOT, 'data/derived'),
-    log: mlog,
-    force: values.force,
-  });
-  if (values['update-lock'])
-    writeFileSync(
-      LOCK_PATH,
-      `${JSON.stringify(lockFile, null, 2)}
-`,
-    );
-  const t = r.manifest.textures;
-  mlog.info(
-    `materials ${r.manifest.hash}${r.cached ? ' (cached)' : ''}: ${r.manifest.layerCount} layers, ` +
-      `albedo ${(t.albedo.bytes / 1e6).toFixed(2)} MB, normal ${(t.normal.bytes / 1e6).toFixed(2)} MB, orm ${(t.orm.bytes / 1e6).toFixed(2)} MB`,
-  );
-  if (values['build-id'])
-    mlog.info(`installed → ${installMaterials(r.dir, join(REPO_ROOT, 'data/build', values['build-id']))}`);
-}
-
 const WRANGLER_JSONC = join(REPO_ROOT, 'apps/worker/wrangler.jsonc');
 
 function targetOf(env: string | undefined) {
@@ -350,12 +335,18 @@ async function fixture(args: string[]): Promise<void> {
   if (values.only !== 'world-mini') log.info(`plateau-mini snapshot ${JSON.stringify(await buildPlateauMini(input))}`);
 }
 
+/** 플레이어 아바타 GLB(M05 결정 2, ADR-0048): data/raw Quaternius zip(sha256 lock) → apps/game/src/assets. 호스트 Node로 실행 가능. */
+const assets = { repoRoot: REPO_ROOT, log, lockSources };
+
 const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   normalize,
   build,
   'hlod-prep': hlodPrep,
   hlod,
-  materials,
+  materials: (args) => assetStages.materials(assets, args),
+  avatar: () => assetStages.avatar(assets),
+  trees: () => assetStages.trees(assets),
+  signage: () => assetStages.signage(assets),
   validate,
   publish,
   gc,

@@ -95,11 +95,14 @@ test('cell colliders: world-mini cells load into the physics worker and raycasts
     return { ground: out, wall, stats: w.physics.stats() };
   });
   test.info().annotations.push({ type: 'colliders', description: JSON.stringify(r) });
-  for (const g of r.ground) {
-    // 지면을 맞힌 레이(TERRAIN = 1)는 streaming 높이장과 ±5 cm. 건물 지붕에 먼저 맞은 레이는 제외.
-    if (g.layer === 1) expect(Math.abs((g.got as number) - (g.want as number))).toBeLessThanOrEqual(0.05);
+  // 지면을 맞힌 레이(TERRAIN = 1)는 streaming 높이장과 ±5 cm. 건물 지붕에 먼저 맞은 레이는 제외.
+  // 보도(M05-T01) 위는 TERRAIN 층 보도 윗면(높이장 + 0.15 m 안팎)에 먼저 맞는다 → 따로 센다.
+  const ground = r.ground.filter((g) => g.layer === 1);
+  const onSidewalk = ground.filter((g) => Math.abs((g.got as number) - (g.want as number) - 0.158) < 0.04);
+  for (const g of ground) {
+    if (!onSidewalk.includes(g)) expect(Math.abs((g.got as number) - (g.want as number))).toBeLessThanOrEqual(0.05);
   }
-  expect(r.ground.filter((g) => g.layer === 1).length).toBeGreaterThanOrEqual(2);
+  expect(ground.length - onSidewalk.length).toBeGreaterThanOrEqual(2);
   expect(r.wall?.layer).toBe(0);
   // 적재 틱(≤ 8 ms) 판정은 실제 GPU 브라우저에서(PR·PROGRESS 기록) — SwiftShader는 렌더가 모든 CPU 코어를 써서 워커 wasm도 2–3배 느리다(최대 22 ms 실측).
   expect(errors).toEqual([]);

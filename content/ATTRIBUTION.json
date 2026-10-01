@@ -602,6 +602,87 @@
         "content/materials/library.json"
       ],
       "modified": true
+    },
+    {
+      "id": "quaternius-ubc",
+      "kind": "model",
+      "title": "Quaternius Universal Base Characters [Standard] — Superhero_Male_FullBody + Hair_SimpleParted → 플레이어 아바타(정점색 굽기·옷 영역 칠함)",
+      "url": "https://quaternius.com/packs/universalbasecharacters.html",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "キャラクターモデル・アニメーション：Quaternius（CC0）",
+        "en": "Character model & animations: Quaternius (CC0)",
+        "ko": "캐릭터 모델·애니메이션: Quaternius (CC0)"
+      },
+      "files": [
+        "apps/game/src/assets/avatar-ubc-male.glb"
+      ],
+      "modified": true
+    },
+    {
+      "id": "quaternius-ual",
+      "kind": "model",
+      "title": "Quaternius Universal Animation Library [Standard] — Idle_Loop·Walk_Loop·Jog_Fwd_Loop·Sprint_Loop → 플레이어 아바타 클립",
+      "url": "https://quaternius.com/packs/universalanimationlibrary.html",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "キャラクターモデル・アニメーション：Quaternius（CC0）",
+        "en": "Character model & animations: Quaternius (CC0)",
+        "ko": "캐릭터 모델·애니메이션: Quaternius (CC0)"
+      },
+      "files": [
+        "apps/game/src/assets/avatar-ubc-male.glb"
+      ],
+      "modified": true
+    },
+    {
+      "id": "ez-tree",
+      "kind": "code",
+      "title": "@dgreenheck/ez-tree 1.1.0 — 파이프라인 `trees`가 수종 6종(은행·느티·벚·녹나무·소나무·관목) 가지·잎 카드 기하를 생성(프리셋 + 덮어쓰기). 잎 모양·임포스터는 자체 생성(외부 텍스처 미사용)",
+      "url": "https://github.com/dgreenheck/ez-tree",
+      "license": "MIT",
+      "attribution": {
+        "ja": "樹木生成：ez-tree（Daniel Greenheck, MIT）",
+        "en": "Tree generator: ez-tree (Daniel Greenheck, MIT)",
+        "ko": "나무 생성기: ez-tree (Daniel Greenheck, MIT)"
+      },
+      "files": [
+        "apps/game/src/assets/trees/trees.glb",
+        "apps/game/src/assets/trees/impostor-color.png"
+      ],
+      "modified": true
+    },
+    {
+      "id": "noto-sans-jp",
+      "kind": "font",
+      "title": "Noto Sans JP Bold(noto-cjk Sans2.004, 일본어 서브셋 OTF) — 파이프라인 `signage`가 가상 브랜드 간판 글자 윤곽을 아틀라스로 굽는다(M05-T06). 글꼴 파일은 배포하지 않음",
+      "url": "https://github.com/notofonts/noto-cjk",
+      "license": "OFL-1.1",
+      "attribution": {
+        "ja": "看板文字：Noto Sans JP（© Adobe, SIL Open Font License 1.1）",
+        "en": "Sign lettering: Noto Sans JP (© Adobe, SIL Open Font License 1.1)",
+        "ko": "간판 글자: Noto Sans JP (© Adobe, SIL Open Font License 1.1)"
+      },
+      "files": [
+        "apps/game/src/assets/signage/atlas.png"
+      ],
+      "modified": true
+    },
+    {
+      "id": "osm-kanto",
+      "kind": "data",
+      "title": "OpenStreetMap（Geofabrik 関東抽出 kanto-260929.osm.pbf）→ 노면 표시(횡단보도·정지선·차선·止まれ, M05-T02)",
+      "url": "https://www.openstreetmap.org/copyright",
+      "license": "ODbL-1.0",
+      "attribution": {
+        "ja": "© OpenStreetMap contributors",
+        "en": "© OpenStreetMap contributors",
+        "ko": "© OpenStreetMap contributors"
+      },
+      "files": [
+        "tests/fixtures/world-mini/**"
+      ],
+      "modified": true
     }
   ]
 }

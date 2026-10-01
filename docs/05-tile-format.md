@@ -10,8 +10,8 @@ cells.idx                     존재하는 셀 인덱스 (바이너리, §5)
 L0/<ix>/<iz>.tkc              상세 셀 (256 m)
 L1/<ix>/<iz>.tkc … L3/…       HLOD 셀
 shared/materials/manifest.json + *.ktx2    머티리얼 라이브러리 (텍스처 배열 레이어 정의)
-shared/props/<typeId>.glb     소품 프로토타입 (LOD0/1/2 포함)
-shared/trees/<species>.glb    나무 프로토타입 + 임포스터 아틀라스
+shared/props/<typeId>.glb     소품 프로토타입 (LOD0/1/2 포함) — M05-T03은 렌더 코드 절차 모델(ADR-0051), 파일 없음
+shared/trees/<species>.glb    나무 프로토타입 + 임포스터 아틀라스 — M05-T04는 게임 해시 에셋(apps/game/src/assets/trees, ADR-0052)
 shared/characters/*.glb       보행자 베이스 메시 + VAT 텍스처
 shared/vehicles/*.glb         차량 (교통/플레이어)
 global/rail.bin               전 노선 선로 스플라인·역·정차위치
@@ -75,11 +75,11 @@ credits.json                  출처 표기
 | `terrain.mesh` | glb | 지면 메시. 속성: POSITION, NORMAL, `_SURF`(u8: 0 asphalt,1 sidewalk,2 grass,3 soil,4 gravel,5 water,6 rail_ballast,7 plaza — L0 = PLATEAU 도로 폴리곤 1 m 래스터(차도·횡단보도 0, 보도·교통섬 1, 나머지 7), 차도 경계 삼각형 1 m·그 밖 분류 경계 ≤ 4 m(M03-T06, ADR-0031). 녹지·흙·수면·도상은 M05 데이터. HLOD는 7 고정) | render | L0–L3 |
 | `terrain.height` | bin+gzip | `{u16 size=257, f32 minH, f32 step=0.01}` + `u16[size*size]` (h = minH + v*step), **minH = 모든 셀 공통 −100**(ADR-0018, 이웃 경계 u16 비트 일치), 1 m 간격, 행 우선 `[iz*size + ix]`(iz=0 북쪽 가장자리, ix=0 서쪽) | physics, 지면 질의 | L0 |
 | `buildings.mesh` | glb | 파사드 클래스별 프리미티브. 속성: `_BLDG`(u16 셀내 건물 인덱스), `_FACADE`(u8×4: class 0 오피스·1 맨션·2 주택·3 상업·4 공공·5 공업, floors, tintIdx = 건물 해시, flags bit0 상점 1층·bit1 커튼월·상위 4비트 창 시드), UV0 = 벽: (같은 평면 묶음 시작점부터 m, 건물 최저점부터 m) / 지붕: 셀 로컬 (x, z), **TEXCOORD_1 = (벽 평면 묶음 폭 m, 건물 높이 m)**(지붕·부속물 = (0, 높이)). 벽과 동일 평면인 부속물 면은 제외(ADR-0030) | render | L0–L1 |
-| `roads.mesh` | glb | 차도·보도·연석·광장 | render | L0 |
+| `roads.mesh` | glb | 보도·교통섬 윗면(성형 윗면 + 8 mm, 4 m 조각) + 연석 세로 면 + 바깥 가장자리 치마(M05-T01, ADR-0049). 머티리얼 `terrain_ground`, 속성: POSITION(u16 양자화 + 노드 이동·균일 스케일), NORMAL(i8), `_SURF`(1 보도·7 연석 콘크리트). 차도·광장은 terrain.mesh | render | L0 |
 | `decals.mesh` | glb | 노면 표시 (별도 폴리곤 오프셋) | render | L0 |
-| `overrides.mesh` | glb | 랜드마크 수작업 모델 (PBR, 텍스처 참조는 shared) | render | L0 |
-| `props.inst` | bin+gzip | 반복 `{u16 typeId, u16 pad, u32 count, f32[count*5] (x,y,z,yawRad,scale)}` | render (충돌 있는 소품은 파이프라인이 `collision.bin`에 프리미티브로 굽는다) | L0 |
-| `trees.inst` | bin+gzip | `{u32 count}` + 레코드 `{u8 species, u8 seed, u16 pad, f32 x,y,z, f32 height, f32 crownR}` | render (줄기 충돌은 `collision.bin`의 원기둥) | L0–L1 |
+| `overrides.mesh` | glb | 랜드마크(M05-T05, ADR-0053) + 옥상 설비·외부 비상계단(M05-T07, ADR-0055 — UV 0) + 교량 면·높이 계단(M05-T08, ADR-0056 — UV 0): 프리미티브 1개(머티리얼 `landmark`) — POSITION u16(노드 양자화)·NORMAL i8·TEXCOORD_0 f32(미터: 벽 = 수평 거리·건물 바닥부터 높이, 수평면 = x·z, 화면 = 시드×1000 + m)·`_LMAT` u8(랜드마크 머티리얼 16종 — 15 = FRP, render `materials/landmark.ts`). 텍스처 없음 | render | L0 |
+| `props.inst` | bin+gzip | 반복 `{u16 typeId, u16 pad, u32 count, f32[count*5] (x,y,z,yawRad,scale)}` — typeId = `PROP_TYPE`(1–15 소품, 16–18 가상 간판 돌출·입간판·옥상 — M05-T06: y = 벽면·지붕 높이, 옥상 scale = 폭 / 10 m, 추가만), 셀 로컬, yaw = 로컬 +Z(정면)를 `atan2(fx, fz)`로 | render (충돌 있는 소품은 파이프라인이 `collision.bin`에 프리미티브로 굽는다, ADR-0051) | L0 |
+| `trees.inst` | bin+gzip | `{u32 count}` + 레코드 `{u8 species, u8 seed, u16 pad, f32 x,y,z, f32 height, f32 crownR}` — species = `TREE_SPECIES`(1–6, 0 금지), seed → yaw·색 변형 | render (줄기 충돌은 `collision.bin`의 원기둥, ADR-0052) | L0–L1(L1은 미구현) |
 | `collision.bin` | bin+gzip | §6 JCOL 포맷 | physics | L0 |
 | `nav.bin` | bin | Detour NavMesh 타일 16개 연결 바이트열 (`{u32 count, (u32 len, u8[len])*}`) | sim | L0 |
 | `lanes.bin` | bin+gzip | 차선 그래프 §7 | sim | L0 |
@@ -110,12 +110,13 @@ repeat shapeCount:
   u8 kind (0=triMesh,1=box,2=capsule,3=cylinder,4=convexHull)
   u8 layer (physics ObjectLayer, 08-physics.md §3)
   u8 material (0 concrete,1 asphalt,2 metal,3 glass,4 wood,5 grass,6 soil,7 tile)
-  u8 flags (bit0 = oneSided stairs ramp proxy, bit1 = climbable, bit2 = escalator — layer SENSOR 박스, 로컬 +Z = 진행 방향, ADR-0044)
+  u8 flags (bit0 = oneSided stairs ramp proxy — 데이터: 교량 계단 triMesh(위를 향한 면, 계단 + 평평한 착지판, M05-T08 ADR-0056), bit1 = climbable, bit2 = escalator — layer SENSOR 박스, 로컬 +Z = 진행 방향, ADR-0044)
   f32 pos[3], f32 quat[4]          (셀 로컬)
   kind 0/4: u32 vCount, u32 iCount, f32[vCount*3], u32[iCount]  (4는 iCount=0)
   kind 1: f32 halfExtents[3]; 2: f32 halfHeight, radius; 3: f32 halfHeight, radius
 ```
 - 건물 삼각 메시는 셀당 1개로 병합(삼각형별 머티리얼 ID는 `u8[triCount]` 부가 배열로 확장 예정 → v2).
+- 보도 윗면(M05-T01): layer 1 TERRAIN·material 7 tile triMesh 청크(건물 청크 뒤) — 높이장(보도 안쪽 = 기준면 D)보다 0.15 m 위, 착지점 탐색·걷기가 이 면을 쓴다.
 - 셰이프 헤더 32 B(모든 배열 4바이트 정렬). reader 거부: 미지 kind·kind 4의 iCount ≠ 0·iCount %3 ≠ 0·인덱스 ≥ vCount·비유한 실수(`corrupt`), 길이 부족(`truncated`, 배열 할당 전 검사). 끝 여분 바이트 무시.
 
 ## 7. lanes.bin

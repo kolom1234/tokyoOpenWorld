@@ -110,6 +110,46 @@ export function cellWindow(dem: DemWindow, ix: number, iz: number, margin = DEM_
   return { size, margin, stride, values };
 }
 
+/**
+ * 셀 창(여유 margin)을 DEM 창 밖이면 가장 가까운 가장자리 값으로 채워 만든다(성형 여유 SHAPE_PAD — 영역 외곽·픽스처 1셀 창).
+ * 창 안이면 cellWindow와 같은 값.
+ */
+export function paddedCellWindow(dem: DemWindow, ix: number, iz: number, margin: number): CellWindow {
+  const size = HEIGHTFIELD_SIZE;
+  const stride = size + 2 * margin;
+  const cx = ix * CELL_SIZE_M - margin - dem.x0;
+  const cz = iz * CELL_SIZE_M - margin - dem.z0;
+  const values = new Float32Array(stride * stride);
+  for (let r = 0; r < stride; r++) {
+    const zz = Math.min(Math.max(cz + r, 0), dem.height - 1);
+    for (let c = 0; c < stride; c++) {
+      const xx = Math.min(Math.max(cx + c, 0), dem.width - 1);
+      values[r * stride + c] = dem.values[zz * dem.width + xx] as number;
+    }
+  }
+  return { size, margin, stride, values };
+}
+
+/** 넓은 창 값(같은 셀, 여유 w.margin) → 여유 margin 창(값 복사). */
+export function cropWindow(w: CellWindow, values: Float32Array, margin: number): CellWindow {
+  const stride = w.size + 2 * margin;
+  const off = w.margin - margin;
+  if (off < 0) throw new RangeError('cropWindow: target margin larger than source');
+  const out = new Float32Array(stride * stride);
+  for (let r = 0; r < stride; r++) {
+    const src = (r + off) * w.stride + off;
+    out.set(values.subarray(src, src + stride), r * stride);
+  }
+  return { size: w.size, margin, stride, values: out };
+}
+
+/** WF (x, z)에 가장 가까운 DEM 값(창 밖 undefined) — 셀 밖 지면이 필요한 곳(교량 계단 통로). */
+export function demHeightAt(dem: DemWindow, x: number, z: number): number | undefined {
+  const [c, r] = [Math.round(x - dem.x0), Math.round(z - dem.z0)];
+  if (c < 0 || r < 0 || c >= dem.width || r >= dem.height) return undefined;
+  return dem.values[r * dem.width + c];
+}
+
 /** 로컬 격자 (x, z) 높이(margin 안쪽 음수·size 이상 허용). */
 export function sampleAt(w: CellWindow, x: number, z: number): number {
   return w.values[(z + w.margin) * w.stride + x + w.margin] as number;

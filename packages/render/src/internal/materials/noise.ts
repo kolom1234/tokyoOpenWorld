@@ -40,7 +40,7 @@ export function noiseTexture(): Texture {
 }
 
 /** 격자 좌표 p(1 단위 = 격자 1칸)의 부드러운 보간 표본(RGBA 0..1). */
-function lattice(p: V2): TslNode<'vec4'> {
+export function lattice(p: V2): TslNode<'vec4'> {
   const i = p.floor();
   const f = fract(p);
   const w = f.mul(f).mul(float(3).sub(f.mul(2)));

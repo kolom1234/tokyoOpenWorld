@@ -265,13 +265,53 @@ export interface HeightfieldData {
   step: number;
   data: Uint16Array;
 }
+/**
+ * 소품 종류(props.inst typeId, M05-T03 — ADR-0051). 파이프라인(배치·콜라이더)과 렌더(절차 모델)가 같은 번호를 쓴다. 번호는 바꾸지 않고 추가만.
+ */
+export const PROP_TYPE = {
+  utilityPole: 1,
+  streetLamp: 2,
+  signalVehicle: 3,
+  signalPedestrian: 4,
+  vendingMachine: 5,
+  guardRail: 6,
+  bollard: 7,
+  signStop: 8,
+  postBox: 9,
+  bicycleRack: 10,
+  busStop: 11,
+  manhole: 12,
+  bench: 13,
+  phoneBooth: 14,
+  wasteBasket: 15,
+  /** M05-T06 가상 간판 — 렌더는 소품 풀이 아니라 간판 필드가 그린다. y = 셀 로컬 높이(벽면·옥상), 옥상 scale = 폭 / 10 m. */
+  signProjecting: 16,
+  signStanding: 17,
+  signRooftop: 18,
+} as const;
+export type PropTypeName = keyof typeof PROP_TYPE;
+
 export interface PropBatch {
   typeId: number;
   /** x, y, z, yaw, scale (셀 로컬) × count. */
   transforms: Float32Array;
 }
+/** 나무 수종(trees.inst species, M05-T04 — ADR-0052). 0 금지, 번호는 추가만. */
+export const TREE_SPECIES = { ginkgo: 1, zelkova: 2, cherry: 3, camphor: 4, pine: 5, shrub: 6 } as const;
+export type TreeSpeciesName = keyof typeof TREE_SPECIES;
+/** trees.inst 레코드 1개(셀 로컬, 높이·수관 반경 m). */
+export interface TreeRecord {
+  species: number;
+  seed: number;
+  x: number;
+  y: number;
+  z: number;
+  height: number;
+  crownR: number;
+}
 export interface TreeBatch {
   count: number;
+  /** 24 B 레코드 × count(`treeRecordAt`). */
   records: ArrayBuffer;
 }
 export interface LightRecord {

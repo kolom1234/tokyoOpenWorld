@@ -41,7 +41,7 @@ export interface WallSample extends LayerSample {
   b: V3;
 }
 
-/** 건물당 한 레이어·한 틴트. 지붕은 평지붕(ny > 0.97) 콘크리트, 경사 지붕 = roof 그룹. */
+/** 건물당 한 레이어·한 틴트. 지붕은 평지붕(ny > 0.97) 콘크리트(+ 방수 마감 색, M05-T07), 경사 지붕 = roof 그룹. */
 export function facadeWall(lib: MaterialLibrary, i: FacadeInputs): WallSample {
   const h1 = hash(i.tint.add(0.25));
   const h2 = hash(i.tint.add(0.75));
@@ -58,7 +58,15 @@ export function facadeWall(lib: MaterialLibrary, i: FacadeInputs): WallSample {
   const uv0 = vec2(i.u, i.v);
   const st = select(i.isRoof, uv0, vec2(i.u, i.v.negate())).mul(lib.invTile(layer));
   const s = sampleLayer(lib, layer, st);
-  const tint = select(i.isRoof, vec3(1), vec3(palette.element(int(i.tint.mod(8)))));
+  // 평지붕 방수 마감(M05-T07): 건물 해시로 녹색 우레탄 30 %·밝은 시트 20 %·짙은 아스팔트 시트 10 %·콘크리트 그대로 — 상공 조망의 균일한 회색 지붕을 깬다.
+  const rh = hash(i.tint.add(0.61));
+  const coat = select(
+    rh.lessThan(0.3),
+    vec3(0.58, 0.78, 0.62),
+    select(rh.lessThan(0.5), vec3(1.15, 1.15, 1.12), select(rh.lessThan(0.6), vec3(0.62, 0.62, 0.64), vec3(1))),
+  );
+  const roofTint = select(n.y.greaterThan(0.97), coat, vec3(1));
+  const tint = select(i.isRoof, roofTint, vec3(palette.element(int(i.tint.mod(8)))));
   const tWall = normalize(vec3(n.z, 0, n.x.negate()));
   const t = select(i.isRoof, vec3(1, 0, 0), tWall);
   const b = select(i.isRoof, vec3(0, 0, -1), vec3(0, 1, 0));

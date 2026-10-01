@@ -23,7 +23,12 @@ type Snapshot = Record<string, { sections: Record<string, Array<{ vertices: numb
 const SNAPSHOT = JSON.parse(
   readFileSync(resolve(import.meta.dirname, '../fixtures/snapshots/world-mini-decode.json'), 'utf8'),
 ) as Snapshot;
-const SLOT_OF: Record<string, string> = { 'terrain.mesh': 'terrain', 'buildings.mesh': 'buildings' };
+const SLOT_OF: Record<string, string> = {
+  'terrain.mesh': 'terrain',
+  'buildings.mesh': 'buildings',
+  'roads.mesh': 'roads',
+  'decals.mesh': 'decals',
+};
 
 test('decode worker: world-mini cells match the pipeline snapshot, cache on 2nd pass, cancel works', async ({
   page,

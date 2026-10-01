@@ -24,6 +24,8 @@ export interface DebugOverlayDeps {
   traversal: TraversalService;
   ground: GroundQuery;
   log: Logger;
+  /** 추가 안정 조건(머티리얼 적재·첫 품질 티어 결정 — boot가 월드 로드 뒤 채운다). 없으면 true. */
+  settledExtra?: () => boolean;
   /** 단조 시계(ms). FPS는 FrameContext.dtReal(0.1 s 상한)이 아닌 실제 경과로 잰다. */
   now?: () => number;
 }
@@ -72,19 +74,30 @@ export function describeDebug(
     `셀 ${s.cells} · draw ${s.drawCalls} · tris ${s.triangles.toLocaleString('en-US')}`,
     describeStreaming(st, s),
     describeMaterials(s.materials),
+    `소품 ${s.props.visible}/${s.props.instances} · 풀 ${s.props.pools} · 나무 ${s.trees.visible}/${s.trees.instances} · ${s.trees.pools}${s.trees.ready ? '' : ' (에셋 대기)'} · 간판 ${s.signs.visible}/${s.signs.instances}${s.signs.ready ? '' : ' (대기)'}`,
     `[클릭] 마우스 잠금 · WASD 이동 · E/Q 상승/하강 · 휠 속도 · Shift ×4 · [O] 원점 재설정 테스트`,
   ];
 }
 
-/** e2e용 `data-*`. settled = HLOD 페이드 0 + 스트리밍 대기·받기·디코드·적용 대기 0(화면 비교 전 안정 조건). */
-function writeDataset(el: HTMLElement, s: RenderStats, st: StreamingStats | undefined): void {
+/**
+ * e2e용 `data-*`. settled = HLOD 페이드 0 + 스트리밍 대기·받기·디코드·적용 대기 0 + extra(머티리얼·첫 품질 티어 — 화면 비교·입력 전 안정 조건).
+ * mode = traversal 모드.
+ */
+function writeDataset(
+  el: HTMLElement,
+  s: RenderStats,
+  st: StreamingStats | undefined,
+  extra: boolean,
+  mode: string,
+): void {
   el.dataset.backend = s.backend;
   el.dataset.depth = s.depth;
   el.dataset.cells = String(s.cells);
   el.dataset.frames = String(s.frames);
   el.dataset.rebases = String(s.originRebases);
+  el.dataset.mode = mode;
   const pending = st ? st.queued + st.fetching + st.decoding + st.pendingReady : 0;
-  el.dataset.settled = String(s.hlodFading === 0 && pending === 0);
+  el.dataset.settled = String(s.hlodFading === 0 && pending === 0 && extra);
 }
 
 /** originRebases가 target에 닿을 때까지(프레임마다 확인, 최대 30 s) + 그 뒤 minMs만큼 더. */
@@ -114,7 +127,7 @@ export function createDebugOverlay(deps: DebugOverlayDeps): DebugOverlay {
     const p = traversal.camera.posWF;
     const st = deps.streaming?.stats();
     el.textContent = describeDebug(s, fps, traversal, deps.ground.groundHeightAt(p.x, p.z), st).join('\n');
-    writeDataset(el, s, st);
+    writeDataset(el, s, st, deps.settledExtra?.() ?? true, traversal.mode);
   };
 
   const rebaseTest = async (): Promise<void> => {

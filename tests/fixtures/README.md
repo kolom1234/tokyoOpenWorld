@@ -1,6 +1,6 @@
 # tests/fixtures — 커밋되는 소형 월드·원천 샘플 (M01-T07)
 
-저장소 안에 두는 유일한 월드 데이터. 합계 ≤ 5 MB(현재 ≈ 3.4 MB). `.gitignore`의 `!tests/fixtures/**`가 `*.tkc` 제외를 되돌린다.
+저장소 안에 두는 유일한 월드 데이터. 합계 ≤ 6 MB(M05-T02에서 5 → 6 MB: M05-T01 보도·연석 roads.mesh·보도 콜라이더 + 노면 표시 decals.mesh(OSM, ODbL — ATTRIBUTION.json) — 늘리면 셀 선택·단순화부터 재검토). `.gitignore`의 `!tests/fixtures/**`가 `*.tkc` 제외를 되돌린다.
 **직접 편집 금지** — 아래 명령으로 다시 만든다(`ATTRIBUTION.json`·`expected.json`도 생성물). Biome 대상에서 빠져 있다(생성 바이트 보존).
 
 ## world-mini/ — 빌드된 L0 2×2 월드

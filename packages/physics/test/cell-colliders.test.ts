@@ -152,8 +152,10 @@ describe('cell colliders (world-mini)', () => {
     expect(ticks).toBeGreaterThan(10);
     expect(st.colliderCells).toBe(4);
 
-    // 지면: 정수 샘플 위치 수직 레이 → 높이장 값(±5 cm).
+    // 지면: 정수 샘플 위치 수직 레이 → 높이장 값(±5 cm). 보도(M05-T01) 위는 TERRAIN 층 보도 윗면(높이장 + 연석 0.15 m, 보도 안쪽은
+    // 높이장이 기준면 D)에 먼저 맞는다 → 0.15 ± 0.04 m 위 적중은 보도로 세고 따로 본다.
     const errs: number[] = [];
+    let sidewalkHits = 0;
     for (const c of cells) {
       for (const [sx, sz] of [
         [10, 10],
@@ -169,9 +171,13 @@ describe('cell colliders (world-mini)', () => {
           800,
         );
         await lb.flush();
-        if (hit && hit.layer === 1) errs.push(Math.abs(hit.posWF.y - want));
+        if (!hit || hit.layer !== 1) continue;
+        const dy = hit.posWF.y - want;
+        if (Math.abs(dy - 0.158) < 0.04) sidewalkHits++;
+        else errs.push(Math.abs(dy));
       }
     }
+    expect(sidewalkHits).toBeLessThan(errs.length);
     expect(errs.length).toBeGreaterThan(4);
     expect(Math.max(...errs)).toBeLessThanOrEqual(0.05);
 

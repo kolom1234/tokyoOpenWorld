@@ -8,6 +8,7 @@ import { createPlateauReader } from '../readers/plateau/index.ts';
 import { buildArea } from './build/assemble.ts';
 import { DEM_MARGIN, readDemWindow, readDemWindowFiles, writeDemWindowFiles } from './build/dem-window.ts';
 import type { AreaDef } from './build/manifest.ts';
+import { readCatalog } from './derive/props/context.ts';
 import { extractPlateauMini } from './fixture-plateau.ts';
 import { normalizePlateau } from './normalize-plateau.ts';
 import { validateBuild, writeReport } from './validate.ts';
@@ -25,6 +26,11 @@ const I18N: Record<string, { title: string; en: string; ko: string }> = {
     title: 'Project PLATEAU 3D都市モデル（渋谷区）2025',
     en: 'Source: MLIT Project PLATEAU 3D city model (Shibuya-ku), processed',
     ko: '출처: 국토교통성 Project PLATEAU 3D 도시모델(시부야구)을 가공하여 작성',
+  },
+  'osm-kanto': {
+    title: 'OpenStreetMap（Geofabrik 関東抽出 2026-09-29）',
+    en: '© OpenStreetMap contributors (ODbL 1.0) — road markings derived',
+    ko: '© OpenStreetMap contributors(ODbL 1.0) — 노면 표시 파생',
   },
   'gsi-dem': {
     title: '基盤地図情報 数値標高モデル（DEM1A/5A）',
@@ -87,6 +93,7 @@ export async function buildWorldMini(input: FixtureInput): Promise<string> {
     outDir: buildDir,
     plateauSources: [PLATEAU_MINI_SOURCE],
     log: log.child('world-mini'),
+    props: readCatalog(repoRoot),
   });
   const report = await validateBuild(buildDir, join(repoRoot, 'schemas'), new Set(input.lock.map((l) => l.id)));
   writeReport(buildDir, report);
@@ -97,7 +104,7 @@ export async function buildWorldMini(input: FixtureInput): Promise<string> {
   for (const f of ['world.json', 'cells.idx', 'L0']) cpSync(join(buildDir, f), join(out, f), { recursive: true });
   const attribution = fixtureAttribution(
     input.lock,
-    ['gsi-dem', PLATEAU_MINI_SOURCE],
+    ['gsi-dem', PLATEAU_MINI_SOURCE, 'osm-kanto'],
     ['tests/fixtures/world-mini/**'],
   );
   writeJson(join(out, 'ATTRIBUTION.json'), attribution);

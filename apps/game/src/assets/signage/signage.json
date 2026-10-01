@@ -1,0 +1,526 @@
+{
+  "atlas": {
+    "width": 1024,
+    "height": 2048,
+    "h": {
+      "w": 256,
+      "h": 64
+    },
+    "v": {
+      "w": 64,
+      "h": 256
+    }
+  },
+  "palettes": [
+    {
+      "bg": "#b8202a",
+      "text": "#ffffff",
+      "accent": "#f2c230"
+    },
+    {
+      "bg": "#1d3f8a",
+      "text": "#ffffff",
+      "accent": "#e8e8e8"
+    },
+    {
+      "bg": "#f1efe8",
+      "text": "#20242a",
+      "accent": "#c4362c"
+    },
+    {
+      "bg": "#1e6b3a",
+      "text": "#f6f2e0",
+      "accent": "#e9c35a"
+    },
+    {
+      "bg": "#f2c230",
+      "text": "#2a1d10",
+      "accent": "#b8202a"
+    },
+    {
+      "bg": "#20242a",
+      "text": "#f6d36b",
+      "accent": "#e84a2f"
+    },
+    {
+      "bg": "#e86a1f",
+      "text": "#ffffff",
+      "accent": "#2a1d10"
+    },
+    {
+      "bg": "#ffffff",
+      "text": "#1d3f8a",
+      "accent": "#2d9cdb"
+    },
+    {
+      "bg": "#5b2a6e",
+      "text": "#ffffff",
+      "accent": "#f2a7d8"
+    },
+    {
+      "bg": "#2d9cdb",
+      "text": "#ffffff",
+      "accent": "#1d3f8a"
+    },
+    {
+      "bg": "#3a2a1e",
+      "text": "#f6efe0",
+      "accent": "#c9a36b"
+    },
+    {
+      "bg": "#d93a7a",
+      "text": "#ffffff",
+      "accent": "#ffd6e7"
+    }
+  ],
+  "brands": [
+    {
+      "name": "NOHATA BAKERY",
+      "category": "BAKERY",
+      "palette": 8,
+      "h": [0, 0],
+      "v": [0, 1024]
+    },
+    {
+      "name": "むそす焼肉",
+      "category": "GRILL",
+      "palette": 7,
+      "h": [256, 0],
+      "v": [64, 1024]
+    },
+    {
+      "name": "ちま中華",
+      "category": "CHINA",
+      "palette": 6,
+      "h": [512, 0],
+      "v": [128, 1024]
+    },
+    {
+      "name": "楓沢カラオケ",
+      "category": "KARAOKE",
+      "palette": 8,
+      "h": [768, 0],
+      "v": [192, 1024]
+    },
+    {
+      "name": "バハナ居酒屋",
+      "category": "IZAKAYA",
+      "palette": 11,
+      "h": [0, 64],
+      "v": [256, 1024]
+    },
+    {
+      "name": "トレ中華",
+      "category": "CHINA",
+      "palette": 10,
+      "h": [256, 64],
+      "v": [320, 1024]
+    },
+    {
+      "name": "ソヤ雑貨",
+      "category": "GOODS",
+      "palette": 6,
+      "h": [512, 64],
+      "v": [384, 1024]
+    },
+    {
+      "name": "千坊",
+      "category": "FLOWERS",
+      "palette": 6,
+      "h": [768, 64],
+      "v": [448, 1024]
+    },
+    {
+      "name": "チニボ書店",
+      "category": "BOOKS",
+      "palette": 6,
+      "h": [0, 128],
+      "v": [512, 1024]
+    },
+    {
+      "name": "セド食堂",
+      "category": "DINER",
+      "palette": 9,
+      "h": [256, 128],
+      "v": [576, 1024]
+    },
+    {
+      "name": "虎見美容室",
+      "category": "HAIR",
+      "palette": 7,
+      "h": [512, 128],
+      "v": [640, 1024]
+    },
+    {
+      "name": "フス書店",
+      "category": "BOOKS",
+      "palette": 1,
+      "h": [768, 128],
+      "v": [704, 1024]
+    },
+    {
+      "name": "柳野洋菓子",
+      "category": "PATISSERIE",
+      "palette": 3,
+      "h": [0, 192],
+      "v": [768, 1024]
+    },
+    {
+      "name": "亀亭",
+      "category": "CHINA",
+      "palette": 3,
+      "h": [256, 192],
+      "v": [832, 1024]
+    },
+    {
+      "name": "ハラレ酒場",
+      "category": "BAR",
+      "palette": 7,
+      "h": [512, 192],
+      "v": [896, 1024]
+    },
+    {
+      "name": "つらそば",
+      "category": "SOBA",
+      "palette": 10,
+      "h": [768, 192],
+      "v": [960, 1024]
+    },
+    {
+      "name": "ささまラーメン",
+      "category": "NOODLE",
+      "palette": 1,
+      "h": [0, 256],
+      "v": [0, 1280]
+    },
+    {
+      "name": "小館",
+      "category": "PHARMACY",
+      "palette": 7,
+      "h": [256, 256],
+      "v": [64, 1280]
+    },
+    {
+      "name": "NORYU NOODLE",
+      "category": "NOODLE",
+      "palette": 10,
+      "h": [512, 256],
+      "v": [128, 1280]
+    },
+    {
+      "name": "ソバ酒場",
+      "category": "BAR",
+      "palette": 2,
+      "h": [768, 256],
+      "v": [192, 1280]
+    },
+    {
+      "name": "さもの雑貨",
+      "category": "GOODS",
+      "palette": 0,
+      "h": [0, 320],
+      "v": [256, 1280]
+    },
+    {
+      "name": "ムル中華",
+      "category": "CHINA",
+      "palette": 0,
+      "h": [256, 320],
+      "v": [320, 1280]
+    },
+    {
+      "name": "マネハ薬局",
+      "category": "PHARMACY",
+      "palette": 4,
+      "h": [512, 320],
+      "v": [384, 1280]
+    },
+    {
+      "name": "青堂",
+      "category": "BAR",
+      "palette": 2,
+      "h": [768, 320],
+      "v": [448, 1280]
+    },
+    {
+      "name": "はと書店",
+      "category": "BOOKS",
+      "palette": 1,
+      "h": [0, 384],
+      "v": [512, 1280]
+    },
+    {
+      "name": "ゆくよ薬局",
+      "category": "PHARMACY",
+      "palette": 4,
+      "h": [256, 384],
+      "v": [576, 1280]
+    },
+    {
+      "name": "モヤ不動産",
+      "category": "ESTATE",
+      "palette": 6,
+      "h": [512, 384],
+      "v": [640, 1280]
+    },
+    {
+      "name": "ツサ不動産",
+      "category": "ESTATE",
+      "palette": 7,
+      "h": [768, 384],
+      "v": [704, 1280]
+    },
+    {
+      "name": "つす中華",
+      "category": "CHINA",
+      "palette": 3,
+      "h": [0, 448],
+      "v": [768, 1280]
+    },
+    {
+      "name": "スヨ書店",
+      "category": "BOOKS",
+      "palette": 2,
+      "h": [256, 448],
+      "v": [832, 1280]
+    },
+    {
+      "name": "花野そば",
+      "category": "SOBA",
+      "palette": 4,
+      "h": [512, 448],
+      "v": [896, 1280]
+    },
+    {
+      "name": "ヒネ美容室",
+      "category": "HAIR",
+      "palette": 3,
+      "h": [768, 448],
+      "v": [960, 1280]
+    },
+    {
+      "name": "藤軒",
+      "category": "SET MEAL",
+      "palette": 2,
+      "h": [0, 512],
+      "v": [0, 1536]
+    },
+    {
+      "name": "泉波美容室",
+      "category": "HAIR",
+      "palette": 8,
+      "h": [256, 512],
+      "v": [64, 1536]
+    },
+    {
+      "name": "若里花店",
+      "category": "FLOWERS",
+      "palette": 2,
+      "h": [512, 512],
+      "v": [128, 1536]
+    },
+    {
+      "name": "TOVERBEL CHINA",
+      "category": "CHINA",
+      "palette": 4,
+      "h": [768, 512],
+      "v": [192, 1536]
+    },
+    {
+      "name": "らしき焼肉",
+      "category": "GRILL",
+      "palette": 11,
+      "h": [0, 576],
+      "v": [256, 1536]
+    },
+    {
+      "name": "RAFIONOR SOBA",
+      "category": "SOBA",
+      "palette": 7,
+      "h": [256, 576],
+      "v": [320, 1536]
+    },
+    {
+      "name": "ミシヒ食堂",
+      "category": "DINER",
+      "palette": 3,
+      "h": [512, 576],
+      "v": [384, 1536]
+    },
+    {
+      "name": "NESOYU NOODLE",
+      "category": "NOODLE",
+      "palette": 6,
+      "h": [768, 576],
+      "v": [448, 1536]
+    },
+    {
+      "name": "YUVER FLOWERS",
+      "category": "FLOWERS",
+      "palette": 6,
+      "h": [0, 640],
+      "v": [512, 1536]
+    },
+    {
+      "name": "ロノ食堂",
+      "category": "DINER",
+      "palette": 2,
+      "h": [256, 640],
+      "v": [576, 1536]
+    },
+    {
+      "name": "千谷歯科",
+      "category": "DENTAL",
+      "palette": 9,
+      "h": [512, 640],
+      "v": [640, 1536]
+    },
+    {
+      "name": "ゆほ雑貨",
+      "category": "GOODS",
+      "palette": 7,
+      "h": [768, 640],
+      "v": [704, 1536]
+    },
+    {
+      "name": "NAMIFIO KARAOKE",
+      "category": "KARAOKE",
+      "palette": 0,
+      "h": [0, 704],
+      "v": [768, 1536]
+    },
+    {
+      "name": "カニル珈琲",
+      "category": "COFFEE",
+      "palette": 8,
+      "h": [256, 704],
+      "v": [832, 1536]
+    },
+    {
+      "name": "若葉珈琲",
+      "category": "COFFEE",
+      "palette": 9,
+      "h": [512, 704],
+      "v": [896, 1536]
+    },
+    {
+      "name": "もにベーカリー",
+      "category": "BAKERY",
+      "palette": 3,
+      "h": [768, 704],
+      "v": [960, 1536]
+    },
+    {
+      "name": "東堂",
+      "category": "IZAKAYA",
+      "palette": 4,
+      "h": [0, 768],
+      "v": [0, 1792]
+    },
+    {
+      "name": "ムポヒ書店",
+      "category": "BOOKS",
+      "palette": 8,
+      "h": [256, 768],
+      "v": [64, 1792]
+    },
+    {
+      "name": "ふむまベーカリー",
+      "category": "BAKERY",
+      "palette": 2,
+      "h": [512, 768],
+      "v": [128, 1792]
+    },
+    {
+      "name": "コセ眼鏡",
+      "category": "OPTICAL",
+      "palette": 1,
+      "h": [768, 768],
+      "v": [192, 1792]
+    },
+    {
+      "name": "シハハ定食",
+      "category": "SET MEAL",
+      "palette": 5,
+      "h": [0, 832],
+      "v": [256, 1792]
+    },
+    {
+      "name": "鈴館",
+      "category": "SOBA",
+      "palette": 1,
+      "h": [256, 832],
+      "v": [320, 1792]
+    },
+    {
+      "name": "森見整骨院",
+      "category": "CLINIC",
+      "palette": 10,
+      "h": [512, 832],
+      "v": [384, 1792]
+    },
+    {
+      "name": "モセサそば",
+      "category": "SOBA",
+      "palette": 0,
+      "h": [768, 832],
+      "v": [448, 1792]
+    },
+    {
+      "name": "ラネガ花店",
+      "category": "FLOWERS",
+      "palette": 10,
+      "h": [0, 896],
+      "v": [512, 1792]
+    },
+    {
+      "name": "RONARO BAR",
+      "category": "BAR",
+      "palette": 6,
+      "h": [256, 896],
+      "v": [576, 1792]
+    },
+    {
+      "name": "小屋",
+      "category": "FLOWERS",
+      "palette": 2,
+      "h": [512, 896],
+      "v": [640, 1792]
+    },
+    {
+      "name": "セユヒ歯科",
+      "category": "DENTAL",
+      "palette": 8,
+      "h": [768, 896],
+      "v": [704, 1792]
+    },
+    {
+      "name": "リレボカラオケ",
+      "category": "KARAOKE",
+      "palette": 6,
+      "h": [0, 960],
+      "v": [768, 1792]
+    },
+    {
+      "name": "みらち古着",
+      "category": "VINTAGE",
+      "palette": 8,
+      "h": [256, 960],
+      "v": [832, 1792]
+    },
+    {
+      "name": "ゴヒ寿司",
+      "category": "SUSHI",
+      "palette": 7,
+      "h": [512, 960],
+      "v": [896, 1792]
+    },
+    {
+      "name": "風家",
+      "category": "SOBA",
+      "palette": 11,
+      "h": [768, 960],
+      "v": [960, 1792]
+    }
+  ]
+}

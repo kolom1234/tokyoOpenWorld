@@ -6,11 +6,11 @@ Layer: — | Depends: core, geo, tile-format, @gltf-transform/*, meshoptimizer, 
 상세: `docs/04-data-pipeline.md`, 포맷: `docs/05-tile-format.md`.
 
 ## CLI
-`pnpm pipeline <fetch|normalize|derive|build|hlod|materials|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
+`pnpm pipeline <fetch|normalize|derive|build|hlod|materials|avatar|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
 
 ## Files
 ```
-src/cli.ts                      명령 파서(구현: normalize --area --cells --layer plateau|terrain|all --source --reader; build --area --cells --build-id; validate --build-id)
+src/cli.ts                      명령 파서(구현: normalize --area --cells --layer plateau|terrain|all --source --reader --plateau-layer bldg|tran|brid; build --area --cells --build-id; validate --build-id)
 src/context.ts                  경로·설정·로거·캐시 키
 src/readers/plateau/{index,types,codes,geometry,citygml-sax,citygml-sax-state,citygml-assemble,nusamai}.ts  (ADR-0007)
 src/readers/dem.ts              GSI FGD DEM xml(zip 멤버 스트림) → Float32 타일 + EPSG:6668 VRT (M01-T03)
@@ -37,6 +37,27 @@ src/stages/hlod/child-split.ts    childKeys, 자식 지형 패치(RTIN + 스커�
 src/stages/hlod/boxes.ts          OBB 박스·블록 매스 기하 / l1.ts(용접 + meshopt simplify) / l2.ts(buildFarLevel) / l3.ts / run.ts(예산 재시도·cells.idx 병합)
 src/stages/validate-hlod.ts       HLOD 예산·자식 그룹 검사
 src/lib/{geom2d,png}.ts           볼록 껍질·최소 면적 사각형 / 최소 PNG 디코더
+src/lib/{zip,mesh-lookup}.ts      최소 ZIP 읽기(저장·deflate) / 삼각형 메시 xz 높이 조회(1 m 버킷)
+src/stages/derive/{grid,roads,terrain-shape,edge-burn,curbs,sidewalks,footprints}.ts   M05-T01(ADR-0049): 1 m 창 도구(원반 오프셋 최근접·마스크 평균·쌍선형) / 도로 래스터(차도·보행·없음)·벡터 색인 / 지형 성형(차도 경사·보행 띠·비도로 섞기·건물 평탄화·RTIN 허용 오차) / 바깥 가장자리 새기기 / 연석·치마 변 분류(0.15·0.5·1.0 m 탐침) / 보도 윗면(earcut + 4 m 조각) / 건물 지면 발자국
+src/stages/build/roads-mesh.ts   roads.mesh(보도 윗면 + 연석 + 치마, u16 위치) + 보도 윗면 콜라이더, 바깥 가장자리 지형 맞춤
+src/stages/validate-roads.ts     `validate`의 `road gaps`(교차로 50곳 < 2 cm, 연석 아래 틈) — CLI가 오류로 올린다
+src/stages/normalize-osm.ts      `normalize --layer osm`(M05-T02, ADR-0050): lock osm-kanto(sha256 스트림) → osmium extract·tags-filter·export GeoJSONSeq → WF → data/normalized/osm/<cell>.ndjson.gz(OsmRecord {id, geom, rings(xz), tags, source})
+src/stages/derive/markings/{common,crosswalk,lanes,stopline,text,index}.ts   노면 표시: 1 m 칸 데칼 띠(지형 + 2 cm, 셀 소유) / 일본식 횡단보도 / 차선(좌측통행·폭 행진) / 정지선(신호·stop) / 「止まれ」 획 폰트 / 조립·통계
+src/stages/build/decals-mesh.ts  decals.mesh(road_marking, u16 위치, `_PAINT`)
+src/checks/markings-photo.ts     GSI z18 사진 대조(검증 전용, PHOTO_DEBUG 그림)
+src/stages/derive/props/{context,signals,poles,points,vending,linear,wires,index}.ts   거리 소품(M05-T03, ADR-0051): 카탈로그·배치 문맥(셀 소유·표면 높이·예산) / 신호(교차로 건너편 왼쪽·보행 양끝) / 전신주(선 id 시드 정거장)·전선 경간 / OSM 점 / 자판기(가상 브랜드, 길가 벽) / 가드 파이프·맨홀 / 전선 리본(중심선 + `_OFF`) / 조립(우선순위·예산 5k)
+src/stages/build/props-cell.ts   셀 소품: 표면 높이(보도 윗면·지형)·교차부·건물 발자국 → buildProps → props.inst(gzip)·콜라이더·전선
+src/stages/build/area-reader.ts  영역 빌드 입력(셀별 ndjson.gz, 8-이웃 캐시)
+src/stages/build/overrides/{spec,geom,shell,parts,figures,index}.ts   랜드마크 오버라이드(M05-T05, ADR-0053): content/overrides/<id>/meta.json 읽기(LMAT) / 메시 스트림·도형 / PLATEAU 셸 재머티리얼(cuts 띠 자르기) / 부품(상자·원기둥·압출·난간·참도 띠·벽 화면) / 도리이·개 동상 / 셀 조립·renderSkip·수락 검사(수평 ≤ 0.5 m·높이 ≤ 1 m)·overrides.mesh
+src/stages/build/overrides/rooftops.ts   옥상 설비·외부 비상계단(M05-T07, ADR-0055): 가장 큰 평지붕에 塔屋·물탱크·실외기 무리·난간·안테나(gmlId 시드, LOD2 옥상 부속물 있으면 생략), 8–22 m 건물 짧은 변 바깥 지그재그 철골 계단 — overrides.mesh(UV 0)
+src/stages/derive/stairs.ts      교량 계단(M05-T08, ADR-0056): PLATEAU 상판(decksOf·deckHeightAt) + OSM 지상 계단 중 상판에 닿는 것(높이 차 0.5–10 m·경사 ≤ 45°) → StairSpec(아래 → 위, 상판 가장자리에서 자름 cutAtDeck, 착지판 landingOf), walkwaysOf(셀 계단 + 이웃 포함 걷어내기 통로)
+src/stages/build/overrides/{bridges,carve}.ts   교량 면(overrides 스트림 UV 0 + 정밀 지면 충돌) / 계단 메시(챌면 ≤ 0.20 m·옆 판·손스침·착지판) + 램프 프록시 triMesh(flags bit0) + 옆 벽 박스 / 계단 통로 안 교량 면 버림·위 끝 문을 가로지르는 면 자르기
+src/stages/build/cell-stats.ts   셀 빌드 통계(CellBuildStats, 로그 — overrides.details)
+src/stages/signage/{raster,brand-generator,atlas,run}.ts   `pnpm pipeline signage`(M05-T06, ADR-0054): 글리프 윤곽 래스터라이저 / 가상 브랜드 생성·실존 대조(content/signage) / 타일 배치·색 합성 아틀라스 / Noto Sans JP(lock) → apps/game/src/assets/signage/{atlas.png, signage.json}
+src/stages/derive/props/signs.ts   간판 배치(돌출 상자 열·입간판·옥상 광고탑, 상업 용도 길가 변) — props.inst PROP_TYPE 16–18
+src/stages/derive/vegetation.ts · derive/trees/{species,place,street,fill,index}.ts   녹지 `_SURF` 잔디 / 나무 배치(OSM 점·열, 규칙 가로수, 녹지 격자, 수종, 줄기 콜라이더, 셀 4k) — M05-T04 ADR-0052
+src/stages/trees/{generate,leaf-atlas,impostor,run}.ts · src/cli-assets.ts   `pnpm pipeline trees`(ez-tree 수종 → GLB, 자체 잎 아틀라스, CPU 반팔면체 임포스터 → apps/game/src/assets/trees) / 에셋 CLI(materials·avatar·trees)
+src/stages/avatar/{run,bake,anims}.ts  `avatar`(M05 결정 2, ADR-0048): data/raw Quaternius UBC·UAL zip(sha256 lock, lib/zip.ts) → 몸+머리털 프리미티브 1개·정점색(텍스처 표본 + 스킨 가중치 옷 영역)·클립 4개(회전 + pelvis 이동, _RM 자연 속력) → apps/game/src/assets/avatar-ubc-male.glb(커밋)
 src/stages/materials/{library,fetch,encode,run,interiors,interior-rooms}.ts  `materials`(M03-T01, ADR-0027; 실내 큐브맵 8방 × 6면 광선 추적 → interiors.ktx2 M03-T05, ADR-0034): content/materials/library.json → ambientCG zip(sha256 lock, `--update-lock`) → ImageMagick(리사이즈·ORM 패킹) → toktx KTX2 배열 3장 + manifest → 캐시 data/derived/materials/<hash> → `--build-id` 설치(shared/materials)
 src/stages/validate-materials.ts  manifest 스키마(schemas/materials.schema.json)·파일 크기·KTX2 헤더·그룹 일관성(없으면 건너뜀)
 interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts   (미구현)
@@ -57,7 +78,7 @@ interface PlateauReader { readonly name: 'nusamai' | 'citygml-sax'; read(file: s
 type NormalizedFeature = BuildingRecord | RoadRecord;   // 필드: docs/04-data-pipeline.md §4.2 표, 정의: readers/plateau/types.ts
 createPlateauReader(impl = 'citygml-sax'); parseCityGmlString(xml, sourceId)   // 후자는 테스트·픽스처용
 createCityGmlSaxReader().readChunks(asyncIterableOfStrings, { sourceId })       // 스트림 입력(unzip -p)
-normalizePlateau({ sources: [{ sourceId, rawRoot }…], cells, outDir, reader, log })  // → data/normalized/{buildings,roads}/<cellId>.ndjson.gz
+normalizePlateau({ sources: [{ sourceId, rawRoot }…], cells, outDir, reader, log, layers? })  // → data/normalized/{buildings,roads,bridges}/<cellId>.ndjson.gz (layers 기본 bldg·tran·brid)
                                                                                 // 소스들을 한 버킷으로, 같은 메시 파일명은 앞 소스만(都 pref 판 = 메시 단위)
 ```
 - 원천 배치: `data/raw/<sourceId>/<zip>` + `data/raw/<sourceId>/extracted/{udx,codelists,…}`.
@@ -74,9 +95,10 @@ gridOfBounds(b): PrjGrid                              // 픽셀 (col,row) 중심
 
 ## Build / Validate (M01-T05, ADR-0018)
 ```ts
-buildArea({ area, cells, buildId, normalizedDir, outDir, plateauSources, log, dem? }): Promise<CellBuildStats[]>  // → data/build/<buildId>/{world.json,cells.idx,L0/<ix>/<iz>.tkc}
+buildArea({ area, cells, buildId, normalizedDir, outDir, plateauSources, log, dem?, props?, overrides? }): Promise<CellBuildStats[]>  // → data/build/<buildId>/{world.json,cells.idx,L0/<ix>/<iz>.tkc}; props = readCatalog(repoRoot)(CLI build·world-mini, plateau-mini 스냅샷은 없음), overrides = readOverrides(repoRoot)(CLI build만, cells.idx flags bit0)
 buildCell({ key, buildId, window, buildings, metaFallbackSources }): Promise<{ tkc, stats }>
-rtinTriangulate(h, n /*2^k+1*/, maxError): Uint32Array;  buildTerrainGeometry(w) / encodeTerrainMesh(g);  buildBuildings(records, originWF)
+rtinTriangulate(h, n /*2^k+1*/, maxError): Uint32Array;  buildTerrainGeometry(w) / encodeTerrainMesh(g);  buildBuildings(records, originWF, renderSkip?)  // renderSkip = 렌더에서만 뺄 gmlId(충돌·meta 유지)
+overrideCell(set, records, originWF, groundAt): Promise<{ glb, aabbLocal, tris, renderSkip, collider, landmarks, checks }>  // 허용 초과 시 throw
 encodeGlb(mesh) / decodeGlb(bytes)   // lib/gltf.ts, meshopt + KHR_mesh_quantization
 makeBuildId(repoRoot, date?)  // YYYYMMDD-<git7>-<lock8>, SOURCE_DATE_EPOCH 존중
 validateBuild(dir, schemasDir, lockIds): Promise<ValidateReport>;  writeReport(dir, r)  // report.json + report.md(셀 표)
@@ -106,7 +128,7 @@ buildL1(key, { l0Buildings, dem1m, farDem, far }, ratio);  buildFarLevel(key, fa
 
 ## Tests
 픽스처 셀 빌드 스냅샷 해시, 경계 이음새 검사, 폴리곤·스플라인 유틸 단위 테스트.
-현재: `test/hlod.test.ts`(자식 분할 합집합·예산·박스 외향·매스 피복·simplify 25%·PNG/dem_png·OBB), `test/build-terrain.test.ts`(RTIN 오차 상한·면적·경계 정점, 이웃 셀 높이장 u16·메시 경계 정점 완전 일치, 결정론), `test/fixtures.test.ts`(커밋된 world-mini validate·4 이음새·ATTRIBUTION 스키마, plateau-mini normalize→build 2회 동일 + `expected.json` 스냅샷), `test/build-cell.test.ts`(건물 속성·양자화 오차·외향 법선, 영역 빌드 → validate 무오류·lock 위반 검출, 2회 빌드 바이트 동일), `test/dem.test.ts`(FGD DEM 파싱·startPoint·결측 종류, 격자 정렬, 1A/5A 병합), `test/citygml-sax.test.ts`(합성 CityGML: 면 종류·속성·UV·LOD 선택·도로 기능), `test/polygon.test.ts`(클리핑 이음새·보간, gzip 헤더 고정).
+현재: `test/hlod.test.ts`(자식 분할 합집합·예산·박스 외향·매스 피복·simplify 25%·PNG/dem_png·OBB), `test/build-terrain.test.ts`(RTIN 오차 상한·면적·경계 정점, 이웃 셀 높이장 u16·메시 경계 정점 완전 일치, 결정론), `test/fixtures.test.ts`(커밋된 world-mini validate·4 이음새·ATTRIBUTION 스키마, plateau-mini normalize→build 2회 동일 + `expected.json` 스냅샷), `test/build-cell.test.ts`(건물 속성·양자화 오차·외향 법선, 영역 빌드 → validate 무오류·lock 위반 검출, 2회 빌드 바이트 동일), `test/dem.test.ts`(FGD DEM 파싱·startPoint·결측 종류, 격자 정렬, 1A/5A 병합), `test/citygml-sax.test.ts`(합성 CityGML: 면 종류·속성·UV·LOD 선택·도로 기능·교량 brid 테마면), `test/stairs.test.ts`(상판·계단 명세 — 상판에 닿는 것만·45°·자름·착지판·소유, 챌면 ≤ 0.20·램프 프록시 위를 향함·옆 벽, 통로 면 버림·위 끝 난간 자르기), `test/polygon.test.ts`(클리핑 이음새·보간, gzip 헤더 고정). `test/props-derive.test.ts`(전주 한쪽·간격·셀 무관 정거장·전선 5가닥, 신호 보행·차량 좌측, 가드 파이프 횡단 틈, 맨홀 차도, 예산 절단, 자판기 길가·정면, props.inst 왕복). `test/overrides.test.ts`(띠 자르기, 셸 오차 0·renderSkip(충돌·meta 유지), 벽 화면 0.305 m, 높이 허용 초과 실패, 부품 셀 소유·충돌, 도리이·동상 치수, content 명세 순서·중복 거부).
 
 ## Status
 M01-T02: PLATEAU 리더(SAX) + normalize(건물·도로) + 컨테이너. M01-T03: DEM → dem_1m.tif. M01-T05: build(지형·건물·meta) + validate(스키마·해시·예산·이음새). M01-T07: fixture.

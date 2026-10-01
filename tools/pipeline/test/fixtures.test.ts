@@ -47,7 +47,7 @@ describe('world-mini', () => {
     const a = readJson(join(dir, 'ATTRIBUTION.json')) as { entries: { id: string }[] };
     const v = attributionValidator();
     expect(v(a), JSON.stringify(v.errors)).toBe(true);
-    expect(a.entries.map((e) => e.id).sort()).toEqual(['gsi-dem', 'plateau-shibuya']);
+    expect(a.entries.map((e) => e.id).sort()).toEqual(['gsi-dem', 'osm-kanto', 'plateau-shibuya']);
   });
 });
 

@@ -30,6 +30,7 @@ scene
 - `DecodedMesh` → `BufferGeometry` (TypedArray 그대로 `BufferAttribute`), 머티리얼 클래스별 공유 머티리얼 인스턴스.
 - 셀당 드로우콜 목표: L0 ≤ 30, L1 ≤ 8, L2/L3 ≤ 4. HLOD는 머티리얼별 1개(현재 지형·건물 = 2, ADR-0025).
 - 소품/나무: 타입별 **전역 InstancedMesh 풀**(셀별이 아님) + 셀별 인스턴스 범위 할당 → 드로우콜 = 타입 수 × LOD 수.
+  구현(M05-T03, ADR-0051) `props/{geo,models,blocks,pools}.ts`: 코드 절차 모델(정점색, LOD 0/1/2), **LOD당 풀 1개**(전 종류 합친 기하 + 인스턴스 종류 번호 — three r186은 InstancedMesh마다 노드 빌드 ≈ 140 ms라 종류 × LOD 풀 대신), 64 m 블록 거리 LOD(0 ≤ 40·1 ≤ 150·2 ≤ 종류별 80–600 m, 히스테리시스 2 m, 카메라 1 m 이동마다), 바뀐 LOD만 재작성.
 - 컬링: 셀 AABB 프러스텀 컬링(CPU) + 인스턴스는 거리 LOD 선택(CPU, 셀 단위 매 4프레임).
 
 ## 4. 머티리얼 클래스 (고정 목록 — 부팅 시 선컴파일)
@@ -37,18 +38,18 @@ scene
 |---|---|---|
 | `M_TERRAIN` | 지면 | `_SURF` 기반 텍스처 배열 스플랫, 경사 triplanar, 젖음 |
 | `M_ROAD` | 차도/보도/연석 | 아스팔트 변형 노이즈(보수 패치·균열·유분), 보도 타일 패턴, 젖음·물웅덩이 |
-| `M_DECAL` | 노면 표시 | 도료 마모 마스크, polygonOffset, 약간의 재귀반사 느낌(시선각 스페큘러) |
+| `M_DECAL` | 노면 표시 | 도료 마모 마스크, polygonOffset, 약간의 재귀반사 느낌(시선각 스페큘러). **구현(M05-T02, ADR-0050)** `materials/decal.ts` `road_marking`: `_PAINT` 흰·황, 노이즈 3축척 마모 = 알파 테스트, 지형 위 2 cm 기하 오프셋(깊이 편향 없음), 재귀반사 미구현 |
 | `M_FACADE` | 건물 벽 (핵심) | §5 절차적 파사드 |
 | `M_ROOF` | 지붕 | 콘크리트/방수시트/금속 변형, 옥상 설비 인스턴스는 별도 |
 | `M_GLASS` | 커튼월/대형 유리 | 프레넬 반사(SSR + 환경 프로브), 내부 매핑, 멀리언 패턴 — 셰이딩 함수 `materials/glass.ts`(파사드 창·커튼월·상점 유리 공유, M03-T05) |
-| `M_OVERRIDE` | 랜드마크 수작업 | `MeshPhysicalNodeMaterial` 표준 PBR |
-| `M_PROP` | 소품 | PBR + 텍스처 배열, 발광 마스크(자판기 등) |
-| `M_FOLIAGE` | 잎 | alpha-to-coverage/해시 알파, 투과광, 바람 흔들림, 계절 틴트 |
-| `M_IMPOSTOR` | 원거리 나무/소품 | 옥타헤드럴 임포스터 |
+| `M_OVERRIDE` | 랜드마크 | **구현(M05-T05, ADR-0053)** `materials/landmark.ts` `landmark`: Standard PBR, `_LMAT` 15종 표(색·거칠기·금속도) + 절차 무늬(멀리언·흰 세로 핀·석재 줄눈·화강암 창 격자·강판 이음·자갈·나뭇결·청동 녹, fwidth 거리 평균) + 화면 가상 영상(색면·원·띠·LED 격자, 글자·로고 없음, `screenExposure`) |
+| `M_PROP` | 소품 | PBR + 텍스처 배열, 발광 마스크(자판기 등). **구현(M05-T03)** `materials/prop.ts` `street_prop` = 정점색 × 인스턴스 색(자판기 가상 브랜드), 텍스처·발광 없음(야간 = M09-T03). 전선 `power_wire` = 중심선 + `_OFF` 거리 비례 최소 폭(≈ 1.5 px) |
+| `M_FOLIAGE` | 잎 | alpha-to-coverage/해시 알파, 투과광, 바람 흔들림, 계절 틴트. **구현(M05-T04, ADR-0052)** `trees/materials.ts` `tree_leaf`: 자체 잎 아틀라스 알파 테스트, Lambert + 태양 + 하늘 간접광(보조 AtmosphereLight) + 투과 22 %, 높이² 흔들림·떨림, 수종 계절 표. 인스턴싱 = InstancedBufferGeometry 속성(`_ipos`·`_iext`) |
+| `M_IMPOSTOR` | 원거리 나무/소품 | 옥타헤드럴 임포스터. **구현(M05-T04)** `tree_impostor`: 반팔면체 8 × 8 틀(CPU 굽기), 나무 로컬 방향으로 틀 선택, 구면 법선, 수종 타일 3 × 2 |
 | `M_CHARACTER` | 보행자 | VAT(정점 애니메이션 텍스처) + 인스턴스 색 변형 + 소지품(우산) |
 | `M_VEHICLE` | 차량 | 클리어코트 도장, 유리, 라이트 발광 |
 | `M_WATER` | 강·연못 | 법선 스크롤 + SSR + 빗방울 파문 |
-| `M_SIGN` | 간판/전광판 | **가상 브랜드** 텍스트 아틀라스 발광, 밤 점등 |
+| `M_SIGN` | 간판/전광판 | **가상 브랜드** 텍스트 아틀라스 발광, 밤 점등. **구현(M05-T06, ADR-0054)** `signs/{atlas,material,field,models}.ts` `sign`: 색까지 구운 sRGB 아틀라스(가로 4:1·세로 1:4 타일) 표본 1회, 돌출 상자·입간판·옥상 광고탑 풀(InstancedBufferGeometry `_ipos`·`_isig`, 브랜드 = WF 위치 해시). 발광·점등은 M09 |
 - 텍스처: `shared/materials`의 KTX2 배열 3장 — albedo 1024² ETC1S(sRGB), normal·ORM 512² UASTC(ADR-0027). 매니페스트(`schemas/materials.schema.json`)가 레이어별 그룹·`tileM`·평균색, 그룹 → 레이어 인덱스를 준다. 셰이더는 그룹(`MATERIAL_GROUPS` 13종) + 해시로 레이어를 고른다. 첫 표시 뒤 지연 적재(그 전엔 평균색), 유리는 절차(텍스처 없음).
 - 공통 전역 유니폼(`EnvUniforms`): `wetness`, `snowCover`, `timeOfDay`, `season`, `windDir/strength`, `nightFactor`. 구현(M03-T06) = `weather/wetness.ts`의 `wetness`(값 = `EnvironmentState.weather.wetness`, sim 날씨 M06 전엔 0·디버그 `?wet=`), 나머지는 쓰는 태스크에서 추가.
 - **M_TERRAIN 구현(M03-T06, ADR-0031)** `materials/{terrain,road,noise}.ts`: 정점 `_SURF` 원-핫(8) 보간 → 픽셀마다 상위 2클래스, 클래스 순서에 반대칭인 노이즈로 경계 혼합(±0.08). 주 클래스 = 위 투영 2표본(두 번째 = 0.83 rad 회전·0.61배 축척, ≈ 6 m 노이즈 가중, **분산 보존 혼합** m + (mix − m)/√(w²+(1−w)²)), 법선은 첫 표본만. 보조 클래스 = 알베도·ORM 1표본. 경사 triplanar(측면 투영 알베도)는 `TerrainOptions.triplanar`(기본 끔, +0.7–1.3 ms — 품질 티어 T08). 노이즈 = 256² RGBA 격자값 텍스처 `noiseBank`(4축척 × 4채널, 4표본 — ALU 해시는 7–9 ms였다). 이어서 M_ROAD 변형(아스팔트 보수 패치·유분·바랜 구간, 보도 구간 명암·때 — 추가 표본 없음), 29 m 거시 명암, 젖음(흡수율별 알베도 ↓ 최대 55 %, 수막 거칠기 ↓, n.y > 0.97 포장면 물웅덩이 — 젖음 0.35부터). 1440p 지형 순증 ≈ +1.2–1.8 ms(RTX 3050 Laptop). 도로 전용 메시·연석·차선(`M_ROAD`·`M_DECAL` 별도 메시)은 M05-T01. 파문 노멀은 M06.
@@ -64,8 +65,8 @@ scene
    셰이더 `facade/interior.ts`(유리 픽셀에서만 동적 분기, 명시 LOD, 베이 < ≈ 3 px면 방 평균색) + `glass.ts`(실내 = 발광 × (1 − 프레넬) × 투과율 0.8/커튼월 0.35 ×
    `interiorExposure` 0.02, 블라인드 = 유리 안쪽 확산 알베도·살 무늬). 방 선택: 사무(열린 사무실 45 %·회의 20 %·소등 25 %·창고 10 %), 주거 4종 균등, 좌우 반전 50 %.
 5. **야간 점등**: 창별 점등 확률 = f(class, 시각, 요일) — 오피스는 19–22시 감소 곡선, 주거는 18–23시 피크. 점등 창은 실내 매핑 밝기 + 색온도 변화.
-6. **1층 상점(flags.retail)**: 셔터(영업시간 외 닫힘), 차양, **가상 간판**(M_SIGN과 같은 아틀라스), 쇼윈도 광원(lights.bin과 연동).
-7. **맨션 발코니**: 노멀+시차(POM)로 표현(M05-T07), 필요 시 파이프라인에서 슬래브 지오메트리 압출(ADR).
+6. **1층 상점(flags.retail)**: 셔터(영업시간 외 닫힘), 차양, **가상 간판**(M_SIGN과 같은 아틀라스 — M05-T06: 간판 띠 베이 가운데 4:1 타일 + 나머지 = 브랜드 바탕색), 쇼윈도 광원(lights.bin과 연동). 창문 시트는 ⚠️ 미구현.
+7. **맨션 발코니**: 노멀+시차(POM)로 표현(M05-T07), 필요 시 파이프라인에서 슬래브 지오메트리 압출(ADR). **구현(ADR-0055)** `facade/balcony.ts`: 난간판·슬래브 끝·칸막이 + 안쪽 깊이 1.2 m 시차 격자(gIn) + 천장 그늘, 기하 없음. 평지붕 방수 마감 색(walls.ts). 옥상 설비·외부 비상계단은 파이프라인 기하(overrides.mesh).
 8. **디테일**: 층간 줄눈, 배수관·실외기(데칼 마스크), 빗물 얼룩(상단→하단 그라디언트 노이즈), AO 모서리 어둡힘.
 
 ## 6. 조명·대기
@@ -104,7 +105,7 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 | 흐림/안개 | 태양 조도 감쇠, 하늘 산란 파라미터, 안개 밀도 |
 | 눈(희귀) | `snowCover` 상향면 블렌드, 입자 |
 | 구름 | Ultra: TSL 레이마치 볼류메트릭(1/4 해상도 + 시간 재투영). High/Medium: 2D 레이어 구름(조명 반영). Low: 하늘만 |
-| 계절 | 나무 틴트 테이블: 은행나무 황엽 11/15–12/10, 벚꽃 3/25–4/8, 느티나무 갈색 11월, 겨울 낙엽수 가지만. 보행자 옷 팔레트(겨울 코트, 여름 반팔) |
+| 계절 | 나무 틴트 테이블: 은행나무 황엽 11/15–12/10, 벚꽃 3/25–4/8, 느티나무 갈색 11월, 겨울 낙엽수 가지만. 보행자 옷 팔레트(겨울 코트, 여름 반팔). 나무 구현 = `trees/season.ts`(dayOfYear → 수종 색·잎 밀도, M05-T04) |
 
 ## 9. 품질 티어
 | 항목 | Low | Medium | High | Ultra |
@@ -124,6 +125,7 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 - 초기 티어: `detect-gpu` 결과 + 60프레임 측정. 실행 중 **동적 해상도**: 목표 프레임 16.6 ms 유지 위해 렌더 스케일 ±0.05(범위 0.5–1.0).
   구현(M03-T08, ADR-0036): 첫 표시 뒤 스트리밍이 조용해지면 `render.detectQuality()`(detect-gpu 벤치마크 JSON 자체 호스팅 `/detect-gpu/`, 0–1 low · 2 medium · 3 high, Ultra는 사용자) →
   저장(localStorage `sanpo.quality.v1`, 다음 부팅은 감지 생략) → 동적 해상도가 0.5 바닥인데 EMA > 20 ms면 한 단계 강등(반복). `?quality=`·골든뷰는 고정.
+  소프트웨어 래스터(SwiftShader 등)는 detect-gpu를 부르지 않고 Low(차단 목록 티어 0과 같음 — 판정용 WebGL 컨텍스트 생성이 CI에서 메인 스레드를 16 s 막았다, M05 결정 0).
   동적 해상도(`renderer/dynamic-resolution.ts`): 20프레임마다 EMA > 17.5 ms면 −0.05, 17.1 ms 아래로 2 s 머물면 +0.05 시도, 시도 직후 넘치면 되돌리고 대기 2배(≤ 30 s).
   60 Hz 수직 동기에선 dt가 16.7 ms에 붙어 여유를 직접 못 재므로 "시도-후퇴"로. 스케일은 PassNode·중간 RTT·GTAO·SSR의 `resolutionScale`만 바꾼다(재컴파일 없음) —
   그래서 TAA는 항상 TAAU. 해상도에 비례하지 않는 고정 비용(TAAU 해석·출력 변환, 1440p 3050 Laptop ≈ 8 ms)은 동적 해상도로 못 줄인다.

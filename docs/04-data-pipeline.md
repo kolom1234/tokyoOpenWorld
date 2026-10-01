@@ -45,7 +45,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 |---|---|---|---|
 | `buildings` | PLATEAU bldg (LOD3 > LOD2 > LOD1) | `PlateauReader` | `gmlId, buildingId, lod, measuredHeightM, storeys, storeysBelow, usage(코드), surfaces[{kind: roof/wall/ground/closure/installation, gmlId?, ringsWF, uv?, tex?}], source` |
 | `roads` | PLATEAU tran (도로별 LOD3 TrafficArea > LOD2 > LOD1 Road면) | `PlateauReader` | `id, roadId, lod, function(carriageway/sidewalk/island/crosswalk/other), functionCode, polygonWF, source` |
-| `bridges` | PLATEAU brid | `PlateauReader` | 표면 메시 + 상판 높이 |
+| `bridges` | PLATEAU brid(`udx/brid/*_op.gml`) | `PlateauReader` | `BridgeRecord` = buildings와 같은 모양(`layer: 'bridges'`): surfaces[{kind: roof = OuterFloor·Roof(상판 윗면), ground = OuterCeiling·Ground, wall, installation = BridgeConstructionElement·BridgeInstallation}] — M05-T08, ADR-0056. `normalize --layer plateau --plateau-layer brid`로 교량만 |
 | `furniture` | PLATEAU frn LOD3 | `PlateauReader` | `class(pole/sign/signal/lamp/...), transform, dims` |
 | `vegetation` | PLATEAU veg LOD3 (SolitaryVegetationObject), OSM `natural=tree` | `PlateauReader`, `OsmReader` | `species?, height, crown, posWF` |
 | `terrain` | GSI DEM1A(1 m, 주) → 결측만 DEM5A(5 m) → 잔여 결측 역거리 보간 | `readers/dem.ts` + GDAL | `dem_1m.tif`(EPSG:6677, 1A bilinear·5A bicubic 재표본, 픽셀 중심 = 정수 PRJ = 정수 WF) |
@@ -61,12 +61,17 @@ data/build/<buildId>/                        (build/hlod/validate)
 |---|---|
 | 지형 성형 | 건물 footprint 아래 = 건물 최저 지반고로 평탄화. 차도 폴리곤 = 횡단경사 2% 포장면. 보도 = 차도 + 0.15 m(연석). 공원 = 원 DEM 유지 |
 | 연석/가드레일 | 보도–차도 경계 폴리라인 → 연석 메시(높이 0.15 m, 모따기) + 콜라이더. 가드레일은 OSM `barrier=guard_rail` + 규칙(간선도로 보도 측) |
+| ↳ 구현(M05-T01, ADR-0049) | `stages/derive/{terrain-shape,edge-burn,roads,curbs,sidewalks,footprints,grid}.ts` + `build/roads-mesh.ts`: 셀 + 여유 16 m 창 국소 성형(차도 D + 2 % 경사 ≤ 0.15, 보행 바깥 띠 S = D + 0.15·안쪽 D, 비도로 1.5 m → 4 m 섞기, 건물 평탄화 조건부), 차도 = 지형, 보도·교통섬 = `roads.mesh`(4 m 조각 윗면 + 연석 세로 면 + 바깥 치마), 가장자리 새기기 + 지형 맞춤, 보도 윗면 TERRAIN triMesh. 수락 검사 = validate `road gaps`(교차로 50곳 < 2 cm) |
 | 노면 표시 | OSM lanes/turn:lanes + 도로 폴리곤 → 차선(백색 실선/점선, 황색 추월금지), 정지선, 횡단보도(일본식: 측선 없는 사다리형, 폭 0.45 m 줄 간격 0.45 m), 「止まれ」 문자 데칼(자체 폰트 메시) |
+| ↳ 노면 표시 구현(M05-T02, ADR-0050) | `stages/normalize-osm.ts`(osmium extract·tags-filter·GeoJSONSeq → data/normalized/osm) + `derive/markings/{common,crosswalk,lanes,stopline,text,index}.ts` → `build/decals-mesh.ts`(decals.mesh). 횡단 = OSM crossing 선 + 차도 구간, 차선 = OSM lanes + PLATEAU 차도 폭 행진, 정지선 = 신호 횡단 상류·stop 점, 「止まれ」 자체 획 폰트. 검증 = `checks/markings-photo.ts`(GSI 사진 대조, 검증 전용) |
 | 신호 | OSM `highway=traffic_signals` + PLATEAU frn → 교차로별 신호기 배치(차량용 3색 가로형, 보행자용 2색) + `signalGroups` |
 | 소품 절차 배치 | 규칙 기반(시드=hash(cellId,'props')): 전신주(폭원 < 15 m 생활도로에만 30–40 m 간격, 간선도로·무전주화 지구 `data/rules/no-poles.geojson` 제외), 가로등, 자판기(상업·주거 건물 전면, 밀도 파라미터), 자전거 거치대(역 반경 300 m), 버스정류장(OSM), 우체통(OSM `amenity=post_box`), 표지판 |
+| ↳ 소품 구현(M05-T03, ADR-0051) | `stages/derive/props/{context,signals,poles,points,vending,linear,wires,index}.ts` + `build/props-cell.ts` → `props.inst` + 소품 콜라이더(`collision.bin` 프리미티브) + 전선(`decals.mesh` `power_wire`). 우선순위 = 신호(교차로 건너편 왼쪽) → 전신주·전선(선 id 시드 정거장) → OSM 점 → 자판기(가상 브랜드) → 가드 파이프(간선) → 맨홀, 셀 예산 5k(`content/props/catalog.json`). ⚠️ PLATEAU frn·무전주화 지구 미사용 |
 | 나무 | PLATEAU veg 위치·높이 우선, OSM 보완. 수종 매핑: 가로수 기본 규칙(간선=은행나무/느티나무 가중, 공원=혼합) → `species` |
+| ↳ 나무 구현(M05-T04, ADR-0052) | `stages/derive/{vegetation,trees/*}.ts`: OSM 녹지 면 → `_SURF` 잔디, OSM 나무 점·열 → 규칙 가로수(간선 보도) → 녹지 격자 채우기(숲 6.5 m), 수종 = 태그·도로 이름·해시 가중, 줄기 원기둥 콜라이더, 셀 4k → `trees.inst`. 수종 에셋 = `pnpm pipeline trees`(ez-tree + 자체 잎 아틀라스 + CPU 임포스터 → `apps/game/src/assets/trees/`). ⚠️ PLATEAU veg 미사용 |
 | 파사드 파라미터 | 건물별: 층수(`storeys` 또는 `measuredHeight/3.2`), 용도→파사드 클래스(office_curtain, office_punched, retail_podium, residential_mansion, house_wood, house_mortar, station, temple…), PLATEAU 텍스처 평균색→틴트, 1층 상점 여부(용도·도로 인접) |
 | 레인 그래프 | OSM 도로 중심선 + 차선 수 → 차선 중심 폴리라인, 교차로 연결(좌회전/우회전 곡선), 제한속도, 신호 그룹 참조 |
+| ↳ 교량 계단 구현(M05-T08, ADR-0056) | `stages/derive/stairs.ts`: PLATEAU 상판(평평한 roof 면) + OSM `highway=steps`(지상) 중 한 끝 이상이 상판 2 m 안 → 계단 명세(높이 차 0.5–10 m·경사 ≤ 45°, 아래 → 위, 상판에 들어가는 곳에서 자름, 착지판). 두 끝 모두 지형인 계단은 지형 그대로. `footway bridge=yes` 단독 육교는 ⚠️ 미구현(MVP는 PLATEAU brid) |
 | 보행 그래프 + 내비메시 | 보도·횡단보도·광장 폴리곤 + 계단/육교(OSM `highway=steps/footway bridge=yes`) → Recast 타일(64 m, 셀당 4×4), 에이전트 반경 0.3 m |
 | 철도 | 트랙 폴리라인 → Catmull-Rom 스플라인(0.5 m 샘플), 높이: 지상=지형+0.8 m(도상), 교량=PLATEAU brid 상판, 터널=비렌더. 역 정차 위치(플랫폼 중심) 산출 |
 | 오디오 존 | 규칙: 교차로 반경 40 m=crossing, 역 건물·플랫폼=station, 공원=park, 폭 < 6 m 도로 주변=alley, 상점가(OSM `shop=*` 밀집)=shopping |
@@ -79,9 +84,9 @@ data/build/<buildId>/                        (build/hlod/validate)
 1. 지형 메시: 1 m 그리드 → RTIN 단순화(모든 샘플 수직 오차 ≤ 5 cm, 정확 측정) + 경계 정점 고정(ADR-0018). 높이장 섹션(물리용) 별도(모든 셀 공통 기준·스텝).
 2. 건물: 머티리얼 클래스별 병합, 정점 속성 `_BLDG`(u16), `_FACADE(u8x4: class, floors, tint idx, flags)` — `stages/build/facade-params.ts`(용도·높이 → 클래스·상점·커튼월, ADR-0030), 벽 평면 묶기(`wall-planes.ts`)·TEXCOORD_1(면 폭·건물 높이). LOD2 텍스처는 **사용하지 않고** 틴트만 추출(항공사진 기반 텍스처는 그림자가 구워져 있어 동적 조명과 충돌).
 3. 도로/보도/노면표시: 메시 + 데칼 메시(깊이 오프셋용 별도 프리미티브).
-4. 오버라이드: `content/overrides/<gmlId>/model.glb`가 있으면 해당 건물 대체(원점·스케일 검증).
-5. 인스턴스: 소품/나무 → 타입별 트랜스폼 배열(`props.inst`).
-6. 충돌(`stages/build/collision.ts`, ADR-0042): 건물 렌더 면 1 mm 용접 → 단순화(meshopt simplify 절대 오차 0.3 m) → 64 m 블록 순 ≤ 2500 삼각형 청크(JCOL triMesh 여러 개), 연석·가드레일, `catalog.json`에서 `collider`가 정의된 소품(박스/캡슐/원기둥), 나무 줄기(원기둥, 반경 = 높이×0.02) → 모두 `collision.bin`.
+4. 오버라이드(M05-T05, ADR-0053): `content/overrides/<id>/meta.json` — 대체 건물(`replace`)의 PLATEAU 면을 높이 띠·규칙별 랜드마크 머티리얼로 다시 내는 셸 + 절차 부품(상자·원기둥·압출·난간·참도 띠·벽 화면·도리이·동상) → `overrides.mesh`(`_LMAT`). 대체 건물은 buildings.mesh 렌더에서만 빠진다(충돌·meta 유지). 검사: 셸 + 붙은 부품 경계 vs PLATEAU 수평 ≤ 0.5 m·높이 ≤ 1 m(넘으면 빌드 실패). 수작업 glb는 쓰지 않는다. 같은 스트림에 대체 안 한 건물마다 옥상 설비(塔屋·물탱크·실외기·난간·안테나)·소형 건물 외부 비상계단(M05-T07, ADR-0055). 교량 면(PLATEAU brid, 계단 통로 안 면 걷어내기·위 끝 난간 자르기)·높이 계단(챌면 ≤ 0.20 m + 옆 판·손스침·착지판)도 같은 스트림(M05-T08, ADR-0056).
+5. 인스턴스: 소품/나무 → 타입별 트랜스폼 배열(`props.inst`, 카탈로그가 있을 때만 — `buildArea({ props })`).
+6. 충돌(`stages/build/collision.ts`, ADR-0042): 건물 렌더 면 1 mm 용접 → 단순화(meshopt simplify 절대 오차 0.3 m) → 64 m 블록 순 ≤ 2500 삼각형 청크(JCOL triMesh 여러 개), 교량 면(단순화 없이 지면 스트림)·계단 램프 프록시(flags bit0)·계단 옆 벽 박스(M05-T08), 연석·가드레일, `catalog.json`에서 `collider`가 정의된 소품(박스/캡슐/원기둥), 나무 줄기(원기둥, 반경 = 높이×0.02) → 모두 `collision.bin`.
 7. 내비·레인·광원·오디오·POI·meta.
 8. glTF 후처리: `reorder(meshopt) → quantize(직접) → meshopt(encode, gltf-transform core+extensions)` — dedup·weld는 필요 시 추가(ADR-0018); 텍스처는 셀에 넣지 않고 `shared/materials` 참조(머티리얼 ID).
 

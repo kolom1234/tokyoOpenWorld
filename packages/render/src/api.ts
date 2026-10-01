@@ -124,6 +124,25 @@ export interface RenderStats {
   quality: { tier: QualityTier; renderScale: number; dynamic: boolean; frameMs: number };
   /** 태양 그림자(07 §9 티어) + 이번 프레임 다시 그린 캐스케이드 수(ADR-0039). 그림자 없음 = null. */
   shadows: { cascades: number; mapSize: number; maxFarM: number; updated: number } | null;
+  /** 거리 소품(M05-T03): 적재 인스턴스·보이는 인스턴스·쓰는 풀(= 드로우콜, ≤ 종류 × 3)·풀 재작성 횟수. */
+  props: { instances: number; visible: number; pools: number; rebuilds: number; dropped: number };
+  /** 나무(M05-T04): 적재 인스턴스·보이는 인스턴스·그리는 메시 수(드로우콜)·용량 초과·에셋 준비. */
+  trees: { instances: number; visible: number; pools: number; dropped: number; ready: boolean };
+  /** 가상 간판(M05-T06): 적재 인스턴스(돌출·입간판·옥상)·보이는 인스턴스·그리는 풀·에셋 준비. */
+  signs: { instances: number; visible: number; pools: number; ready: boolean };
+}
+
+/** 나무 에셋 URL(파이프라인 `trees` 산출, 게임 번들 해시 에셋). */
+export interface TreeAssetUrls {
+  manifest: string;
+  glb: string;
+  leaves: string;
+  impostor: string;
+}
+
+/** 간판 에셋 URL(파이프라인 `signage` 산출 — 브랜드 색까지 구운 아틀라스 PNG, 게임 번들 해시 에셋). */
+export interface SignageAssetUrls {
+  atlas: string;
 }
 
 export interface RenderService extends SystemProvider {
@@ -153,8 +172,20 @@ export interface RenderService extends SystemProvider {
   precompile(): Promise<void>;
   /** WF float64 카메라. 다음 renderPrep(phase 70)에서 원점 재설정·투영에 반영. */
   setCamera(c: Readonly<CameraState>): void;
-  /** 플레이어 아바타(절차 마네킹, M04-T05 — ADR-0045). 매 프레임 renderPrep 전에. */
+  /** 플레이어 아바타 상태(절차 마네킹 M04-T05 → 모델 ADR-0048). 매 프레임 renderPrep 전에. */
   setAvatar(a: Readonly<AvatarState>): void;
+  /**
+   * 아바타 모델 GLB(파이프라인 `avatar` — Quaternius UBC + UAL 클립, ADR-0048) 적재 → 선컴파일 → 마네킹 교체. 첫 표시 뒤에 부른다.
+   * 실패하면 reject하고 절차 마네킹을 계속 쓴다.
+   */
+  loadAvatar(url: string): Promise<void>;
+  /**
+   * 나무 에셋(파이프라인 `trees` — 수종 GLB·잎·임포스터 아틀라스, M05-T04) 적재 → 머티리얼 선컴파일 → 셀 trees.inst를 그리기 시작.
+   * 첫 표시 뒤에 부른다(초기 다운로드 밖). 그 전 셀의 나무도 기억했다가 그린다.
+   */
+  loadTrees(urls: TreeAssetUrls): Promise<void>;
+  /** 간판 아틀라스(M05-T06) 적재 → 간판 머티리얼 선컴파일 → 셀 props.inst 간판 종류 + 파사드 1층 간판 띠에 가상 브랜드. */
+  loadSignage(urls: SignageAssetUrls): Promise<void>;
   stats(): RenderStats;
   dispose(): void;
 }

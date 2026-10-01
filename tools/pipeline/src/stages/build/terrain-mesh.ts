@@ -73,13 +73,18 @@ function gridHeights(w: CellWindow): Float64Array {
 }
 
 /**
- * 셀 창 + 표면 분류 격자(surface-class, 257², 행 = z) → RTIN 단순화(분류 경계 세분)·정점 캐시 재정렬된 지형 기하.
+ * 셀 창 + 표면 분류 격자(surface-class, 257², 행 = z) + 선택 샘플별 허용 오차(M05-T01 성형) → RTIN 단순화(분류 경계 세분)·정점 캐시 재정렬된 지형 기하.
  * 결정론(입력만으로 결과가 정해진다).
  */
-export async function buildTerrainGeometry(w: CellWindow, surf: Uint8Array): Promise<TerrainGeometry> {
+export async function buildTerrainGeometry(
+  w: CellWindow,
+  surf: Uint8Array,
+  tol?: Float32Array,
+): Promise<TerrainGeometry> {
   await MeshoptEncoder.ready;
   if (surf.length !== w.size * w.size) throw new RangeError('buildTerrainGeometry: surf grid size mismatch');
-  const indices = rtinTriangulate(gridHeights(w), w.size, TERRAIN_SIMPLIFY_ERROR_M, surf);
+  if (tol && tol.length !== w.size * w.size) throw new RangeError('buildTerrainGeometry: tol grid size mismatch');
+  const indices = rtinTriangulate(gridHeights(w), w.size, TERRAIN_SIMPLIFY_ERROR_M, surf, tol);
   const [remap, unique] = MeshoptEncoder.reorderMesh(indices, true, false);
   const positions = remapVertices(gridPositions(w), 3, remap, unique);
   const normals = remapVertices(gridNormals(w), 3, remap, unique);

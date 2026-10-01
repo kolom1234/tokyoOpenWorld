@@ -14,6 +14,7 @@ import {
 import type { PostEffects, QualityTier, RenderConfig } from '@sanpo/render';
 import type { ClockMode } from '@sanpo/sim';
 import { detectCaps } from './caps.ts';
+import { mountCredits } from './credits.ts';
 import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
 import { createDebugOverlay } from './debug/overlay.ts';
 import { parsePostFlag, parseQualityFlag } from './debug/post-flags.ts';
@@ -22,7 +23,7 @@ import { createSunOverride, parseSunFlag } from './debug/sun-override.ts';
 import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-override.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
-import { loadTier, startQualityWiring } from './wiring/quality.ts';
+import { loadTier, type QualityWiring, startQualityWiring } from './wiring/quality.ts';
 import {
   type LoadedWorld,
   loadWorld,
@@ -73,6 +74,10 @@ export interface BootFlags {
   gpuLoad?: number;
   /** `?forcePost=1` → 소프트웨어 래스터에서도 후처리 체인(e2e flicker.spec.ts). */
   forcePost?: boolean;
+  /** `?mode=freecam` → 첫 표시를 freecam 시작 시점으로(기본 = walk, 09 §1). 렌더 e2e·비교용. */
+  mode?: 'freecam';
+  /** `?trees=0` → 나무 에셋을 적재하지 않는다(나무 GPU 비용 비교, M05-T04). */
+  noTrees?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -111,6 +116,8 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('dynres') === '0' ? { noDynres: true } : {}),
     ...(Number(q.get('gpuLoad')) > 0 ? { gpuLoad: Math.min(Math.floor(Number(q.get('gpuLoad'))), 4096) } : {}),
     ...(q.get('forcePost') === '1' ? { forcePost: true } : {}),
+    ...(q.get('mode') === 'freecam' ? { mode: 'freecam' as const } : {}),
+    ...(q.get('trees') === '0' ? { noTrees: true } : {}),
   };
 }
 
@@ -198,6 +205,11 @@ function storageOf(): Storage | undefined {
   }
 }
 
+/** 월드 로드 뒤 정해지는 안정 조건(디버그 오버레이 `data-settled`). */
+interface LateReady {
+  quality?: QualityWiring;
+}
+
 async function setupWorldView(
   flags: BootFlags,
   scheduler: Scheduler,
@@ -205,6 +217,7 @@ async function setupWorldView(
   view: StatusView,
   golden: GoldenView | undefined,
   bus: EventBus,
+  late: LateReady,
 ): Promise<WorldView | undefined> {
   try {
     const weather = weatherOf(flags, golden);
@@ -217,6 +230,8 @@ async function setupWorldView(
       renderConfig: renderConfigOf(flags, golden),
       ...clockOf(flags, golden),
       ...(weather ? { weather } : {}),
+      ...(flags.mode ? { startMode: flags.mode } : {}),
+      ...(flags.noTrees ? { trees: false } : {}),
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),
@@ -229,6 +244,7 @@ async function setupWorldView(
     if (weather && !golden) mountWetSlider(document, weather);
     scheduler.setFrameSource(world.frameSource);
     document.body.classList.add('rendering');
+    mountCredits(document);
     view.setRenderer(world.render.backend, world.render.depth);
     if (flags.debug) {
       const overlay = createDebugOverlay({
@@ -241,6 +257,12 @@ async function setupWorldView(
         get streaming() {
           return world.streaming;
         },
+        settledExtra: () =>
+          world.materialsSettled &&
+          world.avatarSettled &&
+          world.treesSettled &&
+          world.signsSettled &&
+          late.quality?.settled === true,
       });
       scheduler.add(overlay.system);
       // e2e·콘솔 조작용 핸들(디버그 모드에서만 노출).
@@ -261,7 +283,8 @@ function addGoldenWatch(scheduler: Scheduler, world: WorldView, golden: GoldenVi
     root,
     streaming: () => world.streaming?.stats(),
     render: () => world.render.stats(),
-    extra: () => world.materialsSettled,
+    // 나무 에셋(M05-T04)도 첫 표시 뒤 적재 — 붙기 전에 찍으면 나무가 빠진다(오모테산도 골든뷰).
+    extra: () => world.materialsSettled && world.treesSettled && world.signsSettled,
   });
   scheduler.add({ systems: () => [watch.system] });
   Object.assign(globalThis, { __SANPO_GOLDEN__: { view: golden, render: () => world.render.stats() } });
@@ -279,7 +302,8 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
   const golden = flags.view === undefined ? undefined : await loadGoldenView(flags.view);
   if (flags.view !== undefined && golden === undefined) view.showError(`골든뷰 없음: ${flags.view}`);
   const bus = createEventBus(log);
-  const world = await setupWorldView(flags, scheduler, log, view, golden, bus);
+  const late: LateReady = {};
+  const world = await setupWorldView(flags, scheduler, log, view, golden, bus, late);
   const watch = golden && world ? addGoldenWatch(scheduler, world, golden) : undefined;
   await scheduler.init();
 
@@ -296,7 +320,7 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
     const shown = await world.showWorld(loaded);
     view.setRendered(shown);
     watch?.start();
-    startQualityWiring({
+    late.quality = startQualityWiring({
       render: world.render,
       bus,
       log: log.child('quality'),

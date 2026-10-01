@@ -1,6 +1,6 @@
 // SAX 파서가 모은 건물·도로 컨텍스트 → 정규화 레코드(LOD 선택 규칙). see docs/04-data-pipeline.md §4.2
 import { roadFunctionOf, type TrafficAreaType } from './codes.ts';
-import type { BuildingRecord, RingsWF, RoadRecord, SurfaceRecord } from './types.ts';
+import type { BridgeRecord, BuildingRecord, RingsWF, RoadRecord, SurfaceRecord } from './types.ts';
 
 export interface BuildingCtx {
   gmlId: string;
@@ -10,6 +10,8 @@ export interface BuildingCtx {
   storeysBelow: number | null;
   usage: string | null;
   byLod: Map<number, SurfaceRecord[]>;
+  /** brid:Bridge(M05-T08)이면 레이어 'bridges'. */
+  bridge?: boolean;
 }
 
 export interface AreaCtx {
@@ -26,12 +28,12 @@ export interface RoadCtx {
 }
 
 /** 건물: 면이 있는 최고 LOD(3 > 2 > 1) 하나만 기록. 면이 없으면 null(통계에 누락으로 잡힘). */
-export function finishBuilding(b: BuildingCtx, source: string): BuildingRecord | null {
+export function finishBuilding(b: BuildingCtx, source: string): BuildingRecord | BridgeRecord | null {
   for (const lod of [3, 2, 1] as const) {
     const surfaces = b.byLod.get(lod);
     if (!surfaces || surfaces.length === 0) continue;
     return {
-      layer: 'buildings',
+      layer: b.bridge ? 'bridges' : 'buildings',
       gmlId: b.gmlId,
       buildingId: b.buildingId,
       lod,

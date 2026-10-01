@@ -159,7 +159,7 @@ function metaOf(b: BuildingRecord, heightM: number): MetaBuilding {
   return m;
 }
 
-function boundsOf(pos: readonly number[]): Aabb {
+export function boundsOf(pos: readonly number[]): Aabb {
   const min: Vec3Tuple = [Infinity, Infinity, Infinity];
   const max: Vec3Tuple = [-Infinity, -Infinity, -Infinity];
   for (let i = 0; i < pos.length; i++) {
@@ -182,10 +182,18 @@ export function quantizePositions(pos: readonly number[], b: Aabb): { q: Uint16A
   return { q, t, s };
 }
 
-/** 셀 건물 레코드 → buildings.mesh glb + meta.buildings. 결정론(gmlId 순, meshopt 재정렬). */
-export async function buildBuildings(records: readonly BuildingRecord[], originWF: Vec3Tuple): Promise<BuildingsBuild> {
+/**
+ * 셀 건물 레코드 → buildings.mesh glb + meta.buildings. 결정론(gmlId 순, meshopt 재정렬).
+ * renderSkip(M05-T05 랜드마크 오버라이드가 대체하는 gmlId)은 렌더에서 빼고 충돌·meta에는 남긴다.
+ */
+export async function buildBuildings(
+  records: readonly BuildingRecord[],
+  originWF: Vec3Tuple,
+  renderSkip: ReadonlySet<string> = new Set(),
+): Promise<BuildingsBuild> {
   const sorted = [...records].sort((a, b) => (a.gmlId < b.gmlId ? -1 : a.gmlId > b.gmlId ? 1 : 0));
   const s = new Stream();
+  const skipped = new Stream();
   const meta: MetaBuilding[] = [];
   let tris = 0;
   for (const [i, b] of sorted.entries()) {
@@ -193,10 +201,14 @@ export async function buildBuildings(records: readonly BuildingRecord[], originW
     meta.push(metaOf(b, h));
     const facade = facadeParams({ id: b.gmlId, usage: b.usage, heightM: h, floors: floorsOf(b, h) });
     const ctx: BuildingCtx = { index: i, facade, baseY: minY(b) - originWF[1], heightM: h };
-    tris += addBuilding(s, b, ctx, originWF);
+    if (renderSkip.has(b.gmlId)) addBuilding(skipped, b, ctx, originWF);
+    else tris += addBuilding(s, b, ctx, originWF);
   }
   const sources = [...new Set(sorted.map((b) => b.source))].sort();
-  const collision = { pos: Float32Array.from(s.pos), idx: Uint32Array.from(s.idx) };
+  const collision = {
+    pos: Float32Array.from([...s.pos, ...skipped.pos]),
+    idx: Uint32Array.from([...s.idx, ...skipped.idx.map((k) => k + s.count)]),
+  };
   if (s.count === 0) return { glb: null, meta, aabbLocal: null, vertices: 0, tris: 0, sources, collision };
   const aabbLocal = boundsOf(s.pos);
   const glb = await encodeBuildings(s, aabbLocal);

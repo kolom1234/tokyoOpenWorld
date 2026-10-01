@@ -31,6 +31,22 @@
         "tests/fixtures/world-mini/**"
       ],
       "modified": true
+    },
+    {
+      "id": "osm-kanto",
+      "kind": "data",
+      "title": "OpenStreetMap（Geofabrik 関東抽出 2026-09-29）",
+      "url": "https://download.geofabrik.de/asia/japan/kanto-260929.osm.pbf",
+      "license": "ODbL-1.0",
+      "attribution": {
+        "ja": "© OpenStreetMap contributors",
+        "en": "© OpenStreetMap contributors (ODbL 1.0) — road markings derived",
+        "ko": "© OpenStreetMap contributors(ODbL 1.0) — 노면 표시 파생"
+      },
+      "files": [
+        "tests/fixtures/world-mini/**"
+      ],
+      "modified": true
     }
   ]
 }

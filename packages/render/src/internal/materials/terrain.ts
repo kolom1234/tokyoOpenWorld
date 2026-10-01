@@ -158,12 +158,17 @@ export function createTerrainMaterial(lib: MaterialLibrary, env: EnvUniforms, op
   const xz = positionWorld.xz.add(lib.worldOffset).toVar();
   const nb = noiseBank(xz);
   const n = normalWorld.toVar();
+  // 세로 면(보도 연석·치마, M05-T01): 위 투영은 한 줄로 늘어진다 → 면 접선(수평)·높이 투영. 표본 수는 같다(주·보조 좌표만 바꿈).
+  const hN = vec2(n.x, n.z);
+  const tH = vec2(hN.y, hN.x.negate()).div(hN.length().max(1e-4));
+  const vertical = n.y.lessThan(0.5);
+  const st = select(vertical, vec2(xz.dot(tH), positionWorld.y.negate()), xz).toVar();
   const top = topTwo([lo.x, lo.y, lo.z, lo.w, hi.x, hi.y, hi.z, hi.w], nb.n1.x.sub(0.5).mul(EDGE_NOISE));
   const l1 = lib.layerOfIndex(groupOf(top.c1), float(0));
   const l2 = lib.layerOfIndex(groupOf(top.c2.max(0)), float(0));
-  const p = primaryTop(lib, l1, xz, nb);
+  const p = primaryTop(lib, l1, st, nb);
   const side = opts.triplanar ? sideAlbedo(lib, l1, xz, n) : { albedo: vec3(0), w: float(0) };
-  const q = sampleLayer(lib, l2, xz.mul(lib.invTile(l2)));
+  const q = sampleLayer(lib, l2, st.mul(lib.invTile(l2)));
   const pAlbedo = opts.triplanar ? mix(p.albedo, side.albedo, side.w) : p.albedo;
   const pOrm = p.orm;
   const asphalt = asphaltVariation(nb);
@@ -171,7 +176,7 @@ export function createTerrainMaterial(lib: MaterialLibrary, env: EnvUniforms, op
   const a = varied(pAlbedo, pOrm.y, variationOf(top.c1, asphalt, paving));
   const b = varied(q.albedo, q.orm.y, variationOf(top.c2, asphalt, paving));
   // 법선: 주 클래스 위 투영만(보조 몫·경사면 몫은 기하 법선으로 옅게).
-  const t = vec3(1, 0, 0).sub(n.mul(n.x)).normalize();
+  const t = select(vertical, vec3(tH.x, 0, tH.y), vec3(1, 0, 0).sub(n.mul(n.x)).normalize());
   const flat = opts.triplanar ? top.s.add(side.w).min(1) : top.s;
   const normalW = tsToWorld(mix(p.nTS, vec3(0, 0, 1), flat), t, n.cross(t), n);
   const wet = applyWetness(

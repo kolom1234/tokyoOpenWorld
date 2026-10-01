@@ -2,15 +2,21 @@
 // see docs/07-rendering.md §3–4
 import { type Material, MeshBasicNodeMaterial, MeshStandardNodeMaterial } from 'three/webgpu';
 import type { EnvUniforms } from '../weather/wetness.ts';
+import { createDecalMaterial } from './decal.ts';
 import { createFacadeMaterial } from './facade/index.ts';
 import { createHlodMaterial } from './hlod.ts';
+import { createLandmarkMaterial } from './landmark.ts';
 import type { MaterialLibrary } from './library.ts';
+import { createWireMaterial } from './prop.ts';
 import { createTerrainMaterial } from './terrain.ts';
 
 /** 파이프라인 머티리얼 ID(ADR-0018 §5 glTF extras.materialId)별 생성기. HLOD는 단색(원거리 — 07 §3). */
 const CELL_MATERIALS: Readonly<Record<string, (lib: MaterialLibrary, env: EnvUniforms) => Material>> = {
   terrain_ground: createTerrainMaterial,
   facade_default: createFacadeMaterial,
+  road_marking: createDecalMaterial,
+  power_wire: createWireMaterial,
+  landmark: createLandmarkMaterial,
 };
 const HLOD_COLORS: Readonly<Record<string, { color: number; roughness: number }>> = {
   terrain_ground: { color: 0x8a8a80, roughness: 0.95 },
@@ -32,6 +38,8 @@ export interface MaterialRegistry {
 
 /** 부팅 시 선컴파일할 ID(06 §6). */
 export const PRECOMPILE_IDS = Object.keys(CELL_MATERIALS);
+/** hlod.mesh에 나오는 ID(지형·건물) — HLOD 변형은 이것만 선컴파일(노면 표시·전선은 L0 전용). */
+export const HLOD_MATERIAL_IDS: readonly string[] = Object.keys(HLOD_COLORS);
 
 export function createMaterialRegistry(
   lib: MaterialLibrary,
