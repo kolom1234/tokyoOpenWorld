@@ -29,20 +29,33 @@ function closestT(p: P2, a: P2, b: P2): number {
   return l2 < 1e-9 ? 0 : Math.min(1, Math.max(0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / l2));
 }
 
-/** 삼각형 1개(위쪽 법선이 되도록 감기 정렬). */
-function upTri(s: LStream, a: Vec3, b: Vec3, c: Vec3, ua: P2, ub: P2, uc: P2, m: number): void {
-  let n = norm([
-    (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]),
-    (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]),
-    (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]),
-  ]);
-  const flip = n[1] < 0;
-  if (flip) n = [-n[0], -n[1], -n[2]];
-  const k = s.count;
-  s.vert(a, n, ua, m);
-  s.vert(b, n, ub, m);
-  s.vert(c, n, uc, m);
-  s.idx.push(...(flip ? [k, k + 2, k + 1] : [k, k + 1, k + 2]));
+const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+/** 둘레(i, 닫힘) × 행(k) 격자를 공유 정점·매끈한 법선(중앙 차분, 위쪽)으로 낸다. 삼각형 감기는 면 법선이 위를 향하게. */
+function smoothGrid(s: LStream, grid: { p: Vec3; uv: P2 }[][], m: number): void {
+  const n = grid.length;
+  const rows = (grid[0] as { p: Vec3 }[]).length;
+  const at = (i: number, k: number) => (grid[((i % n) + n) % n] as { p: Vec3; uv: P2 }[])[Math.min(rows - 1, Math.max(0, k))] as { p: Vec3; uv: P2 };
+  const base = s.count;
+  for (let i = 0; i < n; i++) {
+    for (let k = 0; k < rows; k++) {
+      const du = sub(at(i + 1, k).p, at(i - 1, k).p);
+      const dk = sub(at(i, k + 1).p, at(i, k - 1).p);
+      let nv = norm(cross(du, dk));
+      if (!Number.isFinite(nv[0]) || Math.hypot(...nv) < 0.5) nv = [0, 1, 0];
+      if (nv[1] < 0) nv = [-nv[0], -nv[1], -nv[2]];
+      s.vert(at(i, k).p, nv, at(i, k).uv, m);
+    }
+  }
+  const id = (i: number, k: number) => base + (i % n) * rows + k;
+  for (let i = 0; i < n; i++) {
+    for (let k = 0; k + 1 < rows; k++) {
+      const [a, b, c, d] = [id(i, k), id(i + 1, k), id(i + 1, k + 1), id(i, k + 1)];
+      const fn = cross(sub(at(i + 1, k).p, at(i, k).p), sub(at(i + 1, k + 1).p, at(i, k).p));
+      s.idx.push(...(fn[1] >= 0 ? [a, b, c, a, c, d] : [a, c, b, a, d, c]));
+    }
+  }
 }
 
 /** 현수 지붕 + 둘레 벽 + 기둥 + 주 케이블. g0 = 건물 바닥(셀 로컬 y), ox·oz = 셀 원점. */
@@ -67,14 +80,8 @@ export function tentRoof(s: LStream, b: BuildingRecord, p: TentPart, g0: number,
     const z = v[1] + (sp[1] - v[1]) * f;
     return { p: [x, eave + (ridge(t) - eave) * f * f, z], uv: [arc[i] as number, f * 12] };
   };
-  const roof = LMAT[p.mat];
-  for (let i = 0; i < out.length; i++) {
-    for (let k = 0; k < ROWS; k++) {
-      const [a, b2, c, d] = [row(i, k), row(i + 1, k), row(i + 1, k + 1), row(i, k + 1)];
-      upTri(s, a.p, b2.p, c.p, a.uv, b2.uv, c.uv, roof);
-      upTri(s, a.p, c.p, d.p, a.uv, c.uv, d.uv, roof);
-    }
-  }
+  const grid = out.map((_, i) => Array.from({ length: ROWS + 1 }, (_, k) => row(i, k)));
+  smoothGrid(s, grid, LMAT[p.mat]);
   // 둘레 벽(콘크리트 링, 바닥 0.5 m 묻힘) — 신발끈 면적 부호로 감기(면적 > 0이면 뒤집어 바깥을 보게, geom.extrude와 같은 규칙).
   let area = 0;
   for (let i = 0; i < out.length; i++) {
