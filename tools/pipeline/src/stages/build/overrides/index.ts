@@ -1,12 +1,14 @@
 // 셀 랜드마크 오버라이드(M05-T05): 이 셀 건물 중 대체 대상 → 셸, 기준점이 이 셀인 부품 → overrides.mesh(glb, 머티리얼 landmark,
 // POSITION u16·NORMAL i8·TEXCOORD_0 f32(미터)·`_LMAT` u8). 대체 건물은 buildings.mesh 렌더에서 빠지고(renderSkip) 충돌·meta에는 남는다.
 // 수락 검사: 셸 + 붙은 부품 경계 vs PLATEAU 렌더 면 경계 — 수평 ≤ 0.5 m, 높이(위) ≤ 1 m. 넘으면 빌드 실패. see ADR-0053, docs/04 §4.4-4
-import type { Vec3Tuple } from '@sanpo/tile-format';
+import type { JcolShape, Vec3Tuple } from '@sanpo/tile-format';
 import { MeshoptEncoder } from 'meshoptimizer';
 import { encodeGlb } from '../../../lib/gltf.ts';
-import type { BuildingRecord } from '../../../readers/plateau/types.ts';
+import type { BridgeRecord, BuildingRecord } from '../../../readers/plateau/types.ts';
+import type { StairSpec } from '../../derive/stairs.ts';
 import { type Aabb, boundsOf, quantizePositions } from '../buildings-mesh.ts';
 import { remapVertices } from '../terrain-mesh.ts';
+import { emitBridge, emitStair } from './bridges.ts';
 import { LStream } from './geom.ts';
 import { emitPart, hostOf, ownsFreePart, type PartCtx } from './parts.ts';
 import { type DetailStats, emitFireEscape, emitRooftop, emptyDetailStats } from './rooftops.ts';
@@ -29,6 +31,13 @@ export interface OverrideCheck {
   dy: number;
 }
 
+/** 교량·높이 계단 입력(M05-T08): 셀 교량, 셀이 가진 계단, 교량 면을 걷어낼 계단 통로(이웃 포함). */
+export interface WalkwayInput {
+  bridges?: readonly BridgeRecord[];
+  stairs?: readonly StairSpec[];
+  corridors?: readonly StairSpec[];
+}
+
 export interface OverrideCellOutput {
   glb: Uint8Array | null;
   aabbLocal: Aabb | null;
@@ -40,6 +49,11 @@ export interface OverrideCellOutput {
   checks: OverrideCheck[];
   /** 옥상 설비·외부 비상계단(M05-T07) 통계. */
   details: DetailStats;
+  /** 교량 면 정밀 충돌(셀 로컬, 지면 스트림에 합친다 — M05-T08). */
+  walkCollider: { pos: number[]; idx: number[] };
+  /** 계단 램프 프록시·옆 벽(JCOL 프리미티브·triMesh). */
+  walkShapes: JcolShape[];
+  walk: { bridges: number; stairs: number; risers: number; carved: number };
 }
 
 function boundsDelta(a: Bounds, b: Bounds): { dxz: number; dy: number } {
@@ -54,6 +68,7 @@ export async function overrideCell(
   records: readonly BuildingRecord[],
   originWF: Vec3Tuple,
   groundAt: (x: number, z: number) => number | undefined,
+  walk: WalkwayInput = {},
 ): Promise<OverrideCellOutput> {
   const out = new LStream();
   const collider = new LStream();
@@ -87,6 +102,7 @@ export async function overrideCell(
     }
   }
   const details = emitDetails(out, records, renderSkip, originWF);
+  const walkway = emitWalkways(out, walk, originWF);
   const bad = checks.filter((c) => c.dxz > POSITION_TOL_M || c.dy > HEIGHT_TOL_M);
   if (bad.length > 0) throw new Error(`overrides: tolerance exceeded ${JSON.stringify(bad)}`);
   const encoded = out.count > 0 ? await encodeOverrides(out) : null;
@@ -99,7 +115,32 @@ export async function overrideCell(
     landmarks: [...landmarks].sort(),
     checks,
     details,
+    ...walkway,
   };
+}
+
+/** 교량 면 + 높이 계단(M05-T08): 렌더는 같은 스트림(UV 0), 충돌은 정밀 지면 스트림·램프 프록시. */
+function emitWalkways(
+  out: LStream,
+  walk: WalkwayInput,
+  originWF: Vec3Tuple,
+): Pick<OverrideCellOutput, 'walkCollider' | 'walkShapes' | 'walk'> {
+  const walkCollider = { pos: [] as number[], idx: [] as number[] };
+  const walkShapes: JcolShape[] = [];
+  const stats = { bridges: 0, stairs: 0, risers: 0, carved: 0 };
+  out.plainUv = true;
+  for (const b of walk.bridges ?? []) {
+    stats.carved += emitBridge(out, walkCollider, b, originWF, walk.corridors);
+    stats.bridges++;
+  }
+  for (const st of walk.stairs ?? []) {
+    const n = emitStair(out, walkShapes, st, originWF);
+    if (n === 0) continue;
+    stats.stairs++;
+    stats.risers += n;
+  }
+  out.plainUv = false;
+  return { walkCollider, walkShapes, walk: stats };
 }
 
 const sub3 = (a: Vec3Tuple, o: Vec3Tuple): Vec3Tuple => [a[0] - o[0], a[1] - o[1], a[2] - o[2]];

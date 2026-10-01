@@ -1,5 +1,5 @@
 // 도보 캐릭터(08 §5): Jolt CharacterVirtual 캡슐(반경 0.25, 전체 키 1.70 — 위치 = 발, mShapeOffset으로 캡슐을 위로), 경사 50°, 계단 0.40 m,
-// 바닥 붙기 0.5 m, 예측 접촉 0.1 m, 삼각형 양면(PLATEAU 감김 불일치 — ADR-0042). 원하는 수평 속도(명령)로 가속 8·감속 10 m/s², 지면이면 수직 = 지면 속도, 아니면 중력.
+// 바닥 붙기 0.5 m, 예측 접촉 0.1 m, 삼각형 양면(PLATEAU 감김 불일치 — ADR-0042). 원하는 수평 속도(명령)로 가속 8·감속 10 m/s², 지면이면 수직 = 지면 속도(+ 램프 프록시면 수평을 지면 평면에 올리는 성분 — 오르막 수평 속력 유지), 아니면 중력.
 // 에스컬레이터 구간(escalators.ts) 안이면 걷기 수평 ≤ 0.6 m/s + 구간 진행 방향 0.5 m/s(ADR-0044). 지면 재질 = 지면 바디 userData 하위 8비트(상위 = JCOL flags).
 import type { Vec3 } from '@sanpo/core';
 import { ESCALATOR, type Escalators } from './escalators.ts';
@@ -117,6 +117,22 @@ function createUpdateCtx(w: PhysicsWorld): UpdateCtx {
   };
 }
 
+const COS_MAX_SLOPE = Math.cos((CHARACTER.maxSlopeDeg * Math.PI) / 180);
+/** 바디 userData = 재질 | JCOL flags << 8 → flags bit0(rampProxy). */
+const RAMP_PROXY_BIT = 1 << 8;
+
+/**
+ * 램프 프록시(계단 대신 경사면 — JCOL flags bit0 = userData bit 8) 위 수평 속도 h를 지면 평면에 올리는 수직 속도. 그 밖(지형·연석·박스 계단 모서리의
+ * 기울어진 접촉 법선)·평지·가파른 면이면 undefined(중력 — 모서리에서 튀어 오르지 않게).
+ */
+function slopeFollowVy(w: PhysicsWorld, ch: JCharacter, h: Readonly<Vec3>): number | undefined {
+  if ((Number(w.bodies.GetUserData(ch.GetGroundBodyID())) & RAMP_PROXY_BIT) === 0) return undefined;
+  const n = ch.GetGroundNormal();
+  const ny = n.GetY();
+  if (ny < COS_MAX_SLOPE || ny > 0.9995) return undefined;
+  return -(n.GetX() * h.x + n.GetZ() * h.z) / ny;
+}
+
 /** 한 스텝: 가감속(에스컬레이터 안이면 걷기 ≤ 0.6 m/s + 진행 방향 0.5 m/s) → 속도 설정 → ExtendedUpdate(계단·바닥 붙기). */
 function moveCharacter(u: UpdateCtx, escalators: Escalators, c: CharacterBody, dt: number): void {
   const { Jolt, iface, scratch } = u.w;
@@ -134,7 +150,9 @@ function moveCharacter(u: UpdateCtx, escalators: Escalators, c: CharacterBody, d
   const onGround = ch.GetGroundState() === Jolt.EGroundState_OnGround;
   const own = onGround ? ch.GetGroundVelocity().GetY() : ch.GetLinearVelocity().GetY() - c.escVy;
   // 에스컬레이터 위 접지 중엔 중력을 더하지 않는다(경사 투영으로 운반 속도가 0.5 → 0.46 m/s로 줄지 않게, 바닥 붙기가 접지 유지).
-  const vy = own + (onGround && esc ? 0 : u.g.GetY() * dt);
+  // 램프 프록시 접지 중엔 수평 속도를 지면 평면에 올린다 — 접촉 투영은 오르막 수평을 cos²θ로 줄인다(28° 계단 1.35 → 1.0 m/s, ADR-0056).
+  const vy =
+    own + (onGround && esc ? 0 : ((onGround ? slopeFollowVy(u.w, ch, c.horizontal) : undefined) ?? u.g.GetY() * dt));
   const e = esc ? esc.dir : ([0, 0, 0] as const);
   const s = ESCALATOR.speedMs;
   c.escVy = e[1] * s;

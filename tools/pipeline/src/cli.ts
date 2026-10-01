@@ -19,7 +19,7 @@ import { fetchDemTiles, resampleFarDem, writeFarDem } from './stages/hlod/dem-fa
 import { runHlod } from './stages/hlod/run.ts';
 import { extractTokyo23 } from './stages/hlod/tokyo23-lod1.ts';
 import { normalizeOsmFromLock } from './stages/normalize-osm.ts';
-import { normalizePlateau } from './stages/normalize-plateau.ts';
+import { normalizePlateau, type PlateauLayer } from './stages/normalize-plateau.ts';
 import { hasDemSources, normalizeTerrain, writeTerrainMeta } from './stages/normalize-terrain.ts';
 import { buildFiles, gcBuilds, publishBuild, verifyViaWorker } from './stages/publish/publish.ts';
 import { createClients, type PublishEnv, readTargets } from './stages/publish/targets.ts';
@@ -64,7 +64,12 @@ function readArea(id: string): AreaDef {
   return JSON.parse(readFileSync(join(REPO_ROOT, `data/areas/${id}.json`), 'utf8')) as AreaDef;
 }
 
-async function normalizePlateauLayer(cells: CellKey[], source: string | undefined, reader: string): Promise<void> {
+async function normalizePlateauLayer(
+  cells: CellKey[],
+  source: string | undefined,
+  reader: string,
+  layers?: PlateauLayer[],
+): Promise<void> {
   const readerName = reader === 'nusamai' ? 'nusamai' : 'citygml-sax';
   const ids = source ? [source] : plateauSources();
   const res = await normalizePlateau({
@@ -73,11 +78,12 @@ async function normalizePlateauLayer(cells: CellKey[], source: string | undefine
     outDir: join(REPO_ROOT, 'data/normalized'),
     reader: createPlateauReader(readerName),
     log: log.child('plateau'),
+    ...(layers ? { layers } : {}),
   });
   const perSource = ids.map((id) => `${id} ${res.files.filter((f) => f.sourceId === id).length}`).join(', ');
   log.info(
     `plateau: files (${perSource}), ${res.features} features → ${res.buildings} buildings, ` +
-      `${res.roadPieces} road pieces, ${res.written.length} cell files`,
+      `${res.roadPieces} road pieces, ${res.bridges} bridges, ${res.written.length} cell files`,
   );
 }
 
@@ -106,6 +112,7 @@ async function normalize(args: string[]): Promise<void> {
       area: { type: 'string', default: 'mvp-shibuya-shinjuku' },
       cells: { type: 'string' },
       layer: { type: 'string', default: 'all' },
+      'plateau-layer': { type: 'string' },
       source: { type: 'string' },
       reader: { type: 'string', default: 'citygml-sax' },
     },
@@ -113,7 +120,8 @@ async function normalize(args: string[]): Promise<void> {
   const area = readArea(values.area);
   const cells = values.cells ? values.cells.split(',').map(parseCellId) : areaCells(area);
   const layer = values.layer;
-  if (layer === 'all' || layer === 'plateau') await normalizePlateauLayer(cells, values.source, values.reader);
+  const only = values['plateau-layer']?.split(',') as PlateauLayer[] | undefined;
+  if (layer === 'all' || layer === 'plateau') await normalizePlateauLayer(cells, values.source, values.reader, only);
   if (layer === 'all' || layer === 'terrain') await normalizeTerrainLayer(cells);
   if (layer === 'all' || layer === 'osm') await normalizeOsmLayer(cells);
 }

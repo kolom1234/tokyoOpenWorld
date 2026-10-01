@@ -86,6 +86,9 @@ function sceneJcol(): ArrayBuffer {
   shapes.push(box([49, TOP / 2, Z], [3, TOP / 2, 2]));
   shapes.push(...escalator());
   shapes.push(box([60 + ESC_RUN + 3, TOP / 2, Z], [3, TOP / 2, 2]));
+  // 30° 램프 프록시(실제 보도육교 계단 28–35° — M05-T08): x 80 → 80 + ESC_RUN, 위 층계참.
+  shapes.push(ramp(80, 80 + ESC_RUN, JCOL_MATERIAL.concrete, JCOL_FLAG.rampProxy));
+  shapes.push(box([80 + ESC_RUN + 3, TOP / 2, Z], [3, TOP / 2, 2]));
   const bytes = writeJcol(shapes);
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
@@ -181,6 +184,32 @@ describe('stairs, ramp proxy, escalator, ground material', () => {
       const dy = (onRamp[i] as (typeof onRamp)[0]).posWF.y - (onRamp[i - 1] as (typeof onRamp)[0]).posWF.y;
       expect(Math.abs(dy)).toBeLessThan(0.01);
     }
+    s.phys.dispose();
+  });
+
+  it('keeps walking speed on a 30° ramp proxy up and down (slope follow, ADR-0056)', async () => {
+    const s = await scene();
+    await s.place(76);
+    s.move(1.35);
+    const up = await s.run(6);
+    expect(s.pose().posWF.y).toBeCloseTo(TOP, 1);
+    const windows = (ps: typeof up, sign: 1 | -1) => {
+      for (let i = 10; i < ps.length; i++) {
+        const [a, b] = [ps[i - 10] as (typeof ps)[0], ps[i] as (typeof ps)[0]];
+        // 접촉 투영만이면 오르막 수평 = 1.35·cos²30° ≈ 1.0 m/s.
+        expect((sign * (lx(b) - lx(a))) / (10 / 60)).toBeGreaterThan(1.2);
+        expect(Math.abs(b.posWF.y - (ps[i - 1] as (typeof ps)[0]).posWF.y)).toBeLessThan(0.016);
+      }
+    };
+    const onUp = up.filter((p) => lx(p) > 80.4 && lx(p) < 80 + ESC_RUN - 0.3);
+    expect(onUp.length).toBeGreaterThan(60);
+    windows(onUp, 1);
+    s.move(-1.35);
+    const down = await s.run(6);
+    expect(s.pose().posWF.y).toBeCloseTo(0, 1);
+    const onDown = down.filter((p) => lx(p) > 80.4 && lx(p) < 80 + ESC_RUN - 0.3);
+    windows(onDown, -1);
+    expect(onDown.filter((p) => !p.grounded).length).toBe(0);
     s.phys.dispose();
   });
 

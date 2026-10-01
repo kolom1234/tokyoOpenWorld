@@ -143,6 +143,13 @@ export function cropWindow(w: CellWindow, values: Float32Array, margin: number):
   return { size: w.size, margin, stride, values: out };
 }
 
+/** WF (x, z)에 가장 가까운 DEM 값(창 밖 undefined) — 셀 밖 지면이 필요한 곳(교량 계단 통로). */
+export function demHeightAt(dem: DemWindow, x: number, z: number): number | undefined {
+  const [c, r] = [Math.round(x - dem.x0), Math.round(z - dem.z0)];
+  if (c < 0 || r < 0 || c >= dem.width || r >= dem.height) return undefined;
+  return dem.values[r * dem.width + c];
+}
+
 /** 로컬 격자 (x, z) 높이(margin 안쪽 음수·size 이상 허용). */
 export function sampleAt(w: CellWindow, x: number, z: number): number {
   return w.values[(z + w.margin) * w.stride + x + w.margin] as number;

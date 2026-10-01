@@ -13,9 +13,22 @@ const THEME_KIND: Readonly<Record<string, SurfaceKind>> = {
   'bldg:ClosureSurface': 'closure',
   'bldg:OuterFloorSurface': 'roof', // 위를 향한 외부 바닥(발코니 바닥 등)
   'bldg:OuterCeilingSurface': 'ground', // 아래를 향한 외부 천장(처마 밑 등)
+  // 교량(M05-T08): 상판 윗면 = OuterFloorSurface → roof(걷는 면), 아랫면 = OuterCeilingSurface.
+  'brid:RoofSurface': 'roof',
+  'brid:WallSurface': 'wall',
+  'brid:GroundSurface': 'ground',
+  'brid:ClosureSurface': 'closure',
+  'brid:OuterFloorSurface': 'roof',
+  'brid:OuterCeilingSurface': 'ground',
 };
+/** 부속물(installation) 깊이를 세는 요소 — 건물 부속물 + 교량 구조재·부속물. */
+const INSTALLATION = new Set([
+  'bldg:BuildingInstallation',
+  'brid:BridgeInstallation',
+  'brid:BridgeConstructionElement',
+]);
 /** 캡처할 기하 속성: lod1Solid(LOD1 외피), lodN MultiSurface/Geometry. lod2Solid·lod3Solid는 xlink 참조뿐이라 제외. */
-const GEOM_RE = /^(?:bldg|tran):lod([1-4])(Solid|MultiSurface|Geometry)$/;
+const GEOM_RE = /^(?:bldg|tran|brid):lod([1-4])(Solid|MultiSurface|Geometry)$/;
 const TEXT_ELEMENTS = new Set([
   'gml:posList',
   'app:imageURI',
@@ -110,7 +123,8 @@ export class CityGmlState {
     const id = attrs['gml:id'] ?? '';
     const theme = THEME_KIND[name];
     if (name === 'bldg:Building' && !this.bldg) this.bldg = newBuilding(id);
-    else if (name === 'bldg:BuildingInstallation') this.installDepth++;
+    else if (name === 'brid:Bridge' && !this.bldg) this.bldg = { ...newBuilding(id), bridge: true };
+    else if (INSTALLATION.has(name)) this.installDepth++;
     else if (theme && this.bldg) {
       this.themeKind = theme;
       this.themeId = id || null;
@@ -131,9 +145,9 @@ export class CityGmlState {
       this.poly = null;
     } else if (this.geom && name === this.geom.name) this.geom = null;
     else if (THEME_KIND[name]) this.themeKind = this.themeId = null;
-    else if (name === 'bldg:BuildingInstallation') this.installDepth--;
+    else if (INSTALLATION.has(name)) this.installDepth--;
     else if (name === 'tran:TrafficArea' || name === 'tran:AuxiliaryTrafficArea') this.area = null;
-    else if (name === 'bldg:Building' && this.bldg) {
+    else if ((name === 'bldg:Building' || name === 'brid:Bridge') && this.bldg) {
       // BuildingPart는 별도 요소명 → 여기 도달 = 최상위 Building 종료.
       const b = finishBuilding(this.bldg, this.sourceId);
       if (b) this.emit(b);

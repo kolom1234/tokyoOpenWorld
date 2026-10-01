@@ -17,7 +17,7 @@ const HI = cellBoundsWF(packCellKey(0, SPIKE_CELLS.maxIx, SPIKE_CELLS.maxIz));
 const REGION = { minX: LO.minX, minZ: LO.minZ, maxX: HI.maxX, maxZ: HI.maxZ };
 
 function inRegion(f: NormalizedFeature): boolean {
-  if (f.layer === 'buildings') {
+  if (f.layer === 'buildings' || f.layer === 'bridges') {
     const c = centroidXZ(f.surfaces.map((s) => s.ringsWF));
     if (!c) return false;
     const { ix, iz } = unpackCellKey(cellOf(0, c.x, c.z));

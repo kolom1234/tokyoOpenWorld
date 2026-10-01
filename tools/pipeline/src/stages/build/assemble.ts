@@ -15,7 +15,7 @@ import {
   writeTkc,
 } from '@sanpo/tile-format';
 import { terrainLookup } from '../../lib/mesh-lookup.ts';
-import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
+import type { BridgeRecord, BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { burnOuterEdges, outerEdgesAround } from '../derive/edge-burn.ts';
 import { type FootprintSource, footprintGrid, footprintSources } from '../derive/footprints.ts';
 import type { LocalGrid } from '../derive/grid.ts';
@@ -23,6 +23,7 @@ import { buildMarkings } from '../derive/markings/index.ts';
 import type { PropCatalog } from '../derive/props/context.ts';
 import type { WireBuf } from '../derive/props/wires.ts';
 import { roadIndex, roadRaster } from '../derive/roads.ts';
+import { walkwaysOf } from '../derive/stairs.ts';
 import { SHAPE_PAD, type ShapedGround, shapeGround } from '../derive/terrain-shape.ts';
 import { paintVegetation } from '../derive/vegetation.ts';
 import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
@@ -37,6 +38,7 @@ import {
   cropWindow,
   DEM_MARGIN,
   type DemWindow,
+  demHeightAt,
   paddedCellWindow,
   readDemWindow,
 } from './dem-window.ts';
@@ -72,6 +74,24 @@ export interface CellBuildInput {
   metaFallbackSources: readonly string[];
   /** 랜드마크 오버라이드(M05-T05, content/overrides). 없으면 overrides.mesh 없음. */
   overrides?: OverrideSet;
+  /** 이 셀 교량(PLATEAU brid, M05-T08)·셀 + 8-이웃 교량(계단 끝 상판 높이). overrides가 있을 때만 쓴다. */
+  bridges?: readonly BridgeRecord[];
+  bridgesAround?: readonly BridgeRecord[];
+  /** 이웃 포함 OSM 계단 선(교량 면 계단 통로 걷어내기). */
+  stepsAround?: readonly OsmRecord[];
+  /** 셀 밖까지 WF 지면 높이(영역 DEM) — 이웃 셀 계단 통로. 없으면 셀 지형만. */
+  groundAround?: (x: number, z: number) => number | undefined;
+}
+
+function mergeStreams(
+  a: { pos: ArrayLike<number>; idx: ArrayLike<number> },
+  b: { pos: readonly number[]; idx: readonly number[] },
+): { pos: Float32Array; idx: Uint32Array } {
+  const base = a.pos.length / 3;
+  return {
+    pos: Float32Array.from([...Array.from(a.pos), ...b.pos]),
+    idx: Uint32Array.from([...Array.from(a.idx), ...b.idx.map((k) => k + base)]),
+  };
 }
 
 /** 랜드마크 부품 충돌 삼각형을 건물 충돌 스트림 뒤에 붙인다(같이 단순화·청크). */
@@ -246,14 +266,17 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   const sc = shapeCell(input, originWF);
   const terrain = await buildTerrainGeometry(sc.window, sc.surf, sc.tol);
   const terrainAt = terrainLookup({ pos: terrain.positions, idx: terrain.indices });
-  const ov = input.overrides ? await overrideCell(input.overrides, input.buildings, originWF, terrainAt) : null;
+  const ov = input.overrides
+    ? await overrideCell(input.overrides, input.buildings, originWF, terrainAt, walkwaysOf(input, originWF, terrainAt))
+    : null;
   const bld = await buildBuildings(input.buildings, originWF, ov?.renderSkip);
   const own = input.cellRoads ?? [];
   const roads = await buildRoads(own, sc.index, originWF[0], originWF[2], sc.shaped, terrainAt);
   const props = await propCell(input, originWF, sc, terrainAt);
   const { decals, decalTris, marks } = await markCell(input, originWF, terrainAt, props?.wires);
   const bc = withOverrideCollider(bld.collision, ov);
-  const col = await buildCollision(bc.pos, bc.idx, roads.collider, props?.colliders);
+  const ground = ov ? mergeStreams(roads.collider, ov.walkCollider) : roads.collider;
+  const col = await buildCollision(bc.pos, bc.idx, ground, [...(props?.colliders ?? []), ...(ov?.walkShapes ?? [])]);
   const parts: CellParts = { sc, terrain, bld, roads, own, decals, col, props, ov };
   const [y0, y1] = yRange(terrain.positions);
   const cellBox: Aabb = { min: [0, y0, 0], max: [CELL_SIZE_M, y1, CELL_SIZE_M] };
@@ -337,7 +360,15 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       cellRoads: files.roadsOf(key),
       osm: readLayer<OsmRecord>(input.normalizedDir, 'osm', key),
       ...(input.props ? { props: input.props } : {}),
-      ...(input.overrides ? { overrides: input.overrides } : {}),
+      ...(input.overrides
+        ? {
+            overrides: input.overrides,
+            bridges: files.bridgesOf(key),
+            bridgesAround: files.bridgesAround(key),
+            stepsAround: files.stepsAround(key),
+            groundAround: (x: number, z: number) => demHeightAt(dem, x, z),
+          }
+        : {}),
       metaFallbackSources: input.plateauSources,
     });
     const dir = join(outDir, 'L0', String(ix));

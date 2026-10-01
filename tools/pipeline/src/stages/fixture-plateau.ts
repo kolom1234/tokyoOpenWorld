@@ -54,7 +54,7 @@ export function splitCityGml(text: string): { header: string; members: { start: 
 }
 
 function inCell(f: NormalizedFeature, cell: CellKey): boolean {
-  if (f.layer === 'buildings') {
+  if (f.layer === 'buildings' || f.layer === 'bridges') {
     const c = centroidXZ(f.surfaces.map((s) => s.ringsWF));
     return c !== null && cellOf(0, c.x, c.z) === cell;
   }
@@ -71,7 +71,7 @@ function candidatesOf(file: string, opts: PlateauMiniOptions): { header: string;
     const feats = parseCityGmlString(`${header.replace(BOM, '')}\n${m.chunk}${MODEL_CLOSE}`, opts.sourceId);
     const hit = feats.find((f) => inCell(f, opts.cell));
     if (!hit) continue;
-    const id = hit.layer === 'buildings' ? hit.gmlId : hit.roadId;
+    const id = hit.layer === 'roads' ? hit.roadId : hit.gmlId;
     const height = hit.layer === 'buildings' ? (hit.measuredHeightM ?? 0) : 0;
     list.push({ file, start: m.start, chunk: m.chunk, layer, id, height });
   }

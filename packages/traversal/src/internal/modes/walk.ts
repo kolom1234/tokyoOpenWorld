@@ -14,6 +14,7 @@ import type {
 } from '../../api.ts';
 import { type BoomState, boomLength, createBoomState, requestBoom, resetBoom, stepToward } from '../camera/boom.ts';
 import {
+  BOB_AIR_GRACE_S,
   createFirstPersonState,
   createLookState,
   type FirstPersonState,
@@ -236,7 +237,8 @@ function drive(rt: Rt, frame: FrameContext, ctx: TraversalContext, physics: Phys
   const hSpeed = Math.hypot(st.vel.x, st.vel.z);
   const feetY = followFeet(rt.fp, st.feet.y, st.grounded, frame.dtReal, w.eyeFollowPerS);
   if (st.view === 'first') {
-    const bob = headBob(rt.fp, st.grounded && !st.escalator ? hSpeed : 0, frame.dtReal, w);
+    const onFoot = (st.grounded || rt.fp.airS < BOB_AIR_GRACE_S) && !st.escalator;
+    const bob = headBob(rt.fp, onFoot ? hSpeed : 0, frame.dtReal, w);
     firstPersonCamera(rt.camera, st.feet, feetY, look, bob, w);
     rt.avatar.visible = false;
   } else thirdPerson(rt, frame, ctx, physics, feetY);

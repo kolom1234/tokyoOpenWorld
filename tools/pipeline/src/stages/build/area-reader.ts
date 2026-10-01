@@ -3,8 +3,9 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { type CellKey, cellIdString, packCellKey, unpackCellKey } from '@sanpo/core';
 import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
-import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
+import type { BridgeRecord, BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { type FootprintSource, footprintSources } from '../derive/footprints.ts';
+import type { OsmRecord } from '../normalize-osm.ts';
 
 export function readLayer<T>(normalizedDir: string, layer: string, key: CellKey): T[] {
   const f = join(normalizedDir, layer, `${cellIdString(key)}.ndjson.gz`);
@@ -17,6 +18,8 @@ const AROUND_CACHE = 64;
 export function aroundReader(normalizedDir: string) {
   const roads = new Map<CellKey, RoadRecord[]>();
   const prints = new Map<CellKey, FootprintSource[]>();
+  const bridges = new Map<CellKey, BridgeRecord[]>();
+  const steps = new Map<CellKey, OsmRecord[]>();
   const get = <T>(m: Map<CellKey, T>, k: CellKey, load: () => T): T => {
     let v = m.get(k);
     if (v === undefined) {
@@ -36,7 +39,14 @@ export function aroundReader(normalizedDir: string) {
   const roadsOf = (k: CellKey) => get(roads, k, () => readLayer<RoadRecord>(normalizedDir, 'roads', k));
   const printsOf = (k: CellKey) =>
     get(prints, k, () => footprintSources(readLayer<BuildingRecord>(normalizedDir, 'buildings', k)));
+  const bridgesOf = (k: CellKey) => get(bridges, k, () => readLayer<BridgeRecord>(normalizedDir, 'bridges', k));
+  const stepsOf = (k: CellKey) =>
+    get(steps, k, () => readLayer<OsmRecord>(normalizedDir, 'osm', k).filter((r) => r.tags.highway === 'steps'));
   return {
+    bridgesOf,
+    /** 이웃 포함 OSM 계단 선(교량 계단 통로 — M05-T08). 셀 경계를 걸친 선은 중복될 수 있다. */
+    stepsAround: (k: CellKey) => around(k, stepsOf),
+    bridgesAround: (k: CellKey) => around(k, bridgesOf),
     roadsOf,
     roadsAround: (k: CellKey) => around(k, roadsOf),
     footprintsAround: (k: CellKey) => around(k, printsOf),

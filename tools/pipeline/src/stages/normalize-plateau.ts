@@ -10,8 +10,9 @@ import { clipRingsToRect } from '../lib/polygon.ts';
 import { centroidXZ } from '../readers/plateau/geometry.ts';
 import type { NormalizedFeature, PlateauReader, RoadRecord } from '../readers/plateau/index.ts';
 
-/** normalize가 읽는 PLATEAU 레이어(파일명 `<mesh>_<layer>_<epsg>_op.gml`). */
-const LAYERS = ['bldg', 'tran'] as const;
+/** normalize가 읽는 PLATEAU 레이어(파일명 `<mesh>_<layer>_<epsg>_op.gml`). brid = 교량(M05-T08, 없으면 건너뜀). */
+const LAYERS = ['bldg', 'tran', 'brid'] as const;
+export type PlateauLayer = (typeof LAYERS)[number];
 
 export interface PlateauSourceRoot {
   sourceId: string;
@@ -27,6 +28,8 @@ export interface NormalizePlateauInput {
   outDir: string;
   reader: PlateauReader;
   log: Logger;
+  /** 읽을 레이어(기본 전부) — `normalize --plateau-layer brid`처럼 일부만 다시 만들 때. */
+  layers?: readonly PlateauLayer[];
 }
 
 export interface NormalizePlateauResult {
@@ -35,17 +38,23 @@ export interface NormalizePlateauResult {
   features: number;
   buildings: number;
   roadPieces: number;
+  /** 교량(M05-T08). */
+  bridges: number;
   written: string[];
 }
 
 type Bucket = Map<string, string>; // id → JSON 줄
 
 /** 대상 셀을 덮는 3차 메시의 bldg/tran 파일(정렬). */
-export function plateauFilesForCells(rawRoot: string, cells: readonly CellKey[]): string[] {
+export function plateauFilesForCells(
+  rawRoot: string,
+  cells: readonly CellKey[],
+  layers: readonly PlateauLayer[] = LAYERS,
+): string[] {
   const codes = new Set<string>();
   for (const k of cells) for (const c of jisMesh3CodesInBBox(lonLatBBoxOfWF(cellBoundsWF(k)))) codes.add(c);
   const files: string[] = [];
-  for (const layer of LAYERS) {
+  for (const layer of layers) {
     const dir = join(rawRoot, 'udx', layer);
     if (!existsSync(dir)) continue;
     for (const name of readdirSync(dir).sort()) {
@@ -78,7 +87,7 @@ function bucketOf(m: Map<CellKey, Bucket>, k: CellKey): Bucket {
 
 /** 레코드 1개를 셀 버킷에 넣는다. 반환 = 넣은 조각 수. 같은 id가 이미 있으면(구 경계 중복 등) 먼저 온 것 유지. */
 function place(f: NormalizedFeature, targets: Map<CellKey, CellBoundsWF>, out: Map<CellKey, Bucket>): number {
-  if (f.layer === 'buildings') {
+  if (f.layer === 'buildings' || f.layer === 'bridges') {
     const c = centroidXZ(f.surfaces.map((s) => s.ringsWF));
     const k = c ? cellOf(0, c.x, c.z) : null;
     if (k === null || !targets.has(k)) return 0;
@@ -118,7 +127,7 @@ export async function normalizePlateau(input: NormalizePlateauInput): Promise<No
   const seen = new Set<string>();
   const files: NormalizePlateauResult['files'] = [];
   for (const src of input.sources) {
-    for (const file of plateauFilesForCells(src.rawRoot, input.cells)) {
+    for (const file of plateauFilesForCells(src.rawRoot, input.cells, input.layers)) {
       if (seen.has(basename(file))) continue;
       seen.add(basename(file));
       files.push({ sourceId: src.sourceId, file });
@@ -126,17 +135,23 @@ export async function normalizePlateau(input: NormalizePlateauInput): Promise<No
   }
   const buildings = new Map<CellKey, Bucket>();
   const roads = new Map<CellKey, Bucket>();
-  const res: NormalizePlateauResult = { files, features: 0, buildings: 0, roadPieces: 0, written: [] };
+  const bridges = new Map<CellKey, Bucket>();
+  const res: NormalizePlateauResult = { files, features: 0, buildings: 0, roadPieces: 0, bridges: 0, written: [] };
   for (const { sourceId, file } of files) {
     const t0 = performance.now();
     for await (const f of reader.read(file, { sourceId })) {
       res.features++;
-      const n = place(f, targets, f.layer === 'buildings' ? buildings : roads);
+      const n = place(f, targets, f.layer === 'buildings' ? buildings : f.layer === 'bridges' ? bridges : roads);
       if (f.layer === 'buildings') res.buildings += n;
+      else if (f.layer === 'bridges') res.bridges += n;
       else res.roadPieces += n;
     }
     log.info(`${reader.name} ${file} ${Math.round(performance.now() - t0)} ms`);
   }
-  res.written = [...flush(input.outDir, 'buildings', buildings), ...flush(input.outDir, 'roads', roads)];
+  res.written = [
+    ...flush(input.outDir, 'buildings', buildings),
+    ...flush(input.outDir, 'roads', roads),
+    ...flush(input.outDir, 'bridges', bridges),
+  ];
   return res;
 }
