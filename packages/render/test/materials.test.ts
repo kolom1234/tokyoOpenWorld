@@ -1,6 +1,7 @@
 // 머티리얼 라이브러리(M03-T01): 실패 경로·상태, 셀 시드 결정론·범위, 레지스트리 생성(텍스처 머티리얼 + HLOD).
 import { createLogger, packCellKey } from '@sanpo/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createLandmarkMaterial, LANDMARK_KINDS } from '../src/internal/materials/landmark.ts';
 import { createMaterialLibrary, MATERIAL_GROUPS } from '../src/internal/materials/library.ts';
 import { createMaterialRegistry, PRECOMPILE_IDS } from '../src/internal/materials/registry.ts';
 import { cellSeedOf } from '../src/internal/scene/cell-node.ts';
@@ -39,13 +40,13 @@ describe('registry', () => {
   it('builds textured cell materials and flat HLOD variants for every precompiled id', () => {
     const lib = createMaterialLibrary('/basis/');
     const r = createMaterialRegistry(lib, createEnvUniforms());
-    expect(PRECOMPILE_IDS).toEqual(['terrain_ground', 'facade_default', 'road_marking', 'power_wire']);
+    expect(PRECOMPILE_IDS).toEqual(['terrain_ground', 'facade_default', 'road_marking', 'power_wire', 'landmark']);
     for (const id of PRECOMPILE_IDS) {
       expect(r.get(id).name).toBe(id);
       expect(r.getHlod(id).name).toBe(`hlod:${id}`);
       expect(r.get(id)).toBe(r.get(id));
     }
-    expect(r.all()).toHaveLength(8); // 셀 4 + HLOD 4
+    expect(r.all()).toHaveLength(10); // 셀 5 + HLOD 5
     r.dispose();
     lib.dispose();
   });
@@ -64,5 +65,14 @@ describe('cellSeedOf', () => {
       }
     }
     expect(seeds.size).toBeGreaterThan(200);
+  });
+});
+
+describe('landmark material', () => {
+  it('maps every pipeline _LMAT kind (overrides/spec.ts LMAT, 15 kinds) and is shared by id', () => {
+    expect(LANDMARK_KINDS).toBe(15);
+    const m = createLandmarkMaterial();
+    expect(m.name).toBe('landmark');
+    m.dispose();
   });
 });

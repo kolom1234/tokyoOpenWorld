@@ -35,10 +35,10 @@ export function threeAttributeName(gltfName: string): string {
 }
 
 /**
- * 1성분 정수 속성(`_CHILD` u8·`_SURF` u8·`_BLDG` u16·`_PAINT` u8) → float32: WebGPU 코어에 1성분 8/16비트 정점 형식이 없고,
+ * 1성분 정수 속성(`_CHILD` u8·`_SURF` u8·`_BLDG` u16·`_PAINT` u8·`_LMAT` u8) → float32: WebGPU 코어에 1성분 8/16비트 정점 형식이 없고,
  * WebGL2는 정수 입력에 vertexAttribIPointer가 필요해 셰이더·버퍼 타입이 어긋난다. 셀당 정점 수만큼 1회 변환.
  */
-const F32_ATTRIBUTES: ReadonlySet<string> = new Set(['_CHILD', '_SURF', '_BLDG', '_PAINT']);
+const F32_ATTRIBUTES: ReadonlySet<string> = new Set(['_CHILD', '_SURF', '_BLDG', '_PAINT', '_LMAT']);
 
 function floatAttribute(a: Primitive['attributes'][string]): BufferAttribute {
   const src = a.array as Uint8Array | Uint16Array;

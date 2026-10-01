@@ -43,7 +43,8 @@
 | `@dgreenheck/ez-tree` | 나무 메시 생성기(파이프라인 `trees`, M05-T04 — 수종 6종 가지·잎 카드 → `apps/game/src/assets/trees/`, 잎 아틀라스·임포스터는 자체 생성, `ATTRIBUTION.json` `ez-tree`, ADR-0052) | MIT (생성물은 자체 산출물) |
 | Noto Sans JP / Noto Sans KR | UI 폰트 (자체 호스팅, 서브셋) | SIL OFL 1.1 |
 | Freesound (CC0 필터만) / 자체 녹음·합성 | 환경음·효과음 | CC0 / 자체 |
-| 자체 제작 (Blender) | 랜드마크 오버라이드, 일본 특유 소품(자판기·전신주·신호등·가드레일·표지판) | 프로젝트 소유 |
+| 자체 제작 (Blender) | 일본 특유 소품(자판기·전신주·신호등·가드레일·표지판) | 프로젝트 소유 |
+| 자체 제작 (명세 + 코드) | 랜드마크 오버라이드(M05-T05, ADR-0053): `content/overrides/<id>/meta.json` — PLATEAU 면 재사용(셸) + 절차 부품(도리이·동상·화면 등). 위치·높이 = PLATEAU·OSM(각 meta `reference`), 화면 영상은 절차 색면(글자·로고·실존 광고 없음). 외부 에셋 없음 | 프로젝트 소유(셸 형상 = PLATEAU 출처 표기, 위치 = OSM ODbL) |
 | 자체 제작 (코드) | 거리 소품 15종 절차 모델(M05-T03, `packages/render/src/internal/props/models.ts` — 상자·원기둥 정점색, 로고·글자·실존 상호 없음) + 배치 카탈로그 `content/props/catalog.json`. 외부 에셋 없음 | 프로젝트 소유(출처 표기 불필요) |
 
 ## 5. 사용 금지 목록

@@ -77,7 +77,7 @@ credits.json                  출처 표기
 | `buildings.mesh` | glb | 파사드 클래스별 프리미티브. 속성: `_BLDG`(u16 셀내 건물 인덱스), `_FACADE`(u8×4: class 0 오피스·1 맨션·2 주택·3 상업·4 공공·5 공업, floors, tintIdx = 건물 해시, flags bit0 상점 1층·bit1 커튼월·상위 4비트 창 시드), UV0 = 벽: (같은 평면 묶음 시작점부터 m, 건물 최저점부터 m) / 지붕: 셀 로컬 (x, z), **TEXCOORD_1 = (벽 평면 묶음 폭 m, 건물 높이 m)**(지붕·부속물 = (0, 높이)). 벽과 동일 평면인 부속물 면은 제외(ADR-0030) | render | L0–L1 |
 | `roads.mesh` | glb | 보도·교통섬 윗면(성형 윗면 + 8 mm, 4 m 조각) + 연석 세로 면 + 바깥 가장자리 치마(M05-T01, ADR-0049). 머티리얼 `terrain_ground`, 속성: POSITION(u16 양자화 + 노드 이동·균일 스케일), NORMAL(i8), `_SURF`(1 보도·7 연석 콘크리트). 차도·광장은 terrain.mesh | render | L0 |
 | `decals.mesh` | glb | 노면 표시 (별도 폴리곤 오프셋) | render | L0 |
-| `overrides.mesh` | glb | 랜드마크 수작업 모델 (PBR, 텍스처 참조는 shared) | render | L0 |
+| `overrides.mesh` | glb | 랜드마크(M05-T05, ADR-0053): 프리미티브 1개(머티리얼 `landmark`) — POSITION u16(노드 양자화)·NORMAL i8·TEXCOORD_0 f32(미터: 벽 = 수평 거리·건물 바닥부터 높이, 수평면 = x·z, 화면 = 시드×1000 + m)·`_LMAT` u8(랜드마크 머티리얼 15종, render `materials/landmark.ts`). 텍스처 없음 | render | L0 |
 | `props.inst` | bin+gzip | 반복 `{u16 typeId, u16 pad, u32 count, f32[count*5] (x,y,z,yawRad,scale)}` — typeId = `PROP_TYPE`(1–15, 추가만), 셀 로컬, yaw = 로컬 +Z(정면)를 `atan2(fx, fz)`로 | render (충돌 있는 소품은 파이프라인이 `collision.bin`에 프리미티브로 굽는다, ADR-0051) | L0 |
 | `trees.inst` | bin+gzip | `{u32 count}` + 레코드 `{u8 species, u8 seed, u16 pad, f32 x,y,z, f32 height, f32 crownR}` — species = `TREE_SPECIES`(1–6, 0 금지), seed → yaw·색 변형 | render (줄기 충돌은 `collision.bin`의 원기둥, ADR-0052) | L0–L1(L1은 미구현) |
 | `collision.bin` | bin+gzip | §6 JCOL 포맷 | physics | L0 |

@@ -16,3 +16,6 @@ playwright-report/
 !data/sources.lock.json
 coverage/
 *.tsbuildinfo
+
+# 파이프라인 스크래치(로컬 조사 스크립트·추출물)
+tools/pipeline/.tmp/

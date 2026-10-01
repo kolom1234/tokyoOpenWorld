@@ -83,7 +83,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 1. 지형 메시: 1 m 그리드 → RTIN 단순화(모든 샘플 수직 오차 ≤ 5 cm, 정확 측정) + 경계 정점 고정(ADR-0018). 높이장 섹션(물리용) 별도(모든 셀 공통 기준·스텝).
 2. 건물: 머티리얼 클래스별 병합, 정점 속성 `_BLDG`(u16), `_FACADE(u8x4: class, floors, tint idx, flags)` — `stages/build/facade-params.ts`(용도·높이 → 클래스·상점·커튼월, ADR-0030), 벽 평면 묶기(`wall-planes.ts`)·TEXCOORD_1(면 폭·건물 높이). LOD2 텍스처는 **사용하지 않고** 틴트만 추출(항공사진 기반 텍스처는 그림자가 구워져 있어 동적 조명과 충돌).
 3. 도로/보도/노면표시: 메시 + 데칼 메시(깊이 오프셋용 별도 프리미티브).
-4. 오버라이드: `content/overrides/<gmlId>/model.glb`가 있으면 해당 건물 대체(원점·스케일 검증).
+4. 오버라이드(M05-T05, ADR-0053): `content/overrides/<id>/meta.json` — 대체 건물(`replace`)의 PLATEAU 면을 높이 띠·규칙별 랜드마크 머티리얼로 다시 내는 셸 + 절차 부품(상자·원기둥·압출·난간·참도 띠·벽 화면·도리이·동상) → `overrides.mesh`(`_LMAT`). 대체 건물은 buildings.mesh 렌더에서만 빠진다(충돌·meta 유지). 검사: 셸 + 붙은 부품 경계 vs PLATEAU 수평 ≤ 0.5 m·높이 ≤ 1 m(넘으면 빌드 실패). 수작업 glb는 쓰지 않는다.
 5. 인스턴스: 소품/나무 → 타입별 트랜스폼 배열(`props.inst`, 카탈로그가 있을 때만 — `buildArea({ props })`).
 6. 충돌(`stages/build/collision.ts`, ADR-0042): 건물 렌더 면 1 mm 용접 → 단순화(meshopt simplify 절대 오차 0.3 m) → 64 m 블록 순 ≤ 2500 삼각형 청크(JCOL triMesh 여러 개), 연석·가드레일, `catalog.json`에서 `collider`가 정의된 소품(박스/캡슐/원기둥), 나무 줄기(원기둥, 반경 = 높이×0.02) → 모두 `collision.bin`.
 7. 내비·레인·광원·오디오·POI·meta.

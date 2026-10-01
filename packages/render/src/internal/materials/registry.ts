@@ -5,6 +5,7 @@ import type { EnvUniforms } from '../weather/wetness.ts';
 import { createDecalMaterial } from './decal.ts';
 import { createFacadeMaterial } from './facade/index.ts';
 import { createHlodMaterial } from './hlod.ts';
+import { createLandmarkMaterial } from './landmark.ts';
 import type { MaterialLibrary } from './library.ts';
 import { createWireMaterial } from './prop.ts';
 import { createTerrainMaterial } from './terrain.ts';
@@ -15,6 +16,7 @@ const CELL_MATERIALS: Readonly<Record<string, (lib: MaterialLibrary, env: EnvUni
   facade_default: createFacadeMaterial,
   road_marking: createDecalMaterial,
   power_wire: createWireMaterial,
+  landmark: createLandmarkMaterial,
 };
 const HLOD_COLORS: Readonly<Record<string, { color: number; roughness: number }>> = {
   terrain_ground: { color: 0x8a8a80, roughness: 0.95 },

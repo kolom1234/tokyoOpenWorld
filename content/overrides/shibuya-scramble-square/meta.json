@@ -1,0 +1,34 @@
+{
+  "id": "shibuya-scramble-square",
+  "order": 1,
+  "name": { "ja": "渋谷駅一帯（スクランブルスクエア・マークシティ連絡部）", "en": "Shibuya Station area (Scramble Square, Mark City link)" },
+  "replace": ["bldg_7b006717-e9e6-4a94-8843-1f4ce13b2509", "bldg_84560e8a-53da-47bf-a0c8-93a0e6d434b5"],
+  "shell": [
+    {
+      "gml": "bldg_7b006717-e9e6-4a94-8843-1f4ce13b2509",
+      "cuts": [12, 214],
+      "rules": [
+        { "kinds": ["wall"], "y": [-5, 12], "mat": "clear_glass" },
+        { "kinds": ["wall"], "y": [12, 214], "mat": "fin_curtain" },
+        { "kinds": ["wall"], "mat": "curtain" },
+        { "kinds": ["roof"], "mat": "deck" },
+        { "kinds": ["installation"], "wall": true, "mat": "clear_glass" },
+        { "mat": "metal" }
+      ]
+    },
+    {
+      "gml": "bldg_84560e8a-53da-47bf-a0c8-93a0e6d434b5",
+      "cuts": [4],
+      "rules": [
+        { "kinds": ["wall"], "y": [-5, 4], "mat": "stone" },
+        { "kinds": ["wall"], "mat": "curtain" },
+        { "mat": "metal" }
+      ]
+    }
+  ],
+  "parts": [],
+  "reference": [
+    { "source": "plateau-shibuya", "note": "LOD2 bldg 7b006717(스크램블 스퀘어 동관, 지상 ~ 옥상 시설 231 m) · 84560e8a(마크시티 동단 연결부, 이노카시라선 역사 쪽) 면을 그대로 재사용 — 위치·높이 오차 0" },
+    { "source": "own", "note": "머티리얼 띠(저층 유리 12 m, 핀 커튼월 ~214 m, 크라운 유리·옥상 데크·유리 펜스)는 공개 사진의 외관 인상 근사. 로고·글자 없음" }
+  ]
+}

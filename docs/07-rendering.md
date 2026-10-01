@@ -42,7 +42,7 @@ scene
 | `M_FACADE` | 건물 벽 (핵심) | §5 절차적 파사드 |
 | `M_ROOF` | 지붕 | 콘크리트/방수시트/금속 변형, 옥상 설비 인스턴스는 별도 |
 | `M_GLASS` | 커튼월/대형 유리 | 프레넬 반사(SSR + 환경 프로브), 내부 매핑, 멀리언 패턴 — 셰이딩 함수 `materials/glass.ts`(파사드 창·커튼월·상점 유리 공유, M03-T05) |
-| `M_OVERRIDE` | 랜드마크 수작업 | `MeshPhysicalNodeMaterial` 표준 PBR |
+| `M_OVERRIDE` | 랜드마크 | **구현(M05-T05, ADR-0053)** `materials/landmark.ts` `landmark`: Standard PBR, `_LMAT` 15종 표(색·거칠기·금속도) + 절차 무늬(멀리언·흰 세로 핀·석재 줄눈·화강암 창 격자·강판 이음·자갈·나뭇결·청동 녹, fwidth 거리 평균) + 화면 가상 영상(색면·원·띠·LED 격자, 글자·로고 없음, `screenExposure`) |
 | `M_PROP` | 소품 | PBR + 텍스처 배열, 발광 마스크(자판기 등). **구현(M05-T03)** `materials/prop.ts` `street_prop` = 정점색 × 인스턴스 색(자판기 가상 브랜드), 텍스처·발광 없음(야간 = M09-T03). 전선 `power_wire` = 중심선 + `_OFF` 거리 비례 최소 폭(≈ 1.5 px) |
 | `M_FOLIAGE` | 잎 | alpha-to-coverage/해시 알파, 투과광, 바람 흔들림, 계절 틴트. **구현(M05-T04, ADR-0052)** `trees/materials.ts` `tree_leaf`: 자체 잎 아틀라스 알파 테스트, Lambert + 태양 + 하늘 간접광(보조 AtmosphereLight) + 투과 22 %, 높이² 흔들림·떨림, 수종 계절 표. 인스턴싱 = InstancedBufferGeometry 속성(`_ipos`·`_iext`) |
 | `M_IMPOSTOR` | 원거리 나무/소품 | 옥타헤드럴 임포스터. **구현(M05-T04)** `tree_impostor`: 반팔면체 8 × 8 틀(CPU 굽기), 나무 로컬 방향으로 틀 선택, 구면 법선, 수종 타일 3 × 2 |
