@@ -1,0 +1,56 @@
+{
+  "id": "tokyo-metropolitan-government",
+  "order": 6,
+  "name": { "ja": "東京都庁（第一・第二本庁舎、都議会議事堂）", "en": "Tokyo Metropolitan Government Building" },
+  "replace": [
+    "bldg_94caaf2f-dec2-41a7-8b0f-06ecd0fac6c7",
+    "bldg_d0967cf5-1f32-48d1-9dda-11320828a076",
+    "bldg_7e673dbb-95f1-4a0c-bdab-b0d7bb352d3b",
+    "bldg_fa3ef9ba-cd3c-4ddf-b8b9-87becc2b5792"
+  ],
+  "shell": [
+    {
+      "gml": "bldg_94caaf2f-dec2-41a7-8b0f-06ecd0fac6c7",
+      "cuts": [13],
+      "rules": [
+        { "kinds": ["wall"], "y": [-5, 13], "mat": "stone" },
+        { "kinds": ["wall"], "mat": "granite_grid" },
+        { "kinds": ["roof"], "mat": "deck" },
+        { "kinds": ["installation"], "wall": true, "mat": "metal" },
+        { "mat": "deck" }
+      ]
+    },
+    {
+      "gml": "bldg_d0967cf5-1f32-48d1-9dda-11320828a076",
+      "cuts": [13],
+      "rules": [
+        { "kinds": ["wall"], "y": [-5, 13], "mat": "stone" },
+        { "kinds": ["wall"], "mat": "granite_grid" },
+        { "kinds": ["roof"], "mat": "deck" },
+        { "kinds": ["installation"], "wall": true, "mat": "metal" },
+        { "mat": "deck" }
+      ]
+    },
+    {
+      "gml": "bldg_7e673dbb-95f1-4a0c-bdab-b0d7bb352d3b",
+      "cuts": [8],
+      "rules": [
+        { "kinds": ["wall"], "y": [-5, 8], "mat": "stone" },
+        { "kinds": ["wall"], "mat": "granite_grid" },
+        { "mat": "deck" }
+      ]
+    },
+    {
+      "gml": "bldg_fa3ef9ba-cd3c-4ddf-b8b9-87becc2b5792",
+      "rules": [
+        { "kinds": ["wall"], "mat": "stone" },
+        { "mat": "deck" }
+      ]
+    }
+  ],
+  "parts": [],
+  "reference": [
+    { "source": "plateau-shinjuku", "note": "LOD2 bldg 94caaf2f(第一本庁舎 — 쌍탑 옥상 243 m·안테나), d0967cf5(第二本庁舎), 7e673dbb(都議会議事堂), fa3ef9ba(都民広場 회랑) 면 그대로 — 위치·높이 오차 0" },
+    { "source": "own", "note": "화강암 격자 파사드(1.6 × 3.9 m 칸·짙은 창·4번째 줄 짙은 돌)·석재 기단 13 m는 공개 사진 인상 근사. 글자·문장 없음" }
+  ]
+}
