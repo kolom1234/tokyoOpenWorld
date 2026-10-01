@@ -292,8 +292,22 @@ export interface PropBatch {
   /** x, y, z, yaw, scale (셀 로컬) × count. */
   transforms: Float32Array;
 }
+/** 나무 수종(trees.inst species, M05-T04 — ADR-0052). 0 금지, 번호는 추가만. */
+export const TREE_SPECIES = { ginkgo: 1, zelkova: 2, cherry: 3, camphor: 4, pine: 5, shrub: 6 } as const;
+export type TreeSpeciesName = keyof typeof TREE_SPECIES;
+/** trees.inst 레코드 1개(셀 로컬, 높이·수관 반경 m). */
+export interface TreeRecord {
+  species: number;
+  seed: number;
+  x: number;
+  y: number;
+  z: number;
+  height: number;
+  crownR: number;
+}
 export interface TreeBatch {
   count: number;
+  /** 24 B 레코드 × count(`treeRecordAt`). */
   records: ArrayBuffer;
 }
 export interface LightRecord {

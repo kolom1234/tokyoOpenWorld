@@ -9,3 +9,4 @@ export { parseProps, writeProps } from './internal/props.ts';
 export { isSectionType, sectionHash } from './internal/sections.ts';
 export { readTkc, verifyTkc } from './internal/tkc-reader.ts';
 export { writeTkc } from './internal/tkc-writer.ts';
+export { parseTrees, TREE_RECORD_BYTES, treeRecordAt, writeTrees } from './internal/trees.ts';

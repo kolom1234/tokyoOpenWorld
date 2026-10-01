@@ -25,6 +25,7 @@ describe('describeDebug', () => {
       quality: { tier: 'high', renderScale: 0.85, dynamic: true, frameMs: 16.7 },
       shadows: null,
       props: { instances: 1200, visible: 800, pools: 3, rebuilds: 3, dropped: 0 },
+      trees: { instances: 500, visible: 300, pools: 5, dropped: 0, ready: true },
     };
     const t = { camera: { posWF: { x: -60, y: 75.4, z: -15 } }, hud: { speedKmh: 54 } } as unknown as TraversalService;
     const lines = describeDebug(stats, 59.94, t, 15.4);

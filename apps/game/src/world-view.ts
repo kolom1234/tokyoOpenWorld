@@ -13,7 +13,7 @@ import {
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
-import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
+import { createRender, type RenderConfig, type RenderService, type TreeAssetUrls } from '@sanpo/render';
 import { type ClockMode, createSim, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
@@ -47,6 +47,8 @@ export interface WorldView {
   readonly materialsSettled: boolean;
   /** 아바타 모델 적재·선컴파일이 끝났다(성공·실패 — e2e 안정 조건, ADR-0048). */
   readonly avatarSettled: boolean;
+  /** 나무 에셋 적재·선컴파일이 끝났다(성공·실패 — 골든뷰 안정 조건, M05-T04). */
+  readonly treesSettled: boolean;
   /** streaming 시작 → 스폰 영역 live까지 대기 → 시작 시점으로 이동. 반환 = 스폰 영역 live L0 셀 수. */
   showWorld(world: LoadedWorld): Promise<number>;
 }
@@ -78,6 +80,7 @@ interface LateState {
   physicsWiring?: StreamingPhysicsWiring;
   materialsSettled: boolean;
   avatarSettled: boolean;
+  treesSettled: boolean;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -145,6 +148,24 @@ function loadAvatarLater(render: RenderService, late: LateState, log: Logger): v
     });
 }
 
+/** 나무 에셋(파이프라인 `trees` — ez-tree 수종·자체 잎·임포스터 아틀라스, ADR-0052). Vite 해시 에셋. */
+export const TREE_URLS: TreeAssetUrls = {
+  manifest: new URL('./assets/trees/trees.json', import.meta.url).href,
+  glb: new URL('./assets/trees/trees.glb', import.meta.url).href,
+  leaves: new URL('./assets/trees/leaves.png', import.meta.url).href,
+  impostor: new URL('./assets/trees/impostor-color.png', import.meta.url).href,
+};
+
+/** 나무도 첫 표시 뒤(초기 다운로드 밖, ≈ 1.6 MB). 실패하면 나무 없이. */
+function loadTreesLater(render: RenderService, late: LateState, log: Logger): void {
+  void render
+    .loadTrees(TREE_URLS)
+    .catch((e: unknown) => log.warn('trees', e))
+    .finally(() => {
+      late.treesSettled = true;
+    });
+}
+
 /** traversal: 로딩 중 = freecam(시작 시점). physics는 월드 로드 뒤 생긴다 → getter(전환 요청 때마다 요구조건을 본다 — walk는 그때부터). */
 function createTraversalFor(
   deps: WorldViewDeps,
@@ -189,6 +210,7 @@ async function showWorldWith(
   else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
   loadMaterialsLater(render, world.materialsUrl, late, wlog);
   loadAvatarLater(render, late, wlog);
+  loadTreesLater(render, late, wlog);
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
@@ -197,7 +219,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const config = { ...deps.renderConfig, backend: deps.backend };
   const render = await createRender({ canvas, bus, log, config });
   const input = createInput({ target: canvas, bus, log });
-  const late: LateState = { materialsSettled: false, avatarSettled: false };
+  const late: LateState = { materialsSettled: false, avatarSettled: false, treesSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
   const traversal = createTraversalFor(deps, input, ground, late);
   const now = deps.now ?? Date.now;
@@ -239,6 +261,9 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     },
     get avatarSettled() {
       return late.avatarSettled;
+    },
+    get treesSettled() {
+      return late.treesSettled;
     },
     showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late }, world),
   };

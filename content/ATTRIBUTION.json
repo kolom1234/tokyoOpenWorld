@@ -636,6 +636,23 @@
       "modified": true
     },
     {
+      "id": "ez-tree",
+      "kind": "code",
+      "title": "@dgreenheck/ez-tree 1.1.0 — 파이프라인 `trees`가 수종 6종(은행·느티·벚·녹나무·소나무·관목) 가지·잎 카드 기하를 생성(프리셋 + 덮어쓰기). 잎 모양·임포스터는 자체 생성(외부 텍스처 미사용)",
+      "url": "https://github.com/dgreenheck/ez-tree",
+      "license": "MIT",
+      "attribution": {
+        "ja": "樹木生成：ez-tree（Daniel Greenheck, MIT）",
+        "en": "Tree generator: ez-tree (Daniel Greenheck, MIT)",
+        "ko": "나무 생성기: ez-tree (Daniel Greenheck, MIT)"
+      },
+      "files": [
+        "apps/game/src/assets/trees/trees.glb",
+        "apps/game/src/assets/trees/impostor-color.png"
+      ],
+      "modified": true
+    },
+    {
       "id": "osm-kanto",
       "kind": "data",
       "title": "OpenStreetMap（Geofabrik 関東抽出 kanto-260929.osm.pbf）→ 노면 표시(횡단보도·정지선·차선·止まれ, M05-T02)",

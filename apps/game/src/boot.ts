@@ -253,7 +253,8 @@ async function setupWorldView(
         get streaming() {
           return world.streaming;
         },
-        settledExtra: () => world.materialsSettled && world.avatarSettled && late.quality?.settled === true,
+        settledExtra: () =>
+          world.materialsSettled && world.avatarSettled && world.treesSettled && late.quality?.settled === true,
       });
       scheduler.add(overlay.system);
       // e2e·콘솔 조작용 핸들(디버그 모드에서만 노출).

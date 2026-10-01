@@ -1,6 +1,6 @@
 // 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 // 구현된 단계: normalize(--layer plateau: 건물·도로, terrain: dem_1m.tif), build(L0: 지형·건물·meta → TKC),
-// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열), avatar(Quaternius → 게임 GLB), validate, publish·gc(R2 + KV).
+// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열)·avatar(Quaternius → 게임 GLB)·trees(수종 에셋 — cli-assets.ts), validate, publish·gc(R2 + KV).
 // TODO: fetch | derive.
 import { execFile } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -8,8 +8,8 @@ import { join, resolve } from 'node:path';
 import { parseArgs, promisify } from 'node:util';
 import { type CellKey, createLogger, packCellKey } from '@sanpo/core';
 import { FORMAT_VERSION } from '@sanpo/tile-format';
+import * as assetStages from './cli-assets.ts';
 import { createPlateauReader } from './readers/plateau/index.ts';
-import { type AvatarLock, buildAvatar } from './stages/avatar/run.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
 import { readCatalog } from './stages/derive/props/context.ts';
@@ -17,9 +17,6 @@ import { buildPlateauMini, buildWorldMini, type LockSource } from './stages/fixt
 import { fetchDemTiles, resampleFarDem, writeFarDem } from './stages/hlod/dem-far.ts';
 import { runHlod } from './stages/hlod/run.ts';
 import { extractTokyo23 } from './stages/hlod/tokyo23-lod1.ts';
-import type { AmbientLock } from './stages/materials/fetch.ts';
-import { readLibrary } from './stages/materials/library.ts';
-import { buildMaterials, installMaterials } from './stages/materials/run.ts';
 import { normalizeOsmFromLock } from './stages/normalize-osm.ts';
 import { normalizePlateau } from './stages/normalize-plateau.ts';
 import { hasDemSources, normalizeTerrain, writeTerrainMeta } from './stages/normalize-terrain.ts';
@@ -248,46 +245,6 @@ async function hlod(args: string[]): Promise<void> {
   log.info(`hlod ${buildId}: ${stats.length} cells in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
 }
 
-const LOCK_PATH = join(REPO_ROOT, 'data/sources.lock.json');
-
-/** 머티리얼 라이브러리(M03-T01): content/materials/library.json → data/derived/materials/<hash> → (--build-id) 빌드 shared/materials. 컨테이너 전용. */
-async function materials(args: string[]): Promise<void> {
-  const { values } = parseArgs({
-    args,
-    options: {
-      'build-id': { type: 'string' },
-      'update-lock': { type: 'boolean', default: false },
-      force: { type: 'boolean', default: false },
-    },
-  });
-  const lockFile = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) as { sources: (LockSource | AmbientLock)[] };
-  const lock = lockFile.sources.find((s) => s.id === 'ambientcg') as AmbientLock | undefined;
-  if (!lock) throw new Error('sources.lock.json: no "ambientcg" source');
-  const mlog = log.child('materials');
-  const r = await buildMaterials({
-    library: readLibrary(join(REPO_ROOT, 'content/materials/library.json')),
-    lock,
-    updateLock: values['update-lock'],
-    rawDir: join(REPO_ROOT, 'data/raw/ambientcg'),
-    derivedDir: join(REPO_ROOT, 'data/derived'),
-    log: mlog,
-    force: values.force,
-  });
-  if (values['update-lock'])
-    writeFileSync(
-      LOCK_PATH,
-      `${JSON.stringify(lockFile, null, 2)}
-`,
-    );
-  const t = r.manifest.textures;
-  mlog.info(
-    `materials ${r.manifest.hash}${r.cached ? ' (cached)' : ''}: ${r.manifest.layerCount} layers, ` +
-      `albedo ${(t.albedo.bytes / 1e6).toFixed(2)} MB, normal ${(t.normal.bytes / 1e6).toFixed(2)} MB, orm ${(t.orm.bytes / 1e6).toFixed(2)} MB`,
-  );
-  if (values['build-id'])
-    mlog.info(`installed → ${installMaterials(r.dir, join(REPO_ROOT, 'data/build', values['build-id']))}`);
-}
-
 const WRANGLER_JSONC = join(REPO_ROOT, 'apps/worker/wrangler.jsonc');
 
 function targetOf(env: string | undefined) {
@@ -369,17 +326,16 @@ async function fixture(args: string[]): Promise<void> {
 }
 
 /** 플레이어 아바타 GLB(M05 결정 2, ADR-0048): data/raw Quaternius zip(sha256 lock) → apps/game/src/assets. 호스트 Node로 실행 가능. */
-async function avatar(): Promise<void> {
-  await buildAvatar({ repoRoot: REPO_ROOT, lock: lockSources() as unknown as AvatarLock[], log: log.child('avatar') });
-}
+const assets = { repoRoot: REPO_ROOT, log, lockSources };
 
 const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   normalize,
   build,
   'hlod-prep': hlodPrep,
   hlod,
-  materials,
-  avatar,
+  materials: (args) => assetStages.materials(assets, args),
+  avatar: () => assetStages.avatar(assets),
+  trees: () => assetStages.trees(assets),
   validate,
   publish,
   gc,

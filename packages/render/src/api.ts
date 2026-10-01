@@ -126,6 +126,16 @@ export interface RenderStats {
   shadows: { cascades: number; mapSize: number; maxFarM: number; updated: number } | null;
   /** 거리 소품(M05-T03): 적재 인스턴스·보이는 인스턴스·쓰는 풀(= 드로우콜, ≤ 종류 × 3)·풀 재작성 횟수. */
   props: { instances: number; visible: number; pools: number; rebuilds: number; dropped: number };
+  /** 나무(M05-T04): 적재 인스턴스·보이는 인스턴스·그리는 메시 수(드로우콜)·용량 초과·에셋 준비. */
+  trees: { instances: number; visible: number; pools: number; dropped: number; ready: boolean };
+}
+
+/** 나무 에셋 URL(파이프라인 `trees` 산출, 게임 번들 해시 에셋). */
+export interface TreeAssetUrls {
+  manifest: string;
+  glb: string;
+  leaves: string;
+  impostor: string;
 }
 
 export interface RenderService extends SystemProvider {
@@ -162,6 +172,11 @@ export interface RenderService extends SystemProvider {
    * 실패하면 reject하고 절차 마네킹을 계속 쓴다.
    */
   loadAvatar(url: string): Promise<void>;
+  /**
+   * 나무 에셋(파이프라인 `trees` — 수종 GLB·잎·임포스터 아틀라스, M05-T04) 적재 → 머티리얼 선컴파일 → 셀 trees.inst를 그리기 시작.
+   * 첫 표시 뒤에 부른다(초기 다운로드 밖). 그 전 셀의 나무도 기억했다가 그린다.
+   */
+  loadTrees(urls: TreeAssetUrls): Promise<void>;
   stats(): RenderStats;
   dispose(): void;
 }

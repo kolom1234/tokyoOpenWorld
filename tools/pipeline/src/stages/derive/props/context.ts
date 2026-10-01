@@ -101,7 +101,7 @@ export function batchesOf(out: Map<number, number[]>): PropBatch[] {
 }
 
 /** 점 p에서 방향 v로 차도가 끝나는 거리(m, 0.25 m 행진 + 이분 5회 ≈ 8 mm, ≤ max). */
-export function toRoadEdge(c: PlaceCtx, p: V2, v: V2, max = 15): number {
+export function toRoadEdge(c: Pick<PlaceCtx, 'roads'>, p: V2, v: V2, max = 15): number {
   const road = (s: number): boolean => c.roads.classify(p[0] + v[0] * s, p[1] + v[1] * s) === 'road';
   let s = 0;
   while (s < max && road(s + 0.25)) s += 0.25;

@@ -4,6 +4,7 @@ import { createRenderContext, type RenderContext } from './context.ts';
 import { createFrameSystems } from './frame.ts';
 import { precompileMaterials } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
+import { loadTreesInto, setTreeWind } from './trees/load.ts';
 
 export { RENDER_PHASE, RENDER_PREP_PHASE } from './frame.ts';
 
@@ -27,34 +28,14 @@ function statsOf(ctx: RenderContext): RenderStats {
     quality: ctx.quality.stats(),
     shadows: ctx.shadows ? { ...ctx.shadows.settings, updated: ctx.counters.shadowUpdates } : null,
     props: ctx.props.stats(),
+    trees: ctx.trees.stats(),
   };
 }
 
-export async function createRender(deps: RenderDeps): Promise<RenderService> {
-  const ctx = await createRenderContext(deps);
-  const { prep, draw } = createFrameSystems(ctx);
-  const { renderer, view, cells, hlod, library, graph, log } = ctx;
+/** 선컴파일·지연 적재(아바타·나무) — 첫 표시 전후 비동기 작업. */
+function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAvatar' | 'loadTrees'> {
+  const { renderer, view, graph, log } = ctx;
   return {
-    renderOriginWF: view.renderOriginWF,
-    setQuality: (tier) => ctx.quality.setTier(tier),
-    detectQuality: () => ctx.quality.detect(),
-    backend: ctx.backend,
-    depth: ctx.depth,
-    addCell: (p) => {
-      cells.add(p, view.renderOriginWF);
-      ctx.props.addCell(p.key, p.originWF, p.instances?.props);
-      ctx.counters.sceneVersion++;
-    },
-    removeCell: (key) => {
-      cells.remove(key);
-      ctx.props.removeCell(key);
-      ctx.counters.sceneVersion++;
-    },
-    setHlodChildVisible: (parent, child, visible) => {
-      hlod.setChildVisible(parent, child, visible);
-      ctx.counters.sceneVersion++;
-    },
-    loadMaterials: (url) => library.load(url, renderer, log),
     async precompile() {
       await ctx.atmosphere.prepare();
       // 소품 풀(한 머티리얼 × 인스턴싱): 종류별 LOD0 풀에 1개씩 잠깐 채워 같은 compileAsync로.
@@ -80,11 +61,48 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       ctx.avatar.attach(model);
       log.info('avatar model attached');
     },
+    async loadTrees(urls) {
+      await loadTreesInto(ctx, urls);
+      log.info('trees attached');
+    },
+  };
+}
+
+export async function createRender(deps: RenderDeps): Promise<RenderService> {
+  const ctx = await createRenderContext(deps);
+  const { prep, draw } = createFrameSystems(ctx);
+  const { renderer, view, cells, hlod, library, log } = ctx;
+  return {
+    renderOriginWF: view.renderOriginWF,
+    setQuality: (tier) => ctx.quality.setTier(tier),
+    detectQuality: () => ctx.quality.detect(),
+    backend: ctx.backend,
+    depth: ctx.depth,
+    addCell: (p) => {
+      cells.add(p, view.renderOriginWF);
+      ctx.props.addCell(p.key, p.originWF, p.instances?.props);
+      ctx.trees.addCell(p.key, p.originWF, p.instances?.trees);
+      ctx.counters.sceneVersion++;
+    },
+    removeCell: (key) => {
+      cells.remove(key);
+      ctx.props.removeCell(key);
+      ctx.trees.removeCell(key);
+      ctx.counters.sceneVersion++;
+    },
+    setHlodChildVisible: (parent, child, visible) => {
+      hlod.setChildVisible(parent, child, visible);
+      ctx.counters.sceneVersion++;
+    },
+    loadMaterials: (url) => library.load(url, renderer, log),
+    ...loaders(ctx),
     setCamera: (c) => view.setCamera(c),
     setAvatar: (a) => ctx.avatar.set(a),
     setEnvironment: (e) => {
       ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF);
       ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);
+      ctx.treeUniforms?.setSeason(e.season.dayOfYear);
+      setTreeWind(ctx, e.weather.windMs, e.weather.windDirDeg);
     },
     stats: () => statsOf(ctx),
     dispose: () => draw.dispose(),

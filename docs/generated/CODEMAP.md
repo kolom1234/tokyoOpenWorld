@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 297개.
+> 파일 316개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -30,7 +30,7 @@
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
-- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, AVATAR_URL, createWorldView
+- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, AVATAR_URL, TREE_URLS, createWorldView
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
@@ -106,7 +106,7 @@
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, RenderService, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, TreeAssetUrls, RenderService, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, createRenderContext
@@ -157,6 +157,13 @@
 - `packages/render/src/internal/scene/render-view.ts` — 렌더 시점 상태: WF 카메라(float64) 보관, 원점 재설정 판정·실행(origin/rebased), three 카메라에 렌더 좌표 대입. see docs/07-rendering.md §2 | exports: RenderView, createRenderView
 - `packages/render/src/internal/scene/scene-graph.ts` — 씬 그래프 골격: scene → worldRoot(원점 고정) → 레이어 루트, skyRoot(카메라 상대). see docs/07-rendering.md §2 | exports: LayerRoot, SLOT_ROOT, SceneGraph, createSceneGraph
 - `packages/render/src/internal/service.ts` — createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3 | exports: RENDER_PHASE, RENDER_PREP_PHASE, createRender
+- `packages/render/src/internal/trees/assets.ts` — 나무 에셋 적재(M05-T04): 파이프라인 `trees` 산출(trees.json·trees.glb·leaves.png·impostor-color.png) → 수종·LOD·부분별 float 기하 + 텍스처. | exports: TreeManifest, TreeAssets, loadTreeAssets
+- `packages/render/src/internal/trees/blocks.ts` — 나무 블록·LOD 띠(M05-T04): 셀 trees.inst → 64 m 블록·수종별 조각(셀 로컬 `_ipos` = x, y, z, yaw · `_iext` = 높이, 씨앗, 수종, 0), | exports: TREE_EDGES_BY_SPECIES, TREE_EDGES, TREE_SPECIES_IDS, TreeSlice, TreeBlock, treeBlocksOf, treeDistanceTo, treeBandOf
+- `packages/render/src/internal/trees/field.ts` — 나무 필드(M05-T04): 셀 추가·제거·카메라 → 블록 LOD 띠(blocks.ts) → 풀 채우기(pools.ts). 풀 = 수종 × LOD0/1 × {수피, 잎} + 임포스터 1개(전 수종). | exports: TREE_POOL_CAPACITY, TreeFieldStats, TreeMaterials, TreeField, createTreeField
+- `packages/render/src/internal/trees/load.ts` — 나무 에셋 적재·연결(M05-T04): 에셋 → 유니폼(수종 임포스터 반지름) → 머티리얼 3종 → 필드 attach → 풀마다 1개로 선컴파일(첫 등장 끊김 방지). | exports: loadTreesInto, setTreeWind
+- `packages/render/src/internal/trees/materials.ts` — 나무 머티리얼(M05-T04, 07 §4 M_FOLIAGE·M_IMPOSTOR): 인스턴싱은 InstancedMesh 대신 InstancedBufferGeometry 속성 `_ipos`(x, y, z 렌더 좌표, yaw)· | exports: TreeUniforms, createTreeUniforms, createBarkMaterial, createLeafMaterial, ImpostorLayout, createImpostorMaterial
+- `packages/render/src/internal/trees/pools.ts` — 나무 풀(M05-T04): Mesh + InstancedBufferGeometry(InstancedMesh 아님 — three r186은 InstancedMesh마다 노드 빌드를 따로 해서, 같은 머티리얼·속성 배치의 | exports: TreePool, impostorQuad, makeTreePool, writeTreePool
+- `packages/render/src/internal/trees/season.ts` — 나무 계절 표(M05-T04, 07 §8): dayOfYear(JST) → 수종별 잎 색(선형 RGB)·잎 밀도(0 = 낙엽, 1 = 무성). | exports: SPECIES_SLOTS, BARK_COLORS, seasonTable
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06). | exports: EnvUniforms, createEnvUniforms, WetInput, WetOutput, applyWetness
 
 ## packages/sim
@@ -192,8 +199,8 @@
 - `packages/streaming/src/internal/waiters.ts` — whenReady 대기자: 영역 안 셀(cells.idx에 있는 것)이 전부 live 또는 failed가 되면 resolve. 대기 중 대상은 pinned(로드·유지 강제), | exports: Waiters, targetsOf, createWaiters
 
 ## packages/tile-format
-- `packages/tile-format/src/api.ts` — @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md | exports: TKC_MAGIC, FORMAT_VERSION, TKC_ALIGN, TKC_PREAMBLE_BYTES, CELLS_INDEX_MAGIC, JCOL_MAGIC, JCOL_VERSION, LANES_MAGIC, LANES_VERSION, LANE_NO_SIGNAL, HEIGHTFIELD_SIZE, HEIGHTFIELD_STEP_M, HEIGHTFIELD_BASE_M, SectionCodec, SectionSpec, SECTION_REGISTRY, SectionType, TkcErrorCode, TkcError, Vec3Tuple, SectionEntry, CellStats, CellHeader, CellHeaderInput, TkcSectionInput, TkcReader, CELL_FLAG, CellsIndexEntry, CellsIndexRecord, CellsIndex, JCOL_MATERIAL, JCOL_FLAG, JcolKind, JcolTriMesh, JcolConvexHull, JcolBox, JcolRound, JcolShape, LaneGraphChunk, DecodedMesh, MeshSlot, CellPayload, HeightfieldData, PROP_TYPE, PropTypeName, PropBatch, TreeBatch, LightRecord, AudioZones, I18nText, MetaBuilding, PoiKind, MetaPoi, MetaPlaceName, MetaSignal, InteractableRecord, CellMeta
-- `packages/tile-format/src/index.ts` — @sanpo/tile-format 공개 엔트리(L1): TKC 셀 컨테이너·cells.idx·JCOL·lanes·terrain.height 인코더/디코더. api.ts 재수출 + 순수 함수. see docs/modules/tile-format.md | exports: * from './api.ts', readCellsIndex, tkcHash32, writeCellsIndex, gunzip, gzip, parseHeightfield, quantizeHeightfield, writeHeightfield, parseJcol, writeJcol, parseLanes, writeLanes, parseProps, writeProps, isSectionType, sectionHash, readTkc, verifyTkc, writeTkc
+- `packages/tile-format/src/api.ts` — @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md | exports: TKC_MAGIC, FORMAT_VERSION, TKC_ALIGN, TKC_PREAMBLE_BYTES, CELLS_INDEX_MAGIC, JCOL_MAGIC, JCOL_VERSION, LANES_MAGIC, LANES_VERSION, LANE_NO_SIGNAL, HEIGHTFIELD_SIZE, HEIGHTFIELD_STEP_M, HEIGHTFIELD_BASE_M, SectionCodec, SectionSpec, SECTION_REGISTRY, SectionType, TkcErrorCode, TkcError, Vec3Tuple, SectionEntry, CellStats, CellHeader, CellHeaderInput, TkcSectionInput, TkcReader, CELL_FLAG, CellsIndexEntry, CellsIndexRecord, CellsIndex, JCOL_MATERIAL, JCOL_FLAG, JcolKind, JcolTriMesh, JcolConvexHull, JcolBox, JcolRound, JcolShape, LaneGraphChunk, DecodedMesh, MeshSlot, CellPayload, HeightfieldData, PROP_TYPE, PropTypeName, PropBatch, TREE_SPECIES, TreeSpeciesName, TreeRecord, TreeBatch, LightRecord, AudioZones, I18nText, MetaBuilding, PoiKind, MetaPoi, MetaPlaceName, MetaSignal, InteractableRecord, CellMeta
+- `packages/tile-format/src/index.ts` — @sanpo/tile-format 공개 엔트리(L1): TKC 셀 컨테이너·cells.idx·JCOL·lanes·terrain.height 인코더/디코더. api.ts 재수출 + 순수 함수. see docs/modules/tile-format.md | exports: * from './api.ts', readCellsIndex, tkcHash32, writeCellsIndex, gunzip, gzip, parseHeightfield, quantizeHeightfield, writeHeightfield, parseJcol, writeJcol, parseLanes, writeLanes, parseProps, writeProps, isSectionType, sectionHash, readTkc, verifyTkc, writeTkc, parseTrees, TREE_RECORD_BYTES, treeRecordAt, writeTrees
 - `packages/tile-format/src/internal/bytes.ts` — 리틀엔디언 바이트 쓰기/읽기 헬퍼(범위 검사, 정렬 시 zero-copy typed view). see docs/05-tile-format.md (모든 수치 LE) | exports: fail, ByteWriter, ByteReader, asBytes, allFinite
 - `packages/tile-format/src/internal/cells-index.ts` — cells.idx 인코더/디코더 + .tkc 파일 hash32. 레코드 16 B, (level, iz, ix) 오름차순. see docs/05-tile-format.md §5 | exports: writeCellsIndex, readCellsIndex, tkcHash32
 - `packages/tile-format/src/internal/gzip.ts` — gzip/gunzip — Compression/DecompressionStream(브라우저·워커·Node 22+ 공통). see docs/05-tile-format.md §4 (gzip 코덱) | exports: gzip, gunzip
@@ -205,6 +212,7 @@
 - `packages/tile-format/src/internal/sections.ts` — 섹션 레지스트리 조회·섹션 해시·16바이트 정렬 유틸. see docs/05-tile-format.md §3–4 | exports: HASH_RE, isSectionType, sectionSpec, sectionHash, align16
 - `packages/tile-format/src/internal/tkc-reader.ts` — TKC v1 디코더: 프리앰블·헤더 검사, 섹션 범위/정렬/겹침 검사, 미지 섹션 무시, 원본 버퍼 view 제공. see docs/05-tile-format.md §3, §8 | exports: readTkc, verifyTkc
 - `packages/tile-format/src/internal/tkc-writer.ts` — TKC v1 인코더: 섹션 type 사전순 배치, 16바이트 정렬, 고정 키 순서 헤더 JSON(결정론). see docs/05-tile-format.md §3 | exports: writeTkc
+- `packages/tile-format/src/internal/trees.ts` — trees.inst(gzip 해제 후) 인코더/디코더(05 §4, M05-T04): {u32 count} + 레코드 count개 {u8 species, u8 seed, u16 pad, f32 x, y, z(셀 로컬), f32 height, f32 crownR} = 24 B. | exports: TREE_RECORD_BYTES, writeTrees, treeRecordAt, parseTrees
 - `packages/tile-format/src/internal/xxh64.ts` — XXH64(seed 0) — 섹션 해시·cells.idx hash32. BigInt 없이 u32 hi/lo 쌍 연산(파이프라인 처리량). see docs/05-tile-format.md §3, §5 | exports: xxh64Hex, xxh64Low32
 
 ## packages/traversal
@@ -243,12 +251,13 @@
 ## tools/pipeline
 - `tools/pipeline/src/checks/markings-photo.ts` — M05-T02 수락 검증: 스크램블 교차로 횡단보도 띠(OSM 횡단 선 + 차도 구간 + 규칙 폭) 위치 vs GSI 항공사진(seamlessphoto z18 ≈ 0.49 m/px).
 - `tools/pipeline/src/checks/terrain-gsi.ts` — M01-T03 수락 검증: dem_1m.tif 표고 vs 地理院地図 표시값(GSI 표고 API) 비교 + GDAL/@sanpo/geo 투영 일치 확인. 네트워크 필요(CI 제외).
+- `tools/pipeline/src/cli-assets.ts` — CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), avatar(Quaternius → 게임 GLB, 결정 2), trees(수종·잎·임포스터, M05-T04). | exports: AssetCtx, materials, trees, avatar
 - `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 - `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
 - `tools/pipeline/src/lib/gltf.ts` — 셀 glb 섹션 인코드/디코드: gltf-transform 문서 → EXT_meshopt_compression + KHR_mesh_quantization glb. see docs/05-tile-format.md §4 (glb), docs/adr/0018-cell-mesh-build.md | exports: GlbArray, GlbAttribute, GlbPrimitive, GlbMesh, DecodedGlb, encodeGlb, decodeGlb
 - `tools/pipeline/src/lib/mesh-lookup.ts` — 삼각형 메시 높이 조회(M05-T01): xz 1 m 버킷 → 무게중심 보간 높이. 셀 빌드(보도 가장자리 → 지형 맞춤)와 validate 간극 검사가 같이 쓴다. | exports: Mesh, terrainLookup
 - `tools/pipeline/src/lib/ndjson-gz.ts` — 결정론적 ndjson.gz 입출력: 키 정렬된 레코드 → gzip(헤더 mtime=0, OS=255 고정). see docs/04-data-pipeline.md §1(재현성) | exports: writeNdjsonGz, readNdjsonGz
-- `tools/pipeline/src/lib/png.ts` — 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용 + RGB 인코더(실내 큐브맵 생성, M03-T05). 외부 의존 없음(node:zlib). | exports: DecodedPng, decodePng, encodePngRgb
+- `tools/pipeline/src/lib/png.ts` — 최소 PNG 디코더(8비트 그레이/RGB/RGBA, 비인터레이스): GSI 標高タイル(dem_png) 읽기용 + RGB·RGBA 인코더(실내 큐브맵 M03-T05, 나무 아틀라스 M05-T04). 외부 의존 없음(node:zlib). | exports: DecodedPng, decodePng, encodePngRgb, encodePngRgba
 - `tools/pipeline/src/lib/polygon.ts` — 폴리곤 유틸: 셀 경계(축정렬 XZ 사각형) 클리핑. 도로·지형처럼 셀 경계에서 자르는 레이어용. see docs/04-data-pipeline.md §4.2, §6 | exports: ringAreaXZ, clipRingsToRect
 - `tools/pipeline/src/lib/raster.ts` — 래스터 유틸: 투영 격자 정의(PRJ 정수 m = 픽셀 중심), Float32 raw 입출력, GDAL VRT 기록, 결측 병합·통계. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: PrjGrid, geoTransformOf, targetExtentOf, readFloat32, writeGridVrt, FillStats, mergeWithFallback, ValueStats, valueStats
 - `tools/pipeline/src/lib/sigv4.ts` — AWS Signature V4(헤더 서명) — R2 S3 호환 API용 최소 구현(node:crypto). see https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-create-signed-request.html | exports: SigV4Credentials, SignInput, EMPTY_SHA256, sha256Hex, uriEncode, signV4
@@ -277,7 +286,7 @@
 - `tools/pipeline/src/stages/build/facade-params.ts` — 절차 파사드 파라미터(M03-T04, 07 §5): PLATEAU 건물 용도 코드·높이·층수 → `_FACADE`(u8×4: class, floors, tintIdx, flags). | exports: FACADE_CLASS, FacadeClass, FACADE_FLAG, FacadeInput, facadeParams
 - `tools/pipeline/src/stages/build/heightfield.ts` — terrain.height 섹션: 셀 창(257²) → 공통 기준·스텝 양자화 → writeHeightfield → gzip. see docs/05-tile-format.md §4 (terrain.height), docs/adr/0018-cell-mesh-build.md | exports: cellHeightfield, encodeTerrainHeight
 - `tools/pipeline/src/stages/build/manifest.ts` — 빌드 식별·매니페스트: buildId(YYYYMMDD-<git7>-<lock8>), world.json 직렬화. see docs/04-data-pipeline.md §2, docs/05-tile-format.md §2 | exports: AreaDef, gitShort, lockHash8, buildDate, makeBuildId, createdAtOf, worldJson
-- `tools/pipeline/src/stages/build/props-cell.ts` — 셀 소품(M05-T03): 성형 결과·지형 메시·도로 색인 → buildProps → props.inst(gzip) + 콜라이더 + 전선. 04 §4.3(소품), 05 §4(props.inst), ADR-0051 | exports: PropCellInput, PropCellOutput, propsCell
+- `tools/pipeline/src/stages/build/props-cell.ts` — 셀 소품(M05-T03)·나무(M05-T04): 성형 결과·지형 메시·도로 색인 → buildProps → props.inst(gzip) + 콜라이더 + 전선, 이어서 buildTrees(소품 자리 피함) | exports: PropCellInput, PropCellOutput, propsCell
 - `tools/pipeline/src/stages/build/roads-mesh.ts` — roads.mesh 섹션(M05-T01, 05 §4): 보도·교통섬 윗면(성형 윗면 + 6 mm, 2 m 격자 조각) + 연석 세로 면 + 바깥 가장자리 치마 → | exports: RoadsBuild, TerrainAt, buildRoads
 - `tools/pipeline/src/stages/build/surface-class.ts` — 지형 표면 분류(M03-T06, 05 §4 `_SURF`): PLATEAU 도로 폴리곤(TrafficArea) → 셀 1 m 격자(257²) 분류 래스터. | exports: SURF, rasterizeRings, surfaceGrid
 - `tools/pipeline/src/stages/build/terrain-mesh.ts` — terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금, `_SURF` 경계 ≤ 2 m 세분) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: TERRAIN_SIMPLIFY_ERROR_M, TERRAIN_MATERIAL, TerrainGeometry, remapVertices, buildTerrainGeometry, encodeTerrainMesh
@@ -295,7 +304,7 @@
 - `tools/pipeline/src/stages/derive/markings/text.ts` — 노면 문자 「止まれ」(M05-T02): 자체 제작 획 폰트(단위 상자 선분 — 외부 폰트·상표 없음)를 진행 차로 가로로 세 글자, 글자마다 진행 방향 2.5 m로 늘림 | exports: GLYPHS, addStopText
 - `tools/pipeline/src/stages/derive/props/context.ts` — 소품 배치 공용(M05-T03): 카탈로그(content/props/catalog.json), 배치 문맥(셀 소유·표면 높이·결정론 난수), 인스턴스·콜라이더 모으기. | exports: ColliderSpec, PropSpec, PropCatalog, readCatalog, V2, PlaceCtx, rngFor, owns, yawOf, place, batchesOf, toRoadEdge, towardRoad
 - `tools/pipeline/src/stages/derive/props/index.ts` — 소품 조립(M05-T03): 셀 OSM·건물·도로 → 배치 규칙(우선순위 순: 신호 → 전주·전선 → OSM 점 → 자판기 → 가드 파이프 → 맨홀) → | exports: PropStats, PropInput, PropOutput, buildProps
-- `tools/pipeline/src/stages/derive/props/linear.ts` — 선형 소품(M05-T03): 가드 파이프(간선 — trunk·primary·secondary, 선 따라 4 m 모듈, 양쪽 차도 끝 너머 보도 0.35 m, 횡단 띠·교차부 근처 끊김)와 | exports: isRailRoad, placeGuardRails, placeManholes
+- `tools/pipeline/src/stages/derive/props/linear.ts` — 선형 소품(M05-T03): 가드 파이프(간선 — trunk·primary·secondary, 선 따라 4 m 모듈, 양쪽 차도 끝 너머 보도 0.35 m, 횡단 띠·교차부 근처 끊김)와 | exports: isRailRoad, walkLine, placeGuardRails, placeManholes
 - `tools/pipeline/src/stages/derive/props/points.ts` — OSM 점 소품(M05-T03): 가로등·우체통·자판기·자전거 거치대·벤치·공중전화·휴지통·버스 정류장·볼라드·정지 표지(highway=stop). | exports: pointType, placePoints
 - `tools/pipeline/src/stages/derive/props/poles.ts` — 전신주·전선(M05-T03): 좁은 생활도로(residential·unclassified·living_street·tertiary, 차도 폭 < 15 m) 선을 따라 30–40 m 간격 정거장, | exports: PoleParams, Pole, WireSpan, isPoleRoad, poleParams, poleStations, poleAt, wireSpans, placePoles
 - `tools/pipeline/src/stages/derive/props/signals.ts` — 신호기(M05-T03): 신호 횡단(OSM crossing=traffic_signals) 선 양끝(보도) = 보행 신호(건너편을 봄), 횡단 선 × 차도 선 교차마다 | exports: placeSignals
@@ -304,6 +313,12 @@
 - `tools/pipeline/src/stages/derive/roads.ts` — 도로 분류(M05-T01): PLATEAU TrafficArea 폴리곤(셀 + 8-이웃, normalize가 셀 경계에서 자른 조각) → 성형용 1 m 래스터(차도 0·보행 1·없음 7)와 | exports: ROAD_CLASS, RoadSide, isWalk, roadRaster, insideRings, RoadIndex, roadIndex
 - `tools/pipeline/src/stages/derive/sidewalks.ts` — 보행면 윗면(M05-T01): 보도·교통섬 폴리곤(이 셀 조각) → earcut → 삼각형을 2 m 격자 칸으로 잘라(볼록 조각 부채꼴) 높이 = 성형 윗면(쌍선형) + 6 mm. | exports: TOP_OFFSET_M, EDGE_PIECE_M, HeightAt, MeshBuf, emptyMesh, TopWriter, topWriter, addWalkTop
 - `tools/pipeline/src/stages/derive/terrain-shape.ts` — 지형 성형(M05-T01, 04 §4.3): 셀 + 여유 1 m 창에서 국소 연산만 — 이웃 셀과 공유하는 샘플은 같은 입력 → 같은 값(04 §6). | exports: SHAPE_PAD, CURB_M, CROSSFALL, CROWN_MAX_M, TOL_TIGHT_M, TOL_DEFAULT_M, ShapedGround, shapeGround
+- `tools/pipeline/src/stages/derive/trees/fill.ts` — 녹지 면 채우기(M05-T04): 월드 정렬 격자(종류별 간격) 점마다 결정론 흔들기·확률 → 그 종류 면 안(구멍 제외)·도로/보도 밖·건물 1 m 밖이면 심는다. | exports: fillGreens
+- `tools/pipeline/src/stages/derive/trees/index.ts` — 나무 조립(M05-T04): 셀 OSM·도로·소품 → OSM 나무(점·열) → 규칙 가로수 → 녹지 채우기(우선순위 순, 셀 예산 4k — 넘치면 뒤부터 버림) | exports: MAX_TREES_PER_CELL, TreeStats, TreeInput, buildTrees
+- `tools/pipeline/src/stages/derive/trees/place.ts` — 나무 배치 문맥(M05-T04): 셀 소유·표면 높이·장애물(건물·도로·소품) 검사 → TreeRecord + 줄기 콜라이더(원기둥, 관목 = 둥근 덤불 원기둥). see ADR-0052 | exports: V2, TreeCtx, owns, nearBuilding, nearProp, plant
+- `tools/pipeline/src/stages/derive/trees/species.ts` — 나무 수종(M05-T04): OSM 태그(genus·species·name·leaf_type) → 수종, 없으면 문맥 기본값 — 가로수 = 도로마다 한 수종(도로 이름 표 → 없으면 | exports: SpeciesSpec, SPECIES, speciesFromTags, streetSpecies, forestSpecies, parkSpecies, sizeOf, speciesId
+- `tools/pipeline/src/stages/derive/trees/street.ts` — 가로수(M05-T04): OSM 나무 점(차도 위면 3 m 안 보도로, 수종 = 태그 → 가까운 차도 선의 가로수 수종 → 공원 혼합)·가로수열(tree_row, 8 m 간격) | exports: plantOsmTrees, plantStreetRule
+- `tools/pipeline/src/stages/derive/vegetation.ts` — 식생 면(M05-T04): OSM 녹지 면 → 지형 `_SURF` 덧칠(도로·보도가 아닌 plaza 샘플만) + 나무 채우기용 면 목록. | exports: GreenKind, greenKind, xyzRings, paintVegetation
 - `tools/pipeline/src/stages/fixture-plateau.ts` — plateau-mini 픽스처: 원천 CityGML에서 셀 1개의 건물 몇 동·도로 몇 개만 잘라 같은 파일 이름으로 기록. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: PlateauMiniOptions, splitCityGml, extractPlateauMini
 - `tools/pipeline/src/stages/fixture.ts` — fixture 단계: tests/fixtures/{world-mini, plateau-mini} 생성(M01-T05 빌드 파이프라인 재사용) + plateau-mini 1셀 빌드 스냅샷. see docs/14-testing-perf.md §1, docs/modules/pipeline.md | exports: WORLD_MINI_AREA, PLATEAU_MINI_CELL, PLATEAU_MINI_SOURCE, PLATEAU_MINI_BUILD_ID, LockSource, fixtureAttribution, FixtureInput, buildWorldMini, buildPlateauMini, PlateauMiniSnapshot, plateauMiniSnapshot, hasPlateauRaw
 - `tools/pipeline/src/stages/hlod/boxes.ts` — 원경 건물 기하: 방향 사각형 박스(LOD1 박스, 벽 4 + 지붕, 바닥 없음)와 격자 블록 매스(작은 건물 묶음). 평면 법선·벽 UV는 L0 규칙과 같다. | exports: BOX_SINK_M, addPrism, addFarBox, MassCell, accumulateMasses, MASS_MIN_COVERAGE, addMass
@@ -328,6 +343,10 @@
 - `tools/pipeline/src/stages/publish/publish.ts` — publish: data/build/<buildId> → R2 `world/<buildId>/**`(동시성·재시도) → 매니페스트 → 검증(S3 HEAD 또는 Worker HEAD) → KV 빌드 목록·(선택) 현재 포인터. | exports: CURRENT_KEY, BUILDS_KEY, FILES_KEY, BuildEntry, PublishFile, PublishReport, mapLimit, buildFiles, checkBuildDir, PublishInput, publishBuild, verifyViaWorker, selectGc, GcInput, gcBuilds
 - `tools/pipeline/src/stages/publish/targets.ts` — 퍼블리시 대상(env → R2 버킷·KV 네임스페이스)을 apps/worker/wrangler.jsonc에서 읽는다(바인딩 정의의 단일 출처). | exports: PublishEnv, PublishTarget, stripJsonc, readTargets, Clients, createClients
 - `tools/pipeline/src/stages/publish/uploaders.ts` — 퍼블리시 업로더 2종: `s3`(R2 S3 호환 API, SigV4 — 단일 PUT·멀티파트·HEAD 검증) / `api`(Cloudflare REST, API 토큰 — wrangler와 같은 엔드포인트). | exports: MULTIPART_THRESHOLD, PART_SIZE, ObjectPut, Uploader, S3Options, createS3Uploader, ApiOptions, createApiUploader, KvClient, createKvClient, resolveAccountId
+- `tools/pipeline/src/stages/trees/generate.ts` — 수종 모델 생성(M05-T04): @dgreenheck/ez-tree(MIT) 프리셋 + 수종별 덮어쓰기 → 가지(위치·법선·UV)·잎 카드(위치·법선·UV) → 높이 1로 정규화(줄기 밑 = 원점), | exports: SpeciesName, Part, SpeciesModel, LEAF_CELL, generateSpecies
+- `tools/pipeline/src/stages/trees/impostor.ts` — 나무 임포스터 굽기(M05-T04, CPU 래스터 — GPU 불필요·결정론): 반팔면체 8 × 8 방향(위 반구) × 64 px 틀 = 수종당 512² 두 장. | exports: IMPOSTOR_FRAMES, IMPOSTOR_FRAME_PX, IMPOSTOR_TILE, hemiOctDecode, hemiOctEncode, frameBasis, bakeImpostor
+- `tools/pipeline/src/stages/trees/leaf-atlas.ts` — 잎 아틀라스(M05-T04, 자체 절차 생성 — 외부 사진·텍스처 없음): 512² RGBA, 2 × 2 칸(256²) = 0 활엽 가지(느티·녹나무·관목), 1 은행잎(부채꼴), | exports: ATLAS_SIZE, cellShapes, drawLeafAtlas, atlasAlpha, atlasShade
+- `tools/pipeline/src/stages/trees/run.ts` — `pnpm pipeline trees`(M05-T04, 호스트 Node): 수종 6종 생성(ez-tree) → 잎 아틀라스 → 임포스터 굽기 → apps/game/src/assets/trees/ | exports: TREES_OUT, TreesStats, buildTreeAssets
 - `tools/pipeline/src/stages/validate-hlod.ts` — validate(HLOD L1–L3): 레벨별 크기 예산(L1 ≤ 3 MB, L2/L3 ≤ 2 MB), hlod.mesh 자식 그룹(모든 정점 _CHILD ∈ 0..15, | exports: HLOD_BUDGET_BYTES, HlodCellReport, inspectHlodCell, hlodSummary
 - `tools/pipeline/src/stages/validate-materials.ts` — validate: 공유 머티리얼(shared/materials, M03-T01) — manifest 스키마·KTX2 파일(텍스처 3장 + 실내 큐브맵) 존재·바이트 수·레이어 인덱스·그룹 일관성. 없으면 건너뜀(픽스처 빌드). | exports: MaterialsReport, checkMaterials
 - `tools/pipeline/src/stages/validate-roads.ts` — M05-T01 수락 검사: 무작위 교차로 50곳(PLATEAU 車道交差部 TrafficArea:1020 중심을 25 m 격자로 묶은 대표점, 시드 결정론) 반경 30 m 안에서 | exports: GAP_LIMIT_M, RoadGapReport, verticalEdges, pickIntersections, checkRoadGaps

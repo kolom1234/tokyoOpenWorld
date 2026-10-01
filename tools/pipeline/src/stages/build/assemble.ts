@@ -25,6 +25,8 @@ import type { PropStats } from '../derive/props/index.ts';
 import type { WireBuf } from '../derive/props/wires.ts';
 import { roadIndex, roadRaster } from '../derive/roads.ts';
 import { SHAPE_PAD, type ShapedGround, shapeGround } from '../derive/terrain-shape.ts';
+import type { TreeStats } from '../derive/trees/index.ts';
+import { paintVegetation } from '../derive/vegetation.ts';
 import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
 import { aroundReader, readLayer } from './area-reader.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
@@ -70,6 +72,8 @@ export interface CellBuildStats {
   markings: MarkingStats | null;
   /** 소품(M05-T03). */
   props: PropStats | null;
+  /** 나무(M05-T04). */
+  trees: TreeStats | null;
 }
 
 export interface CellBuildInput {
@@ -151,7 +155,8 @@ function shapeCell(input: CellBuildInput, originWF: Vec3Tuple) {
     shaped,
     index,
     window: cropWindow(wide, shaped.ground, DEM_MARGIN),
-    surf: crop(wide, cls, 0),
+    // 지형 `_SURF` = 도로 분류 + 녹지 덧칠(M05-T04 — 성형 cls는 그대로).
+    surf: crop(wide, input.osm ? paintVegetation(cls, input.osm, originWF[0], originWF[2], grid) : cls, 0),
     tol: crop(wide, shaped.tol, 0),
     flat,
   };
@@ -224,6 +229,7 @@ async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSec
   if (p.decals) sections.push({ type: 'decals.mesh', sources: [OSM_SOURCE, TERRAIN_SOURCE], data: p.decals });
   const propSources = [...new Set([OSM_SOURCE, TERRAIN_SOURCE, ...roadSources(own), ...bld.sources])].sort();
   if (props?.inst) sections.push({ type: 'props.inst', sources: propSources, data: props.inst });
+  if (props?.trees) sections.push({ type: 'trees.inst', sources: propSources, data: props.trees });
   if (col.data) {
     const colSources = [
       ...new Set([
@@ -261,6 +267,7 @@ function cellStats(
     decalTris,
     markings: marks,
     props: p.props?.stats ?? null,
+    trees: p.props?.treeStats ?? null,
   };
 }
 
@@ -289,7 +296,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
       originWF,
       aabbWF: { min: add(local.min), max: add(local.max) },
       materials: bld.glb ? [BUILDING_MATERIAL, TERRAIN_MATERIAL].sort() : [TERRAIN_MATERIAL],
-      stats: { tris, colliderTris: col.tris, instances: props?.stats.instances ?? 0 },
+      stats: { tris, colliderTris: col.tris, instances: (props?.stats.instances ?? 0) + (props?.treeStats.trees ?? 0) },
     },
     await cellSections(input, parts),
   );
@@ -360,7 +367,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     index.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });
     stats.push(s);
     log.info(
-      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), decals ${s.decalTris} tris ${JSON.stringify(s.markings)}, props ${JSON.stringify(s.props)}, collider ${s.colliderTris} tris / ${s.colliderShapes}`,
+      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), decals ${s.decalTris} tris ${JSON.stringify(s.markings)}, props ${JSON.stringify(s.props)}, trees ${JSON.stringify(s.trees)}, collider ${s.colliderTris} tris / ${s.colliderShapes}`,
     );
   }
   writeFileSync(join(outDir, 'cells.idx'), writeCellsIndex(index));

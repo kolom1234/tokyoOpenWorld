@@ -110,7 +110,7 @@ describe('load scheduler', () => {
     await expect.poll(() => g.order.length).toBe(4);
     expect(g.order[3]).toBe('L0_-1_-1');
     for (const k of [K(0, -1), K(-1, -1)]) g.pending.get(k)?.();
-    await expect.poll(() => done.size).toBe(4);
+    await expect.poll(() => done.size, { timeout: 10_000 }).toBe(4); // 전체 병렬 실행 CPU 경합(해시 검증 디코드)
     expect([...done.values()].every((r) => r.ok)).toBe(true);
   });
 

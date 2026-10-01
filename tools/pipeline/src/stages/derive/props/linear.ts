@@ -22,7 +22,12 @@ export function isRailRoad(r: OsmRecord): boolean {
 }
 
 /** 선을 따라 일정(또는 난수) 간격 정거장 — next(): 다음 간격. */
-function walkLine(xz: readonly number[], first: number, next: () => number, visit: (p: V2, d: V2) => void): void {
+export function walkLine(
+  xz: readonly number[],
+  first: number,
+  next: () => number,
+  visit: (p: V2, d: V2) => void,
+): void {
   let at = first;
   let s0 = 0;
   for (let i = 0; i + 3 < xz.length; i += 2) {

@@ -1,7 +1,7 @@
 // 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다.
 // see docs/modules/render.md
 import { type Logger, mergeConfig, type QualityTier } from '@sanpo/core';
-import type { WebGPURenderer } from 'three/webgpu';
+import type { Material, WebGPURenderer } from 'three/webgpu';
 import type { DepthMode, PostEffects, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
 import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
@@ -23,6 +23,8 @@ import { type CellSet, createCellSet } from './scene/cell-node.ts';
 import { createHlodSwitch, type HlodSwitch } from './scene/hlod-switch.ts';
 import { createRenderView, type RenderView } from './scene/render-view.ts';
 import { createSceneGraph, type SceneGraph } from './scene/scene-graph.ts';
+import { createTreeField, type TreeField } from './trees/field.ts';
+import type { TreeUniforms } from './trees/materials.ts';
 import { createEnvUniforms, type EnvUniforms } from './weather/wetness.ts';
 
 export interface RenderContext {
@@ -42,6 +44,10 @@ export interface RenderContext {
   readonly avatar: Avatar;
   /** 거리 소품 인스턴스 풀(prop 루트, M05-T03). */
   readonly props: PropField;
+  /** 나무(vegetation 루트, M05-T04) — 에셋은 loadTrees 뒤. 머티리얼은 적재 때 채운다(그림자 티어 재컴파일 대상). */
+  readonly trees: TreeField;
+  readonly treeMaterials: Material[];
+  treeUniforms?: TreeUniforms;
   readonly atmosphere: AtmosphereRig;
   readonly env: EnvProbe;
   /** 전역 환경 유니폼(젖음 등, 07 §3). */
@@ -99,12 +105,14 @@ function attachAtmosphere(renderer: WebGPURenderer, graph: SceneGraph, view: Ren
 }
 
 /** 아바타(dynamic 루트)·거리 소품 풀(prop 루트, M05-T03). */
-function attachActors(graph: SceneGraph): { avatar: Avatar; props: PropField } {
+function attachActors(graph: SceneGraph): { avatar: Avatar; props: PropField; trees: TreeField } {
   const avatar = createAvatar();
   graph.roots.dynamic.add(avatar.group);
   const props = createPropField(createPropMaterial());
   graph.roots.prop.add(props.root);
-  return { avatar, props };
+  const trees = createTreeField();
+  graph.roots.vegetation.add(trees.root);
+  return { avatar, props, trees };
 }
 
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
@@ -124,8 +132,9 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const atmosphere = attachAtmosphere(renderer, graph, view, !post);
   if (backend === 'webgl2') glassRoughness.value = WEBGL2_GLASS_ROUGHNESS;
   const postFor = postEffectsFor(cfg, backend);
-  const { avatar, props } = attachActors(graph);
-  const casters = () => [...materials.all(), ...avatar.materials, props.material];
+  const { avatar, props, trees } = attachActors(graph);
+  const treeMaterials: Material[] = [];
+  const casters = () => [...materials.all(), ...avatar.materials, props.material, ...treeMaterials];
   const makePost = (tier: QualityTier): PostPipeline =>
     post
       ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad)
@@ -145,6 +154,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     cells: createCellSet(materials, graph.roots, hlod),
     avatar,
     props,
+    trees,
+    treeMaterials,
     atmosphere,
     envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },

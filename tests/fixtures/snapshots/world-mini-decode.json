@@ -314,7 +314,7 @@
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 711684314
+              "hash": 3280906943
             }
           }
         }
@@ -483,7 +483,7 @@
     }
   },
   "L0_0_0": {
-    "tris": 106906,
+    "tris": 106922,
     "sections": {
       "buildings.mesh": [
         {
@@ -616,27 +616,27 @@
       "terrain.mesh": [
         {
           "materialId": "terrain_ground",
-          "vertices": 22644,
-          "indices": 132786,
-          "indexHash": 2866991083,
+          "vertices": 22652,
+          "indices": 132834,
+          "indexHash": 3569884208,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 1464337358
+              "hash": 4131815293
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1840484247
+              "hash": 4053347668
             },
             "_SURF": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1559108931
+              "hash": 1223966880
             }
           }
         }

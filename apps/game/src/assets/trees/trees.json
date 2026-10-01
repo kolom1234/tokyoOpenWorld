@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "species": [
+    {
+      "name": "ginkgo",
+      "id": 1,
+      "tile": 0,
+      "leafCell": 1,
+      "radius": 0.547
+    },
+    {
+      "name": "zelkova",
+      "id": 2,
+      "tile": 1,
+      "leafCell": 0,
+      "radius": 0.543
+    },
+    {
+      "name": "cherry",
+      "id": 3,
+      "tile": 2,
+      "leafCell": 2,
+      "radius": 0.566
+    },
+    {
+      "name": "camphor",
+      "id": 4,
+      "tile": 3,
+      "leafCell": 0,
+      "radius": 0.504
+    },
+    {
+      "name": "pine",
+      "id": 5,
+      "tile": 4,
+      "leafCell": 3,
+      "radius": 0.502
+    },
+    {
+      "name": "shrub",
+      "id": 6,
+      "tile": 5,
+      "leafCell": 0,
+      "radius": 0.844
+    }
+  ],
+  "impostor": {
+    "frames": 8,
+    "framePx": 64,
+    "tile": 512,
+    "cols": 3,
+    "rows": 2
+  }
+}
