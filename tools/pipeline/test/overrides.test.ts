@@ -5,6 +5,7 @@ import { buildBuildings } from '../src/stages/build/buildings-mesh.ts';
 import { figureDog, figureTorii } from '../src/stages/build/overrides/figures.ts';
 import { LStream } from '../src/stages/build/overrides/geom.ts';
 import { LMAT, overrideCell, overrideSetOf, readOverrides } from '../src/stages/build/overrides/index.ts';
+import { clipToCell } from '../src/stages/build/overrides/parts.ts';
 import { clipRingY } from '../src/stages/build/overrides/shell.ts';
 import type { LandmarkSpec } from '../src/stages/build/overrides/spec.ts';
 import { boxBuilding } from './build-fixtures.ts';
@@ -145,6 +146,29 @@ describe('overrideCell', () => {
     expect(here.collider.idx.length).toBeGreaterThan(0);
     expect(yRange(here.collider)).toEqual([10, 15]);
     expect(there.glb).toBeNull();
+  });
+});
+
+describe('clipToCell', () => {
+  it('splits a polyline into in-cell runs that meet the neighbour exactly on the boundary', () => {
+    const runs = clipToCell([
+      [-10, 10],
+      [100, 10],
+      [300, 10],
+      [300, 50],
+      [100, 50],
+    ]);
+    expect(runs).toEqual([
+      [
+        [0, 10],
+        [100, 10],
+        [256, 10],
+      ],
+      [
+        [256, 50],
+        [100, 50],
+      ],
+    ]);
   });
 });
 

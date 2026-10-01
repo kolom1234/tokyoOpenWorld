@@ -126,6 +126,13 @@ describe('green fill', () => {
     expect(left.colliders.every((c) => c.kind === 'cylinder')).toBe(true);
   });
 
+  it('keeps OSM paths (sando) clear of fill trees, using the width tag', () => {
+    const sando = osm('w9', 'line', [[100, 70, 250, 70]], { highway: 'pedestrian', width: '10' });
+    const t = buildTrees(input([], [forest, sando], 0));
+    expect(t.records.length).toBeGreaterThan(200);
+    for (const r of t.records) if (r.x > 101 && r.x < 249) expect(Math.abs(r.z - 70)).toBeGreaterThanOrEqual(6);
+  });
+
   it('trims to the per-cell budget after mapped and street trees', () => {
     const t = buildTrees(input([], [forest, osm('n1', 'point', [[50, 50]], { natural: 'tree' })], 0, 10));
     expect(t.stats.trees).toBe(10);

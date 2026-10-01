@@ -2,7 +2,7 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T05 Landmark overrides — 4/7 완료(시부야역 일대·하치코·스크램블 비전·요요기), 다음 5/7 메이지 신궁 도리이·참도
+## Current Task: M05-T05 Landmark overrides — 5/7 완료(시부야역 일대·하치코·스크램블 비전·요요기·메이지 신궁), 다음 6/7 도쿄도청
 - Done in this session: M05-T04 나무·식생(7095297·fc5c680·3678f57·57d57f5·a82d5fd·ebc7974, ADR-0052), M05-T03 거리 소품(037028e·7a6252b·e6a76e9·0ce9949·d4e82c5, ADR-0051), M05-T02 노면 표시(8bb5c6a, ADR-0050).
 - Earlier this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
 - 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷),
@@ -17,11 +17,13 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
   3) 스크램블 비전 = 교차로(≈ −35, 10)를 향한 PLATEAU 벽 4면(5f7ff4f3·e6e4de58·d47d8aa9·6abf2261)에 평행 화면(0.3 m 금속 함, 시드 1–4 절차 영상), 비대체 건물도 경계 검사(≤ 0.31 m).
   4) 요요기 국립경기장 = PLATEAU LOD1 제1(122b8689, 형상 17 m·measuredHeight 29.8 ≈ OSM 30.2)·제2(e96bbd0c, 19.6 m) 발자국 위 절차 현수 지붕(`tent`: 둘레 링 → 능선 t² 오목, 기둥·주 케이블 → 꼬리 정착점),
      셸 skip. 높이 기준 = LOD1이면 max(형상, measuredHeight) — 기둥 끝 +0.6 m, 수평 ≤ 0.2 m.
-  남음: 5) 메이지 신궁 도리이(大鳥居 OSM 면 x47–50 z−1619…−1602 height 12, 北参道 도리이 점 (126.1, −2145.1))·참도(南参道·正参道 width 10·北参道 width 8 — `ribbon`)
+  5) 메이지 신궁 = 大鳥居(OSM 면 가사기 축 17.3 m, height 12, 기둥 1.2 m·간격 9.1 m 공개 치수)·北参道 도리이(OSM 점, 9.5 m 근사) 묘진 도리이 + 참도 자갈 띠(南参道 8·正参道 10·北参道 8 m, 셀별 자르기 `clipToCell`).
+     T04 숲 채우기가 참도를 덮던 문제 → `derive/trees/fill.ts` OSM 길(보행·서비스 선, width 태그) 반폭 + 1 m 안 금지(전 지역 공원 길에도 적용).
+  남음:
   6) 도쿄도청(후보 bldg_94caaf2f L0_-4_-14 / 243 m 건물 L0_-5_-11 확인) 7) 신주쿠역 서쪽 출구 광장(OSM 면 x −340…−110 z −3680…−3380). 끝나면 MVP 재빌드 → dev publish → staging → 골든뷰·걷기 봇·첫 로드.
   조사 스크립트 = `tools/pipeline/.tmp/`(gitignore): tmp-bq(셀 건물 bbox 검색)·tmp-shape(높이 띠 단면)·tmp-ov(셀 오버라이드 생성)·tmp-lm(랜드마크 OSM 추출 → WF)·tmp-near(반경 OSM).
   로컬 확인: `build --cells … --build-id t05-local` 후 `shared/` 복사(scratchpad cpshared.mjs) → `?world=local`, scratchpad `ovcheck.mjs`(시점 스크린샷).
-- Next step (정확히 한 걸음): M05-T05 5) 메이지 신궁 — `content/overrides/meiji-jingu/meta.json`: 大鳥居(OSM 면 가사기 축 (48.0,−1619.35)→(49.1,−1602.05), height 12, 기둥 1.2 m·간격 9.1 m)·北参道 도리이(126.1,−2145.1, 근사)·참도 `ribbon`(南参道·正参道 10 m·北参道 8 m, OSM 선) → 로컬 빌드(스폰 3×3 + 해당 셀) 확인 → 커밋. 로컬 부분 빌드는 스폰 셀(L0_-1..1_-1..1)도 넣어야 settled.
+- Next step (정확히 한 걸음): M05-T05 6) 도쿄도청 — 후보 bldg_94caaf2f(L0_-4_-14)·243 m 건물(L0_-5_-11) 중 第一本庁舎(243 m 쌍탑)·第二本庁舎·의회동 확인(tmp-bq·tmp-shape) → 셸 `granite_grid` 높이 띠(쌍탑 상부 크라운) → 로컬 빌드(스폰 3×3 + 해당 셀) → 커밋. 로컬 부분 빌드는 스폰 셀도 넣어야 settled.
 - OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
 - Blockers: 없음
 

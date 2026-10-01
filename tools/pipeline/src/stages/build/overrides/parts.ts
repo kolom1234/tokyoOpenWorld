@@ -176,27 +176,80 @@ function curb(c: PartCtx, s: LStream, path: number[], h: number, w: number, y: n
   sweep(s, pts, w, h + 0.2, m);
 }
 
-/** 지면 띠(참도 자갈): 2 m 간격 단면, 양끝도 지면에 붙여(경사 따라) 4 cm 띄운다. */
-function ribbon(c: PartCtx, path: number[], width: number, m: number): void {
-  const pts = resample(c, path, false, 2);
-  const LIFT = 0.04;
-  let last = 0;
-  const rows: Vec3[][] = pts.map((p, i) => {
-    const a = pts[Math.max(0, i - 1)] as [number, number];
-    const b = pts[Math.min(pts.length - 1, i + 1)] as [number, number];
-    const d = norm([b[0] - a[0], 0, b[1] - a[1]]);
-    const side: [number, number] = [-d[2], d[0]];
-    return [-1, 1].map((k) => {
-      const x = p[0] + side[0] * k * (width / 2);
-      const z = p[1] + side[1] * k * (width / 2);
-      last = groundOr(c, x, z, last);
-      return [x, last + LIFT, z] as Vec3;
-    });
-  });
-  for (let i = 0; i + 1 < rows.length; i++) {
-    const [a, b] = [rows[i] as Vec3[], rows[i + 1] as Vec3[]];
-    face(c.out, [a[1], b[1], b[0], a[0]] as Vec3[], m);
+/** 셀 사각형(로컬 0..256)으로 꺾은선 자르기(Liang–Barsky) → 셀 안 연속 구간들. 경계 점은 이웃 셀과 같다. */
+export function clipToCell(pts: readonly [number, number][]): [number, number][][] {
+  const runs: [number, number][][] = [];
+  let cur: [number, number][] = [];
+  for (let i = 0; i + 1 < pts.length; i++) {
+    const [a, b] = [pts[i] as [number, number], pts[i + 1] as [number, number]];
+    const d = [b[0] - a[0], b[1] - a[1]] as const;
+    let [t0, t1] = [0, 1];
+    for (const [p, q] of [
+      [-d[0], a[0]],
+      [d[0], 256 - a[0]],
+      [-d[1], a[1]],
+      [d[1], 256 - a[1]],
+    ] as const) {
+      if (p === 0) {
+        if (q < 0) t0 = 2;
+      } else if (p < 0) t0 = Math.max(t0, q / p);
+      else t1 = Math.min(t1, q / p);
+    }
+    if (t0 > t1) {
+      if (cur.length > 1) runs.push(cur);
+      cur = [];
+      continue;
+    }
+    const at = (t: number): [number, number] => [a[0] + d[0] * t, a[1] + d[1] * t];
+    if (cur.length === 0 || t0 > 0) {
+      if (cur.length > 1) runs.push(cur);
+      cur = [at(t0)];
+    }
+    cur.push(at(t1));
+    if (t1 < 1) {
+      runs.push(cur);
+      cur = [];
+    }
   }
+  if (cur.length > 1) runs.push(cur);
+  return runs;
+}
+
+/** 지면 띠(참도 자갈): 2 m 간격 단면을 셀 안 구간별로, 양끝을 지면에 붙여(경사 따라) 4 cm 띄운다. */
+function ribbon(c: PartCtx, path: number[], width: number, m: number): void {
+  const LIFT = 0.04;
+  for (const pts of clipToCell(resample(c, path, false, 2))) {
+    let last = c.groundAt(...(pts[0] as [number, number])) ?? 0;
+    const rows: Vec3[][] = pts.map((p, i) => {
+      const a = pts[Math.max(0, i - 1)] as [number, number];
+      const b = pts[Math.min(pts.length - 1, i + 1)] as [number, number];
+      const d = norm([b[0] - a[0], 0, b[1] - a[1]]);
+      const side: [number, number] = [-d[2], d[0]];
+      const mid = groundOr(c, p[0], p[1], last);
+      last = mid;
+      return [-1, 1].map((k) => {
+        const x = p[0] + side[0] * k * (width / 2);
+        const z = p[1] + side[1] * k * (width / 2);
+        return [x, groundOr(c, x, z, mid) + LIFT, z] as Vec3;
+      });
+    });
+    for (let i = 0; i + 1 < rows.length; i++) {
+      const [a, b] = [rows[i] as Vec3[], rows[i + 1] as Vec3[]];
+      face(c.out, [a[1], b[1], b[0], a[0]] as Vec3[], m);
+    }
+  }
+}
+
+/** 이 셀이 내는 부품인가(건물에 붙는 부품 제외): 기준점이 셀 안, 띠는 셀을 지나면. */
+export function ownsFreePart(originWF: Vec3Tuple, p: PartSpec): boolean {
+  const local = (x: number, z: number): [number, number] => [x - originWF[0], z - originWF[2]];
+  if (p.type === 'ribbon') {
+    const pts: [number, number][] = [];
+    for (let i = 0; i + 1 < p.path.length; i += 2) pts.push(local(p.path[i] as number, p.path[i + 1] as number));
+    return clipToCell(pts).length > 0;
+  }
+  const [x, z] = local(...anchorOf(p));
+  return x >= 0 && x < 256 && z >= 0 && z < 256;
 }
 
 /** 벽 화면: 건물 벽 평면(from–to에 가장 가까운)과 평행 — 0.3 m 금속 함 + 0.12 m 안쪽 화면 면(uv = 시드×1000 + m, m). */

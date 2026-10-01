@@ -8,7 +8,7 @@ import type { BuildingRecord } from '../../../readers/plateau/types.ts';
 import { type Aabb, boundsOf, quantizePositions } from '../buildings-mesh.ts';
 import { remapVertices } from '../terrain-mesh.ts';
 import { LStream } from './geom.ts';
-import { anchorOf, emitPart, hostOf, type PartCtx } from './parts.ts';
+import { emitPart, hostOf, ownsFreePart, type PartCtx } from './parts.ts';
 import { type Bounds, emitShell, emptyBounds, growBounds, plateauExtent } from './shell.ts';
 import type { OverrideSet } from './spec.ts';
 
@@ -38,9 +38,6 @@ export interface OverrideCellOutput {
   landmarks: string[];
   checks: OverrideCheck[];
 }
-
-const inCell = (o: Vec3Tuple, p: readonly [number, number]): boolean =>
-  p[0] >= o[0] && p[0] < o[0] + 256 && p[1] >= o[2] && p[1] < o[2] + 256;
 
 function boundsDelta(a: Bounds, b: Bounds): { dxz: number; dy: number } {
   const d = (x: Vec3Tuple, y: Vec3Tuple, k: 0 | 2): number => Math.abs(x[k] - y[k]);
@@ -78,7 +75,7 @@ export async function overrideCell(
       const hostGml = hostOf(p);
       if (hostGml !== undefined && lm.replace.includes(hostGml)) continue;
       const host = hostGml === undefined ? undefined : byGml.get(hostGml);
-      if (hostGml === undefined ? !inCell(originWF, anchorOf(p)) : !host) continue;
+      if (hostGml === undefined ? !ownsFreePart(originWF, p) : !host) continue;
       landmarks.add(lm.id);
       const from = out.pos.length;
       emitPart(ctx, p);
