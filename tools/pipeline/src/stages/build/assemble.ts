@@ -344,7 +344,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, `${iz}.tkc`), tkc);
     // flags bit0 = 수작업 오버라이드 포함(05 §5).
-    const flags = s.overrides ? 1 : 0;
+    const flags = (s.overrides?.landmarks.length ?? 0) > 0 ? 1 : 0;
     index.push({ level: 0, ix, iz, flags, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });
     stats.push(s);
     log.info(

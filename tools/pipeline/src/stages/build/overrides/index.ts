@@ -9,6 +9,7 @@ import { type Aabb, boundsOf, quantizePositions } from '../buildings-mesh.ts';
 import { remapVertices } from '../terrain-mesh.ts';
 import { LStream } from './geom.ts';
 import { emitPart, hostOf, ownsFreePart, type PartCtx } from './parts.ts';
+import { type DetailStats, emitFireEscape, emitRooftop, emptyDetailStats } from './rooftops.ts';
 import { type Bounds, emitShell, emptyBounds, growBounds, plateauExtent } from './shell.ts';
 import type { OverrideSet } from './spec.ts';
 
@@ -37,6 +38,8 @@ export interface OverrideCellOutput {
   collider: { pos: number[]; idx: number[] };
   landmarks: string[];
   checks: OverrideCheck[];
+  /** 옥상 설비·외부 비상계단(M05-T07) 통계. */
+  details: DetailStats;
 }
 
 function boundsDelta(a: Bounds, b: Bounds): { dxz: number; dy: number } {
@@ -83,6 +86,7 @@ export async function overrideCell(
       if (host) checks.push(attachedCheck(lm.id, host, out.pos, from, originWF, true));
     }
   }
+  const details = emitDetails(out, records, renderSkip, originWF);
   const bad = checks.filter((c) => c.dxz > POSITION_TOL_M || c.dy > HEIGHT_TOL_M);
   if (bad.length > 0) throw new Error(`overrides: tolerance exceeded ${JSON.stringify(bad)}`);
   const encoded = out.count > 0 ? await encodeOverrides(out) : null;
@@ -94,10 +98,45 @@ export async function overrideCell(
     collider: { pos: collider.pos, idx: collider.idx },
     landmarks: [...landmarks].sort(),
     checks,
+    details,
   };
 }
 
 const sub3 = (a: Vec3Tuple, o: Vec3Tuple): Vec3Tuple => [a[0] - o[0], a[1] - o[1], a[2] - o[2]];
+
+/** 대체하지 않은 건물마다 옥상 설비 + 외부 비상계단(바깥 칸이 이 셀 다른 건물 안이면 생략). */
+function emitDetails(
+  out: LStream,
+  records: readonly BuildingRecord[],
+  skip: ReadonlySet<string>,
+  originWF: Vec3Tuple,
+): DetailStats {
+  const stats = emptyDetailStats();
+  out.plainUv = true;
+  const rings = records.flatMap((b) =>
+    b.surfaces
+      .filter((s) => s.kind === 'ground' && (s.ringsWF[0]?.length ?? 0) >= 9)
+      .map((s) => s.ringsWF[0] as number[]),
+  );
+  const blocked = (x: number, z: number): boolean => rings.some((r) => inRingWF(r, x, z));
+  for (const b of records) {
+    if (skip.has(b.gmlId)) continue;
+    emitRooftop(out, b, originWF, stats);
+    emitFireEscape(out, b, originWF, blocked, stats);
+  }
+  out.plainUv = false;
+  return stats;
+}
+
+function inRingWF(r: readonly number[], x: number, z: number): boolean {
+  let hit = false;
+  const n = r.length / 3;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const [xi, zi, xj, zj] = [r[i * 3] as number, r[i * 3 + 2] as number, r[j * 3] as number, r[j * 3 + 2] as number];
+    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) hit = !hit;
+  }
+  return hit;
+}
 
 /** 스트림 from.. 기하(+ withPlateau면 PLATEAU 경계 합집합) vs PLATEAU 렌더 면 경계. */
 function attachedCheck(

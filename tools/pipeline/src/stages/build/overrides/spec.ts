@@ -21,6 +21,8 @@ export const LMAT = {
   gravel: 12,
   fin_curtain: 13,
   green: 14,
+  /** 옥상 물탱크 FRP(M05-T07). */
+  frp: 15,
 } as const;
 export type LmatName = keyof typeof LMAT;
 

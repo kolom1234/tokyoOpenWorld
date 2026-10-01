@@ -49,7 +49,8 @@ src/stages/derive/props/{context,signals,poles,points,vending,linear,wires,index
 src/stages/build/props-cell.ts   셀 소품: 표면 높이(보도 윗면·지형)·교차부·건물 발자국 → buildProps → props.inst(gzip)·콜라이더·전선
 src/stages/build/area-reader.ts  영역 빌드 입력(셀별 ndjson.gz, 8-이웃 캐시)
 src/stages/build/overrides/{spec,geom,shell,parts,figures,index}.ts   랜드마크 오버라이드(M05-T05, ADR-0053): content/overrides/<id>/meta.json 읽기(LMAT) / 메시 스트림·도형 / PLATEAU 셸 재머티리얼(cuts 띠 자르기) / 부품(상자·원기둥·압출·난간·참도 띠·벽 화면) / 도리이·개 동상 / 셀 조립·renderSkip·수락 검사(수평 ≤ 0.5 m·높이 ≤ 1 m)·overrides.mesh
-src/stages/build/cell-stats.ts   셀 빌드 통계(CellBuildStats, 로그)
+src/stages/build/overrides/rooftops.ts   옥상 설비·외부 비상계단(M05-T07, ADR-0055): 가장 큰 평지붕에 塔屋·물탱크·실외기 무리·난간·안테나(gmlId 시드, LOD2 옥상 부속물 있으면 생략), 8–22 m 건물 짧은 변 바깥 지그재그 철골 계단 — overrides.mesh(UV 0)
+src/stages/build/cell-stats.ts   셀 빌드 통계(CellBuildStats, 로그 — overrides.details)
 src/stages/signage/{raster,brand-generator,atlas,run}.ts   `pnpm pipeline signage`(M05-T06, ADR-0054): 글리프 윤곽 래스터라이저 / 가상 브랜드 생성·실존 대조(content/signage) / 타일 배치·색 합성 아틀라스 / Noto Sans JP(lock) → apps/game/src/assets/signage/{atlas.png, signage.json}
 src/stages/derive/props/signs.ts   간판 배치(돌출 상자 열·입간판·옥상 광고탑, 상업 용도 길가 변) — props.inst PROP_TYPE 16–18
 src/stages/derive/vegetation.ts · derive/trees/{species,place,street,fill,index}.ts   녹지 `_SURF` 잔디 / 나무 배치(OSM 점·열, 규칙 가로수, 녹지 격자, 수종, 줄기 콜라이더, 셀 4k) — M05-T04 ADR-0052

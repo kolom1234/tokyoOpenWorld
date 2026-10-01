@@ -11,13 +11,16 @@ export class LStream {
   uv: number[] = [];
   mat: number[] = [];
   idx: number[] = [];
+  /** true = UV를 0으로(옥상 설비 — 무늬가 필요 없고, 큰 월드 미터 UV는 meshopt 압축이 거의 안 된다). */
+  plainUv = false;
   get count(): number {
     return this.pos.length / 3;
   }
   vert(p: Vec3, n: Vec3, uv: readonly [number, number], m: number): number {
     this.pos.push(p[0], p[1], p[2]);
     this.nrm.push(n[0], n[1], n[2]);
-    this.uv.push(uv[0], uv[1]);
+    if (this.plainUv) this.uv.push(0, 0);
+    else this.uv.push(uv[0], uv[1]);
     this.mat.push(m);
     return this.count - 1;
   }

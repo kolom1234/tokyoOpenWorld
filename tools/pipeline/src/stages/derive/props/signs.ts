@@ -134,9 +134,9 @@ export function placeSigns(
   const walls = wallTest(buildings);
   for (const b of buildings) {
     if (!b.usage) continue;
-    if (kp && kp.usage.includes(b.usage)) out.projecting += placeProjecting(c, walls, b, kp);
-    if (ks && ks.usage.includes(b.usage)) out.standing += placeStanding(c, walls, b, ks);
-    if (kr && kr.usage.includes(b.usage)) out.rooftop += placeRooftop(c, b, kr);
+    if (kp?.usage.includes(b.usage)) out.projecting += placeProjecting(c, walls, b, kp);
+    if (ks?.usage.includes(b.usage)) out.standing += placeStanding(c, walls, b, ks);
+    if (kr?.usage.includes(b.usage)) out.rooftop += placeRooftop(c, b, kr);
   }
   return out;
 }

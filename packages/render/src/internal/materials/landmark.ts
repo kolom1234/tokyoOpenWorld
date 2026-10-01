@@ -30,7 +30,7 @@ type F = TslNode<'float'>;
 type V2 = TslNode<'vec2'>;
 type V3 = TslNode<'vec3'>;
 
-/** LMAT 순서: 콘크리트·석재·커튼월·투명 유리·금속 패널·데크·목재·주홍·화면·청동·짙은 강판·화강암 격자·자갈·핀 커튼월·녹지. */
+/** LMAT 순서: 콘크리트·석재·커튼월·투명 유리·금속 패널·데크·목재·주홍·화면·청동·짙은 강판·화강암 격자·자갈·핀 커튼월·녹지·FRP(옥상 물탱크, M05-T07). */
 const SPEC: readonly [number, number, number, number, number][] = [
   [0.34, 0.33, 0.3, 0.85, 0],
   [0.45, 0.41, 0.35, 0.6, 0],
@@ -47,6 +47,7 @@ const SPEC: readonly [number, number, number, number, number][] = [
   [0.44, 0.39, 0.3, 0.95, 0],
   [0.15, 0.18, 0.21, 0.07, 0.4],
   [0.045, 0.1, 0.03, 0.9, 0],
+  [0.42, 0.5, 0.55, 0.45, 0],
 ];
 export const LANDMARK_KINDS = SPEC.length;
 const ID = {

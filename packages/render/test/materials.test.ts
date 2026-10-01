@@ -69,8 +69,8 @@ describe('cellSeedOf', () => {
 });
 
 describe('landmark material', () => {
-  it('maps every pipeline _LMAT kind (overrides/spec.ts LMAT, 15 kinds) and is shared by id', () => {
-    expect(LANDMARK_KINDS).toBe(15);
+  it('maps every pipeline _LMAT kind (overrides/spec.ts LMAT, 16 kinds) and is shared by id', () => {
+    expect(LANDMARK_KINDS).toBe(16);
     const m = createLandmarkMaterial();
     expect(m.name).toBe('landmark');
     m.dispose();

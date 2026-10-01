@@ -3,6 +3,7 @@ import { type CellKey, cellIdString } from '@sanpo/core';
 import type { MarkingStats } from '../derive/markings/index.ts';
 import type { PropStats } from '../derive/props/index.ts';
 import type { TreeStats } from '../derive/trees/index.ts';
+import type { DetailStats } from './overrides/rooftops.ts';
 
 export interface CellBuildStats {
   id: string;
@@ -26,8 +27,8 @@ export interface CellBuildStats {
   props: PropStats | null;
   /** 나무(M05-T04). */
   trees: TreeStats | null;
-  /** 랜드마크 오버라이드(M05-T05). */
-  overrides: { landmarks: string[]; tris: number } | null;
+  /** 랜드마크 오버라이드(M05-T05) + 옥상 설비·비상계단(M05-T07). */
+  overrides: { landmarks: string[]; tris: number; details: DetailStats } | null;
 }
 
 /** 통계에 쓰는 셀 조립 결과(assemble.ts CellParts의 부분 구조 — 순환 import 회피). */
@@ -37,7 +38,7 @@ export interface StatsParts {
   col: { tris: number; shapes: number };
   roads: { vertices: number; tris: number; edges: { curbM: number; outerM: number } };
   props: { stats: PropStats; treeStats: TreeStats } | null;
-  ov: { landmarks: string[]; tris: number } | null;
+  ov: { landmarks: string[]; tris: number; details: DetailStats } | null;
 }
 
 export function cellStats(
@@ -65,6 +66,6 @@ export function cellStats(
     markings: marks,
     props: p.props?.stats ?? null,
     trees: p.props?.treeStats ?? null,
-    overrides: p.ov && p.ov.landmarks.length > 0 ? { landmarks: p.ov.landmarks, tris: p.ov.tris } : null,
+    overrides: p.ov ? { landmarks: p.ov.landmarks, tris: p.ov.tris, details: p.ov.details } : null,
   };
 }

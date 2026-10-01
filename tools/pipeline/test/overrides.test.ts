@@ -6,6 +6,7 @@ import { figureDog, figureTorii } from '../src/stages/build/overrides/figures.ts
 import { LStream } from '../src/stages/build/overrides/geom.ts';
 import { LMAT, overrideCell, overrideSetOf, readOverrides } from '../src/stages/build/overrides/index.ts';
 import { clipToCell } from '../src/stages/build/overrides/parts.ts';
+import { emitFireEscape, emitRooftop, emptyDetailStats } from '../src/stages/build/overrides/rooftops.ts';
 import { clipRingY } from '../src/stages/build/overrides/shell.ts';
 import type { LandmarkSpec } from '../src/stages/build/overrides/spec.ts';
 import { boxBuilding } from './build-fixtures.ts';
@@ -215,5 +216,67 @@ describe('content/overrides', () => {
     expect(() =>
       overrideSetOf([spec({ id: 'a', replace: ['x'] }), spec({ id: 'b', order: 2, replace: ['x'] })]),
     ).toThrow(/replaced twice/);
+  });
+});
+
+describe('rooftop details (M05-T07)', () => {
+  const stats = () => emptyDetailStats();
+
+  it('furnishes flat roofs deterministically and keeps everything above the roof inside the footprint', () => {
+    let roofs = 0;
+    let ac = 0;
+    for (let k = 0; k < 20; k++) {
+      const b = { ...boxBuilding(`bldg_r${k}`, 20, 30, 30, 24, 10, 24), usage: '401' };
+      const s1 = new LStream();
+      const s2 = new LStream();
+      const st = stats();
+      emitRooftop(s1, b, [0, 0, 0], st);
+      emitRooftop(s2, b, [0, 0, 0], stats());
+      expect(s1.pos).toEqual(s2.pos);
+      roofs += st.roofs;
+      ac += st.ac;
+      for (let i = 0; i < s1.pos.length; i += 3) {
+        expect(s1.pos[i + 1] as number).toBeGreaterThanOrEqual(34 - 1e-6);
+        expect(s1.pos[i] as number).toBeGreaterThan(20 - 0.01);
+        expect(s1.pos[i] as number).toBeLessThan(50 + 0.01);
+      }
+    }
+    expect(roofs).toBe(20);
+    expect(ac).toBeGreaterThan(20);
+  });
+
+  it('skips equipment on LOD2 roofs that already carry rooftop installations', () => {
+    const b = boxBuilding('bldg_kit', 20, 30, 30, 24, 10, 24);
+    const kit = Array.from({ length: 6 }, (_, i) => ({
+      kind: 'installation' as const,
+      ringsWF: [[21 + i, 34, 31, 22 + i, 34, 31, 22 + i, 35, 31]],
+    }));
+    const st = stats();
+    emitRooftop(new LStream(), { ...b, surfaces: [...b.surfaces, ...kit] }, [0, 0, 0], st);
+    expect(st.ac + st.tanks + st.towers).toBe(0);
+  });
+
+  it('hangs fire escapes on small buildings, outside the wall and never into a neighbour', () => {
+    let n = 0;
+    for (let k = 0; k < 40; k++) {
+      const b = { ...boxBuilding(`bldg_s${k}`, 20, 30, 10, 6, 10, 15), usage: '411' };
+      const s = new LStream();
+      const st = stats();
+      emitFireEscape(s, b, [0, 0, 0], () => false, st);
+      n += st.stairs;
+      if (st.stairs === 0) continue;
+      const xs = s.pos.filter((_, i) => i % 3 === 0);
+      const zs = s.pos.filter((_, i) => i % 3 === 2);
+      // 짧은 변(6 m, x = 20 또는 30) 바깥 1.3 m 안.
+      expect(Math.min(...xs) < 20 || Math.max(...xs) > 30).toBe(true);
+      expect(Math.min(...xs)).toBeGreaterThan(20 - 1.4);
+      expect(Math.max(...xs)).toBeLessThan(30 + 1.4);
+      expect(Math.min(...zs)).toBeGreaterThan(30 - 0.1);
+      const blocked = new LStream();
+      const sb = stats();
+      emitFireEscape(blocked, b, [0, 0, 0], () => true, sb);
+      expect(sb.stairs).toBe(0);
+    }
+    expect(n).toBeGreaterThan(4);
   });
 });
