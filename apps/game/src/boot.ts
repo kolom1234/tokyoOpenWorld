@@ -76,6 +76,8 @@ export interface BootFlags {
   forcePost?: boolean;
   /** `?mode=freecam` → 첫 표시를 freecam 시작 시점으로(기본 = walk, 09 §1). 렌더 e2e·비교용. */
   mode?: 'freecam';
+  /** `?trees=0` → 나무 에셋을 적재하지 않는다(나무 GPU 비용 비교, M05-T04). */
+  noTrees?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -115,6 +117,7 @@ export function parseFlags(search: string): BootFlags {
     ...(Number(q.get('gpuLoad')) > 0 ? { gpuLoad: Math.min(Math.floor(Number(q.get('gpuLoad'))), 4096) } : {}),
     ...(q.get('forcePost') === '1' ? { forcePost: true } : {}),
     ...(q.get('mode') === 'freecam' ? { mode: 'freecam' as const } : {}),
+    ...(q.get('trees') === '0' ? { noTrees: true } : {}),
   };
 }
 
@@ -228,6 +231,7 @@ async function setupWorldView(
       ...clockOf(flags, golden),
       ...(weather ? { weather } : {}),
       ...(flags.mode ? { startMode: flags.mode } : {}),
+      ...(flags.noTrees ? { trees: false } : {}),
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),

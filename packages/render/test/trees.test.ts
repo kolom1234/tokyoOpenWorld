@@ -36,13 +36,15 @@ describe('seasonTable', () => {
 
 describe('treeBandOf', () => {
   it('maps distance to detail/simple/impostor with a 3 m hysteresis', () => {
+    expect(TREE_EDGES).toEqual([30, 60, 2000]);
     expect(treeBandOf(10, TREE_EDGES, -1)).toBe(0);
-    expect(treeBandOf(100, TREE_EDGES, -1)).toBe(1);
+    expect(treeBandOf(50, TREE_EDGES, -1)).toBe(1);
     expect(treeBandOf(500, TREE_EDGES, -1)).toBe(2);
     expect(treeBandOf(2500, TREE_EDGES, 2)).toBe(-1);
-    expect(treeBandOf(46, TREE_EDGES, 0)).toBe(0);
-    expect(treeBandOf(43, TREE_EDGES, 1)).toBe(1);
+    expect(treeBandOf(31, TREE_EDGES, 0)).toBe(0);
+    expect(treeBandOf(28, TREE_EDGES, 1)).toBe(1);
   });
+
 });
 
 const batch = (pts: [number, number, number][]) => {

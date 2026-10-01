@@ -1,5 +1,6 @@
 // 식생 면(M05-T04): OSM 녹지 면 → 지형 `_SURF` 덧칠(도로·보도가 아닌 plaza 샘플만) + 나무 채우기용 면 목록.
-// 잔디(2) = park·garden·grass·recreation_ground·scrub·meadow, 흙(3, 낙엽층) = forest·wood. 공원 안 숲은 숲이 이긴다(칠하는 순서).
+// 잔디(2) = 전부(park·garden·grass·recreation_ground·scrub·meadow·forest·wood) — 숲 바닥을 흙(3)으로 칠하면 수관 틈으로 붉은 흙이 너무 드러난다(MVP 확인).
+// 숲은 나무 밀도로 구분(trees/fill.ts).
 // 셀 OSM 목록 = 셀에 닿는 모든 면(bbox) → 경계 샘플은 이웃 셀과 같은 입력(이음새 일치). see ADR-0052, docs/04-data-pipeline.md §4.3
 import { rasterizeRings, SURF } from '../build/surface-class.ts';
 import type { OsmRecord } from '../normalize-osm.ts';
@@ -25,7 +26,7 @@ const PAINT: readonly [GreenKind, number][] = [
   ['garden', SURF.grass],
   ['grass', SURF.grass],
   ['scrub', SURF.grass],
-  ['forest', SURF.soil],
+  ['forest', SURF.grass],
 ];
 
 /** OSM 링(xz 쌍) → WF xyz 링(y 0) — rasterizeRings 입력. */

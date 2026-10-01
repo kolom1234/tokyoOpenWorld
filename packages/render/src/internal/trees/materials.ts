@@ -39,6 +39,7 @@ import {
 import {
   DoubleSide,
   type Material,
+  MeshLambertNodeMaterial,
   MeshStandardNodeMaterial,
   type Texture,
   type Node as TslNode,
@@ -128,7 +129,8 @@ export function createBarkMaterial(u: TreeUniforms): Material {
 }
 
 export function createLeafMaterial(u: TreeUniforms, leaves: Texture): Material {
-  const m = new MeshStandardNodeMaterial({ roughness: 0.75, metalness: 0, side: DoubleSide });
+  // 잎·임포스터 = Lambert(정반사 없음 — 알파 테스트 잎은 겹쳐 그려져 셰이딩 비용이 크다, 숲 GPU 측정).
+  const m = new MeshLambertNodeMaterial({ side: DoubleSide });
   m.name = 'tree_leaf';
   m.positionNode = placeNode(u, true);
   const tex = texture(leaves, uv());
@@ -160,7 +162,7 @@ export interface ImpostorLayout {
 }
 
 export function createImpostorMaterial(u: TreeUniforms, atlas: Texture, L: ImpostorLayout): Material {
-  const m = new MeshStandardNodeMaterial({ roughness: 0.85, metalness: 0 });
+  const m = new MeshLambertNodeMaterial();
   m.name = 'tree_impostor';
   const vR = varyingProperty('vec3', 'v_impR');
   const vU = varyingProperty('vec3', 'v_impU');

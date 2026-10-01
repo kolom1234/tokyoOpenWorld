@@ -75,6 +75,19 @@ describe('street trees', () => {
     expect(t.colliders).toHaveLength(1);
   });
 
+  it('keeps mapped trees on LOD1 whole-width road polygons when clear of the centerline', () => {
+    const lod1 = [road('c', 'carriageway', -50, 90, 306, 130)];
+    const centre = osm('w9', 'line', [[-40, 110, 300, 110]], { highway: 'secondary' });
+    const t = buildTrees(
+      input(lod1, [
+        centre,
+        osm('n1', 'point', [[30, 94]], { natural: 'tree' }),
+        osm('n2', 'point', [[40, 111]], { natural: 'tree' }),
+      ]),
+    );
+    expect(t.records.map((r) => [r.x, r.z])).toEqual([[30, 94]]);
+  });
+
   it('lines wide sidewalks of arterials every 10 m (named street species), skipping crossings and narrow sidewalks', () => {
     const crossing = osm('w3', 'line', [[128, 94, 128, 126]], {
       highway: 'footway',
@@ -122,7 +135,7 @@ describe('green fill', () => {
 });
 
 describe('vegetation surface', () => {
-  it('paints grass and forest soil over plaza samples only', () => {
+  it('paints green areas (forest included) as grass over plaza samples only', () => {
     const n = 8;
     const surf = new Uint8Array(n * n).fill(SURF.plaza);
     surf[0] = SURF.asphalt;
@@ -131,7 +144,7 @@ describe('vegetation surface', () => {
     const out = paintVegetation(surf, [wood, park], 0, 0, { x0: 0, z0: 0, n });
     expect(out[0]).toBe(SURF.asphalt);
     expect(out[1]).toBe(SURF.grass);
-    expect(out[5 * n + 5]).toBe(SURF.soil);
+    expect(out[5 * n + 5]).toBe(SURF.grass);
     expect(surf[1]).toBe(SURF.plaza);
   });
 });

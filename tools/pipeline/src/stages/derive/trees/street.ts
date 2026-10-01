@@ -1,4 +1,4 @@
-// 가로수(M05-T04): OSM 나무 점(차도 위면 3 m 안 보도로, 수종 = 태그 → 가까운 차도 선의 가로수 수종 → 공원 혼합)·가로수열(tree_row, 8 m 간격)
+// 가로수(M05-T04): OSM 나무 점(차도 위면 3 m 안 보도로 — 못 찾아도 차도 중심선 3.5 m 밖이면 그대로(LOD1 도로 구역), 수종 = 태그 → 가까운 차도 선의 가로수 수종 → 공원 혼합)·가로수열(tree_row, 8 m 간격)
 // + 규칙 가로수: 간선(trunk·primary·secondary·tertiary) 양쪽 보도(폭 ≥ 2.5 m) 차도 끝 + 1 m, 10 m 간격(선 id 시드) — 교차부 ± 6 m·횡단 띠 + 4 m·
 // OSM 나무 5 m·소품 1.5 m 안은 생략. see ADR-0052
 import { createRng, hash32, WORLD_SEED } from '@sanpo/core';
@@ -16,8 +16,8 @@ const ROW_SPACING_M = 8;
 const NEAR_ROAD_M = 25;
 const OSM_CLEAR_M = 5;
 
-/** 가장 가까운 차도 선(NEAR_ROAD_M 안). */
-function nearestRoad(p: V2, roads: readonly OsmRecord[]): OsmRecord | undefined {
+/** 가장 가까운 차도 선(NEAR_ROAD_M 안)과 거리. */
+function nearestRoad(p: V2, roads: readonly OsmRecord[]): { r: OsmRecord; d: number } | undefined {
   let best: { r: OsmRecord; d: number } | undefined;
   for (const r of roads) {
     const xz = r.rings[0] ?? [];
@@ -29,8 +29,11 @@ function nearestRoad(p: V2, roads: readonly OsmRecord[]): OsmRecord | undefined 
       if (d < NEAR_ROAD_M && (!best || d < best.d)) best = { r, d };
     }
   }
-  return best?.r;
+  return best;
 }
+
+/** 차도 중심선에서 이만큼 떨어진 OSM 나무는 PLATEAU가 차도(LOD1 도로 = 보도 포함 전체 폭)라 해도 그대로 둔다. */
+const OSM_CENTER_CLEAR_M = 3.5;
 
 /** 차도 위면 가장 가까운 비차도(≤ 3 m), 없으면 undefined. */
 function offRoad(c: TreeCtx, p: V2): V2 | undefined {
@@ -47,7 +50,7 @@ function offRoad(c: TreeCtx, p: V2): V2 | undefined {
 function speciesAt(r: OsmRecord, p: V2, vehicle: readonly OsmRecord[], u: number) {
   const tagged = speciesFromTags(r.tags);
   if (tagged) return tagged;
-  const road = nearestRoad(p, vehicle);
+  const road = nearestRoad(p, vehicle)?.r;
   return road ? streetSpecies(road.tags.name, road.id) : parkSpecies(u);
 }
 
@@ -57,7 +60,8 @@ export function plantOsmTrees(c: TreeCtx, osm: readonly OsmRecord[]): V2[] {
   const placed: V2[] = [];
   const one = (r: OsmRecord, p0: V2, i: number): void => {
     const rng = createRng(hash32(WORLD_SEED, 'trees', 'osm', r.id, i));
-    const p = offRoad(c, p0);
+    const near = nearestRoad(p0, vehicle);
+    const p = offRoad(c, p0) ?? (!near || near.d >= OSM_CENTER_CLEAR_M ? p0 : undefined);
     if (!p || nearBuilding(c, p)) return;
     placed.push(p);
     plant(c, speciesAt(r, p, vehicle, rng.next()), p, rng.next(), rng.next() * 256, r.tags.height);

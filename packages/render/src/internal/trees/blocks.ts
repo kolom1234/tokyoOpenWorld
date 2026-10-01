@@ -1,14 +1,14 @@
 // 나무 블록·LOD 띠(M05-T04): 셀 trees.inst → 64 m 블록·수종별 조각(셀 로컬 `_ipos` = x, y, z, yaw · `_iext` = 높이, 씨앗, 수종, 0),
-// 블록 AABB 3D 거리 → 띠(0 상세 ≤ 45 m, 1 간략 ≤ 150 m, 2 임포스터 ≤ 2 km — 관목 30/80/300 m, 히스테리시스 3 m). see ADR-0052
+// 블록 AABB 3D 거리 → 띠(0 상세 ≤ 30 m, 1 간략 ≤ 60 m, 2 임포스터 ≤ 2 km — 관목 20/50/250 m, 히스테리시스 3 m; 숲 GPU 측정으로 줄임). see ADR-0052
 import type { Vec3d } from '@sanpo/core';
 import { TREE_SPECIES, type TreeBatch, treeRecordAt } from '@sanpo/tile-format';
 
 const BLOCK_M = 64;
 const HYST_M = 3;
 export const TREE_EDGES_BY_SPECIES: Readonly<Record<number, readonly number[]>> = {
-  [TREE_SPECIES.shrub]: [30, 80, 300],
+  [TREE_SPECIES.shrub]: [20, 50, 250],
 };
-export const TREE_EDGES = [45, 150, 2000];
+export const TREE_EDGES = [30, 60, 2000];
 export const TREE_SPECIES_IDS: readonly number[] = Object.values(TREE_SPECIES);
 
 export interface TreeSlice {

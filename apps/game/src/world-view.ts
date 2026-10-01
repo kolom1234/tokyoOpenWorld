@@ -70,6 +70,8 @@ export interface WorldViewDeps {
   clock?: ClockMode;
   /** 디버그 날씨 덮어쓰기(`?wet=`). */
   weather?: WeatherOverride;
+  /** false = 나무 에셋 적재 안 함(`?trees=0`, GPU 비용 비교). */
+  trees?: boolean;
 }
 
 /** 월드 로드 뒤 생기는 것들(getter로 노출). */
@@ -210,7 +212,8 @@ async function showWorldWith(
   else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
   loadMaterialsLater(render, world.materialsUrl, late, wlog);
   loadAvatarLater(render, late, wlog);
-  loadTreesLater(render, late, wlog);
+  if (deps.trees === false) late.treesSettled = true;
+  else loadTreesLater(render, late, wlog);
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 

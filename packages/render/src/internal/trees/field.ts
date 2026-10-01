@@ -75,7 +75,8 @@ class TreeFieldImpl implements TreeField {
             { base: bark, material: m.bark },
             { base: leaf, material: m.leaf },
           ],
-          true,
+          // 그림자 = 상세 LOD만(간략·임포스터까지 4단 그림자에 그리면 숲에서 수 ms — 측정).
+          lod === 0,
         );
         this.pools.set(keyOf(sp, lod), p);
         this.root.add(...p.meshes);
@@ -84,7 +85,7 @@ class TreeFieldImpl implements TreeField {
       'trees/impostor',
       TREE_POOL_CAPACITY.impostor,
       [{ base: impostorQuad(), material: m.impostor }],
-      true,
+      false,
     );
     this.pools.set('imp', imp);
     this.root.add(...imp.meshes);

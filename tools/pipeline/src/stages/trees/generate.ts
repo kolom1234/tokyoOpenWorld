@@ -1,5 +1,5 @@
 // 수종 모델 생성(M05-T04): @dgreenheck/ez-tree(MIT) 프리셋 + 수종별 덮어쓰기 → 가지(위치·법선·UV)·잎 카드(위치·법선·UV) → 높이 1로 정규화(줄기 밑 = 원점),
-// 잎 UV = 잎 아틀라스 칸(leaf-atlas.ts). LOD1 = 가지 meshopt 단순화 25 % + 잎 카드 1/3만 1.7배 확대. ez-tree 텍스처 모듈이 모듈 로드 때 Image를 만들므로
+// 잎 UV = 잎 아틀라스 칸(leaf-atlas.ts). LOD1 = 가지 meshopt 단순화 15 % + 잎 카드 1/4만 2배 확대. ez-tree 텍스처 모듈이 모듈 로드 때 Image를 만들므로
 // Node에선 document 스텁(텍스처는 쓰지 않는다 — 잎 모양은 자체 아틀라스). see ADR-0052
 import { MeshoptSimplifier } from 'meshoptimizer';
 
@@ -119,11 +119,11 @@ function partOf(g: RawGeom, scale: number, uvCell?: number): Part {
   return { pos, nrm, uv, idx };
 }
 
-/** 잎 카드 1/3만 남기고 카드 중심 기준 1.7배(LOD1). 카드 = 연속 정점 4개. */
+/** 잎 카드 1/4만 남기고 카드 중심 기준 2배(LOD1). 카드 = 연속 정점 4개. */
 function thinLeaves(p: Part): Part {
   const quads = p.pos.length / 12;
   const keep: number[] = [];
-  for (let q = 0; q < quads; q++) if (q % 3 === 0) keep.push(q);
+  for (let q = 0; q < quads; q++) if (q % 4 === 0) keep.push(q);
   const pos = new Float32Array(keep.length * 12);
   const nrm = new Float32Array(keep.length * 12);
   const uv = new Float32Array(keep.length * 8);
@@ -133,7 +133,7 @@ function thinLeaves(p: Part): Part {
     for (let v = 0; v < 4; v++)
       for (let a = 0; a < 3; a++) {
         const src = (q * 4 + v) * 3 + a;
-        pos[(k * 4 + v) * 3 + a] = (c[a] as number) + ((p.pos[src] as number) - (c[a] as number)) * 1.7;
+        pos[(k * 4 + v) * 3 + a] = (c[a] as number) + ((p.pos[src] as number) - (c[a] as number)) * 2;
         nrm[(k * 4 + v) * 3 + a] = p.nrm[src] as number;
       }
     uv.set(p.uv.subarray(q * 8, q * 8 + 8), k * 8);
@@ -145,9 +145,9 @@ function thinLeaves(p: Part): Part {
   return { pos, nrm, uv, idx };
 }
 
-/** 가지 단순화(목표 25 %, 상대 오차 2 %). */
+/** 가지 단순화(목표 15 %, 상대 오차 3 %). */
 function simplifyBark(p: Part): Part {
-  const [idx] = MeshoptSimplifier.simplify(p.idx, p.pos, 3, Math.floor((p.idx.length * 0.25) / 3) * 3, 0.02);
+  const [idx] = MeshoptSimplifier.simplify(p.idx, p.pos, 3, Math.floor((p.idx.length * 0.15) / 3) * 3, 0.03);
   return { ...p, idx };
 }
 

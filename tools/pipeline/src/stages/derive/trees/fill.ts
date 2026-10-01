@@ -1,5 +1,5 @@
 // 녹지 면 채우기(M05-T04): 월드 정렬 격자(종류별 간격) 점마다 결정론 흔들기·확률 → 그 종류 면 안(구멍 제외)·도로/보도 밖·건물 1 m 밖이면 심는다.
-// 숲(forest·wood) 7 m·85 %(숲 혼합), 공원 12 m·40 %(잔디밭이면 20 %로, 공원 혼합), 정원 9 m·40 %, 관목(scrub) 3.5 m·50 %(관목).
+// 숲(forest·wood) 6.5 m·90 %(숲 혼합 — 수관이 닫히게), 공원 12 m·40 %(잔디밭이면 20 %로, 공원 혼합), 정원 9 m·40 %, 관목(scrub) 3.5 m·50 %(관목).
 // 격자 점 번호(전역 i, j)로 시드 → 어느 셀에서 계산해도 같다(소유 = 점이 속한 셀). see ADR-0052
 import { createRng, hash32, WORLD_SEED } from '@sanpo/core';
 import type { OsmRecord } from '../../normalize-osm.ts';
@@ -17,7 +17,7 @@ interface Area {
 }
 
 const LATTICE: readonly { kind: GreenKind; spacing: number; p: number }[] = [
-  { kind: 'forest', spacing: 7, p: 0.85 },
+  { kind: 'forest', spacing: 6.5, p: 0.9 },
   { kind: 'park', spacing: 12, p: 0.4 },
   { kind: 'garden', spacing: 9, p: 0.4 },
   { kind: 'scrub', spacing: 3.5, p: 0.5 },
