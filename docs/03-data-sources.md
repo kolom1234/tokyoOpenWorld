@@ -38,7 +38,7 @@
 | ambientCG | PBR 머티리얼 32종(M03-T01, `content/materials/library.json` — 아스팔트·보도블록·콘크리트·타일·금속·미장·사이딩·ALC·벽돌·지붕·잔디·흙·자갈), 1K-JPG zip sha256은 `sources.lock` `ambientcg`, 자산별 출처 `ATTRIBUTION.json` `ambientcg-<asset>` | CC0 |
 | 자체 생성 | 실내 큐브맵 8종(M03-T05, `tools/pipeline/src/stages/materials/interior-rooms.ts` 상자 가구·조명판을 광선 추적) — 외부 에셋·사진 없음 | 프로젝트 소유(출처 표기 불필요) |
 | Poly Haven | PBR 텍스처, HDRI(포토모드 참고용), 일부 소품 모델 | CC0 |
-| Quaternius (Universal Base Characters / Universal Animation Library 무료판) | 플레이어 아바타(M05 결정 2 — UBC Standard Superhero_Male + Hair_SimpleParted, UAL 클립 4개, `pnpm pipeline avatar`, ADR-0048), 보행자 베이스 메시·애니메이션(M06 후보). 원본 zip sha256 = `sources.lock` `quaternius-ubc`·`quaternius-ual`, 출처 `ATTRIBUTION.json` | CC0 |
+| Microsoft Rocketbox Avatar Library (커밋 `0943055`) | 플레이어 아바타(Male_Adult_10)·군중 베이스 12종 메시·기본색 텍스처·Biped 클립(ADR-0057, M06 사전 결정 1 — Quaternius ADR-0048 대체). `pnpm pipeline characters`(커밋 고정 URL에서 받기), sha256 = `sources.lock` `rocketbox`(저장소 상대 경로별), 목록 = `content/characters/catalog.json`. 로고 검사: 실제 상표 없음, 문구 프린트 아바타(Male_Adult_09) 제외. 저작권·허가 고지 = `apps/game/public/third-party-notices.txt` | MIT |
 | Kenney | 보조 소품/아이콘 | CC0 |
 | `@dgreenheck/ez-tree` | 나무 메시 생성기(파이프라인 `trees`, M05-T04 — 수종 6종 가지·잎 카드 → `apps/game/src/assets/trees/`, 잎 아틀라스·임포스터는 자체 생성, `ATTRIBUTION.json` `ez-tree`, ADR-0052) | MIT (생성물은 자체 산출물) |
 | Noto Sans JP / Noto Sans KR | UI 폰트 (자체 호스팅, 서브셋) | SIL OFL 1.1 |

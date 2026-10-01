@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "note": "Microsoft Rocketbox Avatar Library(MIT) — 군중 베이스 12종 + 플레이어 1종, 클립(성별별). 고른 기준·로고 검사 = ADR-0057. 경로 = Assets/ 아래(저장소 커밋 고정).",
+  "repo": "microsoft/Microsoft-Rocketbox",
+  "commit": "0943055db6ec570bcef9f2c8b41c9e5467c808f9",
+  "fps": 30,
+  "loopTrimS": 6,
+  "loopBlendS": 0.5,
+  "bases": [
+    { "id": "bm01", "tex": "m005", "avatar": "Professions/Business_Male_01", "sex": "m", "weight": 1.2 },
+    { "id": "bm02", "tex": "m008", "avatar": "Professions/Business_Male_02", "sex": "m", "weight": 1.4 },
+    { "id": "bm03", "tex": "m020", "avatar": "Professions/Business_Male_03", "sex": "m", "weight": 1.2 },
+    { "id": "bm04", "tex": "m015", "hair": false, "avatar": "Professions/Business_Male_04", "sex": "m", "weight": 0.8 },
+    { "id": "am08", "tex": "m014", "avatar": "Adults/Male_Adult_08", "sex": "m", "weight": 1 },
+    { "id": "am01", "tex": "m002", "avatar": "Adults/Male_Adult_01", "sex": "m", "weight": 0.8 },
+    { "id": "bf01", "tex": "f014", "avatar": "Professions/Business_Female_01", "sex": "f", "weight": 1 },
+    { "id": "bf03", "tex": "f016", "avatar": "Professions/Business_Female_03", "sex": "f", "weight": 1.4 },
+    { "id": "af02", "tex": "f002", "avatar": "Adults/Female_Adult_02", "sex": "f", "weight": 1 },
+    { "id": "af03", "tex": "f003", "avatar": "Adults/Female_Adult_03", "sex": "f", "weight": 1.4 },
+    { "id": "af05", "tex": "f005", "avatar": "Adults/Female_Adult_05", "sex": "f", "weight": 1 },
+    { "id": "af11", "tex": "f011", "avatar": "Adults/Female_Adult_11", "sex": "f", "weight": 0.8 }
+  ],
+  "player": { "id": "am10", "tex": "m024", "avatar": "Adults/Male_Adult_10", "sex": "m" },
+  "clips": [
+    { "name": "walk", "m": "xy/m_walk_neutral_01", "f": "xy/f_walk_neutral_01" },
+    { "name": "walk_slow", "m": "xy/m_walk_slow_01", "f": "xy/f_walk_slow_01" },
+    { "name": "walk_fast", "m": "xy/m_walk_fast_01", "f": "xy/f_walk_fast_01" },
+    { "name": "idle", "m": "static/m_idle_neutral_01", "f": "static/f_idle_neutral_01", "trim": true },
+    { "name": "phone", "m": "static/m_cell_phone_textmessage", "f": "static/f_cell_phone_textmessage", "trim": true }
+  ],
+  "playerClips": [
+    { "name": "idle", "file": "static/m_idle_neutral_01", "trim": true },
+    { "name": "walk", "file": "xy/m_walk_fast_01" },
+    { "name": "jog", "file": "xy/m_run_slow_01" },
+    { "name": "sprint", "file": "xy/m_run_fast_01" }
+  ],
+  "lods": [
+    { "maxTris": 0, "maxDistM": 12 },
+    { "maxTris": 2400, "maxDistM": 30 },
+    { "maxTris": 800, "maxDistM": 70 },
+    { "maxTris": 260, "maxDistM": 250 }
+  ],
+  "textures": { "crowdPart": 512, "playerPart": 1024 }
+}

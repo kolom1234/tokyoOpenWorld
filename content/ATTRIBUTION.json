@@ -604,34 +604,18 @@
       "modified": true
     },
     {
-      "id": "quaternius-ubc",
+      "id": "rocketbox",
       "kind": "model",
-      "title": "Quaternius Universal Base Characters [Standard] — Superhero_Male_FullBody + Hair_SimpleParted → 플레이어 아바타(정점색 굽기·옷 영역 칠함)",
-      "url": "https://quaternius.com/packs/universalbasecharacters.html",
-      "license": "CC0-1.0",
+      "title": "Microsoft Rocketbox Avatar Library(커밋 0943055) — 플레이어 아바타 Male_Adult_10 + 군중 베이스 12종(메시·기본색 텍스처·Biped 클립) → 리그 23뼈·LOD·아틀라스 KTX2·뼈 팔레트로 변환(ADR-0057). MIT 고지 = apps/game/public/third-party-notices.txt",
+      "url": "https://github.com/microsoft/Microsoft-Rocketbox",
+      "license": "MIT",
       "attribution": {
-        "ja": "キャラクターモデル・アニメーション：Quaternius（CC0）",
-        "en": "Character model & animations: Quaternius (CC0)",
-        "ko": "캐릭터 모델·애니메이션: Quaternius (CC0)"
+        "ja": "キャラクター：Microsoft Rocketbox Avatar Library（© 2020 Microsoft, MIT License）",
+        "en": "Characters: Microsoft Rocketbox Avatar Library (© 2020 Microsoft, MIT License)",
+        "ko": "캐릭터: Microsoft Rocketbox Avatar Library (© 2020 Microsoft, MIT License)"
       },
       "files": [
-        "apps/game/src/assets/avatar-ubc-male.glb"
-      ],
-      "modified": true
-    },
-    {
-      "id": "quaternius-ual",
-      "kind": "model",
-      "title": "Quaternius Universal Animation Library [Standard] — Idle_Loop·Walk_Loop·Jog_Fwd_Loop·Sprint_Loop → 플레이어 아바타 클립",
-      "url": "https://quaternius.com/packs/universalanimationlibrary.html",
-      "license": "CC0-1.0",
-      "attribution": {
-        "ja": "キャラクターモデル・アニメーション：Quaternius（CC0）",
-        "en": "Character model & animations: Quaternius (CC0)",
-        "ko": "캐릭터 모델·애니메이션: Quaternius (CC0)"
-      },
-      "files": [
-        "apps/game/src/assets/avatar-ubc-male.glb"
+        "apps/game/src/assets/characters/*"
       ],
       "modified": true
     },

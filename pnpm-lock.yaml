@@ -287,6 +287,9 @@ importers:
       '@types/earcut':
         specifier: 3.0.0
         version: 3.0.0
+      '@types/three':
+        specifier: 0.186.0
+        version: 0.186.0
 
 packages:
 

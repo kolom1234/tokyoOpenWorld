@@ -31,9 +31,9 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   precompile(): Promise<void>;                     // 대기 LUT 계산(await) + 고정 머티리얼 × {기본, HLOD} compileAsync
   setCamera(c: CameraState): void;                 // WF float64 — 다음 renderPrep에서 반영
   setAvatar(a: AvatarState): void;                 // 플레이어 아바타(자체 절차 마네킹, dynamic 루트, 속도 블렌드·근접 디더 페이드 — M04-T05, ADR-0045)
-  loadAvatar(url): Promise<void>;
+  loadAvatar(urls: AvatarAssetUrls { glb, texture }): Promise<void>;
   // 셀 슬롯 decals(M05-T02): materialId road_marking — materials/decal.ts(`_PAINT` → f32, 알파 테스트 마모, ADR-0050) + power_wire(M05-T03 전선, `_OFF` 거리 비례 최소 폭)
-  // addCell의 instances.props(M05-T03) → props/pools(64 m 블록 LOD, 종류 × LOD InstancedMesh), removeCell·원점 재설정 동기                  // Quaternius 굽기 GLB → 선컴파일 → 마네킹 교체(속력 블렌드 idle·walk·jog·sprint, 위상 공유 — ADR-0048). 실패 = 마네킹 유지
+  // addCell의 instances.props(M05-T03) → props/pools(64 m 블록 LOD, 종류 × LOD InstancedMesh), removeCell·원점 재설정 동기                  // Rocketbox GLB + KTX2 아틀라스(library.ktx2 공유 로더) → 선컴파일 → 마네킹 교체(속력 블렌드 idle·walk·jog·sprint, 위상 공유 — ADR-0048·0057). 실패 = 마네킹 유지
   setEnvironment(e: EnvironmentState): void;       // M03-T02: sunDirWF·moonDirWF → 대기(ECEF). 천문 계산은 sim. M03-T06: weather.wetness → EnvUniforms.wetness(0..1 클램프)
   stats(): RenderStats;                            // backend, depth, frames, drawCalls, triangles, cells, originRebases, renderOriginWF, hlodParents, hlodFading, materials{state,layers,downloadBytes,gpuBytes,loadMs}, gpu{enabled,frameMs,samples}
   dispose(): void;

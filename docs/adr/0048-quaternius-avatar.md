@@ -1,5 +1,5 @@
 # ADR-0048: 플레이어 아바타 = Quaternius UBC + UAL(CC0) 굽기 GLB, 정점색·옷 영역, 속력 블렌드 (M05 결정 2)
-- Status: Accepted (ADR-0045 §4 "자체 절차 마네킹"은 모델 적재 전·실패 시 대체로 유지)
+- Status: Superseded by ADR-0057 (2026-10-02 — Rocketbox MIT로 교체. 속력 블렌드·마네킹 대체·적재 시점은 그대로 유지)
 - Date: 2026-10-01
 
 ## Context

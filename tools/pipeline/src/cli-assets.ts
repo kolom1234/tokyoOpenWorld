@@ -1,9 +1,10 @@
-// CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), avatar(Quaternius → 게임 GLB, 결정 2), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06).
+// CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), characters(Rocketbox → 플레이어 아바타·군중 팩, ADR-0057), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Logger } from '@sanpo/core';
-import { type AvatarLock, buildAvatar } from './stages/avatar/run.ts';
+import { buildCharacters } from './stages/characters/run.ts';
+import type { RocketboxLock } from './stages/characters/source.ts';
 import type { LockSource } from './stages/fixture.ts';
 import type { AmbientLock } from './stages/materials/fetch.ts';
 import { readLibrary } from './stages/materials/library.ts';
@@ -69,10 +70,28 @@ export async function signage(ctx: AssetCtx): Promise<void> {
   await buildSignage(ctx.repoRoot, src, ctx.log.child('signage'));
 }
 
-export async function avatar(ctx: AssetCtx): Promise<void> {
-  await buildAvatar({
-    repoRoot: ctx.repoRoot,
-    lock: ctx.lockSources() as unknown as AvatarLock[],
-    log: ctx.log.child('avatar'),
+/** 캐릭터(ADR-0057): Rocketbox(raw, 없으면 커밋 고정 URL에서 받기 + sha256 lock) → apps/game/src/assets/characters. 컨테이너 전용(toktx). */
+export async function characters(ctx: AssetCtx, args: string[]): Promise<void> {
+  const LOCK_PATH = join(ctx.repoRoot, 'data/sources.lock.json');
+  const { values } = parseArgs({
+    args,
+    options: { 'update-lock': { type: 'boolean', default: false }, only: { type: 'string' } },
   });
+  const lockFile = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) as { sources: (LockSource | RocketboxLock)[] };
+  const lock = lockFile.sources.find((s) => s.id === 'rocketbox') as RocketboxLock | undefined;
+  if (!lock) throw new Error('sources.lock.json: no "rocketbox" source');
+  const only = values.only === 'player' || values.only === 'crowd' ? values.only : undefined;
+  await buildCharacters({
+    repoRoot: ctx.repoRoot,
+    lock,
+    updateLock: values['update-lock'],
+    log: ctx.log.child('characters'),
+    ...(only ? { only } : {}),
+  });
+  if (values['update-lock'])
+    writeFileSync(
+      LOCK_PATH,
+      `${JSON.stringify(lockFile, null, 2)}
+`,
+    );
 }

@@ -18,6 +18,7 @@
     "three": "0.186.1"
   },
   "devDependencies": {
-    "@types/earcut": "3.0.0"
+    "@types/earcut": "3.0.0",
+    "@types/three": "0.186.0"
   }
 }

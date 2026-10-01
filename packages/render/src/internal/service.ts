@@ -54,8 +54,8 @@ function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAv
         .catch((e: unknown) => log.warn('avatar precompile', e));
       ctx.avatar.group.visible = false;
     },
-    async loadAvatar(url) {
-      const model = await loadAvatarModel(url, ctx.avatar.opacity);
+    async loadAvatar(urls) {
+      const model = await loadAvatarModel(urls, ctx.avatar.opacity, ctx.library.ktx2(renderer));
       // 붙이기 전에 파이프라인을 만든다(3인칭 전환 첫 프레임 끊김 방지) — 보이지 않는 그룹으로 컴파일.
       await renderer
         .compileAsync(model.root, view.camera, graph.scene)

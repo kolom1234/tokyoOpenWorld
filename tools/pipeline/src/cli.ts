@@ -1,6 +1,6 @@
 // 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 // 구현된 단계: normalize(--layer plateau: 건물·도로, terrain: dem_1m.tif), build(L0: 지형·건물·meta → TKC),
-// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열)·avatar(Quaternius → 게임 GLB)·trees(수종 에셋 — cli-assets.ts), validate, publish·gc(R2 + KV).
+// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열)·characters(Rocketbox → 플레이어 아바타·군중 팩)·trees(수종 에셋 — cli-assets.ts), validate, publish·gc(R2 + KV).
 // TODO: fetch | derive.
 import { execFile } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -335,7 +335,7 @@ async function fixture(args: string[]): Promise<void> {
   if (values.only !== 'world-mini') log.info(`plateau-mini snapshot ${JSON.stringify(await buildPlateauMini(input))}`);
 }
 
-/** 플레이어 아바타 GLB(M05 결정 2, ADR-0048): data/raw Quaternius zip(sha256 lock) → apps/game/src/assets. 호스트 Node로 실행 가능. */
+/** 에셋 단계 공용 문맥(cli-assets.ts). */
 const assets = { repoRoot: REPO_ROOT, log, lockSources };
 
 const STAGES: Record<string, (args: string[]) => Promise<void>> = {
@@ -344,7 +344,7 @@ const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   'hlod-prep': hlodPrep,
   hlod,
   materials: (args) => assetStages.materials(assets, args),
-  avatar: () => assetStages.avatar(assets),
+  characters: (args) => assetStages.characters(assets, args),
   trees: () => assetStages.trees(assets),
   signage: () => assetStages.signage(assets),
   validate,
