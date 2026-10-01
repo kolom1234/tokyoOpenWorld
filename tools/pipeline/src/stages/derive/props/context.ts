@@ -57,12 +57,12 @@ export function owns(c: PlaceCtx, p: V2): boolean {
 /** 정면 방향(WF xz) → yaw(로컬 +Z가 그 방향을 보게). */
 export const yawOf = (f: V2): number => Math.atan2(f[0], f[1]);
 
-/** 인스턴스 1개 + 콜라이더(카탈로그). 소유·높이 없으면 건너뛴다. 반환 = 놓았는지. */
-export function place(c: PlaceCtx, type: PropTypeName, p: V2, yaw: number, scale = 1): boolean {
+/** 인스턴스 1개 + 콜라이더(카탈로그). 소유·높이 없으면 건너뛴다. yAt = 셀 로컬 높이 지정(간판 — 없으면 표면). 반환 = 놓았는지. */
+export function place(c: PlaceCtx, type: PropTypeName, p: V2, yaw: number, scale = 1, yAt?: number): boolean {
   if (!owns(c, p)) return false;
   const lx = p[0] - c.ox;
   const lz = p[1] - c.oz;
-  const y = c.surfaceAt(lx, lz);
+  const y = yAt ?? c.surfaceAt(lx, lz);
   if (y === undefined) return false;
   if (c.left <= 0) {
     c.trimmed++;

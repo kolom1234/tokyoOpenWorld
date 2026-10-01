@@ -13,7 +13,13 @@ import {
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
-import { createRender, type RenderConfig, type RenderService, type TreeAssetUrls } from '@sanpo/render';
+import {
+  createRender,
+  type RenderConfig,
+  type RenderService,
+  type SignageAssetUrls,
+  type TreeAssetUrls,
+} from '@sanpo/render';
 import { type ClockMode, createSim, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
@@ -49,6 +55,8 @@ export interface WorldView {
   readonly avatarSettled: boolean;
   /** 나무 에셋 적재·선컴파일이 끝났다(성공·실패 — 골든뷰 안정 조건, M05-T04). */
   readonly treesSettled: boolean;
+  /** 간판 아틀라스 적재·선컴파일이 끝났다(성공·실패 — 골든뷰 안정 조건, M05-T06). */
+  readonly signsSettled: boolean;
   /** streaming 시작 → 스폰 영역 live까지 대기 → 시작 시점으로 이동. 반환 = 스폰 영역 live L0 셀 수. */
   showWorld(world: LoadedWorld): Promise<number>;
 }
@@ -83,6 +91,7 @@ interface LateState {
   materialsSettled: boolean;
   avatarSettled: boolean;
   treesSettled: boolean;
+  signsSettled: boolean;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -158,6 +167,21 @@ export const TREE_URLS: TreeAssetUrls = {
   impostor: new URL('./assets/trees/impostor-color.png', import.meta.url).href,
 };
 
+/** 간판 아틀라스(파이프라인 `signage` — 가상 브랜드, ADR-0054). Vite 해시 에셋. */
+export const SIGNAGE_URLS: SignageAssetUrls = {
+  atlas: new URL('./assets/signage/atlas.png', import.meta.url).href,
+};
+
+/** 간판도 첫 표시 뒤(≈ 0.25 MB). 실패하면 무지 간판·간판 인스턴스 없이. */
+function loadSignageLater(render: RenderService, late: LateState, log: Logger): void {
+  void render
+    .loadSignage(SIGNAGE_URLS)
+    .catch((e: unknown) => log.warn('signage', e))
+    .finally(() => {
+      late.signsSettled = true;
+    });
+}
+
 /** 나무도 첫 표시 뒤(초기 다운로드 밖, ≈ 1.6 MB). 실패하면 나무 없이. */
 function loadTreesLater(render: RenderService, late: LateState, log: Logger): void {
   void render
@@ -214,6 +238,7 @@ async function showWorldWith(
   loadAvatarLater(render, late, wlog);
   if (deps.trees === false) late.treesSettled = true;
   else loadTreesLater(render, late, wlog);
+  loadSignageLater(render, late, wlog);
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
@@ -222,7 +247,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const config = { ...deps.renderConfig, backend: deps.backend };
   const render = await createRender({ canvas, bus, log, config });
   const input = createInput({ target: canvas, bus, log });
-  const late: LateState = { materialsSettled: false, avatarSettled: false, treesSettled: false };
+  const late: LateState = { materialsSettled: false, avatarSettled: false, treesSettled: false, signsSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
   const traversal = createTraversalFor(deps, input, ground, late);
   const now = deps.now ?? Date.now;
@@ -267,6 +292,9 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     },
     get treesSettled() {
       return late.treesSettled;
+    },
+    get signsSettled() {
+      return late.signsSettled;
     },
     showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late }, world),
   };

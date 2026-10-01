@@ -199,6 +199,17 @@
       "license": "CC0-1.0",
       "attribution": "Universal Animation Library by Quaternius (CC0 1.0)",
       "retrievedAt": "2026-09-30"
+    },
+    {
+      "id": "noto-sans-jp",
+      "url": "https://raw.githubusercontent.com/notofonts/noto-cjk/Sans2.004/Sans/SubsetOTF/JP/NotoSansJP-Bold.otf",
+      "dataset": "https://github.com/notofonts/noto-cjk (태그 Sans2.004)",
+      "resource": "NotoSansJP-Bold.otf(4,656,448 B, 일본어 서브셋 OTF/CFF) — M05-T06 가상 간판 아틀라스 글자 윤곽(파이프라인에서 래스터 굽기, 글꼴 파일 자체는 배포하지 않음)",
+      "fiscalYear": null,
+      "sha256": "1b0edfb500b73a4fa8a4fcaae1bbbd403994e08e73e3e0da37e70d3853f42c5f",
+      "license": "OFL-1.1",
+      "attribution": "Noto Sans JP © 2014-2021 Adobe (http://www.adobe.com/), SIL Open Font License 1.1",
+      "retrievedAt": "2026-10-01"
     }
   ]
 }

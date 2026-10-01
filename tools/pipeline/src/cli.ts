@@ -338,6 +338,7 @@ const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   materials: (args) => assetStages.materials(assets, args),
   avatar: () => assetStages.avatar(assets),
   trees: () => assetStages.trees(assets),
+  signage: () => assetStages.signage(assets),
   validate,
   publish,
   gc,

@@ -41,14 +41,15 @@ function createMotionProbe(camera: PerspectiveCamera): () => boolean {
 
 const scratchCam = { x: 0, y: 0, z: 0 };
 
-/** 소품·나무 LOD(카메라 WF = 렌더 원점 + 카메라 렌더 좌표). 반환 = 풀을 다시 채웠는지. */
+/** 소품·나무 LOD·간판 채우기(카메라 WF = 렌더 원점 + 카메라 렌더 좌표). 반환 = 풀을 다시 채웠는지. */
 function syncProps(ctx: RenderContext, rebased: boolean): boolean {
   const { camera, renderOriginWF: o } = ctx.view;
   scratchCam.x = o.x + camera.position.x;
   scratchCam.y = o.y + camera.position.y;
   scratchCam.z = o.z + camera.position.z;
   const props = ctx.props.update(scratchCam, o, rebased);
-  return ctx.trees.update(scratchCam, o, rebased) || props;
+  const signs = ctx.signs.update(scratchCam, o, rebased);
+  return ctx.trees.update(scratchCam, o, rebased) || props || signs;
 }
 
 export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw: GameSystem } {
@@ -90,6 +91,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
       cells.dispose();
       ctx.props.dispose();
       ctx.trees.dispose();
+      ctx.signs.dispose();
       ctx.avatar.dispose();
       ctx.quality.dispose();
       ctx.post.dispose();

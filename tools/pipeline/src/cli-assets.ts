@@ -1,4 +1,4 @@
-// CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), avatar(Quaternius → 게임 GLB, 결정 2), trees(수종·잎·임포스터, M05-T04).
+// CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), avatar(Quaternius → 게임 GLB, 결정 2), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -8,6 +8,7 @@ import type { LockSource } from './stages/fixture.ts';
 import type { AmbientLock } from './stages/materials/fetch.ts';
 import { readLibrary } from './stages/materials/library.ts';
 import { buildMaterials, installMaterials } from './stages/materials/run.ts';
+import { buildSignage, FONT_SOURCE, type FontLock } from './stages/signage/run.ts';
 import { buildTreeAssets } from './stages/trees/run.ts';
 
 export interface AssetCtx {
@@ -59,6 +60,13 @@ export async function materials(ctx: AssetCtx, args: string[]): Promise<void> {
 /** 나무 수종 에셋(M05-T04, 호스트 Node): ez-tree 생성 + 잎 아틀라스 + 임포스터 → apps/game/src/assets/trees. */
 export async function trees(ctx: AssetCtx): Promise<void> {
   await buildTreeAssets({ repoRoot: ctx.repoRoot, log: ctx.log.child('trees') });
+}
+
+/** 간판 아틀라스(M05-T06): Noto Sans JP Bold(lock noto-sans-jp, 없으면 내려받기) + content/signage → apps/game/src/assets/signage. 호스트 Node. */
+export async function signage(ctx: AssetCtx): Promise<void> {
+  const src = ctx.lockSources().find((s) => s.id === FONT_SOURCE) as FontLock | undefined;
+  if (!src) throw new Error(`sources.lock.json: no "${FONT_SOURCE}" source`);
+  await buildSignage(ctx.repoRoot, src, ctx.log.child('signage'));
 }
 
 export async function avatar(ctx: AssetCtx): Promise<void> {

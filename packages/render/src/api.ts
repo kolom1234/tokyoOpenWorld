@@ -128,6 +128,8 @@ export interface RenderStats {
   props: { instances: number; visible: number; pools: number; rebuilds: number; dropped: number };
   /** 나무(M05-T04): 적재 인스턴스·보이는 인스턴스·그리는 메시 수(드로우콜)·용량 초과·에셋 준비. */
   trees: { instances: number; visible: number; pools: number; dropped: number; ready: boolean };
+  /** 가상 간판(M05-T06): 적재 인스턴스(돌출·입간판·옥상)·보이는 인스턴스·그리는 풀·에셋 준비. */
+  signs: { instances: number; visible: number; pools: number; ready: boolean };
 }
 
 /** 나무 에셋 URL(파이프라인 `trees` 산출, 게임 번들 해시 에셋). */
@@ -136,6 +138,11 @@ export interface TreeAssetUrls {
   glb: string;
   leaves: string;
   impostor: string;
+}
+
+/** 간판 에셋 URL(파이프라인 `signage` 산출 — 브랜드 색까지 구운 아틀라스 PNG, 게임 번들 해시 에셋). */
+export interface SignageAssetUrls {
+  atlas: string;
 }
 
 export interface RenderService extends SystemProvider {
@@ -177,6 +184,8 @@ export interface RenderService extends SystemProvider {
    * 첫 표시 뒤에 부른다(초기 다운로드 밖). 그 전 셀의 나무도 기억했다가 그린다.
    */
   loadTrees(urls: TreeAssetUrls): Promise<void>;
+  /** 간판 아틀라스(M05-T06) 적재 → 간판 머티리얼 선컴파일 → 셀 props.inst 간판 종류 + 파사드 1층 간판 띠에 가상 브랜드. */
+  loadSignage(urls: SignageAssetUrls): Promise<void>;
   stats(): RenderStats;
   dispose(): void;
 }

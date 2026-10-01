@@ -49,7 +49,7 @@ scene
 | `M_CHARACTER` | 보행자 | VAT(정점 애니메이션 텍스처) + 인스턴스 색 변형 + 소지품(우산) |
 | `M_VEHICLE` | 차량 | 클리어코트 도장, 유리, 라이트 발광 |
 | `M_WATER` | 강·연못 | 법선 스크롤 + SSR + 빗방울 파문 |
-| `M_SIGN` | 간판/전광판 | **가상 브랜드** 텍스트 아틀라스 발광, 밤 점등 |
+| `M_SIGN` | 간판/전광판 | **가상 브랜드** 텍스트 아틀라스 발광, 밤 점등. **구현(M05-T06, ADR-0054)** `signs/{atlas,material,field,models}.ts` `sign`: 색까지 구운 sRGB 아틀라스(가로 4:1·세로 1:4 타일) 표본 1회, 돌출 상자·입간판·옥상 광고탑 풀(InstancedBufferGeometry `_ipos`·`_isig`, 브랜드 = WF 위치 해시). 발광·점등은 M09 |
 - 텍스처: `shared/materials`의 KTX2 배열 3장 — albedo 1024² ETC1S(sRGB), normal·ORM 512² UASTC(ADR-0027). 매니페스트(`schemas/materials.schema.json`)가 레이어별 그룹·`tileM`·평균색, 그룹 → 레이어 인덱스를 준다. 셰이더는 그룹(`MATERIAL_GROUPS` 13종) + 해시로 레이어를 고른다. 첫 표시 뒤 지연 적재(그 전엔 평균색), 유리는 절차(텍스처 없음).
 - 공통 전역 유니폼(`EnvUniforms`): `wetness`, `snowCover`, `timeOfDay`, `season`, `windDir/strength`, `nightFactor`. 구현(M03-T06) = `weather/wetness.ts`의 `wetness`(값 = `EnvironmentState.weather.wetness`, sim 날씨 M06 전엔 0·디버그 `?wet=`), 나머지는 쓰는 태스크에서 추가.
 - **M_TERRAIN 구현(M03-T06, ADR-0031)** `materials/{terrain,road,noise}.ts`: 정점 `_SURF` 원-핫(8) 보간 → 픽셀마다 상위 2클래스, 클래스 순서에 반대칭인 노이즈로 경계 혼합(±0.08). 주 클래스 = 위 투영 2표본(두 번째 = 0.83 rad 회전·0.61배 축척, ≈ 6 m 노이즈 가중, **분산 보존 혼합** m + (mix − m)/√(w²+(1−w)²)), 법선은 첫 표본만. 보조 클래스 = 알베도·ORM 1표본. 경사 triplanar(측면 투영 알베도)는 `TerrainOptions.triplanar`(기본 끔, +0.7–1.3 ms — 품질 티어 T08). 노이즈 = 256² RGBA 격자값 텍스처 `noiseBank`(4축척 × 4채널, 4표본 — ALU 해시는 7–9 ms였다). 이어서 M_ROAD 변형(아스팔트 보수 패치·유분·바랜 구간, 보도 구간 명암·때 — 추가 표본 없음), 29 m 거시 명암, 젖음(흡수율별 알베도 ↓ 최대 55 %, 수막 거칠기 ↓, n.y > 0.97 포장면 물웅덩이 — 젖음 0.35부터). 1440p 지형 순증 ≈ +1.2–1.8 ms(RTX 3050 Laptop). 도로 전용 메시·연석·차선(`M_ROAD`·`M_DECAL` 별도 메시)은 M05-T01. 파문 노멀은 M06.
@@ -65,7 +65,7 @@ scene
    셰이더 `facade/interior.ts`(유리 픽셀에서만 동적 분기, 명시 LOD, 베이 < ≈ 3 px면 방 평균색) + `glass.ts`(실내 = 발광 × (1 − 프레넬) × 투과율 0.8/커튼월 0.35 ×
    `interiorExposure` 0.02, 블라인드 = 유리 안쪽 확산 알베도·살 무늬). 방 선택: 사무(열린 사무실 45 %·회의 20 %·소등 25 %·창고 10 %), 주거 4종 균등, 좌우 반전 50 %.
 5. **야간 점등**: 창별 점등 확률 = f(class, 시각, 요일) — 오피스는 19–22시 감소 곡선, 주거는 18–23시 피크. 점등 창은 실내 매핑 밝기 + 색온도 변화.
-6. **1층 상점(flags.retail)**: 셔터(영업시간 외 닫힘), 차양, **가상 간판**(M_SIGN과 같은 아틀라스), 쇼윈도 광원(lights.bin과 연동).
+6. **1층 상점(flags.retail)**: 셔터(영업시간 외 닫힘), 차양, **가상 간판**(M_SIGN과 같은 아틀라스 — M05-T06: 간판 띠 베이 가운데 4:1 타일 + 나머지 = 브랜드 바탕색), 쇼윈도 광원(lights.bin과 연동). 창문 시트는 ⚠️ 미구현.
 7. **맨션 발코니**: 노멀+시차(POM)로 표현(M05-T07), 필요 시 파이프라인에서 슬래브 지오메트리 압출(ADR).
 8. **디테일**: 층간 줄눈, 배수관·실외기(데칼 마스크), 빗물 얼룩(상단→하단 그라디언트 노이즈), AO 모서리 어둡힘.
 

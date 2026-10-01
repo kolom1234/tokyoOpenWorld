@@ -23,6 +23,7 @@ import { type CellSet, createCellSet } from './scene/cell-node.ts';
 import { createHlodSwitch, type HlodSwitch } from './scene/hlod-switch.ts';
 import { createRenderView, type RenderView } from './scene/render-view.ts';
 import { createSceneGraph, type SceneGraph } from './scene/scene-graph.ts';
+import { createSignField, type SignField } from './signs/field.ts';
 import { createTreeField, type TreeField } from './trees/field.ts';
 import type { TreeUniforms } from './trees/materials.ts';
 import { createEnvUniforms, type EnvUniforms } from './weather/wetness.ts';
@@ -48,6 +49,9 @@ export interface RenderContext {
   readonly trees: TreeField;
   readonly treeMaterials: Material[];
   treeUniforms?: TreeUniforms;
+  /** 가상 간판(prop 루트, M05-T06) — 에셋은 loadSignage 뒤. */
+  readonly signs: SignField;
+  readonly signMaterials: Material[];
   readonly atmosphere: AtmosphereRig;
   readonly env: EnvProbe;
   /** 전역 환경 유니폼(젖음 등, 07 §3). */
@@ -105,14 +109,16 @@ function attachAtmosphere(renderer: WebGPURenderer, graph: SceneGraph, view: Ren
 }
 
 /** 아바타(dynamic 루트)·거리 소품 풀(prop 루트, M05-T03). */
-function attachActors(graph: SceneGraph): { avatar: Avatar; props: PropField; trees: TreeField } {
+function attachActors(graph: SceneGraph): { avatar: Avatar; props: PropField; trees: TreeField; signs: SignField } {
   const avatar = createAvatar();
   graph.roots.dynamic.add(avatar.group);
   const props = createPropField(createPropMaterial());
   graph.roots.prop.add(props.root);
   const trees = createTreeField();
   graph.roots.vegetation.add(trees.root);
-  return { avatar, props, trees };
+  const signs = createSignField();
+  graph.roots.prop.add(signs.root);
+  return { avatar, props, trees, signs };
 }
 
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
@@ -132,9 +138,10 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const atmosphere = attachAtmosphere(renderer, graph, view, !post);
   if (backend === 'webgl2') glassRoughness.value = WEBGL2_GLASS_ROUGHNESS;
   const postFor = postEffectsFor(cfg, backend);
-  const { avatar, props, trees } = attachActors(graph);
+  const { avatar, props, trees, signs } = attachActors(graph);
   const treeMaterials: Material[] = [];
-  const casters = () => [...materials.all(), ...avatar.materials, props.material, ...treeMaterials];
+  const signMaterials: Material[] = [];
+  const casters = () => [...materials.all(), ...avatar.materials, props.material, ...treeMaterials, ...signMaterials];
   const makePost = (tier: QualityTier): PostPipeline =>
     post
       ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad)
@@ -156,6 +163,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     props,
     trees,
     treeMaterials,
+    signs,
+    signMaterials,
     atmosphere,
     envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },

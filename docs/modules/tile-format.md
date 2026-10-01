@@ -41,7 +41,7 @@ writeProps(batches: PropBatch[]): Uint8Array;  parseProps(bytes): Result<PropBat
 // trees.inst (M05-T04 ADR-0052): {u32 count} + 24 B 레코드
 writeTrees(records: TreeRecord[]): Uint8Array;  parseTrees(bytes): Result<TreeBatch, TkcError>;  treeRecordAt(batch, i): TreeRecord;  TREE_RECORD_BYTES = 24
 TREE_SPECIES = { ginkgo: 1, zelkova: 2, cherry: 3, camphor: 4, pine: 5, shrub: 6 }; TreeSpeciesName; TreeRecord { species, seed, x, y, z, height, crownR }
-PROP_TYPE = { utilityPole: 1, streetLamp: 2, signalVehicle: 3, signalPedestrian: 4, vendingMachine: 5, guardRail: 6, bollard: 7, signStop: 8, postBox: 9, bicycleRack: 10, busStop: 11, manhole: 12, bench: 13, phoneBooth: 14, wasteBasket: 15 }; PropTypeName  // 번호는 추가만
+PROP_TYPE = { utilityPole: 1, streetLamp: 2, signalVehicle: 3, signalPedestrian: 4, vendingMachine: 5, guardRail: 6, bollard: 7, signStop: 8, postBox: 9, bicycleRack: 10, busStop: 11, manhole: 12, bench: 13, phoneBooth: 14, wasteBasket: 15, signProjecting: 16, signStanding: 17, signRooftop: 18 }; PropTypeName  // 번호는 추가만, 16–18 = 가상 간판(M05-T06, render 간판 필드)
 // gzip (Compression/DecompressionStream)
 gzip(bytes): Promise<Uint8Array>   // mtime 0, OS 바이트 0xFF → 같은 런타임에서 결정론
 gunzip(bytes): Promise<Result<Uint8Array, TkcError>>

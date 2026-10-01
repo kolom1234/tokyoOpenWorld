@@ -14,7 +14,10 @@ function tris(typeId: number, lod: 0 | 1 | 2): number {
 
 describe('prop models', () => {
   it('exist for every PROP_TYPE with fewer triangles per LOD', () => {
-    expect(PROP_TYPE_IDS.slice().sort((a, b) => a - b)).toEqual(Object.values(PROP_TYPE).sort((a, b) => a - b));
+    // 간판 3종(M05-T06)은 소품 풀이 아니라 간판 필드(signs/)가 그린다.
+    const signs: number[] = [PROP_TYPE.signProjecting, PROP_TYPE.signStanding, PROP_TYPE.signRooftop];
+    const pooled = Object.values(PROP_TYPE).filter((t) => !signs.includes(t));
+    expect(PROP_TYPE_IDS.slice().sort((a, b) => a - b)).toEqual(pooled.sort((a, b) => a - b));
     for (const t of PROP_TYPE_IDS) {
       expect(tris(t, 0)).toBeGreaterThan(0);
       expect(tris(t, 0)).toBeGreaterThanOrEqual(tris(t, 1));

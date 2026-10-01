@@ -4,6 +4,7 @@ import { createRenderContext, type RenderContext } from './context.ts';
 import { createFrameSystems } from './frame.ts';
 import { precompileMaterials } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
+import { loadSignageInto } from './signs/load.ts';
 import { loadTreesInto, setTreeWind } from './trees/load.ts';
 
 export { RENDER_PHASE, RENDER_PREP_PHASE } from './frame.ts';
@@ -29,11 +30,12 @@ function statsOf(ctx: RenderContext): RenderStats {
     shadows: ctx.shadows ? { ...ctx.shadows.settings, updated: ctx.counters.shadowUpdates } : null,
     props: ctx.props.stats(),
     trees: ctx.trees.stats(),
+    signs: ctx.signs.stats(),
   };
 }
 
 /** 선컴파일·지연 적재(아바타·나무) — 첫 표시 전후 비동기 작업. */
-function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAvatar' | 'loadTrees'> {
+function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAvatar' | 'loadTrees' | 'loadSignage'> {
   const { renderer, view, graph, log } = ctx;
   return {
     async precompile() {
@@ -65,6 +67,10 @@ function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAv
       await loadTreesInto(ctx, urls);
       log.info('trees attached');
     },
+    async loadSignage(urls) {
+      await loadSignageInto(ctx, urls);
+      log.info('signage attached');
+    },
   };
 }
 
@@ -82,12 +88,14 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       cells.add(p, view.renderOriginWF);
       ctx.props.addCell(p.key, p.originWF, p.instances?.props);
       ctx.trees.addCell(p.key, p.originWF, p.instances?.trees);
+      ctx.signs.addCell(p.key, p.originWF, p.instances?.props);
       ctx.counters.sceneVersion++;
     },
     removeCell: (key) => {
       cells.remove(key);
       ctx.props.removeCell(key);
       ctx.trees.removeCell(key);
+      ctx.signs.removeCell(key);
       ctx.counters.sceneVersion++;
     },
     setHlodChildVisible: (parent, child, visible) => {

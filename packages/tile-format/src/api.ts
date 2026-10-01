@@ -284,6 +284,10 @@ export const PROP_TYPE = {
   bench: 13,
   phoneBooth: 14,
   wasteBasket: 15,
+  /** M05-T06 가상 간판 — 렌더는 소품 풀이 아니라 간판 필드가 그린다. y = 셀 로컬 높이(벽면·옥상), 옥상 scale = 폭 / 10 m. */
+  signProjecting: 16,
+  signStanding: 17,
+  signRooftop: 18,
 } as const;
 export type PropTypeName = keyof typeof PROP_TYPE;
 

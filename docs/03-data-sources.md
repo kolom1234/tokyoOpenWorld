@@ -42,6 +42,9 @@
 | Kenney | 보조 소품/아이콘 | CC0 |
 | `@dgreenheck/ez-tree` | 나무 메시 생성기(파이프라인 `trees`, M05-T04 — 수종 6종 가지·잎 카드 → `apps/game/src/assets/trees/`, 잎 아틀라스·임포스터는 자체 생성, `ATTRIBUTION.json` `ez-tree`, ADR-0052) | MIT (생성물은 자체 산출물) |
 | Noto Sans JP / Noto Sans KR | UI 폰트 (자체 호스팅, 서브셋) | SIL OFL 1.1 |
+| Noto Sans JP Bold (noto-cjk Sans2.004 서브셋 OTF) | 가상 간판 글자 윤곽 → 파이프라인 `signage`가 아틀라스로 굽기(M05-T06, sources.lock `noto-sans-jp`, `ATTRIBUTION.json` `noto-sans-jp`, ADR-0054). 글꼴 파일은 배포하지 않음 | SIL OFL 1.1 |
+| `opentype.js` 2.0.0 | 글꼴 윤곽 읽기(파이프라인 `signage`) | MIT |
+| 자체 제작 (설정 + 코드) | 가상 브랜드 64개(`content/signage/brands.json` 생성 규칙 + `real-brands.txt` 실존 상호 254개 대조 — 일치 0건), 간판 모델·아틀라스(ADR-0054) | 프로젝트 소유 |
 | Freesound (CC0 필터만) / 자체 녹음·합성 | 환경음·효과음 | CC0 / 자체 |
 | 자체 제작 (Blender) | 일본 특유 소품(자판기·전신주·신호등·가드레일·표지판) | 프로젝트 소유 |
 | 자체 제작 (명세 + 코드) | 랜드마크 오버라이드(M05-T05, ADR-0053): `content/overrides/<id>/meta.json` — PLATEAU 면 재사용(셸) + 절차 부품(도리이·동상·화면 등). 위치·높이 = PLATEAU·OSM(각 meta `reference`), 화면 영상은 절차 색면(글자·로고·실존 광고 없음). 외부 에셋 없음 | 프로젝트 소유(셸 형상 = PLATEAU 출처 표기, 위치 = OSM ODbL) |

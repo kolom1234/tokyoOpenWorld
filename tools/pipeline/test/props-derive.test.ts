@@ -240,3 +240,52 @@ describe('props.inst', () => {
     expect(r.ok && r.value).toEqual(out.batches);
   });
 });
+
+describe('signs (M05-T06)', () => {
+  const roads = [road('c', 'carriageway', -50, 100, 306, 120), road('s1', 'sidewalk', -50, 96, 306, 100)];
+  // 상업 건물(바닥 10 m, 높이 24 m) 길가 변 z = 94(바깥 = +Z), 평지붕 34 m.
+  const ring = [20, 10, 64, 240, 10, 64, 240, 10, 94, 20, 10, 94];
+  const roof = [20, 34, 64, 20, 34, 94, 240, 34, 94, 240, 34, 64];
+  const shop: BuildingRecord = {
+    layer: 'buildings',
+    gmlId: 'shop',
+    buildingId: null,
+    lod: 2,
+    measuredHeightM: 24,
+    storeys: 7,
+    storeysBelow: 0,
+    usage: '402',
+    surfaces: [
+      { kind: 'ground', ringsWF: [ring] },
+      { kind: 'roof', ringsWF: [roof] },
+    ],
+    source: 'plateau-shibuya',
+  };
+
+  it('stacks projecting boxes on street walls below the roof, stands A-frames against the wall, and tops some roofs', () => {
+    const out = buildProps(input({ roads, osm: [], buildings: [shop] }));
+    const proj = instancesOf(out, 'signProjecting');
+    expect(proj.length).toBeGreaterThan(10);
+    for (const p of proj) {
+      expect(p[2]).toBeCloseTo(94.05, 5);
+      expect(Math.cos(p[3] as number)).toBeCloseTo(1, 5);
+      expect(p[1] as number).toBeGreaterThanOrEqual(13.6);
+      expect((p[1] as number) + 2.2).toBeLessThanOrEqual(34 - 1 + 1e-6);
+    }
+    for (const s of instancesOf(out, 'signStanding')) expect(s[2]).toBeCloseTo(94.33, 5);
+    expect(out.stats.signs.projecting).toBe(proj.length);
+    const homes = buildProps(input({ roads, osm: [], buildings: [{ ...shop, usage: '411' }] }));
+    expect(homes.stats.signs).toEqual({ projecting: 0, standing: 0, rooftop: 0 });
+  });
+
+  it('puts rooftop billboards on the roof height with width-encoded scale', () => {
+    const always: PropCatalog = {
+      ...CATALOG,
+      types: { ...CATALOG.types, signRooftop: { place: { usage: ['402'], perFacadeM: 0, minHeightM: 14, p: 1 } } },
+    };
+    const r = instancesOf(buildProps(input({ roads, osm: [], buildings: [shop], catalog: always })), 'signRooftop');
+    expect(r).toHaveLength(1);
+    expect(r[0]?.[1]).toBeCloseTo(34, 5);
+    expect(r[0]?.[4]).toBeCloseTo(1.4, 5);
+  });
+});

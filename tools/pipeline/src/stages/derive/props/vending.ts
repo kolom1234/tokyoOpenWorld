@@ -35,7 +35,7 @@ function inRing(r: readonly number[], x: number, z: number): boolean {
   return inside;
 }
 
-interface Edge {
+export interface Edge {
   a: V2;
   u: V2;
   L: number;
@@ -43,7 +43,7 @@ interface Edge {
 }
 
 /** 길가 변(바깥 법선 n 방향 3 m에 보도·차도, 길이 ≥ 모서리 여유 × 2). */
-function streetEdges(c: PlaceCtx, ring: readonly number[]): Edge[] {
+export function streetEdges(c: PlaceCtx, ring: readonly number[]): Edge[] {
   const out: Edge[] = [];
   const cnt = ring.length / 3;
   const sgn = signedArea(ring) > 0 ? 1 : -1;
@@ -61,7 +61,7 @@ function streetEdges(c: PlaceCtx, ring: readonly number[]): Edge[] {
   return out;
 }
 
-type Walls = (x: number, z: number) => boolean;
+export type Walls = (x: number, z: number) => boolean;
 
 /** 자판기 몸체 모서리가 벽 안이 아니고, 양 옆면 너머 SIDE_CLEAR 안에 벽이 없나(벽에 붙은 뒤쪽 0.2 m 줄에서 검사). */
 function clearOfWalls(walls: Walls, e: Edge, p: V2): boolean {
@@ -84,7 +84,7 @@ function placeAt(c: PlaceCtx, walls: Walls, e: Edge, s: number, gap: number): bo
 }
 
 /** 셀 건물 지면 외곽 링(정확 판정, bbox 거름). */
-function wallTest(buildings: readonly BuildingRecord[]): Walls {
+export function wallTest(buildings: readonly BuildingRecord[]): Walls {
   const rings: { r: number[]; x0: number; x1: number; z0: number; z1: number }[] = [];
   for (const b of buildings)
     for (const s of b.surfaces) {

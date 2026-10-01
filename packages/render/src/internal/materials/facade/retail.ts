@@ -1,6 +1,7 @@
-// 절차 파사드 ④ 1층 상점(07 §5-6, flags.retail): 쇼윈도(0.3–3.2 m, 베이마다 멀리언), 간판 띠(3.4–4.2 m, 가상 브랜드 아틀라스는 M05-T06 —
-// 지금은 무지 색판), 차양 띠, 일부 베이 셔터(골판 세로줄). 영업시간·발광은 M09.
-import { abs, float, fract, fwidth, hash, max, mix, select, smoothstep, vec3 } from 'three/tsl';
+// 절차 파사드 ④ 1층 상점(07 §5-6, flags.retail): 쇼윈도(0.3–3.2 m, 베이마다 멀리언), 간판 띠(3.35–4.2 m — 가상 브랜드 아틀라스(M05-T06, signs/atlas):
+// 베이 가운데 4:1 간판(폭 ≤ 3.4 m) + 나머지 띠 = 그 브랜드 바탕색, 적재 전 = 무지 색판), 차양 띠, 일부 베이 셔터(골판 세로줄). 영업시간·발광은 M09.
+import { abs, bool, float, floor, fract, fwidth, hash, max, min, mix, select, smoothstep, vec2, vec3 } from 'three/tsl';
+import { SIGN_BRANDS, signBg, signFace, signReady } from '../../signs/atlas.ts';
 import type { B, F, FacadeGrid, FacadeInputs, V3 } from './grid.ts';
 
 export interface RetailSample {
@@ -56,7 +57,15 @@ export function facadeRetail(i: FacadeInputs, g: FacadeGrid): RetailSample {
   const shutterPaint = vec3(0.45, 0.46, 0.47).mul(ribs.mul(0.25).add(0.8));
   const shutterMask = select(shutter, shopfront.mul(float(1).sub(pillar)), float(0));
   const paintMask = sign.add(awning).add(shutterMask).min(1);
-  const colored = mix(signColor(shop), signColor(hash(shop.add(0.3))), awning);
+  // 간판: 베이 가운데 폭 sw(≤ 3.4 m = 띠 높이 0.85 × 4)에 가로 타일, 띠 나머지는 판 밖(→ 브랜드 바탕색).
+  const sw = min(g.bayW.sub(0.3), float(3.4)).max(0.5);
+  const su = g.lx.sub(g.bayW.sub(sw).mul(0.5)).div(sw);
+  const sv = float(4.2).sub(g.ly).div(0.85);
+  const brand = floor(shop.mul(SIGN_BRANDS));
+  const inRect = su.greaterThan(0).and(su.lessThan(1));
+  const fascia = select(inRect, signFace(brand, vec2(su, sv), bool(false)), signBg(brand));
+  const signPaint = select(signReady.greaterThan(0.5), fascia, signColor(shop));
+  const colored = mix(signPaint, signColor(hash(shop.add(0.3))), awning);
   const paint = mix(colored, shutterPaint, shutterMask);
   return {
     active,

@@ -1,4 +1,4 @@
-// 소품 조립(M05-T03): 셀 OSM·건물·도로 → 배치 규칙(우선순위 순: 신호 → 전주·전선 → OSM 점 → 자판기 → 가드 파이프 → 맨홀) →
+// 소품 조립(M05-T03): 셀 OSM·건물·도로 → 배치 규칙(우선순위 순: 신호 → 전주·전선 → OSM 점 → 자판기 → 간판(M05-T06) → 가드 파이프 → 맨홀) →
 // props.inst 배치(PropBatch) + JCOL 콜라이더 + 전선 메시 + 통계. 셀당 예산(카탈로그 budget, 기본 5k)을 넘으면 뒤 순위부터 버린다. see ADR-0051
 import type { JcolShape, PropBatch } from '@sanpo/tile-format';
 import type { BuildingRecord } from '../../../readers/plateau/types.ts';
@@ -10,6 +10,7 @@ import { placeGuardRails, placeManholes } from './linear.ts';
 import { placePoints } from './points.ts';
 import { placePoles } from './poles.ts';
 import { placeSignals } from './signals.ts';
+import { placeSigns } from './signs.ts';
 import { placeVending } from './vending.ts';
 import { addWire, emptyWires, type WireBuf } from './wires.ts';
 
@@ -20,6 +21,8 @@ export interface PropStats {
   wireSpans: number;
   points: number;
   vending: number;
+  /** 가상 간판(M05-T06): 돌출 상자·입간판·옥상 광고탑. */
+  signs: { projecting: number; standing: number; rooftop: number };
   guardRails: number;
   manholes: number;
   /** 예산 초과로 버린 인스턴스. */
@@ -67,6 +70,7 @@ export function buildProps(i: PropInput): PropOutput {
   const { poles, spans } = placePoles(c, i.osm);
   const points = placePoints(c, i.osm);
   const vending = placeVending(c, i.buildings);
+  const signs = placeSigns(c, i.buildings);
   const guardRails = placeGuardRails(c, i.osm, crossBands(i.osm));
   const manholes = placeManholes(c, i.osm);
   const wires = emptyWires();
@@ -85,6 +89,7 @@ export function buildProps(i: PropInput): PropOutput {
       wireSpans: spans.length,
       points,
       vending,
+      signs,
       guardRails,
       manholes,
       trimmed: c.trimmed,

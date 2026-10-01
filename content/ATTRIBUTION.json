@@ -653,6 +653,22 @@
       "modified": true
     },
     {
+      "id": "noto-sans-jp",
+      "kind": "font",
+      "title": "Noto Sans JP Bold(noto-cjk Sans2.004, 일본어 서브셋 OTF) — 파이프라인 `signage`가 가상 브랜드 간판 글자 윤곽을 아틀라스로 굽는다(M05-T06). 글꼴 파일은 배포하지 않음",
+      "url": "https://github.com/notofonts/noto-cjk",
+      "license": "OFL-1.1",
+      "attribution": {
+        "ja": "看板文字：Noto Sans JP（© Adobe, SIL Open Font License 1.1）",
+        "en": "Sign lettering: Noto Sans JP (© Adobe, SIL Open Font License 1.1)",
+        "ko": "간판 글자: Noto Sans JP (© Adobe, SIL Open Font License 1.1)"
+      },
+      "files": [
+        "apps/game/src/assets/signage/atlas.png"
+      ],
+      "modified": true
+    },
+    {
       "id": "osm-kanto",
       "kind": "data",
       "title": "OpenStreetMap（Geofabrik 関東抽出 kanto-260929.osm.pbf）→ 노면 표시(횡단보도·정지선·차선·止まれ, M05-T02)",

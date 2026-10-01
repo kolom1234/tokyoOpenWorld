@@ -30,13 +30,18 @@ function closestT(p: P2, a: P2, b: P2): number {
 }
 
 const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const cross = (a: Vec3, b: Vec3): Vec3 => [
+  a[1] * b[2] - a[2] * b[1],
+  a[2] * b[0] - a[0] * b[2],
+  a[0] * b[1] - a[1] * b[0],
+];
 
 /** 둘레(i, 닫힘) × 행(k) 격자를 공유 정점·매끈한 법선(중앙 차분, 위쪽)으로 낸다. 삼각형 감기는 면 법선이 위를 향하게. */
 function smoothGrid(s: LStream, grid: { p: Vec3; uv: P2 }[][], m: number): void {
   const n = grid.length;
   const rows = (grid[0] as { p: Vec3 }[]).length;
-  const at = (i: number, k: number) => (grid[((i % n) + n) % n] as { p: Vec3; uv: P2 }[])[Math.min(rows - 1, Math.max(0, k))] as { p: Vec3; uv: P2 };
+  const at = (i: number, k: number) =>
+    (grid[((i % n) + n) % n] as { p: Vec3; uv: P2 }[])[Math.min(rows - 1, Math.max(0, k))] as { p: Vec3; uv: P2 };
   const base = s.count;
   for (let i = 0; i < n; i++) {
     for (let k = 0; k < rows; k++) {

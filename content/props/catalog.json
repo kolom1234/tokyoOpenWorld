@@ -15,7 +15,10 @@
     "manhole": { "place": { "spacingM": [25, 45] } },
     "bench": { "collider": { "kind": "box", "halfExtents": [0.8, 0.22, 0.25], "material": "wood" } },
     "phoneBooth": { "collider": { "kind": "box", "halfExtents": [0.45, 1.1, 0.45], "material": "glass" } },
-    "wasteBasket": { "collider": { "kind": "cylinder", "halfHeight": 0.4, "radius": 0.2, "material": "metal" } }
+    "wasteBasket": { "collider": { "kind": "cylinder", "halfHeight": 0.4, "radius": 0.2, "material": "metal" } },
+    "signProjecting": { "place": { "usage": ["401", "402", "404", "413", "414"], "perFacadeM": 9, "minHeightM": 8 } },
+    "signStanding": { "collider": { "kind": "box", "halfExtents": [0.3, 0.5, 0.25], "material": "metal" }, "place": { "usage": ["402", "404", "413", "414"], "perFacadeM": 10, "minHeightM": 0, "p": 0.45 } },
+    "signRooftop": { "place": { "usage": ["401", "402", "404"], "perFacadeM": 0, "minHeightM": 14, "p": 0.3 } }
   },
   "budget": { "maxInstancesPerCell": 5000 }
 }
