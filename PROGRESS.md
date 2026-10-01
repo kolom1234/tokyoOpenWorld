@@ -2,24 +2,26 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T05 완료(cbcd20f…a6f7460, 25bd36f) → M05-T06 Fictional signage
-- Done in this session: M05-T05 랜드마크 오버라이드 7종(ADR-0053), M05-T04 나무·식생(ADR-0052), M05-T03 거리 소품(ADR-0051), M05-T02 노면 표시(ADR-0050).
-- Earlier this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
+## Current Task: M05-T06 완료(6cecd7b) → M05-T07 Rooftops & facade details 진행 중
+- Done in this session: M05-T06 가상 간판(ADR-0054), M05-T05 랜드마크 7종(ADR-0053), M05-T04 나무(ADR-0052), M05-T03 소품(ADR-0051), M05-T02 노면 표시(ADR-0050).
+- Earlier this session: 결정 0–3, M05-T01(ADR-0049).
 - 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed), `walkbot.mjs`(**URL에 `&debug=1` 필수** — 없으면 walk 대기 시간 초과),
   `lookat.mjs`·`ovcheck.mjs`(시점 스크린샷 — ovcheck는 카메라 이동 뒤 settled 대기, 부분 빌드도 됨), `bootprobe.mjs`(부팅 진행), `treecost.mjs`, `cpshared.mjs`(로컬 부분 빌드에 shared/ 복사).
   in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용. 로컬 부분 빌드는 스폰 3×3(L0_-1..1_-1..1)도 넣어야 첫 표시가 끝난다.
-- 배포 상태(2026-10-01): staging = **a6f7460**(T01–T05) + dev 버킷 current **`20261001-a6f7460-9c667fa9`**(478파일 302.1 MB). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
-  로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 빌드 id 문자열 정렬이 아님(`ls | tail` 금지).
-- In progress: M05-T06(커밋 전, 작업 트리): `content/signage/{brands.json,real-brands.txt}`, `tools/pipeline/src/stages/signage/{raster,brand-generator,atlas,run}.ts`,
-  `derive/props/signs.ts`(돌출 열·입간판·옥상 광고탑, catalog sign* 3종), render `internal/signs/{models,atlas,material,field,load}.ts`, test `tools/pipeline/test/signage.test.ts`(6 통과).
-  남은 연결: tile-format PROP_TYPE signProjecting 16·signStanding 17·signRooftop 18 → opentype.js 2.0.0(MIT) 의존성 + sources.lock `noto-sans-jp`(태그 Sans2.004 NotoSansJP-Bold.otf 4,656,448 B, OFL) →
-  cli-assets `signage` → render api(loadSignage·stats.signs)·service·context(signs 필드·signMaterials)·frame(update) + facade/retail 간판 띠 아틀라스 → game world-view 지연 적재 → 문서(ADR-0054·03·07·모듈 카드) → MVP 재빌드.
-  요요기 지붕 매끈한 법선(tent.ts)은 커밋됨·다음 MVP 재빌드에 반영.
-- Next step (정확히 한 걸음): tile-format `PROP_TYPE`에 간판 3종 추가 → `pnpm --filter @sanpo/pipeline add opentype.js@2.0.0` + lock 항목 → `pnpm pipeline signage`.
+- 배포 상태(2026-10-02): staging = **6cecd7b**(T01–T06) + dev 버킷 current **`20261001-6cecd7b-03883ce7`**(478파일 302.3 MB). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
+  로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 빌드 id 문자열 정렬이 아님(`ls | tail` 금지). 빌드 id = `node tools/pipeline/.tmp/tmp-bid.ts`(makeBuildId).
+- In progress: M05-T07(작업 트리, 커밋 전): 파이프라인 `overrides/rooftops.ts`(옥상 실외기·물탱크·塔屋·난간·안테나 + 소형 건물 외부 비상계단, overrides.mesh 스트림 — `overrideCell`이 대체 안 한 건물마다,
+  UV 0(`plainUv`), 셀당 ≤ 33k 삼각형·≈ 355 KB), LMAT `frp` 15(render landmark 16종), render `facade/balcony.ts`(맨션 발코니: 난간판·슬래브·칸막이 + 깊이 1.2 m 시차 격자 gIn, index.ts 연결).
+  남은 일: 로컬 3×3 빌드로 시각 확인(옥상·발코니·비상계단) → 테스트(rooftops·balcony) → ADR-0055·문서 → check·test → 커밋 → MVP 재빌드·publish·staging·골든(aerial-shinjuku-400m 전후 비교)·걷기 봇.
+- Next step (정확히 한 걸음): `docker/run.sh … build --cells <신주쿠 3×3 + 스폰 3×3> --build-id t07-local` → cpshared → ovcheck로 신주쿠 상공·주거 발코니 시점 확인.
 - OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
 - Blockers: 없음
 
 ## Recently Completed
+- M05-T06 Fictional signage — 가상 브랜드 64개(`content/signage/brands.json` 규칙 + `real-brands.txt` 실존 254개 정규화 대조 **일치 0건**), Noto Sans JP Bold(OFL, lock) → 자체 래스터라이저 →
+  색까지 구운 sRGB 아틀라스 1024 × 2048(400 KB, 팔레트 uniform 배열은 파사드 uniform 버퍼 12개 한도 초과로 폐기), props.inst PROP_TYPE 16 돌출·17 입간판·18 옥상(상업 길가 변),
+  render 간판 필드(종류별 풀, 위치 해시 브랜드) + 파사드 1층 간판 띠 같은 아틀라스. ⚠️ 창문 시트 미구현. MVP 돌출 37,838·입간판 2,469·옥상 753, L0 186.3 MB,
+  **첫 로드 23.7 MB·첫 표시 13.3 s**, 걷기 봇 5분 × 2 낙하 0·끼임 0. 골든뷰 docs/screenshots/M05/T06(`signage-street`). ADR-0054 (2026-10-02)
 - M05-T05 Landmark overrides — `content/overrides/<id>/meta.json`(PLATEAU 셸 재머티리얼 + 절차 부품) → `overrides.mesh`(`_LMAT` 15종, render `landmark` 머티리얼), 대체 건물 렌더만 제외(충돌·meta 유지),
   빌드 시 수평 ≤ 0.5 m·높이 ≤ 1 m 검사. 1) 스크램블 스퀘어·마크시티 연결부 2) 하치코 동상·화단 3) 교차로 비전 4면(가상 영상) 4) 요요기 제1·제2체육관(LOD1 → 절차 현수 지붕) 5) 메이지 신궁
   大鳥居·北参道 도리이 + 자갈 참도(숲 채우기 OSM 길 비우기) 6) 도쿄도청 화강암 격자 7) 신주쿠 서쪽 출구 지하 광장 개구부(짙은 바닥 + 유리 난간 ⚠️ 지형 구멍 불가).
