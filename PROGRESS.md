@@ -2,22 +2,26 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T06 완료(6cecd7b) → M05-T07 Rooftops & facade details 진행 중
-- Done in this session: M05-T06 가상 간판(ADR-0054), M05-T05 랜드마크 7종(ADR-0053), M05-T04 나무(ADR-0052), M05-T03 소품(ADR-0051), M05-T02 노면 표시(ADR-0050).
+## Current Task: M05-T07 완료(ddcda76·26b6603) → M05-T08 Bridges, footbridges & stairs 진행 중
+- Done in this session: M05-T07 옥상·파사드 디테일(ADR-0055), M05-T06 가상 간판(ADR-0054), M05-T05 랜드마크(ADR-0053), M05-T04 나무(ADR-0052), M05-T03 소품(ADR-0051), M05-T02 노면 표시(ADR-0050).
 - Earlier this session: 결정 0–3, M05-T01(ADR-0049).
 - 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed), `walkbot.mjs`(**URL에 `&debug=1` 필수** — 없으면 walk 대기 시간 초과),
   `lookat.mjs`·`ovcheck.mjs`(시점 스크린샷 — ovcheck는 카메라 이동 뒤 settled 대기, 부분 빌드도 됨), `bootprobe.mjs`(부팅 진행), `treecost.mjs`, `cpshared.mjs`(로컬 부분 빌드에 shared/ 복사).
   in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용. 로컬 부분 빌드는 스폰 3×3(L0_-1..1_-1..1)도 넣어야 첫 표시가 끝난다.
-- 배포 상태(2026-10-02): staging = **6cecd7b**(T01–T06) + dev 버킷 current **`20261001-6cecd7b-03883ce7`**(478파일 302.3 MB). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
-  로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 빌드 id 문자열 정렬이 아님(`ls | tail` 금지). 빌드 id = `node tools/pipeline/.tmp/tmp-bid.ts`(makeBuildId).
-- In progress: M05-T07(작업 트리, 커밋 전): 파이프라인 `overrides/rooftops.ts`(옥상 실외기·물탱크·塔屋·난간·안테나 + 소형 건물 외부 비상계단, overrides.mesh 스트림 — `overrideCell`이 대체 안 한 건물마다,
-  UV 0(`plainUv`), 셀당 ≤ 33k 삼각형·≈ 355 KB), LMAT `frp` 15(render landmark 16종), render `facade/balcony.ts`(맨션 발코니: 난간판·슬래브·칸막이 + 깊이 1.2 m 시차 격자 gIn, index.ts 연결).
-  남은 일: 로컬 3×3 빌드로 시각 확인(옥상·발코니·비상계단) → 테스트(rooftops·balcony) → ADR-0055·문서 → check·test → 커밋 → MVP 재빌드·publish·staging·골든(aerial-shinjuku-400m 전후 비교)·걷기 봇.
-- Next step (정확히 한 걸음): `docker/run.sh … build --cells <신주쿠 3×3 + 스폰 3×3> --build-id t07-local` → cpshared → ovcheck로 신주쿠 상공·주거 발코니 시점 확인.
+- 배포 상태(2026-10-02): staging = **26b6603**(T01–T07) + dev 버킷 current **`20261001-ddcda76-03883ce7`**(478파일 352.7 MB). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
+  로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 다른 빌드를 쓰려면 node `fs.utimesSync`로 그 폴더를 최신으로. 빌드 id = `node tools/pipeline/.tmp/tmp-bid.ts`.
+- In progress: M05-T08(작업 트리, 커밋 전): PLATEAU brid 리더(citygml-sax-state THEME_KIND brid·INSTALLATION·GEOM_RE, BridgeRecord layer 'bridges') + normalize `--plateau-layer brid`
+  (data/raw/<plateau>/extracted/udx/brid 압축 해제 완료, normalized/bridges 86동·41셀). 시부야역 일대 PLATEAU 교량 = 상판(≈ 28 m)뿐, 계단은 OSM `highway=steps`(예: 渋谷駅西口歩道橋 w17620008 (4.1,271)→(−28.8,285.1)).
+  남은 일: build — 교량 면 렌더(overrides 스트림, LMAT 종류별, plainUv)·충돌(지면 스트림 = 정밀 단순화) / `derive/stairs.ts`(OSM steps: 끝점 높이 = 교량 상판 또는 지형, 높이차 ≥ 0.5 m만 → 챌면 ≤ 0.20 m 계단 메시 + JCOL 램프 프록시 bit0 + 옆 난간 벽) /
+  계단 봇(`stairbot.mjs` 왕복, 1/6 s 수평 ≥ 0.9 m/s·낙하 0·카메라 프레임당 < 3 cm) / ADR-0056 / MVP 재빌드·publish·staging·골든·걷기 봇.
+- Next step (정확히 한 걸음): `tools/pipeline/src/stages/build/overrides/bridges.ts`(교량 면 → 스트림·정밀 충돌) + assemble에서 셀 bridges 레이어 읽기.
 - OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
 - Blockers: 없음
 
 ## Recently Completed
+- M05-T07 Rooftops & facade details — 옥상 설비(塔屋·물탱크·실외기·난간·안테나)·소형 건물 외부 비상계단 = overrides.mesh 절차 기하(대체 안 한 모든 건물, UV 0, LOD2 옥상 부속물 있으면 생략),
+  맨션 발코니 = 파사드 시차 셰이더(난간판·슬래브·칸막이 + 깊이 1.2 m), 평지붕 방수 마감 색(L0 + HLOD). MVP 실외기 130,876·塔屋 5,681·비상계단 5,234, L0 236.7 MB(+27 %),
+  **첫 로드 20.9 MB·첫 표시 12.9–14.1 s**. 수락: 골든뷰 `aerial-shinjuku-400m` 전·후(docs/screenshots/M05/T07) — HLOD 지붕 색 변화로 원경 평지붕 인상 감소(리뷰 체크리스트). ADR-0055 (2026-10-02)
 - M05-T06 Fictional signage — 가상 브랜드 64개(`content/signage/brands.json` 규칙 + `real-brands.txt` 실존 254개 정규화 대조 **일치 0건**), Noto Sans JP Bold(OFL, lock) → 자체 래스터라이저 →
   색까지 구운 sRGB 아틀라스 1024 × 2048(400 KB, 팔레트 uniform 배열은 파사드 uniform 버퍼 12개 한도 초과로 폐기), props.inst PROP_TYPE 16 돌출·17 입간판·18 옥상(상업 길가 변),
   render 간판 필드(종류별 풀, 위치 해시 브랜드) + 파사드 1층 간판 띠 같은 아틀라스. ⚠️ 창문 시트 미구현. MVP 돌출 37,838·입간판 2,469·옥상 753, L0 186.3 MB,
