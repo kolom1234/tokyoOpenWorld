@@ -142,7 +142,8 @@ async function inspectCell(tkc: Uint8Array, id: string, ctx: CellCtx): Promise<[
   const bld = await meshCounts(r.value.section('buildings.mesh'));
   const roads = await meshCounts(r.value.section('roads.mesh'));
   const decals = await meshCounts(r.value.section('decals.mesh'));
-  const tris = terrain.t + bld.t + roads.t + decals.t;
+  const overrides = await meshCounts(r.value.section('overrides.mesh'));
+  const tris = terrain.t + bld.t + roads.t + decals.t + overrides.t;
   if (tris !== r.value.header.stats.tris) ctx.errors.push(`${id}: stats.tris ${r.value.header.stats.tris} ≠ ${tris}`);
   const sections = Object.fromEntries(r.value.header.sections.map((s) => [s.type, s.length]));
   const { ix, iz } = r.value.header.cell;
