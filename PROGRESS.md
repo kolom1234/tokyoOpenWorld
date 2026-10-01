@@ -1,23 +1,20 @@
 # PROGRESS
-Updated: 2026-10-02 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
+Updated: 2026-10-02 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브랜치 `claude/m06-life`, draft PR)
 
-## Current Milestone: M05 — Street Detail **완료(T01–T08)** → 다음 M06
-## Current Task: M05-T08 완료(b779645·2993754) — M05 큐 끝. 다음 = M06 시작 전 사용자 결정(아래 Decisions Pending)
-- Done in this session: M05-T08 교량·보도육교·계단(ADR-0056), T07 옥상·파사드(ADR-0055), T06 가상 간판(ADR-0054), T05 랜드마크(ADR-0053), T04 나무(ADR-0052), T03 소품(ADR-0051), T02 노면 표시(ADR-0050).
-- Earlier this session: 결정 0–3, M05-T01(ADR-0049).
-- 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, `open(url, { init })` = addInitScript), `walkbot.mjs`(**URL에 `&debug=1` 필수**, `START=x,z`로 시작 위치),
-  `stairbot.mjs`(계단 왕복: 순간이동 → W + 포인터 조향, **rAF를 감싸 프레임마다 최종 상태 기록** — 별도 rAF 기록은 게임 루프와 순서가 섞여 프레임 2개가 한 표본에 들어간다),
-  `lookat.mjs`·`ovcheck.mjs`(시점 스크린샷 — 카메라 이동 뒤 settled 대기, 부분 빌드도 됨), `viewshot.mjs`(URL 첫 표시 스크린샷), `bootprobe.mjs`, `cpshared.mjs`(로컬 부분 빌드에 shared/ 복사), `t08build.sh`(T08 시험 영역 빌드).
-  in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용. 로컬 부분 빌드는 스폰 3×3(L0_-1..1_-1..1)도 넣어야 첫 표시가 끝난다.
-- 배포 상태(2026-10-02): staging = **2993754**(T01–T08) + dev 버킷 current **`20261001-b779645-03883ce7`**(478파일 354.2 MB). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
-  로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 다른 빌드를 쓰려면 node `fs.utimesSync`로 그 폴더를 최신으로. 빌드 id = `cd tools/pipeline && node .tmp/tmp-bid.ts`(저장소 루트에서 실행하면 경로 오류).
-  골든뷰 좌표(`tests/golden/views.json`)는 게임 번들 청크 → 바꾸면 staging 재배포 뒤 캡처.
-- PLATEAU brid 원천: `data/raw/plateau-{shibuya,shinjuku}/extracted/udx/brid/*_op.gml`(zip에서 수동 해제, fetch 미구현) → `normalize --layer plateau --plateau-layer brid` → normalized/bridges 86동·41셀.
-- Next step (정확히 한 걸음): 사용자 결정(Quaternius 유료 Source 여부) 확인 뒤 `docs/roadmap/M06.md`의 첫 태스크 블록 읽기.
-- OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
-- Blockers: 없음(M06 체형 결정은 사용자 몫)
+## Current Milestone: M06 — Life: Crowds & Traffic (사전 항목 1–5 → T01–T07)
+## Current Task: M06 사전 항목(사용자 지정 순서) — 1 ✅ Rocketbox 채택·아바타 교체(e568a59), 다음 = 2 횡단보도 오차
+- Done in this session: 사전 1 Rocketbox(ADR-0057).
+- 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright `@playwright/test` chromium + `channel: 'chrome'` headed, open/settled/shot/waitFor), `avatar-shot.mjs`.
+  dev 서버 = preview_start `game-dev`(vite 5173), 로컬 빌드 `?world=local&debug=1`.
+- 배포 상태(2026-10-02): staging = **2993754**(M05) + dev 버킷 current `20261001-b779645-03883ce7`. 옛 빌드 gc는 10/6 이후(7일 규칙).
+- Next step (정확히 한 걸음): 사전 2 — PLATEAU LOD3 도로 면에 횡단보도(TrafficArea function) 영역이 있는지 normalized 도로 레코드에서 확인.
+- Blockers: 없음
 
 ## Recently Completed
+- M06 사전 1 Rocketbox 캐릭터 — 사용자 결정(Quaternius 유료 안 삼) → Microsoft Rocketbox(MIT, LICENSE.md 원문 확인, 커밋 0943055) 채택. 실측: hipoly 1단계만(6.7–8.7k 삼각형, 81뼈 Biped),
+  LOD는 meshopt(6,732 → 2,399/800/258), VAT는 가능하나 12종 ≈ 180 MB → **뼈 팔레트 텍스처**(≈ 2 MB)로. `pnpm pipeline characters`(컨테이너, 커밋 고정 URL + 파일별 sha256),
+  리그 23뼈(얼굴→머리, 편 손 굽기), 클립 제자리·자연 속력·6 s 반복 자르기, 아틀라스 사분면 KTX2. 플레이어 = Male_Adult_10(GLB 333 KB + KTX2 477 KB) 실제 GPU 3인칭 정지·걷기 확인.
+  군중 12종 선정(정장 비중, 로고 검사 — Male_Adult_09 문구 프린트 제외). Quaternius 단계·GLB·lock·ATTRIBUTION 삭제, MIT 고지 `/third-party-notices.txt`. ADR-0057 (2026-10-02)
 - M05-T08 Bridges, footbridges & stairs — PLATEAU brid 리더(`BridgeRecord`, 상판 윗면 = OuterFloorSurface) + `normalize --plateau-layer brid`, 교량 면 = overrides 스트림(UV 0) + 정밀 지면 충돌,
   계단 = PLATEAU 상판에 닿는 OSM `highway=steps`(높이 차 0.5–10 m·경사 ≤ 45°, 상판 가장자리에서 자름, 착지판) → 챌면 ≤ 0.20 m 메시 + JCOL 램프 프록시(bit0) + 옆 벽 박스,
   계단 통로 안 PLATEAU 블록 면 버림·위 끝 난간 자르기(`overrides/carve.ts`). physics: 램프 프록시 위 수평 속력 유지(접촉 투영만이면 오르막 ≈ v·cos²θ), traversal: 공중 프레임 카메라 오프셋 유지·착지 속도 ≤ 1 m/s·헤드밥 0.3 s 유지.
@@ -64,7 +61,6 @@ Updated: 2026-10-02 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
   → 프리미티브 1·머티리얼 1·**정점색**(텍스처 표본 + 스킨 가중치 옷 영역: 반팔 셔츠·바지·운동화, 머리털 짙은 갈색) → `apps/game/src/assets/avatar-ubc-male.glb` **709 KB·15,619 삼각형**(커밋, Vite 해시 에셋).
   render `loadAvatar`(속력 매듭 0·1.35·3.0·5.0 블렌드, 위상 공유, 재생 속도 [0.75, 1.6]), 첫 표시 뒤 적재(초기 다운로드 밖), `avatarSettled` → `data-settled`. 실제 GPU: 걷기·달리기 60 FPS.
   M06 군중: CC0·같은 골격·43클립 OK, 단순화 1k 삼각형 오차 1.4 cm → LOD 가능. ⚠️ 무료판 체형 = Superhero 남·여뿐 → Regular·Teen은 유료 Source($20, CC0) — **사용자 결정 필요(M06 전)**. ADR-0048 (2026-10-01)
-- M05 결정 1 시작 모드 walk — 로딩 중 freecam → 첫 표시에 world.json 스폰(yawDeg) 눈높이에서 walk 요청(착지점 = walk 링 탐색). `?mode=freecam`·골든뷰 = freecam 유지(render·flicker e2e). ADR-0047 (2026-09-30)
 
 ## Known Issues
 - [physics] 역 에스컬레이터 **데이터 없음**(M07). 육교·계단 = M05-T08(ADR-0056, 램프 프록시 위 수평 속력 유지). 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
@@ -77,7 +73,8 @@ Updated: 2026-10-02 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 - [roads] 옹벽(DEM 급락) 옆 보도는 벽 기하 없이 1.5 m 띠 뒤 급경사 흙면, 횡단보도 앞 연석 낮춤 없음, 보도 윗면 가장자리 정점 4 m 간격 → 치마 사이 ≤ 1 cm 선(ADR-0049).
 - [markings] OSM 횡단 선 위치 오차(스크램블 대각선 ≈ 2 m), 회전 화살표·버스 정류장·자전거 표시 없음, 차선은 OSM lanes 태그 의존(ADR-0050). ⚠ ODbL 파생 DB(osm-derived.gpkg) 공개는 M11-T05.
 - [streaming] 순간이동을 이어 하면 이전 목적지 작업이 큐(동시 8·대기 16)에 남아 스로틀에서 새 발밑 L0가 늦게 온다(Fast 3G 3번째 순간이동 뒤 4분+ 공중 고정 — 낙하 없음). 발밑 L0 우선·이전 목적지 취소는 M08 transition(`whenReady`)과 함께(ADR-0046).
-- [avatar] 무료판 체형 Superhero만(근육질) — 도심 보행자로 과장됨. 유료 Source(Regular·Teen, CC0) 도입 여부는 사용자 결정(ADR-0048). 발 IK 없음(재생 속도 자르기로 약간의 발 미끄럼).
+- [avatar] Rocketbox 리그 23뼈 — 손가락·표정 애니메이션 없음(편 손 고정), 발 IK 없음(재생 속도 [0.75, 1.6] 자르기 → sprint 6.81 m/s 클립을 5 m/s에 쓰면 약간 미끄럼). ADR-0057.
+- [worker] 이 PC에서 miniflare 테스트 'GET 200 … ETag'가 5 s 시간 초과(HEAD에서도 같음 — 환경). 로컬 전체 테스트는 `SANPO_SKIP_MINIFLARE=1` 고려.
 - [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장 + 보도 triMesh + 소품 프리미티브(M05-T03, 64 m 블록 합성). 나무 줄기 = M05-T04. CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱이 길다(기록만).
 - [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).
 - [render] 동적 해상도는 60 Hz 수직 동기에서 여유를 못 재 "시도-후퇴"로 0.05씩 오르내린다(15 W 1080p High: 120 s에 19회, 0.5–0.85). 정지 떨림에는 영향 없음(ADR-0038 측정) — 선명도 변화가 거슬리면 시도 간격·히스테리시스 조정.
@@ -126,7 +123,6 @@ Updated: 2026-10-02 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 
 ## Decisions Pending
 - 라이선스 ⚠ 항목 → M11-T05 (단, 공개 배포 전 필수)
-- **M06 전**: 군중 체형 — Quaternius 무료판(Superhero 남·여)만 쓸지, 유료 Source($20, CC0, Regular·Teen 체형) 도입할지(ADR-0048).
 - M05-T02 ⚠️: OSM 횡단보도 선 위치 오차(스크램블 대각선 ≈ 2 m) — OSM 원본 수정 기여 여부(사용자 계정 작업)·고해상도 정사영상 도입 여부.
 
 ## Pre-flight (사람이 해야 할 일)
