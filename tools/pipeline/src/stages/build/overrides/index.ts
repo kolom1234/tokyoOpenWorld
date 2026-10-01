@@ -8,7 +8,7 @@ import type { BuildingRecord } from '../../../readers/plateau/types.ts';
 import { type Aabb, boundsOf, quantizePositions } from '../buildings-mesh.ts';
 import { remapVertices } from '../terrain-mesh.ts';
 import { LStream } from './geom.ts';
-import { anchorOf, emitPart, type PartCtx } from './parts.ts';
+import { anchorOf, emitPart, hostOf, type PartCtx } from './parts.ts';
 import { type Bounds, emitShell, emptyBounds, growBounds, plateauExtent } from './shell.ts';
 import type { OverrideSet } from './spec.ts';
 
@@ -70,14 +70,15 @@ export async function overrideCell(
       renderSkip.add(gml);
       landmarks.add(lm.id);
       const from = out.pos.length;
-      emitShell(out, b, entry.shell, originWF);
-      for (const p of lm.parts) if (p.type === 'screen' && p.gml === gml) emitPart(ctx, p);
+      if (!entry.shell.skip) emitShell(out, b, entry.shell, originWF);
+      for (const p of lm.parts) if (hostOf(p) === gml) emitPart(ctx, p);
       checks.push(attachedCheck(lm.id, b, out.pos, from, originWF, false));
     }
     for (const p of lm.parts) {
-      if (p.type === 'screen' && lm.replace.includes(p.gml)) continue;
-      const host = p.type === 'screen' ? byGml.get(p.gml) : undefined;
-      if (p.type === 'screen' ? !host : !inCell(originWF, anchorOf(p))) continue;
+      const hostGml = hostOf(p);
+      if (hostGml !== undefined && lm.replace.includes(hostGml)) continue;
+      const host = hostGml === undefined ? undefined : byGml.get(hostGml);
+      if (hostGml === undefined ? !inCell(originWF, anchorOf(p)) : !host) continue;
       landmarks.add(lm.id);
       const from = out.pos.length;
       emitPart(ctx, p);
@@ -110,7 +111,9 @@ function attachedCheck(
   originWF: Vec3Tuple,
   withPlateau: boolean,
 ): OverrideCheck {
-  const want = plateauExtent(b).bounds;
+  const { bounds: want, groundY } = plateauExtent(b);
+  // LOD1(평평한 프리즘)은 측량 높이(measuredHeight)가 더 높으면 그것이 기준 — 형상 높이는 단순화 값.
+  if (b.lod === 1 && b.measuredHeightM !== null) want.max[1] = Math.max(want.max[1], groundY + b.measuredHeightM);
   const local: Bounds = { min: sub3(want.min, originWF), max: sub3(want.max, originWF) };
   const got = withPlateau ? { min: [...local.min] as Vec3Tuple, max: [...local.max] as Vec3Tuple } : emptyBounds();
   growBounds(got, pos, from);

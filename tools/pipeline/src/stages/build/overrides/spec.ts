@@ -37,6 +37,8 @@ export interface ShellRule {
 
 export interface ShellSpec {
   gml: string;
+  /** true = PLATEAU 면을 내지 않는다(붙은 부품 — 예: 현수 지붕 — 이 건물을 대신한다). */
+  skip?: boolean;
   /** 벽을 이 높이(건물 바닥 기준, m)에서 수평으로 자른다 — 높이 띠별 머티리얼. */
   cuts?: number[];
   /** 앞에서부터 처음 맞는 규칙. 없으면 concrete. */
@@ -116,6 +118,20 @@ export interface ScreenPart extends PartBase {
   seed: number;
 }
 
+export interface TentPart extends PartBase {
+  type: 'tent';
+  /** 발자국을 쓰는 건물(셸 skip과 함께). */
+  gml: string;
+  /** 주 케이블 능선 양끝(기둥) WF xz — 같은 점이면 기둥 하나(원뿔형). */
+  spine: [number, number, number, number];
+  /** 처마(둘레 링)·능선 끝 높이·능선 가운데 처짐·기둥 높이(건물 바닥 기준 m), 기둥 지름. */
+  eave: number;
+  ridge: number;
+  sag: number;
+  mast: number;
+  mastD: number;
+}
+
 export interface ToriiPart extends PartBase {
   type: 'torii';
   /** 가사기(맨 위 가로대) 양끝 WF xz — 중심·방향·길이. */
@@ -146,6 +162,7 @@ export type PartSpec =
   | RailingPart
   | RibbonPart
   | ScreenPart
+  | TentPart
   | ToriiPart
   | DogPart;
 

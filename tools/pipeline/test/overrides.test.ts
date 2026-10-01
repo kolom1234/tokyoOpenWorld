@@ -106,6 +106,35 @@ describe('overrideCell', () => {
     expect(o.checks).toEqual([{ landmark: 'vision', gml: 'bldg_a', dxz: expect.closeTo(0.305, 5), dy: 0 }]);
   });
 
+  it('hangs a tent roof over an LOD1 footprint and checks it against measuredHeight', async () => {
+    const gym = { ...boxBuilding('bldg_gym', 20, 30, 120, 60, 10, 17), lod: 1 as const, measuredHeightM: 30 };
+    const tent = (mast: number) =>
+      overrideSetOf([
+        spec({
+          replace: ['bldg_gym'],
+          shell: [{ gml: 'bldg_gym', skip: true, rules: [] }],
+          parts: [
+            {
+              type: 'tent',
+              gml: 'bldg_gym',
+              spine: [40, 60, 120, 60],
+              eave: 6,
+              ridge: 29,
+              sag: 4,
+              mast,
+              mastD: 3,
+              mat: 'steel_dark',
+            },
+          ],
+        }),
+      ]);
+    const ok = await overrideCell(tent(30.4), [gym], [0, 0, 0], flatGround);
+    expect(ok.renderSkip.has('bldg_gym')).toBe(true);
+    expect(ok.checks[0]?.dy).toBeCloseTo(0.4, 5);
+    expect(ok.checks[0]?.dxz).toBeLessThan(0.5);
+    await expect(overrideCell(tent(32), [gym], [0, 0, 0], flatGround)).rejects.toThrow(/tolerance/);
+  });
+
   it('emits free parts in the cell that owns their anchor', async () => {
     const mast = overrideSetOf([
       spec({ id: 'mast', parts: [{ type: 'cyl', at: [30, 40], r: 1, h: 5, mat: 'steel_dark', collide: true }] }),

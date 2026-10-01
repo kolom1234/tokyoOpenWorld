@@ -1,0 +1,19 @@
+{
+  "id": "yoyogi-national-gymnasium",
+  "order": 4,
+  "name": { "ja": "国立代々木競技場（第一・第二体育館）", "en": "Yoyogi National Gymnasium (1st and 2nd)" },
+  "replace": ["bldg_122b8689-b04e-4f91-a5d5-10504b067018", "bldg_e96bbd0c-8052-4d18-9a21-b23ceac2bf15"],
+  "shell": [
+    { "gml": "bldg_122b8689-b04e-4f91-a5d5-10504b067018", "skip": true, "rules": [] },
+    { "gml": "bldg_e96bbd0c-8052-4d18-9a21-b23ceac2bf15", "skip": true, "rules": [] }
+  ],
+  "parts": [
+    { "type": "tent", "gml": "bldg_122b8689-b04e-4f91-a5d5-10504b067018", "spine": [-116, -892, 4, -899], "eave": 6, "ridge": 29, "sag": 4.5, "mast": 30.4, "mastD": 3, "mat": "steel_dark" },
+    { "type": "tent", "gml": "bldg_e96bbd0c-8052-4d18-9a21-b23ceac2bf15", "spine": [-166.5, -765.5, -166.5, -765.5], "eave": 5, "ridge": 18.8, "sag": 0, "mast": 20.2, "mastD": 2.5, "mat": "steel_dark" }
+  ],
+  "reference": [
+    { "source": "plateau-shibuya", "note": "LOD1 bldg 122b8689(제1, measuredHeight 29.8 m — OSM height 30.2와 일치, 형상 프리즘은 17 m)·e96bbd0c(제2, 19.6 m)의 발자국(ground 링) 위 현수 지붕 — 수평 오차 0, 높이 기준 = measuredHeight(기둥 끝 +0.6 m)" },
+    { "source": "osm-kanto", "note": "代々木第一体育館(height 30.2)·代々木第二体育館 건물 면으로 위치 확인. 주 케이블 기둥 = 발자국 꺾임점(꼬리 입구 시작) 안쪽" },
+    { "source": "own", "note": "현수 곡면(처마 6/5 m → 능선, t² 오목)·처짐 4.5 m·기둥 지름은 사진 비율 근사" }
+  ]
+}

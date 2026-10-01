@@ -7,6 +7,7 @@ import { figureDog, figureTorii } from './figures.ts';
 import { box, cylinder, extrude, face, type LStream, norm, sweep } from './geom.ts';
 import { plateauExtent } from './shell.ts';
 import { LMAT, type PartSpec, type ScreenPart, type XZ } from './spec.ts';
+import { tentRoof } from './tent.ts';
 
 export interface PartCtx {
   originWF: Vec3Tuple;
@@ -17,6 +18,10 @@ export interface PartCtx {
   out: LStream;
   collider: LStream;
 }
+
+/** 건물에 붙는 부품(화면·현수 지붕)의 건물 gmlId — 그 건물이 있는 셀이 낸다. */
+export const hostOf = (p: PartSpec): string | undefined =>
+  p.type === 'screen' || p.type === 'tent' ? p.gml : undefined;
 
 /** 부품의 기준점(WF xz) — 이 점이 있는 셀이 낸다(화면은 건물이 있는 셀). */
 export function anchorOf(p: PartSpec): XZ {
@@ -29,6 +34,8 @@ export function anchorOf(p: PartSpec): XZ {
       return [(p.a[0] + p.b[0]) / 2, (p.a[1] + p.b[1]) / 2];
     case 'screen':
       return p.from;
+    case 'tent':
+      return [p.spine[0], p.spine[1]];
     default:
       return [
         p.type === 'extrude' ? (p.ring[0] as number) : (p.path[0] as number),
@@ -88,6 +95,13 @@ export function emitPart(c: PartCtx, p: PartSpec): void {
       case 'screen':
         if (s === c.out) screen(c, p);
         break;
+      case 'tent': {
+        const b = c.building(p.gml);
+        if (!b) throw new Error(`overrides: tent building ${p.gml} not in cell`);
+        const g0 = plateauExtent(b).groundY - c.originWF[1];
+        if (s === c.out) tentRoof(s, b, p, g0, c.originWF[0], c.originWF[2]);
+        break;
+      }
       case 'torii': {
         const [cx, cz] = toLocal(c, anchorOf(p));
         figureTorii(s, [cx, baseY(c, p, anchorOf(p)), cz], p, m);
