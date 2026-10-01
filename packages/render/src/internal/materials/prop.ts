@@ -1,7 +1,18 @@
 // 소품 머티리얼(M05-T03, 07 §4): 절차 모델 정점색 × 인스턴스 색(자판기 가상 브랜드, 그 밖 흰색) — 전 종류 한 머티리얼·LOD당 풀 1개.
 // 전선(power_wire): 어두운 무광 리본, 양면. 위치 = 중심선, `_off` = 모서리 방향 → 반폭 = max(1.5 cm, 거리 × WIRE_PX_K)로 펴서
 // ≈ 1.5 px 선을 남기고(3 cm 리본은 20 m 밖에서 1 px 미만 → TAAU가 지운다), 110–170 m에서 폭 0으로 사라진다. see ADR-0051
-import { attribute, cameraPosition, float, max, modelWorldMatrix, positionLocal, select, smoothstep, vec3, vec4 } from 'three/tsl';
+import {
+  attribute,
+  cameraPosition,
+  float,
+  max,
+  modelWorldMatrix,
+  positionLocal,
+  select,
+  smoothstep,
+  vec3,
+  vec4,
+} from 'three/tsl';
 import { DoubleSide, type Material, MeshStandardNodeMaterial } from 'three/webgpu';
 
 /** 전선 실제 반폭(m). */
@@ -25,7 +36,9 @@ export function createWireMaterial(): Material {
   m.name = 'power_wire';
   const world = modelWorldMatrix.mul(vec4(positionLocal, 1)).xyz;
   const dist = cameraPosition.distance(world);
-  const half = max(WIRE_HALF_M, dist.mul(WIRE_PX_K)).mul(float(1).sub(smoothstep(WIRE_FADE_M[0], WIRE_FADE_M[1], dist)));
+  const half = max(WIRE_HALF_M, dist.mul(WIRE_PX_K)).mul(
+    float(1).sub(smoothstep(WIRE_FADE_M[0], WIRE_FADE_M[1], dist)),
+  );
   m.positionNode = positionLocal.add(attribute('_off', 'vec3').mul(half));
   return m;
 }
