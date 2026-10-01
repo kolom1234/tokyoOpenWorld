@@ -2,20 +2,26 @@
 Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `claude/m05-street-detail`, draft PR #17)
 
 ## Current Milestone: M05 — Street Detail (사용자 결정 0–3 완료)
-## Current Task: M05-T03 완료(037028e…c2c0cc0) → M05-T04 Trees & vegetation
-- Done in this session: M05-T03 거리 소품(037028e·7a6252b·e6a76e9·0ce9949·d4e82c5, ADR-0051), M05-T02 노면 표시(8bb5c6a, ADR-0050).
+## Current Task: M05-T04 완료(7095297…ebc7974) → M05-T05 Landmark overrides
+- Done in this session: M05-T04 나무·식생(7095297·fc5c680·3678f57·57d57f5·a82d5fd·ebc7974, ADR-0052), M05-T03 거리 소품(037028e·7a6252b·e6a76e9·0ce9949·d4e82c5, ADR-0051), M05-T02 노면 표시(8bb5c6a, ADR-0050).
 - Earlier this session: 결정 0 e2e 상태 기반 대기(0e0cd09), 결정 1 시작 모드 walk(2540d22, ADR-0047), 결정 3 로컬 e2e 워커 2(55fa3cd), 결정 2 Quaternius 아바타(c36df27, ADR-0048), M05-T01 도로·보도·연석·지형 성형(e6b9fbc, ADR-0049).
 - 실제 GPU 확인 스크립트(세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright + 설치된 Chrome headed, WebGPU·백그라운드 스로틀 끔), `avatarcheck.mjs`(V·걷기·달리기 스크린샷),
-  `walkbot.mjs`(드래그 전 `exitPointerLock` — 잠금 중 복귀 이동이 회전을 상쇄하던 버그 수정), `lookat.mjs`(절대 시점 스크린샷), `stuckprobe/wedge.mjs`(끼임 재현), `bootlog.mjs`(부팅 단계 시각).
+  `walkbot.mjs`(드래그 전 `exitPointerLock` — 잠금 중 복귀 이동이 회전을 상쇄하던 버그 수정), `lookat.mjs`(절대 시점 스크린샷), `stuckprobe/wedge.mjs`(끼임 재현), `bootlog.mjs`(부팅 단계 시각),
+  `treecost.mjs`(수직 동기 해제 Chrome, 나무 켬 − `?trees=0` rAF 중앙값), `treeview.mjs`(날짜 지정 시점).
   in-app Browser 창은 숨겨지면 rAF가 멈춰 측정에 부적합 → headed Chrome 스크립트 사용.
-- 배포 상태(2026-10-01): staging = **d4e82c5**(T01–T03) + dev 버킷 current **`20260930-e6a76e9-9c667fa9`**(MVP L0 294 + HLOD + 머티리얼, 데칼·소품 포함, 478파일 300.6 MB, Worker HEAD 검증). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
+- 배포 상태(2026-10-01): staging = **ebc7974**(T01–T04) + dev 버킷 current **`20261001-3678f57-9c667fa9`**(MVP L0 294 + HLOD + 머티리얼, 데칼·소품·나무 포함, 478파일 301.8 MB, Worker HEAD 검증). 옛 빌드 gc는 10/6 이후(7일 규칙). publish `--verify-url`은 `…/world`까지.
   로컬 빌드 선택은 data/build의 **mtime 최신**(vite `?world=local`) — 빌드 id 문자열 정렬이 아님(`ls | tail` 금지).
 - In progress: 없음.
-- Next step (정확히 한 걸음): `### M05-T04` → 07 §4(M_FOLIAGE·M_IMPOSTOR)·§8 → `pnpm add` ez-tree 1.1.0(tools/pipeline, MIT — Node에선 텍스처 모듈이 document를 써서 스텁 필요) → 수종 5 + 관목 생성·임포스터·배치(OSM 나무 1,688점·tree_row·공원 면).
+- Next step (정확히 한 걸음): `### M05-T05` → 04 §4.4(4)·03 §5 → 오버라이드 틀(`content/overrides/<id>/meta.json` + 파이프라인 파라메트릭 생성기 → overrides.mesh, PLATEAU 건물 대체·충돌) → 목록 순서 1번 시부야역 일대(스크램블 스퀘어·마크시티 연결부)부터 랜드마크마다 커밋.
 - OSM: Geofabrik 간토 2026-09-29판 `data/raw/osm-kanto/`(lock sha256), 이미지에 osmium-tool 1.19, `normalize --layer osm` = 33,866 피처 → 294셀(횡단 선 ≈1,140·정지 493·신호 678·차선 태그 2,300·나무 1,688·계단 1,245).
 - Blockers: 없음
 
 ## Recently Completed
+- M05-T04 Trees & vegetation — OSM 녹지 면 → 지형 `_SURF` 잔디, `derive/trees/*`(OSM 나무 점·열 → 간선 규칙 가로수 → 숲 6.5 m·공원·정원·관목 격자, 수종 = 태그·도로 이름·해시, 줄기 콜라이더) → `trees.inst`,
+  `pnpm pipeline trees`(ez-tree MIT 6종 + 자체 잎 아틀라스 + CPU 반팔면체 임포스터 → `apps/game/src/assets/trees` 1.56 MB, 첫 표시 뒤 적재), render `trees/*`(Mesh + InstancedBufferGeometry 셰이더 인스턴싱,
+  LOD 30/60 m·임포스터 2 km, 바람, 07 §8 계절, 잎·임포스터 Lambert + 하늘 간접광 보조 AtmosphereLight). **수락**: 오모테산도 느티나무길 골든뷰(11/15 단풍, 시점을 가로수길로 수정) ✅,
+  **나무 GPU 0.77 ms ≤ 2 ✅**(실제 GPU 수직 동기 해제, 켬 − `?trees=0`). ⚠️ 숲: 상공 2.96·숲 안 6.07 ms. 걷기 봇 5분 × 2 낙하 0·끼임 0. MVP 나무 28,577(셀 ≤ 1,129), L0 185.8 MB.
+  **첫 로드(staging) 20.4–23.7 MB·첫 표시 11.3–12.1 s**. 골든뷰 docs/screenshots/M05/T04. ADR-0052 (2026-10-01)
 - M05-T03 Street props — `content/props/catalog.json` + `derive/props/*`: 신호(교차로 건너편 왼쪽·보행 양끝), 전신주(생활도로 30–40 m, 선 id 시드 정거장)·전선 5가닥(`decals.mesh` `power_wire`),
   OSM 점(가로등·우체통·자판기·거치대·벤치·전화·휴지통·버스·볼라드·止まれ 표지), 자판기(**가상 브랜드**, 길가 벽에 붙임·모서리 1.5 m), 가드 파이프(간선)·맨홀 → `props.inst` + JCOL 프리미티브.
   render: 코드 절차 모델 15종 × LOD 3, **LOD당 풀 1개**(합친 기하 + 인스턴스 종류 — three가 InstancedMesh마다 노드 빌드 ≈ 140 ms), 64 m 블록 거리 LOD. physics: 프리미티브 64 m 블록 합성 셰이프.
@@ -85,6 +91,8 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 
 ## Known Issues
 - [physics] 육교·계단·에스컬레이터 **데이터 없음** — 연석·보도는 M05-T01(보도 윗면 TERRAIN triMesh). 육교·계단 = M05-T08, 역 에스컬레이터 = M07. 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
+- [trees] L1 HLOD 나무 카드·HLOD 지면 녹지 색 미구현 → L0 반경(384–768 m) 밖 공원은 회색 지면(요요기 상공 골든뷰). PLATEAU veg 원천 없음. 규칙 가로수는 PLATEAU LOD1 도로 구역(보도 분류 없음)에선 안 생김.
+  빽빽한 숲 나무 GPU 3–6 ms(상세 LOD 잎·그림자) — 대안 ADR-0052. 잎은 알파 테스트 계단(TAAU 완화). `?trees=0` = 나무 끔(비용 비교·flicker e2e).
 - [props] 전선은 전주 사이 직선(5가닥, 110–170 m에서 사라짐), 가로등 규칙 배치 없음(OSM 희소), 차량 신호 방향당 1개, 소품 야간 발광 없음(M09-T03), PLATEAU frn·무전주화 지구 미사용(ADR-0051).
   three `stats.triangles`가 합친 풀의 퇴화 삼각형까지 센다(+0.5M). 첫 표시 12.1–12.7 s ⚠️ — 선컴파일 병렬화·소품 풀 지연 컴파일 검토(T07/T08).
 - [roads] 옹벽(DEM 급락) 옆 보도는 벽 기하 없이 1.5 m 띠 뒤 급경사 흙면, 횡단보도 앞 연석 낮춤 없음, 보도 윗면 가장자리 정점 4 m 간격 → 치마 사이 ≤ 1 cm 선(ADR-0049).
@@ -100,7 +108,7 @@ Updated: 2026-10-01 (session #17 — 큐 모드 M05 Street Detail, 브랜치 `cl
 - [render] TAAU(1080p Medium ≈ 12 %)는 three 패치 없이 경량화 불가 → 동적 해상도로 흡수(ADR-0039). L0 반경 축소(HLOD 우선)도 보류.
 - [render] 정지 화면 원경 수평선 부근 서브픽셀 건물 윤곽의 TAAU 재구성 반짝임 잔존(>12 단계 0.047 % 픽셀, ADR-0038). 대안: TAAU 분산 감마 1.5 패치(−30 %, 고스팅 위험), 원경 윤곽 사전 필터링.
 - [perf] 첫 표시 ≈ 11 s(12 s 목표 근접) — 선컴파일 ≈ 5 s·대기 LUT. 첫 표시 직후 HLOD 1–2 s 디졸브(ADR-0033). T07/T08에서 선컴파일 병렬화 검토.
-- [render] 지면 `_SURF` 7(plaza)이 공원·녹지까지 덮음(요요기 콘크리트색) — M05-T04(식생). 차도–비도로(광장·주차장) 경계 `_SURF` 1 m 계단 잔존(차도–보도 경계는 보도 메시가 덮음, M05-T01).
+- [render] 차도–비도로(광장·주차장) 경계 `_SURF` 1 m 계단 잔존(차도–보도 경계는 보도 메시가 덮음, M05-T01). 녹지는 M05-T04에서 잔디로.
 - [pipeline] PLATEAU 동일 평면 중복 면 z-파이팅 잔존(WebGL2 원점 재설정 e2e ≈ 70 px). 벽–벽 중복 제거는 필요 시 M05-T07.
 - [render] takram 패치 + three 패치(`getViewPosition` 역-Z, ADR-0040)는 three r186 전용 — three/takram 버전을 올리면 패치 재확인.
 - [pipeline] GSI DEM 2025판 표고는 JGD2024(2025 개정) 기준, PLATEAU는 JGD2011 → LOD3 차도 정점 vs dem_1m 차 중앙값 +0.05 m(IQR −0.03~+0.18, p95 +8.2 m = 고가도로). M01-T05는 도로 메시 없음 → M03 도로 빌드 때 도로면 우선 스냅 여부 결정.
