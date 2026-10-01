@@ -1,0 +1,17 @@
+{
+  "id": "scramble-vision",
+  "order": 3,
+  "name": { "ja": "スクランブル交差点の大型ビジョン（架空映像）", "en": "Scramble Crossing video walls (fictional footage)" },
+  "replace": [],
+  "shell": [],
+  "parts": [
+    { "type": "screen", "gml": "bldg_5f7ff4f3-a620-4fd0-a380-3ec46435cd27", "from": [-40.9, -19.9], "to": [-27.0, -21.6], "span": [12, 30], "seed": 1, "mat": "screen" },
+    { "type": "screen", "gml": "bldg_e6e4de58-1a37-4345-8795-6b759771ade6", "from": [-80.2, -14.4], "to": [-64.9, -16.2], "span": [10, 24], "seed": 2, "mat": "screen" },
+    { "type": "screen", "gml": "bldg_d47d8aa9-e4f5-4599-9d9a-bc129a12d6a8", "from": [1.2, -8.2], "to": [5.9, -3.6], "span": [12, 28], "seed": 3, "mat": "screen" },
+    { "type": "screen", "gml": "bldg_6abf2261-478c-437a-93f4-8ba23d7b1cad", "from": [-66.2, 28.0], "to": [-72.7, 20.4], "span": [12, 28], "seed": 4, "mat": "screen" }
+  ],
+  "reference": [
+    { "source": "plateau-shibuya", "note": "교차로(≈ −35, 10)를 향한 PLATEAU 벽 4면(북 5f7ff4f3·북서 e6e4de58·북동 d47d8aa9·남서 6abf2261)에 평행, 0.3 m 금속 함 — 건물 경계 대비 0.31 m" },
+    { "source": "own", "note": "영상 = 절차 색면·원·띠(시드 1–4, 9 s 장면) — 실존 광고·로고·글자 없음. 화면 위치·크기는 사진 인상 근사" }
+  ]
+}

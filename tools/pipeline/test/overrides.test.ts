@@ -92,6 +92,20 @@ describe('overrideCell', () => {
     await expect(overrideCell(tall, [b], [0, 0, 0], flatGround)).rejects.toThrow(/tolerance/);
   });
 
+  it('checks screens on buildings that are not replaced against their PLATEAU bounds', async () => {
+    const vision = overrideSetOf([
+      spec({
+        id: 'vision',
+        parts: [
+          { type: 'screen', gml: 'bldg_a', from: [25, 80], to: [45, 80], span: [20, 32], seed: 1, mat: 'screen' },
+        ],
+      }),
+    ]);
+    const o = await overrideCell(vision, [b], [0, 0, 0], flatGround);
+    expect(o.renderSkip.size).toBe(0);
+    expect(o.checks).toEqual([{ landmark: 'vision', gml: 'bldg_a', dxz: expect.closeTo(0.305, 5), dy: 0 }]);
+  });
+
   it('emits free parts in the cell that owns their anchor', async () => {
     const mast = overrideSetOf([
       spec({ id: 'mast', parts: [{ type: 'cyl', at: [30, 40], r: 1, h: 5, mat: 'steel_dark', collide: true }] }),

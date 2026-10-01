@@ -72,18 +72,17 @@ export async function overrideCell(
       const from = out.pos.length;
       emitShell(out, b, entry.shell, originWF);
       for (const p of lm.parts) if (p.type === 'screen' && p.gml === gml) emitPart(ctx, p);
-      const got = emptyBounds();
-      growBounds(got, out.pos, from);
-      const want = plateauExtent(b).bounds;
-      const local: Bounds = { min: sub3(want.min, originWF), max: sub3(want.max, originWF) };
-      checks.push({ landmark: lm.id, gml, ...boundsDelta(got, local) });
+      checks.push(attachedCheck(lm.id, b, out.pos, from, originWF, false));
     }
     for (const p of lm.parts) {
       if (p.type === 'screen' && lm.replace.includes(p.gml)) continue;
-      const owned = p.type === 'screen' ? byGml.has(p.gml) : inCell(originWF, anchorOf(p));
-      if (!owned) continue;
+      const host = p.type === 'screen' ? byGml.get(p.gml) : undefined;
+      if (p.type === 'screen' ? !host : !inCell(originWF, anchorOf(p))) continue;
       landmarks.add(lm.id);
+      const from = out.pos.length;
       emitPart(ctx, p);
+      // 대체하지 않은 건물에 붙인 화면도 그 건물 경계 대비 검사.
+      if (host) checks.push(attachedCheck(lm.id, host, out.pos, from, originWF, true));
     }
   }
   const bad = checks.filter((c) => c.dxz > POSITION_TOL_M || c.dy > HEIGHT_TOL_M);
@@ -101,6 +100,22 @@ export async function overrideCell(
 }
 
 const sub3 = (a: Vec3Tuple, o: Vec3Tuple): Vec3Tuple => [a[0] - o[0], a[1] - o[1], a[2] - o[2]];
+
+/** 스트림 from.. 기하(+ withPlateau면 PLATEAU 경계 합집합) vs PLATEAU 렌더 면 경계. */
+function attachedCheck(
+  landmark: string,
+  b: BuildingRecord,
+  pos: readonly number[],
+  from: number,
+  originWF: Vec3Tuple,
+  withPlateau: boolean,
+): OverrideCheck {
+  const want = plateauExtent(b).bounds;
+  const local: Bounds = { min: sub3(want.min, originWF), max: sub3(want.max, originWF) };
+  const got = withPlateau ? { min: [...local.min] as Vec3Tuple, max: [...local.max] as Vec3Tuple } : emptyBounds();
+  growBounds(got, pos, from);
+  return { landmark, gml: b.gmlId, ...boundsDelta(got, local) };
+}
 
 async function encodeOverrides(s: LStream): Promise<{ glb: Uint8Array; aabb: Aabb }> {
   await MeshoptEncoder.ready;
