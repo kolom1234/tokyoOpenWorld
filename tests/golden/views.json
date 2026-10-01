@@ -187,6 +187,90 @@
       "time": "2026-05-15T12:00:00+09:00",
       "weather": "clear",
       "seed": 1
+    },
+    {
+      "id": "landmark-scramble-square",
+      "core": false,
+      "title": "시부야 스크램블 스퀘어(랜드마크 1)",
+      "purpose": "핀 커튼월·크라운 셸(PLATEAU 면 재머티리얼)",
+      "eyeWF": [-40, 45, 0],
+      "lookWF": [130, 150, 132],
+      "fovDeg": 60,
+      "time": "2026-05-15T12:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
+    },
+    {
+      "id": "landmark-hachiko",
+      "core": false,
+      "title": "하치코 광장(랜드마크 2)",
+      "purpose": "동상·받침·화단 경계석",
+      "eyeWF": [-5, 18.5, 59],
+      "lookWF": [-15.3, 17, 57.4],
+      "fovDeg": 60,
+      "time": "2026-05-15T14:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
+    },
+    {
+      "id": "landmark-scramble-vision",
+      "core": false,
+      "title": "스크램블 교차로 대형 비전(랜드마크 3)",
+      "purpose": "가상 영상 화면(글자·로고 없음)",
+      "eyeWF": [-20, 18, 30],
+      "lookWF": [-45, 32, -20],
+      "fovDeg": 60,
+      "time": "2026-05-15T14:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
+    },
+    {
+      "id": "landmark-yoyogi-gym",
+      "core": false,
+      "title": "요요기 국립경기장(랜드마크 4)",
+      "purpose": "절차 현수 지붕·기둥·주 케이블",
+      "eyeWF": [-60, 120, -720],
+      "lookWF": [-60, 30, -890],
+      "fovDeg": 60,
+      "time": "2026-05-15T10:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
+    },
+    {
+      "id": "landmark-meiji-otorii",
+      "core": false,
+      "title": "메이지 신궁 大鳥居(랜드마크 5)",
+      "purpose": "묘진 도리이·자갈 참도·숲 비움",
+      "eyeWF": [75, 47, -1612],
+      "lookWF": [40, 45, -1611],
+      "fovDeg": 60,
+      "time": "2026-05-15T10:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
+    },
+    {
+      "id": "landmark-tocho",
+      "core": false,
+      "title": "도쿄도청 쌍탑(랜드마크 6)",
+      "purpose": "화강암 창 격자 셸",
+      "eyeWF": [-700, 260, -3250],
+      "lookWF": [-818, 260, -3320],
+      "fovDeg": 60,
+      "time": "2026-05-15T12:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
+    },
+    {
+      "id": "landmark-shinjuku-west-exit",
+      "core": false,
+      "title": "신주쿠역 서쪽 출구 광장(랜드마크 7)",
+      "purpose": "지하 광장 개구부 난간·섬",
+      "eyeWF": [-182, 90, -3440],
+      "lookWF": [-190, 40, -3510],
+      "fovDeg": 60,
+      "time": "2026-05-15T12:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
     }
   ]
 }
