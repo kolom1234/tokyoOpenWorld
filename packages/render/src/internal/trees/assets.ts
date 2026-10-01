@@ -70,8 +70,15 @@ async function loadTexture(url: string): Promise<Texture> {
   return t;
 }
 
+/** 매니페스트(작은 JSON — 번들러가 data: URL로 인라인하면 CSP connect-src 'self'가 fetch를 막는다 → 직접 해석). */
+async function readManifest(url: string): Promise<TreeManifest> {
+  const m = /^data:application\/json(;base64)?,(.*)$/s.exec(url);
+  if (m) return JSON.parse(m[1] ? atob(m[2] ?? '') : decodeURIComponent(m[2] ?? '')) as TreeManifest;
+  return (await (await fetch(url)).json()) as TreeManifest;
+}
+
 export async function loadTreeAssets(urls: TreeAssetUrls): Promise<TreeAssets> {
-  const manifest = (await (await fetch(urls.manifest)).json()) as TreeManifest;
+  const manifest = await readManifest(urls.manifest);
   const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
   const [gltf, leaves, impostor] = await Promise.all([
     loader.loadAsync(urls.glb),
