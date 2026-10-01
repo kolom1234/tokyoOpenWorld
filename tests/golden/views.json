@@ -283,6 +283,30 @@
       "time": "2026-05-15T14:00:00+09:00",
       "weather": "clear",
       "seed": 1
+    },
+    {
+      "id": "footbridge-shibuya",
+      "core": false,
+      "title": "시부야역 동쪽 보도육교 계단(M05-T08)",
+      "purpose": "PLATEAU 교량 상판 + OSM 계단 챌면 메시·손스침, 상판 가장자리 난간 자름",
+      "eyeWF": [225, 23.5, 193],
+      "lookWF": [220.5, 18.5, 201],
+      "fovDeg": 60,
+      "time": "2026-05-15T14:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
+    },
+    {
+      "id": "footbridge-shinjuku",
+      "core": false,
+      "title": "新都心歩道橋 계단(M05-T08)",
+      "purpose": "PLATEAU 계단 블록을 걷어낸 자리의 OSM 계단(직선·곡선)과 상판 연결",
+      "eyeWF": [-268, 43, -3744],
+      "lookWF": [-289, 38.5, -3727],
+      "fovDeg": 60,
+      "time": "2026-05-15T14:00:00+09:00",
+      "weather": "clear",
+      "seed": 1
     }
   ]
 }
