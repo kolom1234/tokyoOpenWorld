@@ -1,4 +1,5 @@
 // 정지 카메라 떨림(M03 보강): 카메라가 멈춰 있으면 TAAU가 수렴해 연속 프레임이 거의 같아야 한다.
+// 나무는 끈다(`trees=0` — 바람 흔들림은 실제 움직임이라 TAA 떨림 판정을 흐린다, M05-T04).
 // CI(SwiftShader)는 기본으로 후처리를 끄므로 `?forcePost=1`로 GTAO + TAAU 체인을 켜고(480×270 — ≈ 10 FPS), 그림자·동적 해상도는 끈다.
 // 게임 루프 직후(같은 프레임) 캔버스를 복사해 연속 8프레임 휘도 차를 잰다.
 // 기준(로컬 SwiftShader, 역-Z GTAO 패치 ADR-0040 뒤): 고정 노이즈 + 블러(현재) 평균 |Δ| 0.095–0.105·>4 단계 0.23–0.32 %,
@@ -7,7 +8,7 @@ import { expect, type Page, test } from '@playwright/test';
 
 const HIDE_UI = 'body > :not(#view) { visibility: hidden !important; }';
 const QUERY =
-  '/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&mode=freecam&forcePost=1&quality=medium&dynres=0&shadows=0';
+  '/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&mode=freecam&forcePost=1&quality=medium&dynres=0&shadows=0&trees=0';
 /** TAAU 수렴(현재 프레임 가중 0.025) 대기 프레임. */
 const WARMUP_FRAMES = 40;
 const CAPTURE_FRAMES = 8;
