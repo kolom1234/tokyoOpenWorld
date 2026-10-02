@@ -57,10 +57,6 @@ Updated: 2026-10-02 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브�
   **걷기 봇**(실제 GPU, 로컬 MVP, 5분·반경 110 m): 506 m, **낙하 0·끼임 0**(후보 4 = 막다른 곳), 연석 오르내림 9회.
   예산: L0 합 176.4 MB(294셀), roads.mesh 184–286 KB/셀, 보도 삼각형 16–66k/셀, 콜라이더 ≤ 47k/셀. **첫 로드(staging GOLDEN_BOOT) 21.3 MB·첫 표시 8.7 s**(ADR-0033 12.7–13.4 MB 대비 +8 MB, 예산 60 MB 안).
   world-mini 3.74 → 4.98 MB. staging = b6317ad + dev 버킷 current `20260930-6a41591-83074405`(478파일 292.4 MB). 골든뷰 docs/screenshots/M05/T01. ADR-0049 (2026-10-01)
-- M05 결정 2 Quaternius 아바타 — UBC Standard(Superhero_Male + Hair_SimpleParted) + UAL Standard(Idle·Walk·Jog_Fwd·Sprint) → `pnpm pipeline avatar`(호스트 Node, `lib/zip.ts`)
-  → 프리미티브 1·머티리얼 1·**정점색**(텍스처 표본 + 스킨 가중치 옷 영역: 반팔 셔츠·바지·운동화, 머리털 짙은 갈색) → `apps/game/src/assets/avatar-ubc-male.glb` **709 KB·15,619 삼각형**(커밋, Vite 해시 에셋).
-  render `loadAvatar`(속력 매듭 0·1.35·3.0·5.0 블렌드, 위상 공유, 재생 속도 [0.75, 1.6]), 첫 표시 뒤 적재(초기 다운로드 밖), `avatarSettled` → `data-settled`. 실제 GPU: 걷기·달리기 60 FPS.
-  M06 군중: CC0·같은 골격·43클립 OK, 단순화 1k 삼각형 오차 1.4 cm → LOD 가능. ⚠️ 무료판 체형 = Superhero 남·여뿐 → Regular·Teen은 유료 Source($20, CC0) — **사용자 결정 필요(M06 전)**. ADR-0048 (2026-10-01)
 
 ## Known Issues
 - [physics] 역 에스컬레이터 **데이터 없음**(M07). 육교·계단 = M05-T08(ADR-0056, 램프 프록시 위 수평 속력 유지). 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
