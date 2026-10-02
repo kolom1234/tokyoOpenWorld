@@ -604,6 +604,22 @@
       "modified": true
     },
     {
+      "id": "gsi-photo-crossing-corrections",
+      "kind": "data",
+      "title": "OSM 횡단 선 보정값(시부야 스크램블 4개 웨이 — 평행 이동·폭) — GSI 地理院タイル seamlessphoto z18 대조로 측정(ADR-0058). 사진 자체는 게임 데이터에 굽지 않음",
+      "url": "https://maps.gsi.go.jp/development/ichiran.html",
+      "license": "GSI-Content-Terms (CC-BY-4.0 compatible)",
+      "attribution": {
+        "ja": "出典：地理院タイル（全国最新写真（シームレス））を加工して作成",
+        "en": "Source: GSI Tiles (seamless aerial photo), processed",
+        "ko": "출처: 국토지리원 지리원 타일(심리스 항공사진) 가공"
+      },
+      "files": [
+        "content/markings/osm-crossing-corrections.json"
+      ],
+      "modified": true
+    },
+    {
       "id": "rocketbox",
       "kind": "model",
       "title": "Microsoft Rocketbox Avatar Library(커밋 0943055) — 플레이어 아바타 Male_Adult_10 + 군중 베이스 12종(메시·기본색 텍스처·Biped 클립) → 리그 23뼈·LOD·아틀라스 KTX2·뼈 팔레트로 변환(ADR-0057). MIT 고지 = apps/game/public/third-party-notices.txt",

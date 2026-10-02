@@ -13,6 +13,7 @@ import { createPlateauReader } from './readers/plateau/index.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
 import { readOverrides } from './stages/build/overrides/index.ts';
+import { readCrossingCorrections } from './stages/derive/markings/corrections.ts';
 import { readCatalog } from './stages/derive/props/context.ts';
 import { buildPlateauMini, buildWorldMini, type LockSource } from './stages/fixture.ts';
 import { fetchDemTiles, resampleFarDem, writeFarDem } from './stages/hlod/dem-far.ts';
@@ -83,7 +84,7 @@ async function normalizePlateauLayer(
   const perSource = ids.map((id) => `${id} ${res.files.filter((f) => f.sourceId === id).length}`).join(', ');
   log.info(
     `plateau: files (${perSource}), ${res.features} features → ${res.buildings} buildings, ` +
-      `${res.roadPieces} road pieces, ${res.bridges} bridges, ${res.written.length} cell files`,
+      `${res.roadPieces} road pieces, ${res.bridges} bridges, ${res.markings} markings, ${res.written.length} cell files`,
   );
 }
 
@@ -155,6 +156,7 @@ async function build(args: string[]): Promise<void> {
     log: log.child('build'),
     props: readCatalog(REPO_ROOT),
     overrides: readOverrides(REPO_ROOT),
+    crossingCorrections: readCrossingCorrections(REPO_ROOT),
   });
   const bytes = stats.reduce((a, s) => a + s.bytes, 0);
   log.info(`build ${buildId}: ${stats.length} cells, ${bytes} B in ${((performance.now() - t0) / 1000).toFixed(1)} s`);

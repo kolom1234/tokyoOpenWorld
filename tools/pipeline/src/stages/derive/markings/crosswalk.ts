@@ -43,13 +43,15 @@ function addSegment(c: MarkCtx, a: V2, b: V2, width: number): number {
   return bars;
 }
 
-/** 횡단 선 하나 → 막대들(이 셀 소유분). 반환 = 막대 수. */
-export function addCrosswalk(c: MarkCtx, r: OsmRecord): number {
+/** 횡단 선 하나 → 막대들(이 셀 소유분). skip = 선분을 그리지 않을지(PLATEAU 横断歩道가 덮음 — M06 사전 2). 반환 = 막대 수. */
+export function addCrosswalk(c: MarkCtx, r: OsmRecord, skip?: (a: V2, b: V2) => boolean): number {
   const xz = r.rings[0] ?? [];
   const width = crosswalkWidth(r);
   let n = 0;
   for (let i = 0; i + 3 < xz.length; i += 2) {
-    n += addSegment(c, [xz[i] as number, xz[i + 1] as number], [xz[i + 2] as number, xz[i + 3] as number], width);
+    const a: V2 = [xz[i] as number, xz[i + 1] as number];
+    const b: V2 = [xz[i + 2] as number, xz[i + 3] as number];
+    if (!skip?.(a, b)) n += addSegment(c, a, b, width);
   }
   return n;
 }
