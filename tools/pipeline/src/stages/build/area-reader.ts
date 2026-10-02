@@ -1,8 +1,9 @@
-// 영역 빌드 입력 읽기: 정규화 층 파일(셀별 ndjson.gz) + 8-이웃 캐시(도로 조각·건물 발자국). assemble.ts buildArea가 쓴다.
+// 영역 빌드 입력 읽기: 정규화 층 파일(셀별 ndjson.gz) + 8-이웃 캐시(도로 조각·건물 발자국·교량·계단·道路標示). assemble.ts buildArea가 쓴다.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { type CellKey, cellIdString, packCellKey, unpackCellKey } from '@sanpo/core';
 import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
+import type { MarkingRecord } from '../../readers/plateau/frn-markings.ts';
 import type { BridgeRecord, BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { type FootprintSource, footprintSources } from '../derive/footprints.ts';
 import type { OsmRecord } from '../normalize-osm.ts';
@@ -20,6 +21,7 @@ export function aroundReader(normalizedDir: string) {
   const prints = new Map<CellKey, FootprintSource[]>();
   const bridges = new Map<CellKey, BridgeRecord[]>();
   const steps = new Map<CellKey, OsmRecord[]>();
+  const marks = new Map<CellKey, MarkingRecord[]>();
   const get = <T>(m: Map<CellKey, T>, k: CellKey, load: () => T): T => {
     let v = m.get(k);
     if (v === undefined) {
@@ -42,8 +44,11 @@ export function aroundReader(normalizedDir: string) {
   const bridgesOf = (k: CellKey) => get(bridges, k, () => readLayer<BridgeRecord>(normalizedDir, 'bridges', k));
   const stepsOf = (k: CellKey) =>
     get(steps, k, () => readLayer<OsmRecord>(normalizedDir, 'osm', k).filter((r) => r.tags.highway === 'steps'));
+  const marksOf = (k: CellKey) => get(marks, k, () => readLayer<MarkingRecord>(normalizedDir, 'markings', k));
   return {
     bridgesOf,
+    /** 셀 + 8-이웃 PLATEAU 道路標示(M06 사전 2 — 셀 경계를 걸친 横断歩道). */
+    markingsAround: (k: CellKey) => around(k, marksOf),
     /** 이웃 포함 OSM 계단 선(교량 계단 통로 — M05-T08). 셀 경계를 걸친 선은 중복될 수 있다. */
     stepsAround: (k: CellKey) => around(k, stepsOf),
     bridgesAround: (k: CellKey) => around(k, bridgesOf),

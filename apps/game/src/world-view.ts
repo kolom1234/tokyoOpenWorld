@@ -14,6 +14,7 @@ import {
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import {
+  type AvatarAssetUrls,
   createRender,
   type RenderConfig,
   type RenderService,
@@ -146,13 +147,16 @@ function loadMaterialsLater(render: RenderService, url: string | undefined, late
     });
 }
 
-/** 플레이어 아바타 GLB(파이프라인 `avatar`, Quaternius CC0 — ADR-0048). Vite가 해시 에셋으로 만든다(/assets/*, immutable). */
-export const AVATAR_URL = new URL('./assets/avatar-ubc-male.glb', import.meta.url).href;
+/** 플레이어 아바타(파이프라인 `characters`, Microsoft Rocketbox MIT — ADR-0057). Vite가 해시 에셋으로 만든다(/assets/*, immutable). */
+export const AVATAR_URLS: AvatarAssetUrls = {
+  glb: new URL('./assets/characters/avatar-rb.glb', import.meta.url).href,
+  texture: new URL('./assets/characters/avatar-rb.ktx2', import.meta.url).href,
+};
 
 /** 아바타 모델도 첫 표시 뒤(초기 다운로드 예산 밖). 실패하면 절차 마네킹. */
 function loadAvatarLater(render: RenderService, late: LateState, log: Logger): void {
   void render
-    .loadAvatar(AVATAR_URL)
+    .loadAvatar(AVATAR_URLS)
     .catch((e: unknown) => log.warn('avatar', e))
     .finally(() => {
       late.avatarSettled = true;

@@ -132,6 +132,12 @@ export interface RenderStats {
   signs: { instances: number; visible: number; pools: number; ready: boolean };
 }
 
+/** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */
+export interface AvatarAssetUrls {
+  glb: string;
+  texture: string;
+}
+
 /** 나무 에셋 URL(파이프라인 `trees` 산출, 게임 번들 해시 에셋). */
 export interface TreeAssetUrls {
   manifest: string;
@@ -175,10 +181,10 @@ export interface RenderService extends SystemProvider {
   /** 플레이어 아바타 상태(절차 마네킹 M04-T05 → 모델 ADR-0048). 매 프레임 renderPrep 전에. */
   setAvatar(a: Readonly<AvatarState>): void;
   /**
-   * 아바타 모델 GLB(파이프라인 `avatar` — Quaternius UBC + UAL 클립, ADR-0048) 적재 → 선컴파일 → 마네킹 교체. 첫 표시 뒤에 부른다.
+   * 아바타 모델(파이프라인 `characters` — Rocketbox GLB + KTX2 아틀라스, ADR-0057) 적재 → 선컴파일 → 마네킹 교체. 첫 표시 뒤에 부른다.
    * 실패하면 reject하고 절차 마네킹을 계속 쓴다.
    */
-  loadAvatar(url: string): Promise<void>;
+  loadAvatar(urls: AvatarAssetUrls): Promise<void>;
   /**
    * 나무 에셋(파이프라인 `trees` — 수종 GLB·잎·임포스터 아틀라스, M05-T04) 적재 → 머티리얼 선컴파일 → 셀 trees.inst를 그리기 시작.
    * 첫 표시 뒤에 부른다(초기 다운로드 밖). 그 전 셀의 나무도 기억했다가 그린다.

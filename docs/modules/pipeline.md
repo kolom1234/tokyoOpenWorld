@@ -6,11 +6,11 @@ Layer: — | Depends: core, geo, tile-format, @gltf-transform/*, meshoptimizer, 
 상세: `docs/04-data-pipeline.md`, 포맷: `docs/05-tile-format.md`.
 
 ## CLI
-`pnpm pipeline <fetch|normalize|derive|build|hlod|materials|avatar|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
+`pnpm pipeline <fetch|normalize|derive|build|hlod|materials|characters|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
 
 ## Files
 ```
-src/cli.ts                      명령 파서(구현: normalize --area --cells --layer plateau|terrain|all --source --reader --plateau-layer bldg|tran|brid; build --area --cells --build-id; validate --build-id)
+src/cli.ts                      명령 파서(구현: normalize --area --cells --layer plateau|terrain|all --source --reader --plateau-layer bldg|tran|brid|frn; build --area --cells --build-id; validate --build-id)
 src/context.ts                  경로·설정·로거·캐시 키
 src/readers/plateau/{index,types,codes,geometry,citygml-sax,citygml-sax-state,citygml-assemble,nusamai}.ts  (ADR-0007)
 src/readers/dem.ts              GSI FGD DEM xml(zip 멤버 스트림) → Float32 타일 + EPSG:6668 VRT (M01-T03)
@@ -44,7 +44,9 @@ src/stages/validate-roads.ts     `validate`의 `road gaps`(교차로 50곳 < 2 c
 src/stages/normalize-osm.ts      `normalize --layer osm`(M05-T02, ADR-0050): lock osm-kanto(sha256 스트림) → osmium extract·tags-filter·export GeoJSONSeq → WF → data/normalized/osm/<cell>.ndjson.gz(OsmRecord {id, geom, rings(xz), tags, source})
 src/stages/derive/markings/{common,crosswalk,lanes,stopline,text,index}.ts   노면 표시: 1 m 칸 데칼 띠(지형 + 2 cm, 셀 소유) / 일본식 횡단보도 / 차선(좌측통행·폭 행진) / 정지선(신호·stop) / 「止まれ」 획 폰트 / 조립·통계
 src/stages/build/decals-mesh.ts  decals.mesh(road_marking, u16 위치, `_PAINT`)
-src/checks/markings-photo.ts     GSI z18 사진 대조(검증 전용, PHOTO_DEBUG 그림)
+src/checks/{markings-photo,photo-tiles}.ts   GSI z18 사진 대조(검증 전용): 끝 측면 맞춤 지표, osm|osm-raw|plateau, PHOTO_DEBUG·PHOTO_DUMP·PROFILE_PRINT(ADR-0058 — z18 참값 오차 중앙값 0.8 m)
+src/readers/plateau/frn-markings.ts   frn LOD3 道路標示(1xxx) saxes 리더 → MarkingRecord {id, function, polygonsWF}(M06 사전 2)
+src/stages/derive/markings/{plateau,corrections}.ts   PLATEAU 横断歩道·停止線 우선(줄무늬/영역, 경계 변 방향, OSM 덮임 대체) · OSM 횡단 보정(content/markings)
 src/stages/derive/props/{context,signals,poles,points,vending,linear,wires,index}.ts   거리 소품(M05-T03, ADR-0051): 카탈로그·배치 문맥(셀 소유·표면 높이·예산) / 신호(교차로 건너편 왼쪽·보행 양끝) / 전신주(선 id 시드 정거장)·전선 경간 / OSM 점 / 자판기(가상 브랜드, 길가 벽) / 가드 파이프·맨홀 / 전선 리본(중심선 + `_OFF`) / 조립(우선순위·예산 5k)
 src/stages/build/props-cell.ts   셀 소품: 표면 높이(보도 윗면·지형)·교차부·건물 발자국 → buildProps → props.inst(gzip)·콜라이더·전선
 src/stages/build/area-reader.ts  영역 빌드 입력(셀별 ndjson.gz, 8-이웃 캐시)
@@ -57,7 +59,7 @@ src/stages/signage/{raster,brand-generator,atlas,run}.ts   `pnpm pipeline signag
 src/stages/derive/props/signs.ts   간판 배치(돌출 상자 열·입간판·옥상 광고탑, 상업 용도 길가 변) — props.inst PROP_TYPE 16–18
 src/stages/derive/vegetation.ts · derive/trees/{species,place,street,fill,index}.ts   녹지 `_SURF` 잔디 / 나무 배치(OSM 점·열, 규칙 가로수, 녹지 격자, 수종, 줄기 콜라이더, 셀 4k) — M05-T04 ADR-0052
 src/stages/trees/{generate,leaf-atlas,impostor,run}.ts · src/cli-assets.ts   `pnpm pipeline trees`(ez-tree 수종 → GLB, 자체 잎 아틀라스, CPU 반팔면체 임포스터 → apps/game/src/assets/trees) / 에셋 CLI(materials·avatar·trees)
-src/stages/avatar/{run,bake,anims}.ts  `avatar`(M05 결정 2, ADR-0048): data/raw Quaternius UBC·UAL zip(sha256 lock, lib/zip.ts) → 몸+머리털 프리미티브 1개·정점색(텍스처 표본 + 스킨 가중치 옷 영역)·클립 4개(회전 + pelvis 이동, _RM 자연 속력) → apps/game/src/assets/avatar-ubc-male.glb(커밋)
+src/stages/characters/{source,fbx,tga,rig,mesh,pose,atlas,prepare,player,crowd,run}.ts  `characters`(ADR-0057, 컨테이너 — toktx): content/characters/catalog.json → Rocketbox(커밋 고정 URL, sha256 lock `rocketbox`) FBX(three FBXLoader)·TGA → 리그 23뼈(얼굴→머리, 편 손 굽기)·LOD(meshopt)·클립(제자리·자연 속력·6 s 반복 자르기)·아틀라스(사분면, 마스크 축소 + 번짐) → apps/game/src/assets/characters/(avatar-rb.glb·.ktx2 + 군중 팩 M06-T01)
 src/stages/materials/{library,fetch,encode,run,interiors,interior-rooms}.ts  `materials`(M03-T01, ADR-0027; 실내 큐브맵 8방 × 6면 광선 추적 → interiors.ktx2 M03-T05, ADR-0034): content/materials/library.json → ambientCG zip(sha256 lock, `--update-lock`) → ImageMagick(리사이즈·ORM 패킹) → toktx KTX2 배열 3장 + manifest → 캐시 data/derived/materials/<hash> → `--build-id` 설치(shared/materials)
 src/stages/validate-materials.ts  manifest 스키마(schemas/materials.schema.json)·파일 크기·KTX2 헤더·그룹 일관성(없으면 건너뜀)
 interiors.ts  trees/*  characters/*  signage/*  timetables/*  map-tiles.ts   (미구현)
@@ -78,7 +80,7 @@ interface PlateauReader { readonly name: 'nusamai' | 'citygml-sax'; read(file: s
 type NormalizedFeature = BuildingRecord | RoadRecord;   // 필드: docs/04-data-pipeline.md §4.2 표, 정의: readers/plateau/types.ts
 createPlateauReader(impl = 'citygml-sax'); parseCityGmlString(xml, sourceId)   // 후자는 테스트·픽스처용
 createCityGmlSaxReader().readChunks(asyncIterableOfStrings, { sourceId })       // 스트림 입력(unzip -p)
-normalizePlateau({ sources: [{ sourceId, rawRoot }…], cells, outDir, reader, log, layers? })  // → data/normalized/{buildings,roads,bridges}/<cellId>.ndjson.gz (layers 기본 bldg·tran·brid)
+normalizePlateau({ sources: [{ sourceId, rawRoot }…], cells, outDir, reader, log, layers? })  // → data/normalized/{buildings,roads,bridges,markings}/<cellId>.ndjson.gz (layers 기본 bldg·tran·brid·frn — frn은 道路標示만)
                                                                                 // 소스들을 한 버킷으로, 같은 메시 파일명은 앞 소스만(都 pref 판 = 메시 단위)
 ```
 - 원천 배치: `data/raw/<sourceId>/<zip>` + `data/raw/<sourceId>/extracted/{udx,codelists,…}`.

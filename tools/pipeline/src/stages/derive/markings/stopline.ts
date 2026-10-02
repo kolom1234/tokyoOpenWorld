@@ -46,6 +46,7 @@ const oneway = (r: OsmRecord): boolean => r.tags.oneway === 'yes' || r.tags.onew
 function stopAcross(c: MarkCtx, y: V2, d: V2, r: OsmRecord, dirSign: 1 | -1): boolean {
   // 교차부(1020) 안·보도 위·남의 셀이면 없음 — 교차로를 통과하는 선의 반대편 교차점은 교차부 안에 떨어진다.
   if (!owns(c, y) || c.roads.classify(y[0], y[1]) !== 'road' || c.inIntersection(y[0], y[1])) return false;
+  if (c.stopBlocked?.(y)) return false;
   const v = leftOf(d);
   const eL = edgeDistance(c, y, v);
   const eR = edgeDistance(c, y, mul(v, -1));
