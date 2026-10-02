@@ -1,6 +1,8 @@
-// freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → CameraState. physics 불필요. see docs/09-traversal.md §2 freecam
+// freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → (physics 있으면) 지오메트리 진입 방지(free-guard.ts) → CameraState.
+// physics 없이도 동작(가드 생략). see docs/09-traversal.md §2 freecam
 import type { CameraState, FrameContext, ModeId } from '@sanpo/core';
 import type { FreecamParams, ModeOutput, TraversalContext, TraversalMode, TraversalSettings } from '../../api.ts';
+import { createFreeGuard, type FreeGuard, resetFreeGuard, stepFreeGuard } from '../camera/free-guard.ts';
 import { clampPitch, createFreeRigState, type FreeRigIntent, rigQuat, stepFreeRig } from '../camera/free-rig.ts';
 
 const MS_TO_KMH = 3.6;
@@ -23,9 +25,15 @@ function readIntent(ctx: TraversalContext, lookRadPerPx: number): FreeRigIntent 
   };
 }
 
-export function createFreecamMode(settings: Readonly<TraversalSettings>): TraversalMode {
+export interface FreecamMode extends TraversalMode {
+  /** 지오메트리 진입 방지 상태(디버그·테스트). */
+  readonly guard: Readonly<FreeGuard>;
+}
+
+export function createFreecamMode(settings: Readonly<TraversalSettings>): FreecamMode {
   const cfg = settings.freecam;
   const rig = createFreeRigState({ x: 0, y: 0, z: 0 }, 0, 0, cfg.startSpeedMs);
+  const guard = createFreeGuard();
   const camera: CameraState = {
     posWF: rig.posWF,
     quat: { x: 0, y: 0, z: 0, w: 1 },
@@ -41,6 +49,7 @@ export function createFreecamMode(settings: Readonly<TraversalSettings>): Traver
   return {
     id: 'freecam',
     requires: [],
+    guard,
     enter(ctx: TraversalContext, _from: ModeId, params?: unknown) {
       ctx.input.setContext('fly');
       if (isFreecamParams(params)) {
@@ -50,10 +59,12 @@ export function createFreecamMode(settings: Readonly<TraversalSettings>): Traver
       }
       rig.velWF.x = rig.velWF.y = rig.velWF.z = 0;
       rigQuat(camera.quat, rig.yawRad, rig.pitchRad);
+      resetFreeGuard(guard);
     },
     update(frame: FrameContext, ctx: TraversalContext) {
       const ground = ctx.ground.groundHeightAt(rig.posWF.x, rig.posWF.z);
       stepFreeRig(rig, readIntent(ctx, settings.lookRadPerPx), frame.dtReal, cfg, ground);
+      stepFreeGuard(guard, rig, ctx.physics);
       rigQuat(camera.quat, rig.yawRad, rig.pitchRad);
       output.hud.speedKmh = Math.hypot(rig.velWF.x, rig.velWF.y, rig.velWF.z) * MS_TO_KMH;
       return output;
@@ -66,6 +77,7 @@ export function createFreecamMode(settings: Readonly<TraversalSettings>): Traver
       rig.yawRad = yawRad;
       rig.velWF.x = rig.velWF.y = rig.velWF.z = 0;
       rigQuat(camera.quat, rig.yawRad, rig.pitchRad);
+      resetFreeGuard(guard);
     },
   };
 }

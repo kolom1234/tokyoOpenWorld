@@ -43,13 +43,14 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 - 바디 없는 모드(freecam)에서는 `player.posWF` = 카메라 위치, `player.yawRad` = 카메라 수평 방위. walk = 발 위치·물리 속도·몸 방향.
 
 ## Files
-api.ts, internal/(fsm, service, settings, walk-placement — 착지점 하늘 레이, ground-guard — 발밑·앞 셀 적재 확인), internal/modes/(freecam, walk), internal/camera/(free-rig, first-person-rig — 시선 스무딩·발 높이 스프링·헤드밥, third-person-rig — 붐·아바타 페이드, boom — 부채꼴 sphereCast·회전 상한).
+api.ts, internal/(fsm, service, settings, walk-placement — 착지점 하늘 레이, ground-guard — 발밑·앞 셀 적재 확인), internal/modes/(freecam, walk), internal/camera/(free-rig, free-guard — freecam 지오메트리 진입 방지(구 캐스트 쓸기 + 6방향 레이 안쪽 판정, ADR-0059), first-person-rig — 시선 스무딩·발 높이 스프링·헤드밥, third-person-rig — 붐·아바타 페이드, boom — 부채꼴 sphereCast·회전 상한).
 예정: modes/(drive, cycle, train, transition), camera/(chase-rig, attached-rig), interactables.ts, interest.ts.
 
 ## Tests
 test/free-rig.test.ts(방향 규약·쿼터니언 = forwardOf·롤 잠금, lookAt 역함수, 관성 감쇠 수치, 휠 속도 범위, sprint, 고도 상한·지면 여유, 피치 제한),
 test/service.test.ts(시작 포즈·fly 컨텍스트·phase, W 이동·km/h, teleport, physics 필요 모드 거부·C 토글·중복 등록),
+test/free-guard.test.ts(벽 접촉 멈춤·법선 속도 제거, 닿은 채 떨어지기, 닫힌 판 안 → 가까운 뒷면 너머, 바깥 시작 유지·늦은 결과 버림),
 test/walk.test.ts(가짜 physics: C → 지붕 아닌 지면 착지·대기 중 카메라 유지, 걸음 단계·달리기·대각선, FP 눈높이, V 3인칭 어깨·뒤·붐 풀림·벽 1 m → 0.95 m 안·아바타 페이드, C 복귀 = 바디, 멀면 다시 놓기).
 
 ## Status
-M01-T06 freecam(physics 없음), M04-T03 walk(ADR-0043), T04 발 높이 스프링(ADR-0044, 공중 연속 M05-T08 ADR-0056), T05 3인칭 충돌·아바타(ADR-0045), T06 발밑 보호(ADR-0046) → M07(train), M08(transition·상호작용).
+M01-T06 freecam(physics 없음), M04-T03 walk(ADR-0043), T04 발 높이 스프링(ADR-0044, 공중 연속 M05-T08 ADR-0056), T05 3인칭 충돌·아바타(ADR-0045), T06 발밑 보호(ADR-0046), M06 사전 3 freecam 진입 방지(ADR-0059) → M07(train), M08(transition·상호작용).
