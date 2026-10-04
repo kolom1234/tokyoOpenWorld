@@ -24,6 +24,8 @@
 `density(area, t) = base[areaKind] × diurnal[dayType][hour] × weatherFactor × hotspot`
 - areaKind: 간선 보도 / 상점가 / 교차로 대기공간 / 역 콘코스·출입구 / 공원 / 골목.
 - 핫스팟 배율: `content/sim/hotspots.yaml` (스크램블 교차로, 다케시타도리, 오모테산도, 신주쿠역 동·서·남구 등).
+  **구현(M06-T04·T07, ADR-0064·0067)**: `content/sim/crowd.json` density.hotspots `{centerWF, radiusM, mult(스폰 가중), crossShare(원 안 목적지를 중심 건너편으로)}` — 스크램블 mult 3·crossShare 0.6.
+  늦은 출발 금지(보행 적까지 남은 시간 + 2 s < 길이 ÷ (걸음 × 1.08 × 0.7)면 다음 주기), 대기 깊이 u₁u₂ × 4.5 m. 리뷰 체크리스트 수치 = `packages/sim/test/scramble-showcase.test.ts`.
 - 비: ×0.6, 우산 착용 확률 = clamp(rainMmH/2, 0, 0.95).
 ### 4.2 3단 LOD
 | 단계 | 범위 | 최대 수(High) | 방식 |

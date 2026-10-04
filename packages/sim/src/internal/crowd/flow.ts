@@ -1,7 +1,7 @@
 // tier B 흐름 보행자(10 §4.2, M06-T04 — ADR-0064): 80–250 m. Detour 에이전트 없이 경로 꺾은선(computePath 모서리)을 일정 속력으로 따라간다 — 회피 없음,
 // 횡단·신호 대기는 tier A와 같은 규칙(decideRoute·crossingPoints·exitPoint — 같은 대기점·좌측 보행 차로라 승격·강등 때 자리가 이어진다).
 // 가로 흔들림(±0.3 m)은 출력에만. 전원 매 틱 이동(싼 산술 — 10 §4.2의 "4프레임 분할"은 불필요, 경로 계획만 틱당 상한).
-import { decideRoute, exitPoint, type FsmCtx } from './agent-fsm.ts';
+import { canMakeIt, decideRoute, exitPoint, type FsmCtx } from './agent-fsm.ts';
 import { type PedIdentity, STATE } from './appearance.ts';
 import { crossingPoints, type V3 } from './route.ts';
 
@@ -118,7 +118,7 @@ export function stepFlow(c: FsmCtx, f: FlowAgent, dt: number): void {
     if ((f.hit ? c.ped(f.hit.rec.signal) : 'W') !== 'W') f.react = lerp(c.p.reactionS, f.rng.next());
     else {
       f.react -= dt;
-      if (f.react <= 0) startCrossFlow(c, f);
+      if (f.react <= 0 && canMakeIt(c, f)) startCrossFlow(c, f);
     }
     return;
   }

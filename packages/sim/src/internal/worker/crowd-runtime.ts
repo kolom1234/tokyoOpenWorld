@@ -7,7 +7,7 @@ import type { NavCrossing } from '@sanpo/tile-format';
 import type { CrowdParams, SignalPlansFile } from '../../api.ts';
 import { type CrowdSim, type CrowdSimStats, createCrowdSim } from '../crowd/crowd-sim.ts';
 import { createNavWorld, type NavWorld } from '../crowd/nav-world.ts';
-import { signalState } from '../signals/controller.ts';
+import { pedWalkLeftS, signalState } from '../signals/controller.ts';
 import { type CompiledPlan, compilePlans } from '../signals/plans.ts';
 
 /** 메인 → 워커 시계 동기(게임 시각 ms, 그 순간 절대 ms, 배속 — frozen = 0). */
@@ -52,7 +52,7 @@ export function createCrowdRuntime(
   const ped = (code: number) => signalState(plans, code, nowGameS).ped;
   void init().then(() => {
     nav = createNavWorld();
-    tier = createCrowdSim(nav, params, ped);
+    tier = createCrowdSim(nav, params, ped, (code) => pedWalkLeftS(plans, code, nowGameS));
     tier.setDensityScale(densityScale);
     for (const [k, b] of pending) if (b) nav.addCell(k, new Uint8Array(b));
     pending.clear();

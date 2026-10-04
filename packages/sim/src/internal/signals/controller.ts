@@ -15,6 +15,24 @@ export const decodeSignal = (code: number) => ({
 /** 기본 계획 주기 오프셋(s) = 파이프라인이 넣은 연동 칸 × 2(주기로 접음). */
 export const offsetOf = (slot: number, cycleS: number): number => (slot * 2) % Math.max(1, Math.round(cycleS));
 
+/**
+ * 보행 그룹이 적(D)이 되기까지 남은 초(W·F 단계를 이어 합침, 지금 D = 0, 주기 내내 녹 = ∞). 보행자 늦은 출발 판단(M06-T07 — 건너지 못할 사람은 W 끝에 나서지 않는다).
+ */
+export function pedWalkLeftS(plans: readonly CompiledPlan[], code: number, timeS: number): number {
+  const st = signalState(plans, code, timeS);
+  if (st.ped === 'D') return 0;
+  const { plan, group } = decodeSignal(code);
+  const p = plans[plan] ?? plans[0];
+  if (!p || group < 2) return 0;
+  let left = st.remainingS;
+  for (let i = 1; i < p.phases.length; i++) {
+    const ph = p.phases[(st.phase + i) % p.phases.length] as CompiledPlan['phases'][number];
+    if (ph.groups[group] === 'D') return left;
+    left += ph.durS;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
 /** code의 그룹 상태(시각 = 초, 절대 — 게임 시각 ms ÷ 1000). 알 수 없는 계획 = 0번. */
 export function signalState(plans: readonly CompiledPlan[], code: number, timeS: number): SignalState {
   const { slot, plan, group } = decodeSignal(code);

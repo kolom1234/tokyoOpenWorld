@@ -1,5 +1,6 @@
 // tier A 보행자 상태 기계(10 §4.2, M06-T03 — ADR-0063): 걷기(목적지) → 접근(횡단 대기점) → 대기(보행 신호 W 전) → 횡단(띠 → 건너편) → 다시 계획.
 // 녹색 점멸(F)엔 새로 건너지 않고, 건너는 중 F·D면 서두른다(최고 속력 × 1.35). 신호 없는 횡단은 바로 건넌다(차량이 양보 — T05).
+// 늦은 출발 금지(M06-T07): W 끝 무렵 남은 보행 시간(+ 전적 2 s) 안에 못 건널 사람은 나서지 않고 다음 주기를 기다린다(차량 녹색 때 횡단 위 잔류 방지).
 // 계획(경로 탐색)은 틱당 상한이 있어 needPlan 표시만 하고 agents-detour가 순서대로 처리한다.
 import type { CrowdAgent } from '@recast-navigation/core';
 import { NAV_FLAG } from '@sanpo/tile-format';
@@ -16,6 +17,13 @@ const DEST_ARRIVE_M = 2;
 /** 대기 줄: 대기점 이 거리 안에서 막히면 그 자리에서 대기. */
 const CROWDED_M = 4;
 const HURRY = 1.35;
+/** 횡단 속력 배율(평소 걸음보다 조금 빠르게)·늦은 출발 여유(전적 s). */
+export const CROSS_SPEED = 1.08;
+const LATE_GRACE_S = 2;
+/** 붐비는 횡단의 실효 속력(마주 오는 흐름 피하기 — world-mini 스크램블 대각 잔류에서). */
+const CROWD_PACE = 0.7;
+/** 대기 깊이 상한(m, 연석 뒤 — 분포 = u₁u₂ × 이것: 앞줄이 촘촘하고 뒤로 성김, M06-T07 3 → 4.5). */
+const WAIT_DEPTH_M = 4.5;
 /** 이 시간 동안 0.25 m도 못 가면 다시 계획, 그 3배면 제거. */
 export const STUCK_S = 4;
 
@@ -38,6 +46,8 @@ export interface FsmCtx {
   p: CrowdAgentsParams;
   /** 횡단 신호 코드 → 보행 램프(NAV_NO_SIGNAL = 항상 W). */
   ped: (code: number) => PedLamp;
+  /** 보행 적(D)까지 남은 s(NAV_NO_SIGNAL·모름 = ∞) — 늦은 출발 판단. */
+  walkLeft: (code: number) => number;
   /** 목적지 고르기(실패 = undefined). */
   pickDest: (a: PedIdentity, pos: V3) => V3 | undefined;
 }
@@ -78,7 +88,7 @@ export function startCross(c: FsmCtx, a: Agent): void {
   const pts = crossingPoints(a.hit, a.lat, a.depth);
   const exit = exitPoint(c, pts.exit, pts.dir) ?? pts.exit;
   a.state = STATE.cross;
-  moveTo(a, exit, FILTER.all, a.speed * 1.08);
+  moveTo(a, exit, FILTER.all, a.speed * CROSS_SPEED);
 }
 
 /** 다음 구간 결정(두 tier 공용): 걷기 = 목적지까지(횡단 없음), 접근 = 첫 횡단의 대기점. 목적지가 없거나 경로가 없으면 undefined. */
@@ -104,7 +114,7 @@ export function decideRoute(c: FsmCtx, a: PedIdentity, pos: V3, forced?: Crossin
   // 시나리오(forced)는 스폰한 대기점(lat·depth)을 그대로 쓴다.
   if (!forced && (hit.rec.id !== a.hit?.rec.id || hit.fromA !== a.hit.fromA)) {
     a.lat = keepLeftLat(a.rng.next());
-    a.depth = a.rng.next() * a.rng.next() * 3;
+    a.depth = a.rng.next() * a.rng.next() * WAIT_DEPTH_M;
   }
   a.hit = hit;
   const pts = crossingPoints(hit, a.lat, a.depth);
@@ -125,12 +135,18 @@ export function plan(c: FsmCtx, a: Agent): boolean {
   return true;
 }
 
-/** 대기점 도착·대기 중: W면 반응 시간 뒤 출발, F·D면 반응 시간을 다시 뽑는다. */
+/** 남은 보행 시간(+ 전적 여유) 안에 이 횡단을 건널 수 있나(두 tier 공용). */
+export function canMakeIt(c: FsmCtx, a: PedIdentity): boolean {
+  if (!a.hit) return true;
+  return c.walkLeft(a.hit.rec.signal) + LATE_GRACE_S >= a.hit.rec.len / (a.speed * CROSS_SPEED * CROWD_PACE);
+}
+
+/** 대기점 도착·대기 중: W면 반응 시간 뒤 출발(남은 시간에 못 건너면 대기 유지), F·D면 반응 시간을 다시 뽑는다. */
 function waitStep(c: FsmCtx, a: Agent, dt: number): void {
   const lamp = a.hit ? c.ped(a.hit.rec.signal) : 'W';
   if (lamp === 'W') {
     a.react -= dt;
-    if (a.react <= 0) startCross(c, a);
+    if (a.react <= 0 && canMakeIt(c, a)) startCross(c, a);
   } else a.react = lerp(c.p.reactionS, a.rng.next());
 }
 

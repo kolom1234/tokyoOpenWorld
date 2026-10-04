@@ -11,7 +11,7 @@ import type { V3 } from './route.ts';
 const AGENT = { radius: 0.3, height: 1.7, maxAcceleration: 6, collisionQueryRange: 2.5, pathOptimizationRange: 12 };
 /** ANTICIPATE_TURNS | OBSTACLE_AVOIDANCE | SEPARATION | OPTIMIZE_VIS | OPTIMIZE_TOPO. */
 const UPDATE_FLAGS = 1 | 2 | 4 | 8 | 16;
-const SEPARATION = 1;
+const SEPARATION = 1.5;
 /** 스폰·승격 자리: 다른 에이전트·플레이어와 이만큼 떨어져야(겹쳐 태어나면 Detour 충돌 풀이가 한동안 겹친 채로 둔다). */
 export const SPAWN_GAP_M = 0.65;
 

@@ -26,6 +26,7 @@ export interface CrowdWorkerStats {
   tiles: number;
   cells: number;
   crossings: number;
+  filled: boolean;
 }
 
 export interface SimWorkerHost {

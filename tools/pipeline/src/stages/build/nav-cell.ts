@@ -52,7 +52,15 @@ function unmarkedBands(osm: readonly OsmRecord[]): CrossBand[] {
   return out;
 }
 
-/** 끝점을 공유하고(0.5 m) 거의 일직선(15° 안)인 띠는 하나로 — OSM 횡단 선의 도로 중간 꼭짓점(스크램블 대각선 등)에서 끊긴 조각을 잇는다. */
+/**
+ * 끝점을 공유하고(0.5 m) 거의 일직선(15° 안)인 띠는 하나로 — OSM 횡단 선의 도로 중간 꼭짓점(스크램블 대각선 등)에서 끊긴 조각을 잇는다.
+ * 6 m 미만 끝 조각(연석 쪽 OSM 꼭짓점 — PLATEAU 대체로 본 띠와 반폭이 달라짐)은 반폭 차·25°까지 본 띠에 흡수(반폭 = 큰 쪽, M06-T07:
+ * 스크램블 북쪽 횡단이 4·22·3 m 세 기록이라 보행자가 조각마다 멈췄다).
+ */
+const STUB_M = 6;
+const STUB_RAD = (25 * Math.PI) / 180;
+const lenOf = (b: CrossBand): number => Math.hypot(b.b[0] - b.a[0], b.b[1] - b.a[1]);
+
 export function mergeCollinear(bands: readonly CrossBand[]): CrossBand[] {
   const out = bands.map((b) => ({ ...b, a: [...b.a] as [number, number], b: [...b.b] as [number, number] }));
   const dir = (b: CrossBand): [number, number] => {
@@ -67,11 +75,13 @@ export function mergeCollinear(bands: readonly CrossBand[]): CrossBand[] {
       for (let j = 0; j < out.length && !merged; j++) {
         const x = out[i] as CrossBand;
         const y = out[j] as CrossBand;
-        if (i === j || x.signal !== y.signal || Math.abs(x.half - y.half) > 0.01 || !near(x.b, y.a)) continue;
+        if (i === j || x.signal !== y.signal || !near(x.b, y.a)) continue;
+        const stub = Math.min(lenOf(x), lenOf(y)) < STUB_M;
+        if (!stub && Math.abs(x.half - y.half) > 0.01) continue;
         const [dx, dz] = dir(x);
         const [ex, ez] = dir(y);
-        if (dx * ex + dz * ez < Math.cos(Math.PI / 12)) continue;
-        out[i] = { ...x, b: y.b };
+        if (dx * ex + dz * ez < Math.cos(stub ? STUB_RAD : Math.PI / 12)) continue;
+        out[i] = { ...x, b: y.b, half: Math.max(x.half, y.half) };
         out.splice(j, 1);
         merged = true;
       }

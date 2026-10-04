@@ -25,7 +25,8 @@ export interface CrowdParams {
   /** M06-T03 밀도(10 §4.1): 시간대 곡선(JST 0–23시, 0–1)·핫스팟. */
   density?: {
     diurnal: number[];
-    hotspots: { name: string; centerWF: [number, number]; radiusM: number; mult: number }[];
+    /** 핫스팟(M06-T04 스폰 가중 mult, M06-T07 crossShare = 원 안에서 목적지를 중심 건너편으로 고를 확률 — 횡단·대각 흐름). */
+    hotspots: { name: string; centerWF: [number, number]; radiusM: number; mult: number; crossShare?: number }[];
   };
 }
 
@@ -106,6 +107,8 @@ export interface SimWorkerStats {
     tiles: number;
     cells: number;
     crossings: number;
+    /** 처음 채우기 끝(목표의 90 %, M06-T07 — 골든뷰 안정 조건). */
+    filled: boolean;
   };
   /** 교통(M06-T05): 대수·스폰·제거·적신호 통과·교착·차선·셀, distM/limitM = 평균 속도 비율 누적. */
   traffic?: {

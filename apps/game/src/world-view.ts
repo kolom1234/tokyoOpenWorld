@@ -66,6 +66,8 @@ export interface WorldView {
   readonly treesSettled: boolean;
   /** 간판 아틀라스 적재·선컴파일이 끝났다(성공·실패 — 골든뷰 안정 조건, M05-T06). */
   readonly signsSettled: boolean;
+  /** 군중: 팩 적재가 끝났고(또는 군중 없음) 처음 채우기가 끝났다(골든뷰 안정 조건, M06-T07). */
+  readonly crowdSettled: boolean;
   /** streaming 시작 → 스폰 영역 live까지 대기 → 시작 시점으로 이동. 반환 = 스폰 영역 live L0 셀 수. */
   showWorld(world: LoadedWorld): Promise<number>;
   /** 첫 표시 전 준비 단계 글(로딩 패널 — 선컴파일 진행·스폰 셀 수). 첫 표시 뒤 ''. */
@@ -214,7 +216,8 @@ async function showWorldWith(
   else loadTreesLater(render, late, wlog);
   loadSignageLater(render, late, wlog);
   const crowd = deps.crowd ?? 'agents';
-  if (crowd !== 'off') {
+  if (crowd === 'off') late.crowdSettled = true;
+  else {
     startCrowdLater(v, world, { mode: crowd, traffic: deps.traffic !== false }, wlog);
     const far = crowdFarDensitySystem(v.sim, render);
     deps.scheduler.add({ systems: () => [far] });
@@ -236,6 +239,7 @@ function initialLate(): LateState {
     avatarSettled: false,
     treesSettled: false,
     signsSettled: false,
+    crowdSettled: false,
     boot: { precompile: '대기 LUT…', done: false },
   };
 }
@@ -302,6 +306,9 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     },
     get signsSettled() {
       return late.signsSettled;
+    },
+    get crowdSettled() {
+      return late.crowdSettled && (sim.workerStats()?.crowd?.filled ?? true);
     },
     showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim }, world),
     bootProgress: () => bootProgressText(late.boot, late.streaming),

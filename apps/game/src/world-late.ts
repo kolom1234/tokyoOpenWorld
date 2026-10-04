@@ -24,6 +24,8 @@ export interface LateState {
   avatarSettled: boolean;
   treesSettled: boolean;
   signsSettled: boolean;
+  /** 군중 팩 적재가 끝났거나(성공·실패) 군중 없음(골든뷰 안정 조건, M06-T07). */
+  crowdSettled: boolean;
   /** streaming → sim nav(M06-T03). 군중 off면 없음. */
   simWiring?: StreamingSimWiring;
   /** startStreaming이 만든 워커 감독자(sim.worker도 같이 — M06-T01). */
@@ -112,14 +114,22 @@ export function startCrowdLater(
         ...(o.traffic ? { traffic: TRAFFIC_PARAMS as unknown as TrafficParams } : {}),
       })
     : undefined;
-  if (!buf) return;
+  if (!buf) {
+    v.late.crowdSettled = true;
+    return;
+  }
   v.render.pedestrians.bindShared(buf);
   // 차량(M06-T06): 교통 SAB → render 차량 레이어, sim → physics 직결 포트(플레이어 60 m 안 키네마틱 바디).
   const traffic = v.sim.outputs().traffic;
   if (traffic) void v.render.vehicles.bindShared(traffic).catch((e: unknown) => log.warn('vehicles', e));
   const physics = v.late.physics;
   if (physics) v.sim.connectPhysics((port) => physics.connectKinematicSource(port));
-  void v.render.loadCrowd(CROWD_URLS).catch((e: unknown) => log.warn('crowd', e));
+  void v.render
+    .loadCrowd(CROWD_URLS)
+    .catch((e: unknown) => log.warn('crowd', e))
+    .finally(() => {
+      v.late.crowdSettled = true;
+    });
   const c = SIGNAL_PLANS.sites[0]?.centerWF;
   if (mode === 'scramble' && c?.[0] !== undefined && c[1] !== undefined)
     v.sim.crowdScenario({ x: c[0], y: 0, z: c[1] }, SCRAMBLE_SCENE.radius, SCRAMBLE_SCENE.count);

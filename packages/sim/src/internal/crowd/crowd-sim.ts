@@ -5,10 +5,10 @@ import { setRandomSeed } from '@recast-navigation/core';
 import { hash32, type Vec3, WORLD_SEED } from '@sanpo/core';
 import { NAV_FLAG, NAV_NO_SIGNAL } from '@sanpo/tile-format';
 import type { CrowdAgentsParams, CrowdParams } from '../../api.ts';
-import type { FsmCtx, PedLamp } from './agent-fsm.ts';
+import type { Agent, FsmCtx, PedLamp } from './agent-fsm.ts';
 import { writeAgents, writeFlows } from './agent-output.ts';
 import { createTierAPool, type TierAPool } from './agents-detour.ts';
-import { newIdentity, STATE } from './appearance.ts';
+import { newIdentity, type PedIdentity, STATE } from './appearance.ts';
 import { hotspotWeight, maxHotspotWeight, totalTarget } from './density.ts';
 import { type FlowAgent, newFlow, planFlow, stepFlow } from './flow.ts';
 import { lodStep, outputPos } from './lod-manager.ts';
@@ -33,6 +33,8 @@ export interface CrowdSimStats {
   stuck: number;
   promoted: number;
   demoted: number;
+  /** 처음 채우기 끝(목표의 90 % — 골든뷰 안정 조건, M06-T07). */
+  filled: boolean;
 }
 
 export interface CrowdSim {
@@ -47,6 +49,8 @@ export interface CrowdSim {
   positions(): V3[];
   /** 시험용: 모든 보행자(순번·tier·그려지는 위치). */
   peds(): { seq: number; tier: 'A' | 'B'; x: number; z: number }[];
+  /** 시험용(M06-T07 스크램블 지표): tier A 상태·횡단·위치. */
+  inspect(): readonly Agent[];
   destroy(): void;
 }
 
@@ -166,12 +170,38 @@ function runScenario(c: Ctx, center: Readonly<V3>, radius: number, count: number
   return made;
 }
 
-function fsmOf(nav: NavWorld, p: CrowdAgentsParams, ped: (code: number) => PedLamp): FsmCtx {
+/**
+ * 핫스팟 건너편 목적지(M06-T07): 원 안이고 난수 < crossShare면 중심 반대쪽(중심 너머 15–45 m) 근처 걷는 점 — 스크램블을 건너는 흐름(대각 포함).
+ */
+function acrossHotspot(nav: NavWorld, params: CrowdParams, a: PedIdentity, pos: V3): V3 | undefined {
+  for (const h of params.density?.hotspots ?? []) {
+    const [cx, cz] = h.centerWF;
+    const dx = cx - pos.x;
+    const dz = cz - pos.z;
+    const d = Math.hypot(dx, dz);
+    if (d > h.radiusM || d < 1 || a.rng.next() >= (h.crossShare ?? 0)) continue;
+    const k = (d + 15 + a.rng.next() * 30) / d;
+    const target = { x: pos.x + dx * k, y: pos.y, z: pos.z + dz * k };
+    return randomWalkPoint(nav, target, 12, hash32(KIND, a.seq, Math.floor(a.rng.next() * 0xffffffff), 9));
+  }
+  return undefined;
+}
+
+function fsmOf(
+  nav: NavWorld,
+  params: CrowdParams,
+  ped: (code: number) => PedLamp,
+  walkLeft: (code: number) => number,
+): FsmCtx {
+  const p = params.agents as CrowdAgentsParams;
   return {
     nav,
     p,
     ped: (code) => (code === NAV_NO_SIGNAL ? 'W' : ped(code)),
+    walkLeft: (code) => (code === NAV_NO_SIGNAL ? Number.POSITIVE_INFINITY : walkLeft(code)),
     pickDest: (a, pos) => {
+      const across = acrossHotspot(nav, params, a, pos);
+      if (across) return across;
       for (let k = 0; k < 4; k++) {
         const d = randomWalkPoint(nav, pos, p.dest[1], hash32(KIND, a.seq, Math.floor(a.rng.next() * 0xffffffff), k));
         if (d && Math.hypot(d.x - pos.x, d.z - pos.z) >= p.dest[0]) return d;
@@ -198,10 +228,15 @@ function stepAll(c: Ctx, dt: number, gameMs: number, out: Float32Array, anchor: 
   return writeFlows(c.flows, c.params, out, anchor, dt, writeAgents(c.a.agents, c.params, out, anchor, dt));
 }
 
-export function createCrowdSim(nav: NavWorld, params: CrowdParams, ped: (code: number) => PedLamp): CrowdSim {
+export function createCrowdSim(
+  nav: NavWorld,
+  params: CrowdParams,
+  ped: (code: number) => PedLamp,
+  walkLeft: (code: number) => number = () => Number.POSITIVE_INFINITY,
+): CrowdSim {
   const p = params.agents;
   if (!p) throw new Error('crowd: agents params missing');
-  const fsm = fsmOf(nav, p, ped);
+  const fsm = fsmOf(nav, params, ped, walkLeft);
   const zero = { agents: 0, flow: 0, waiting: 0, crossing: 0, plans: 0, spawned: 0, despawned: 0 };
   const c: Ctx = {
     nav,
@@ -211,7 +246,7 @@ export function createCrowdSim(nav: NavWorld, params: CrowdParams, ped: (code: n
     a: createTierAPool(nav, p, fsm),
     flows: [],
     player: { pos: undefined, vel: { x: 0, y: 0, z: 0 }, fwd: undefined },
-    st: { ...zero, offMesh: 0, stuck: 0, promoted: 0, demoted: 0 },
+    st: { ...zero, offMesh: 0, stuck: 0, promoted: 0, demoted: 0, filled: false },
     seq: 0,
     filled: false,
     scale: 1,
@@ -233,9 +268,10 @@ export function createCrowdSim(nav: NavWorld, params: CrowdParams, ped: (code: n
       c.st.flow = c.flows.length;
       c.st.waiting = all.filter((x) => x.state === STATE.wait).length;
       c.st.crossing = all.filter((x) => x.state === STATE.cross).length;
-      return { ...c.st };
+      return { ...c.st, filled: c.filled };
     },
     positions: () => c.a.agents.map((x) => x.ca.position()),
+    inspect: () => c.a.agents,
     peds: () => [
       ...c.a.agents.map((x) => ({ seq: x.seq, tier: 'A' as const, ...xz(x.ca.position()) })),
       ...c.flows.map((f) => ({ seq: f.seq, tier: 'B' as const, ...xz(outputPos(f)) })),
