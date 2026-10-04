@@ -152,6 +152,9 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     depth: ctx.depth,
     ...staged.api,
     pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf) },
+    setSignalLamps: (lamp) => {
+      ctx.signalLamp = lamp;
+    },
     addCell: (p) => {
       cells.add(p, view.renderOriginWF);
       staged.take(p.key);

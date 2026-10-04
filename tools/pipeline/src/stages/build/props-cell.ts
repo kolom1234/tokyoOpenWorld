@@ -22,6 +22,8 @@ export interface PropCellInput {
   ox: number;
   oz: number;
   osm: readonly OsmRecord[];
+  /** 셀 + 8-이웃 OSM 차도 선(신호 그룹 도로 방향). */
+  vehicleRoadsAround?: readonly OsmRecord[];
   buildings: readonly BuildingRecord[];
   /** 셀 + 8-이웃 도로(분류·교차부). */
   roads: readonly RoadRecord[];
@@ -78,7 +80,14 @@ export async function propsCell(i: PropCellInput): Promise<PropCellOutput> {
     inBuilding: footprintTest(g, i.footprints, i.ox, i.oz),
     surfaceAt,
   };
-  const out = buildProps({ ...common, catalog: i.catalog, buildings: i.buildings });
+  const junctions = i.roads.filter((r) => r.functionCode === INTERSECTION_CODE);
+  const out = buildProps({
+    ...common,
+    catalog: i.catalog,
+    buildings: i.buildings,
+    junctions,
+    ...(i.vehicleRoadsAround ? { vehicleRoadsAround: i.vehicleRoadsAround } : {}),
+  });
   const tr = buildTrees({ ...common, avoid: propSpots(out.batches, i.ox, i.oz) });
   const inst = out.batches.length > 0 ? await gzip(writeProps(out.batches)) : null;
   const trees = tr.records.length > 0 ? await gzip(writeTrees(tr.records)) : null;

@@ -6,6 +6,7 @@ import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
 import type { MarkingRecord } from '../../readers/plateau/frn-markings.ts';
 import type { BridgeRecord, BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { type FootprintSource, footprintSources } from '../derive/footprints.ts';
+import { isVehicleRoad } from '../derive/markings/stopline.ts';
 import type { OsmRecord } from '../normalize-osm.ts';
 
 export function readLayer<T>(normalizedDir: string, layer: string, key: CellKey): T[] {
@@ -22,6 +23,7 @@ export function aroundReader(normalizedDir: string) {
   const bridges = new Map<CellKey, BridgeRecord[]>();
   const steps = new Map<CellKey, OsmRecord[]>();
   const marks = new Map<CellKey, MarkingRecord[]>();
+  const vroads = new Map<CellKey, OsmRecord[]>();
   const get = <T>(m: Map<CellKey, T>, k: CellKey, load: () => T): T => {
     let v = m.get(k);
     if (v === undefined) {
@@ -45,12 +47,23 @@ export function aroundReader(normalizedDir: string) {
   const stepsOf = (k: CellKey) =>
     get(steps, k, () => readLayer<OsmRecord>(normalizedDir, 'osm', k).filter((r) => r.tags.highway === 'steps'));
   const marksOf = (k: CellKey) => get(marks, k, () => readLayer<MarkingRecord>(normalizedDir, 'markings', k));
+  const vroadsOf = (k: CellKey) =>
+    get(vroads, k, () => readLayer<OsmRecord>(normalizedDir, 'osm', k).filter(isVehicleRoad));
   return {
     bridgesOf,
     /** 셀 + 8-이웃 PLATEAU 道路標示(M06 사전 2 — 셀 경계를 걸친 横断歩道). */
     markingsAround: (k: CellKey) => around(k, marksOf),
     /** 이웃 포함 OSM 계단 선(교량 계단 통로 — M05-T08). 셀 경계를 걸친 선은 중복될 수 있다. */
     stepsAround: (k: CellKey) => around(k, stepsOf),
+    /** 셀 + 8-이웃 OSM 차도 선(id 중복 제거) — 교차로 도로 방향(신호 그룹, M06-T02)이 셀마다 같게. */
+    vehicleRoadsAround: (k: CellKey) => {
+      const seen = new Set<string>();
+      return around(k, vroadsOf).filter((r) => {
+        if (seen.has(r.id)) return false;
+        seen.add(r.id);
+        return true;
+      });
+    },
     bridgesAround: (k: CellKey) => around(k, bridgesOf),
     roadsOf,
     roadsAround: (k: CellKey) => around(k, roadsOf),

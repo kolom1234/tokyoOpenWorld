@@ -30,7 +30,7 @@ clock/(world-clock — 모드·운행일 요일, astronomy — suncalc → 도�
 IDM 단일 차로 수렴, 신호 사이클, 운동 프로파일(시간 점프 일관성), 시간표 컴파일, 날씨 전이 확률 합=1, 공휴일 판정, 밀도 곡선.
 
 ## Status
-M03-T03: 시계·천문·environment(ADR-0029). M06-T01: sim.worker + SAB + 더미 군중(ADR-0061). 신호·내비메시·교통 = M06-T02~, 날씨·공휴일·열차 = M07·M09.
+M03-T03: 시계·천문·environment(ADR-0029). M06-T01: sim.worker + SAB + 더미 군중(ADR-0061). M06-T02: 신호 `signals/{plans,controller}.ts` — `SimDeps.signalPlans`(SignalPlansFile) → `signalStateAt(code)`: SignalState{vehicle G·Y·R, ped W·F·D, phase, remainingS, cycleS}, 게임 시각 순수 함수(ADR-0062). 내비메시·교통 = M06-T03~, 날씨·공휴일·열차 = M07·M09.
 
 ## Tests (구현분)
 `test/crowd-worker.test.ts`: SAB 이중 영역 게시·front 뒤집기, 더미 결정론·원 궤도·접선 yaw·anim/rate 인코딩.

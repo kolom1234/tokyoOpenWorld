@@ -30,6 +30,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   loadMaterials(manifestUrl): Promise<MaterialLibraryStats>;  // M03-T01: manifest → 평균색 → KTX2 배열 3장 교체(재컴파일 없음), 첫 표시 뒤 호출
   precompile(): Promise<void>;
   stageCells(on); compileStaged(): Promise<void>; commitStaged();
+  setSignalLamps(lamp: ((code) => number) | null): void;   // M06-T02(ADR-0062): props 신호 기둥 현시 코드 → 램프 값(차량 1–3 + 4 × 보행 1–2), 보이는 슬롯만·바뀐 범위만 업로드. 소품 풀 정점 버퍼 ≤ 8(_ptype·_itype = vec2)
   loadCrowd(urls: CrowdAssetUrls { manifest, bin, texture }): Promise<void>; readonly pedestrians: InstanceLayer { bindShared(buf) };   // M06-T01(ADR-0061): crowd/{assets,material,field} — 뼈 팔레트 스키닝, (베이스 × LOD) 48풀, 틱 사이 외삽, stats.crowd   // M06 사전 4(ADR-0060): 부팅 스폰 셀을 장면 밖 대기 그룹 → compileAsync(선컴파일과 겹침) → 붙이기                     // 대기 LUT 계산(await) + 고정 머티리얼 × {기본, HLOD} compileAsync
   setCamera(c: CameraState): void;                 // WF float64 — 다음 renderPrep에서 반영
   setAvatar(a: AvatarState): void;                 // 플레이어 아바타(자체 절차 마네킹, dynamic 루트, 속도 블렌드·근접 디더 페이드 — M04-T05, ADR-0045)

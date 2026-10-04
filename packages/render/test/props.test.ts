@@ -89,7 +89,7 @@ type Pool = {
   name: string;
   count: number;
   instanceMatrix: { array: Float32Array; count: number };
-  geometry: { getAttribute(n: string): { array: Float32Array } };
+  geometry: { getAttribute(n: string): { array: Float32Array }; attributes: Record<string, unknown> };
 };
 
 describe('prop field', () => {
@@ -112,9 +112,10 @@ describe('prop field', () => {
     // 가까운 전주·벤치 = LOD0, 먼 전주(≈ 190 m 블록) = LOD2.
     const [near, , far] = pools as [Pool, Pool, Pool];
     expect(near.count).toBe(2);
-    const types = [...near.geometry.getAttribute('_itype').array.subarray(0, 2)].sort((a, b) => a - b);
+    const it = near.geometry.getAttribute('_itype').array; // vec2(종류, 램프)
+    const types = [it[0] as number, it[2] as number].sort((a, b) => a - b);
     expect(types).toEqual([PROP_TYPE.utilityPole, PROP_TYPE.bench].sort((a, b) => a - b));
-    const i = near.geometry.getAttribute('_itype').array[0] === PROP_TYPE.utilityPole ? 0 : 1;
+    const i = it[0] === PROP_TYPE.utilityPole ? 0 : 1;
     expect(near.instanceMatrix.array[i * 16 + 12]).toBeCloseTo(10, 5);
     expect(far.count).toBe(1);
     expect(far.geometry.getAttribute('_itype').array[0]).toBe(PROP_TYPE.utilityPole);
@@ -126,6 +127,14 @@ describe('prop field', () => {
     f.removeCell(key);
     f.update({ x: 266, y: 6, z: 10 }, { x: 0, y: 0, z: 0 }, false);
     expect(f.stats()).toMatchObject({ instances: 0, visible: 0, pools: 0 });
+    f.dispose();
+  });
+
+  it('stays within the 8 WebGPU vertex buffers (geometry attributes + instance matrix/colour + velocity pass)', () => {
+    // M06-T02 회귀: `_lamp`·`_isig`를 따로 두면 9–10개 → 실 GPU에서 파이프라인 생성 실패(소품 전부 사라짐, WebGL2 SwiftShader는 통과).
+    const f = createPropField(material);
+    for (const m of f.root.children as unknown as Pool[])
+      expect(Object.keys(m.geometry.attributes).length + 3).toBeLessThanOrEqual(8);
     f.dispose();
   });
 

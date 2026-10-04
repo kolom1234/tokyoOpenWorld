@@ -1,14 +1,16 @@
 // 소품 조립(M05-T03): 셀 OSM·건물·도로 → 배치 규칙(우선순위 순: 신호 → 전주·전선 → OSM 점 → 자판기 → 간판(M05-T06) → 가드 파이프 → 맨홀) →
 // props.inst 배치(PropBatch) + JCOL 콜라이더 + 전선 메시 + 통계. 셀당 예산(카탈로그 budget, 기본 5k)을 넘으면 뒤 순위부터 버린다. see ADR-0051
 import type { JcolShape, PropBatch } from '@sanpo/tile-format';
-import type { BuildingRecord } from '../../../readers/plateau/types.ts';
+import type { BuildingRecord, RoadRecord } from '../../../readers/plateau/types.ts';
 import type { OsmRecord } from '../../normalize-osm.ts';
 import { crossBands } from '../markings/crosswalk.ts';
+import { isVehicleRoad } from '../markings/stopline.ts';
 import type { RoadIndex } from '../roads.ts';
 import { batchesOf, type PlaceCtx, type PropCatalog } from './context.ts';
 import { placeGuardRails, placeManholes } from './linear.ts';
 import { placePoints } from './points.ts';
 import { placePoles } from './poles.ts';
+import { junctionsOf, siteFinder } from './signal-sites.ts';
 import { placeSignals } from './signals.ts';
 import { placeSigns } from './signs.ts';
 import { placeVending } from './vending.ts';
@@ -40,6 +42,10 @@ export interface PropInput {
   roads: RoadIndex;
   inIntersection: (x: number, z: number) => boolean;
   inBuilding: (x: number, z: number) => boolean;
+  /** 셀 + 8-이웃 PLATEAU 車道交差部(1020) — 신호 사이트(M06-T02). */
+  junctions?: readonly RoadRecord[];
+  /** 셀 + 8-이웃 OSM 차도 선(교차로 도로 방향이 셀마다 같게). 없으면 osm 중 차도. */
+  vehicleRoadsAround?: readonly OsmRecord[];
   /** 셀 로컬 표면 높이(보도 윗면 또는 지형) — 셀 밖은 창 가장자리로 고정(전선 끝). */
   surfaceAt: (x: number, z: number) => number | undefined;
 }
@@ -61,6 +67,11 @@ export function buildProps(i: PropInput): PropOutput {
     surfaceAt: i.surfaceAt,
     inIntersection: i.inIntersection,
     inBuilding: i.inBuilding,
+    signalSite: siteFinder(
+      junctionsOf(i.junctions ?? []),
+      i.catalog.signalSites ?? [],
+      (i.vehicleRoadsAround ?? i.osm.filter(isVehicleRoad)).map((r) => r.rings[0] ?? []),
+    ),
     out: new Map(),
     colliders: [],
     left: i.catalog.budget.maxInstancesPerCell,

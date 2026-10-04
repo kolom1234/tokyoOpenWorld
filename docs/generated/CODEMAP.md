@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 340개.
+> 파일 364개.
 
 ## apps/game
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
@@ -30,7 +30,7 @@
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
-- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, AVATAR_URL, TREE_URLS, SIGNAGE_URLS, createWorldView
+- `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, AVATAR_URLS, TREE_URLS, SIGNAGE_URLS, CROWD_URLS, createWorldView
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
@@ -106,10 +106,13 @@
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, TreeAssetUrls, SignageAssetUrls, RenderService, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, RenderService, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, createRenderContext
+- `packages/render/src/internal/crowd/assets.ts` — 군중 팩 적재(M06-T01, ADR-0057): crowd.json + crowd.bin(meshopt 덩어리) + crowd.ktx2(12층 배열) → 베이스별 정점 속성·LOD 인덱스, | exports: PALETTE_WIDTH, CrowdManifest, CrowdBase, CrowdAssets, loadCrowdAssets
+- `packages/render/src/internal/crowd/field.ts` — 군중 필드(M06-T01): sim SAB 인스턴스(stride 8) → 프레임마다 외삽(30 Hz 틱 사이 — 속력·주기율) → 베이스(variant 가중 선택)·LOD(거리)·시야 원뿔 → | exports: CROWD_POOL_CAPACITY, CrowdFieldStats, CrowdField, createCrowdField
+- `packages/render/src/internal/crowd/material.ts` — 군중 머티리얼(07 §4 M_CHARACTER, M06-T01·ADR-0057): VAT 대신 **뼈 팔레트 텍스처 스키닝** — 정점 4영향 × (사원수 + 이동) 2텍셀 textureLoad, | exports: createCrowdMaterial
 - `packages/render/src/internal/frame.ts` — 프레임 시스템: renderPrep(70: 캔버스 크기·원점 재설정·카메라·HLOD 페이드) / render(80). see docs/01-architecture.md §5, docs/07-rendering.md §1–3 | exports: RENDER_PREP_PHASE, RENDER_PHASE, createFrameSystems
 - `packages/render/src/internal/lighting/atmosphere.ts` — 대기(M03-T02, 07 §6): @takram/three-atmosphere WebGPU — AtmosphereContext(렌더러 contextNode) + AtmosphereLight(태양 직사·하늘 간접) + 하늘 배경. | exports: GEOID_HEIGHT_M, worldToEcef, AtmosphereRig, createAtmosphere
 - `packages/render/src/internal/lighting/env-probe.ts` — 환경 조명(07 §6): 하늘에서 동적 큐브맵 → PMREM(`SkyEnvironmentNode`) → scene.environmentNode. | exports: ENV_CUBE_SIZE, EnvProbe, attachEnvProbe
@@ -151,8 +154,8 @@
 - `packages/render/src/internal/renderer/dynamic-resolution.ts` — 동적 해상도(07 §9, M03-T08): 프레임 시간 EMA로 렌더 스케일 ±0.05(0.5–1.0) — 목표 16.6 ms. | exports: DynResConfig, DYNRES_DEFAULTS, DynamicResolution, createDynamicResolution
 - `packages/render/src/internal/renderer/gpu-timer.ts` — GPU 타이머(M03 성능 표): WebGPU timestamp-query(three `trackTimestamp`)로 렌더 패스 GPU 시간을 모아 프레임당 평균(ms). | exports: GpuTimerStats, GpuTimer, createGpuTimer
 - `packages/render/src/internal/renderer/init.ts` — WebGPURenderer 초기화(WebGL2 폴백) + 깊이 전략 결정(reversed-Z 우선, 불가 시 logarithmic — ADR-0006). see docs/07-rendering.md §1 | exports: InitializedRenderer, resolveDepthMode, initRenderer
-- `packages/render/src/internal/scene/avatar-model.ts` — 플레이어 아바타 모델(M05 결정 2, ADR-0048): Quaternius UBC 베이스 캐릭터 GLB(파이프라인 `avatar` — 정점색 1머티리얼, 클립 idle·walk·jog·sprint) | exports: AVATAR_HEIGHT_M, AvatarClipName, AvatarModelMeta, blendWeights, clipRate, AvatarModel, createAvatarModel, loadAvatarModel
-- `packages/render/src/internal/scene/avatar.ts` — 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리)으로 시작 → `attach`로 Quaternius 모델(ADR-0048, | exports: Avatar, createAvatar
+- `packages/render/src/internal/scene/avatar-model.ts` — 플레이어 아바타 모델(ADR-0048 → ADR-0057): Microsoft Rocketbox GLB(파이프라인 `characters` — 리그 23뼈, 클립 idle·walk·jog·sprint) | exports: AVATAR_HEIGHT_M, AvatarClipName, AvatarModelMeta, blendWeights, clipRate, AvatarModel, avatarMaterial, createAvatarModel, loadAvatarModel
+- `packages/render/src/internal/scene/avatar.ts` — 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리)으로 시작 → `attach`로 Rocketbox 모델(ADR-0057, | exports: Avatar, createAvatar
 - `packages/render/src/internal/scene/cell-node.ts` — 셀 → 렌더 노드: DecodedMesh 프리미티브 → BufferGeometry(TypedArray 그대로) + 공유 머티리얼, 슬롯별 Group(위치 = originWF − renderOrigin). see docs/07-rendering.md §2–3 | exports: CellRenderNode, threeAttributeName, buildGeometry, cellSeedOf, PREPASS_RENDER_ORDER, hlodNeedsDither, createCellNode, placeCellNode, disposeCellNode, CellSet, createCellSet
 - `packages/render/src/internal/scene/hlod-switch.ts` — HLOD 자식 표시 상태: 자식 셀이 live면 부모의 그 자식 영역을 0.3 s 디더로 숨기고, 자식이 해제되면 즉시 다시 보인다(구멍 없음). | exports: HLOD_CHILDREN, HLOD_FADE_S, HlodSwitch, createHlodSwitch
 - `packages/render/src/internal/scene/origin.ts` — 렌더 원점 재설정 순수 계산: 판정(거리 ≥ 2048 m), 256 m 격자 스냅, 노드 위치 = WF − renderOrigin(float64 → 대입 시 float32). see docs/01-architecture.md §7, docs/07-rendering.md §2 | exports: needsRebase, snapOrigin, toRender
@@ -174,11 +177,17 @@
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06). | exports: EnvUniforms, createEnvUniforms, WetInput, WetOutput, applyWetness
 
 ## packages/sim
-- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState)만. 날씨·군중·교통·열차는 M06·M07·M09. | exports: DayType, TimeScale, ClockMode, WorldClock, SimService, SimDeps
+- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, SimService, SimDeps
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts', createSim
 - `packages/sim/src/internal/clock/astronomy.ts` — 천문(10 §2, 01 §7): suncalc 2.x(도 단위, 방위 = 진북 기준 시계방향, 고도 = 대기차 보정 겉보기) → 도북 방위(수렴각 보정) → WF 단위 벡터. | exports: BodyPosition, dirWFFromGrid, sunPosition, moonPosition, clearSkyIlluminanceLux
 - `packages/sim/src/internal/clock/world-clock.ts` — 월드 시계(10 §2): realtime / custom(시작 시각 + 배속, 프레임 dtReal 누적) / frozen. 요일 유형은 04:00 JST 운행일 경계. | exports: dayTypeOf, ClockCore, createWorldClock
+- `packages/sim/src/internal/crowd/dummy.ts` — 더미 보행자(M06-T01 수락 장면): 중심 주위 원 궤도 걷기(반경·속력·방향 = 시드), 일부는 서서 대기·휴대폰. 결정론 = createRng(hash32(WORLD_SEED, 'dummy', i)). | exports: CLIP, CrowdParams, DummyAgent, createDummyAgents, stepDummy
 - `packages/sim/src/internal/service.ts` — createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시). 날씨·계절은 기본값(M06/M09). | exports: SIM_CLOCK_PHASE, computeEnvironment, createSim
+- `packages/sim/src/internal/signals/controller.ts` — 신호 제어기(10 §5.2, M06-T02 — ADR-0062): 상태 = 게임 시각의 순수 함수(빨리감기·시각 점프 즉시 일관). 코드 = 교차로 ID × 16 + 계획 × 4 + 그룹 | exports: decodeSignal, offsetOf, signalState
+- `packages/sim/src/internal/signals/plans.ts` — 신호 계획(10 §5.2, M06-T02 — ADR-0062): content/sim/signal-plans.json → 단계 경계 누적·주기. 그룹 = [차량 A, 차량 B, 보행 A, 보행 B]. | exports: VehicleLamp, PedLamp, CompiledPlan, compilePlans
+- `packages/sim/src/internal/worker/host.ts` — sim.worker 호스트(10 §1, M06-T01): 감독자로 워커를 띄우고 SAB 인스턴스 버퍼를 넘긴다. 재시작되면 같은 SAB·파라미터로 다시 init. | exports: SimWorkerHost, startSimWorker
+- `packages/sim/src/internal/worker/instance-buffer.ts` — SAB 인스턴스 버퍼(10 §1, M06-T01): 머리 64 B(Int32 seq·count·front, Float64 anchor x·y·z·tick 절대 ms) + 이중 데이터 영역 × capacity × stride 8. | exports: STRIDE, instanceBytes, allocInstanceSab, InstanceReader, instanceReader, InstanceWriter, instanceWriter
+- `packages/sim/src/internal/worker/sim.worker.ts` — sim.worker(10 §1, M06-T01): 30 Hz 고정 틱 — 군중(지금은 더미 원형 걷기) → SAB 인스턴스 버퍼(instance-buffer.ts) 게시. | exports: TICK_HZ
 
 ## packages/streaming
 - `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). 설정(T01) + fetch·디코드 워커 풀(T02) + 서비스·수명주기(T03). | exports: InterestConfig, PriorityConfig, FetchConfig, DecodeConfig, LifecycleConfig, StreamingConfig, CellFetchErrorCode, CellFetchError, CellFetchResult, Fetcher, FetchLike, CacheStorageLike, CacheLike, CellFetcherDeps, DecodeRequest, DecodeErrorCode, DecodeError, DecodeResult, DecodePoolStats, DecodePool, DecodePoolDeps, CellState, ConsumerId, WhenReadyRequest, StreamingStats, StreamingService, StreamingDeps
@@ -227,11 +236,12 @@
 - `packages/traversal/src/index.ts` — @sanpo/traversal 공개 엔트리(L3): 이동 모드 상태기계·카메라 리그. api.ts 재수출 + create* 팩토리만. see docs/modules/traversal.md | exports: * from './api.ts', forwardOf, lookAtAngles, createTraversal, DEFAULT_TRAVERSAL_SETTINGS
 - `packages/traversal/src/internal/camera/boom.ts` — 3인칭 카메라 붐 충돌(09 §3 ThirdPersonRig, M04-T05, ADR-0045): 피벗 → 카메라 방향 sphereCast(반경 0.2 m, 워커 — 비동기 ≈ 1프레임). | exports: CAMERA_RADIUS_M, MAX_STEP_RAD, BoomState, createBoomState, resetBoom, stepToward, requestBoom, boomLength
 - `packages/traversal/src/internal/camera/first-person-rig.ts` — FirstPersonRig(09 §3): 눈 = 발 + 눈높이(연석·계단 높이 변화는 스무딩) + 헤드밥(걸음 주기 수직·반주기 측면), 시선 스무딩. 순수 계산. see docs/09-traversal.md §3 | exports: LookState, FirstPersonState, BOB_AIR_GRACE_S, createLookState, createFirstPersonState, stepLook, followFeet, headBob, firstPersonCamera
+- `packages/traversal/src/internal/camera/free-guard.ts` — freecam 지오메트리 진입 방지(M06 사전 3): 교량 상판·건물 안에 카메라가 들어가 화면이 검게(블룸이 NaN을 번져 전체가) 되던 문제. | exports: CAMERA_RADIUS_M, FreeGuard, createFreeGuard, resetFreeGuard, stepFreeGuard
 - `packages/traversal/src/internal/camera/free-rig.ts` — FreeRig: 6DOF 관성 자유비행(요·피치, 롤 잠금) 순수 계산. WF float64. see docs/09-traversal.md §2 freecam, §3 | exports: FreeRigState, FreeRigIntent, createFreeRigState, clampPitch, forwardOf, rigQuat, lookAtAngles, stepFreeRig
 - `packages/traversal/src/internal/camera/third-person-rig.ts` — ThirdPersonRig(09 §3): 피벗 = 발 + 어깨 높이, 붐 = 오른쪽 어깨 0.4 m − 시선 × 거리 3.5 m(휠 1.5–6). 충돌은 boom.ts(sphereCast)가 붐 길이를 줄인다(M04-T05), | exports: zoomDistance, Boom, createBoom, thirdPersonBoom, thirdPersonCamera, avatarOpacity
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
 - `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard
-- `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → CameraState. physics 불필요. see docs/09-traversal.md §2 freecam | exports: createFreecamMode
+- `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → (physics 있으면) 지오메트리 진입 방지(free-guard.ts) → CameraState. | exports: FreecamMode, createFreecamMode
 - `packages/traversal/src/internal/modes/walk.ts` — walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도 | exports: isWalkParams, moveVelocity, WalkMode, createWalkMode
 - `packages/traversal/src/internal/service.ts` — createTraversal: FSM + 기본 모드(freecam·walk) 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD·플레이어). see docs/modules/traversal.md | exports: TRAVERSAL_PHASE, createTraversal
 - `packages/traversal/src/internal/settings.ts` — traversal 기본 설정(09 §2 freecam, §3 리그). 오버라이드는 createTraversal 옵션 → mergeConfig. see docs/09-traversal.md | exports: DEFAULT_TRAVERSAL_SETTINGS
@@ -256,9 +266,10 @@
 - `tools/codemap/src/render.ts` — CODEMAP.md 마크다운 렌더링(패키지별 그룹, 타임스탬프 없음 → 재생성 결과가 결정론적). see docs/16-context-protocol.md §5 | exports: CodemapEntry, groupOf, renderLine, renderCodemap
 
 ## tools/pipeline
-- `tools/pipeline/src/checks/markings-photo.ts` — M05-T02 수락 검증: 스크램블 교차로 횡단보도 띠(OSM 횡단 선 + 차도 구간 + 규칙 폭) 위치 vs GSI 항공사진(seamlessphoto z18 ≈ 0.49 m/px).
+- `tools/pipeline/src/checks/markings-photo.ts` — M05-T02 수락 재검증(M06 사전 2): 횡단보도 띠 위치 vs GSI 항공사진(seamlessphoto z18 ≈ 0.49 m/px, 검증 전용 — photo-tiles.ts).
+- `tools/pipeline/src/checks/photo-tiles.ts` — 검증 전용 GSI 항공사진(seamlessphoto z18 ≈ 0.49 m/px) 모자이크: 타일 캐시(data/raw/gsi-photo/z18) → 회색조 → WF 쌍선형 표본, | exports: PHOTO_Z, toPx, wfToPx, Mosaic, mosaicAround, sample, debugImage
 - `tools/pipeline/src/checks/terrain-gsi.ts` — M01-T03 수락 검증: dem_1m.tif 표고 vs 地理院地図 표시값(GSI 표고 API) 비교 + GDAL/@sanpo/geo 투영 일치 확인. 네트워크 필요(CI 제외).
-- `tools/pipeline/src/cli-assets.ts` — CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), avatar(Quaternius → 게임 GLB, 결정 2), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06). | exports: AssetCtx, materials, trees, signage, avatar
+- `tools/pipeline/src/cli-assets.ts` — CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), characters(Rocketbox → 플레이어 아바타·군중 팩, ADR-0057), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06). | exports: AssetCtx, materials, trees, signage, characters
 - `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 - `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
 - `tools/pipeline/src/lib/gltf.ts` — 셀 glb 섹션 인코드/디코드: gltf-transform 문서 → EXT_meshopt_compression + KHR_mesh_quantization glb. see docs/05-tile-format.md §4 (glb), docs/adr/0018-cell-mesh-build.md | exports: GlbArray, GlbAttribute, GlbPrimitive, GlbMesh, DecodedGlb, encodeGlb, decodeGlb
@@ -275,16 +286,14 @@
 - `tools/pipeline/src/readers/plateau/citygml-sax-state.ts` — B안 CityGML 스트리밍 파서의 상태기계: SAX 이벤트 → 건물·도로 레코드. 드라이버는 citygml-sax.ts. see docs/adr/0007-plateau-reader.md | exports: SaxStats, CityGmlState
 - `tools/pipeline/src/readers/plateau/citygml-sax.ts` — B안 PlateauReader: saxes 스트리밍 파서로 CityGML을 직접 읽는다(외부 바이너리 없음). see docs/adr/0007-plateau-reader.md | exports: CityGmlSaxReader, createCityGmlSaxReader, parseCityGmlString
 - `tools/pipeline/src/readers/plateau/codes.ts` — PLATEAU 코드리스트 → 게임 레이어 축약값. 원 코드는 레코드에 보존한다. see docs/04-data-pipeline.md §4.2 | exports: TrafficAreaType, roadFunctionOf, knownNumber
+- `tools/pipeline/src/readers/plateau/frn-markings.ts` — PLATEAU 都市設備(frn) LOD3 道路標示 리더(M06 사전 2): `frn:CityFurniture` 중 function 1xxx(道路標示 — 1010 区画線·1020 車道中央線·1030 車線境界線· | exports: MARKING_CODES, MarkingRecord, createMarkingParser, readMarkings, parseMarkingsString
 - `tools/pipeline/src/readers/plateau/geometry.ts` — PLATEAU 기하 공통 유틸: EPSG:6697 좌표열 → WF 링, 면 법선 분류, 중심점. see docs/04-data-pipeline.md §4.2 | exports: latLonHToWF, lonLatHToWF, parsePosList, dropClosingPoint, newellNormal, ringNormalY, polygonArea3D, classifyByNormal, centroidXZ
 - `tools/pipeline/src/readers/plateau/index.ts` — PLATEAU 리더 진입점: 공통 타입 재수출 + 구현 선택. 채택안(ADR-0007) = citygml-sax. see docs/04-data-pipeline.md §4.2 | exports: createCityGmlSaxReader, parseCityGmlString, createNusamaiReader, * from './types.ts', createPlateauReader
 - `tools/pipeline/src/readers/plateau/nusamai.ts` — A안 PlateauReader(스파이크 비교용): nusamai CLI → GeoPackage(EPSG:6697) → ogr2ogr GeoJSONSeq → 레코드. see docs/adr/0007-plateau-reader.md | exports: createNusamaiReader
 - `tools/pipeline/src/readers/plateau/types.ts` — PLATEAU 리더 공통 계약: 정규화 레코드 타입 + `PlateauReader` 인터페이스(구현 교체 가능). see docs/04-data-pipeline.md §4.2, docs/adr/0007-plateau-reader.md | exports: SurfaceKind, RoadFunction, RingsWF, SurfaceRecord, BuildingRecord, RoadRecord, BridgeRecord, NormalizedFeature, PlateauReadOptions, PlateauReader
 - `tools/pipeline/src/spike/plateau-spike.ts` — M01-T02 스파이크 CLI: A안(nusamai)·B안(citygml-sax)을 같은 3×3 셀로 돌려 비교한다. 결과 요약은 docs/adr/0007-plateau-reader.md | exports: SPIKE_CELLS
 - `tools/pipeline/src/spike/spike-metrics.ts` — M01-T02 스파이크 비교 지표: 보존(gml:id·속성·면 종류·텍스처·도로 기능), 좌표 일치, 규모. see docs/adr/0007-plateau-reader.md | exports: RunStats, compareOutputs
-- `tools/pipeline/src/stages/avatar/anims.ts` — 아바타 애니메이션(M05 결정 2): Quaternius UAL(같은 65관절 골격) 클립 중 대기·걷기·조깅·달리기를 몸 문서로 복사한다. | exports: AVATAR_CLIPS, AvatarClip, rootSpeed, ClipInfo, copyAvatarClips
-- `tools/pipeline/src/stages/avatar/bake.ts` — 아바타 메시 굽기(M05 결정 2): Quaternius UBC 베이스 캐릭터의 프리미티브(몸·머리털·눈)를 하나로 합치고, 텍스처 대신 정점색(COLOR_0)을 굽는다 — | exports: Region, OUTFIT_SRGB, srgbToLinear, sampleLinear, outfitAt, BakeInput, HAIR_SRGB, quantizeWeights, mergeAndBake
-- `tools/pipeline/src/stages/avatar/run.ts` — `pnpm pipeline avatar`(M05 결정 2): Quaternius UBC Standard(Superhero_Male) + UAL Standard zip(data/raw, sources.lock sha256 검사) → | exports: UBC_ZIP, UAL_ZIP, AVATAR_BODY, AVATAR_HAIR, AVATAR_OUT, AvatarLock, AvatarStats, buildAvatar
-- `tools/pipeline/src/stages/build/area-reader.ts` — 영역 빌드 입력 읽기: 정규화 층 파일(셀별 ndjson.gz) + 8-이웃 캐시(도로 조각·건물 발자국). assemble.ts buildArea가 쓴다. | exports: readLayer, aroundReader
+- `tools/pipeline/src/stages/build/area-reader.ts` — 영역 빌드 입력 읽기: 정규화 층 파일(셀별 ndjson.gz) + 8-이웃 캐시(도로 조각·건물 발자국·교량·계단·道路標示). assemble.ts buildArea가 쓴다. | exports: readLayer, aroundReader
 - `tools/pipeline/src/stages/build/assemble.ts` — L0 셀 조립: 지형 성형(M05-T01) → terrain.mesh + terrain.height + buildings.mesh + roads.mesh(보도·연석) + collision.bin + meta.json → TKC, | exports: BUILD_MARGIN, CellBuildInput, CellParts, buildCell, AreaBuildInput, unionBounds, buildArea, CellBuildStats
 - `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, boundsOf, quantizePositions, buildBuildings
 - `tools/pipeline/src/stages/build/cell-stats.ts` — 셀 빌드 통계(로그·테스트): 지형·건물·도로·데칼·소품·나무·랜드마크·충돌. see docs/04-data-pipeline.md §4.4 | exports: CellBuildStats, StatsParts, cellStats
@@ -310,14 +319,28 @@
 - `tools/pipeline/src/stages/build/terrain-mesh.ts` — terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금, `_SURF` 경계 ≤ 2 m 세분) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: TERRAIN_SIMPLIFY_ERROR_M, TERRAIN_MATERIAL, TerrainGeometry, remapVertices, buildTerrainGeometry, encodeTerrainMesh
 - `tools/pipeline/src/stages/build/terrain-rtin.ts` — 지형 단순화: RTIN(직각 이등변 삼각형 이분 계층) + 정확 오차(삼각형 내부 모든 격자 샘플) + 경계 정점 강제. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: rtinTriangulate
 - `tools/pipeline/src/stages/build/wall-planes.ts` — 벽 평면 묶기(M03-T04): 같은 건물에서 같은 평면(수평 법선 방향·평면 위치)에 있는 벽 면들은 u 원점·폭을 공유한다. | exports: WallFace, WallSpan, wallSpans, coplanarWithAny
+- `tools/pipeline/src/stages/characters/atlas.ts` — 캐릭터 아틀라스 층(ADR-0057): 부위 텍스처(몸·머리·머리털 TGA 2048²) → UV 덮임 마스크 가중 상자 축소 → 덮임 밖 번짐 채우기(밉맵 이음매 방지) | exports: buildAtlasLayer
+- `tools/pipeline/src/stages/characters/crowd-encode.ts` — 군중 팩 인코딩(M06-T01, ADR-0057): 정점 스트림(위치 f32·법선 snorm8·UV unorm16·관절·가중치 unorm8) + LOD 인덱스(u16) → meshopt 압축, | exports: toHalf, VertexStreams, vertexStreams, encodeStream, encodeIndices, paletteHalf
+- `tools/pipeline/src/stages/characters/crowd.ts` — 군중 팩(M06-T01, ADR-0057): Rocketbox 베이스 12종 → 결합 메시(LOD 4)·클립 5종(성별별) 뼈 팔레트·아틀라스 층(부위 512²) → | exports: CROWD_DIR, CrowdManifest, buildCrowdPack
+- `tools/pipeline/src/stages/characters/fbx.ts` — Rocketbox FBX 읽기(three FBXLoader를 Node에서): 텍스처 적재는 막고(TGA는 tga.ts가 직접 읽음) 스킨 메시·뼈·클립만 쓴다. | exports: FbxAvatar, loadAvatarFbx, FbxClip, loadClipFbx, interpolantOf
+- `tools/pipeline/src/stages/characters/mesh.ts` — 캐릭터 결합 메시(ADR-0057): FBX 스킨 메시(면별 정점) → 현재 자세(편 손)로 스키닝한 모델 공간 위치·법선, 리그 23뼈 가중치(u8 합 255), | exports: PART_QUADRANT, CharMesh, quantizeTop4, buildCharMesh
+- `tools/pipeline/src/stages/characters/player.ts` — 플레이어 아바타 GLB(ADR-0057): 리그 23뼈 노드(모델 공간 m, 휴지 로컬 TRS) + 스킨(IBM = 휴지 월드⁻¹) + 결합 메시(LOD0, 정점색 없음 — | exports: PlayerGlbInput, writePlayerGlb
+- `tools/pipeline/src/stages/characters/pose.ts` — 클립 표본(ADR-0057): Rocketbox 클립(같은 Biped 골격)의 리그 뼈 로컬 회전 + Bip01 위치를 아바타 골격에 얹어 fps마다 FK. | exports: SampledClip, sampleClip, restoreRest, captureRest
+- `tools/pipeline/src/stages/characters/prepare.ts` — 캐릭터 공용 준비(ADR-0057): 아바타 FBX → 편 손 자세·결합 메시·리그 휴지 행렬, 아틀라스 층, KTX2 인코드(toktx), 클립 일괄 표본. | exports: ETC1S, Read, PreparedAvatar, prepareAvatar, atlasOf, encodeKtx2, sampleAll
+- `tools/pipeline/src/stages/characters/rig.ts` — 군중·플레이어 공용 리그(ADR-0057): Rocketbox Biped 81뼈 → 23뼈(Bip01 + 몸통·팔다리). 얼굴 뼈는 머리로, 손가락은 걷기 클립 첫 프레임의 | exports: RIG_BONES, CM, rigIndexOf, rigParents, relaxFingers, toModel, rigWorld, PaletteEntry, paletteOf
+- `tools/pipeline/src/stages/characters/run.ts` — `pnpm pipeline characters`(M06 사전 1·M06-T01, ADR-0057): Microsoft Rocketbox(MIT) FBX·TGA → 플레이어 아바타(스킨 GLB + KTX2 아틀라스) | exports: CHAR_OUT, PLAYER_GLB, PLAYER_KTX2, GENERATOR, buildCharacters
+- `tools/pipeline/src/stages/characters/source.ts` — 캐릭터 원천(M06 사전 1, ADR-0057): content/characters/catalog.json → Microsoft Rocketbox 저장소(커밋 고정) 상대 경로 목록, | exports: Sex, CatalogBase, CatalogClip, Catalog, RocketboxLock, RAW_DIR, CATALOG, readCatalog, avatarFiles, clipFile, allFiles, ensureSources
+- `tools/pipeline/src/stages/characters/tga.ts` — 최소 TGA 디코더(Rocketbox 텍스처): 무압축(2)·RLE(10) 트루컬러 24/32비트, 원점 아래/위. 출력 = RGBA8 위→아래 행. | exports: Rgba, decodeTga, downscale
 - `tools/pipeline/src/stages/derive/curbs.ts` — 연석·가장자리(M05-T01, 04 §4.3): 보행면 폴리곤 변을 ≤ 1 m 조각으로 나눠 바깥쪽(자기 폴리곤 밖) 0.15 m 점을 벡터 분류 — | exports: CURB_SINK_M, SKIRT_M, SURF_CURB, SURF_WALK, EdgePiece, EdgeStats, classifyEdges, addEdges
 - `tools/pipeline/src/stages/derive/edge-burn.ts` — 보도 바깥 가장자리 새기기(M05-T01): 래스터 분류(1 m)는 PLATEAU 폴리곤 사이 1 m 미만 겹침·틈을 못 가려 가장자리 치마와 지형이 최대 15 cm 어긋났다. | exports: outerEdgesAround, burnOuterEdges
 - `tools/pipeline/src/stages/derive/footprints.ts` — 건물 발자국 래스터(M05-T01 지형 성형 "건물 아래 평탄화", 04 §4.3): 지면(GroundSurface) 링 → 창 격자, 값 = 지면 링 최저점 | exports: FootprintSource, footprintSources, footprintGrid
 - `tools/pipeline/src/stages/derive/grid.ts` — derive 공용 1 m 격자 도구(M05-T01): 셀 로컬 정수 창, 반경 제한 최근접 탐색(정확 유클리드, 거리·(dz, dx) 순 — 결정론), | exports: LocalGrid, Offsets, discOffsets, nearestIn, distOf, maskedBoxMean, bilinear
-- `tools/pipeline/src/stages/derive/markings/common.ts` — 노면 표시 공용(M05-T02): 셀 로컬 2D 사각형·띠 → 지형 메시 위 데칼 삼각형(≤ 1 m 칸으로 잘라 지형을 따름, 높이 = 지형 + 2 cm). | exports: DECAL_LIFT_M, PAINT, DecalBuf, emptyDecals, TerrainAt, MarkCtx, V2, sub, add, mul, len, norm, leftOf, owns, stripe, polylineOf
+- `tools/pipeline/src/stages/derive/markings/common.ts` — 노면 표시 공용(M05-T02): 셀 로컬 2D 사각형·띠 → 지형 메시 위 데칼 삼각형(≤ 1 m 칸으로 잘라 지형을 따름, 높이 = 지형 + 2 cm). | exports: DECAL_LIFT_M, PAINT, DecalBuf, emptyDecals, TerrainAt, MarkCtx, V2, sub, add, mul, len, norm, leftOf, owns, stripe, triangle, polylineOf
+- `tools/pipeline/src/stages/derive/markings/corrections.ts` — OSM 횡단 선 보정(M06 사전 2): OSM 원본은 고치지 않고, content/markings/osm-crossing-corrections.json(출처 = GSI 항공사진 대조)의 | exports: CORRECTIONS_FILE, CrossingCorrection, CorrectionsFile, readCrossingCorrections, applyCrossingCorrections
 - `tools/pipeline/src/stages/derive/markings/crosswalk.ts` — 일본식 횡단보도(M05-T02, 04 §4.3): OSM footway=crossing 선(표시 있는 것) → 측선 없는 사다리형 — 폭 0.45 m 흰 막대를 선을 따라 0.45 m 간격으로, | exports: BAR_M, GAP_M, isMarkedCrossing, crosswalkWidth, addCrosswalk, CrossBand, crossBands, bandDist
 - `tools/pipeline/src/stages/derive/markings/index.ts` — 노면 표시 조립(M05-T02): 셀 OSM 레코드 → 횡단보도·정지선(신호·止まれ)·차선 → 데칼 버퍼 + 통계. 04 §4.3(노면 표시), ADR-0050 | exports: MarkingStats, MarkingInput, buildMarkings
 - `tools/pipeline/src/stages/derive/markings/lanes.ts` — 차선 표시(M05-T02, 04 §4.3): OSM 차도 중심선(lanes ≥ 2) → 1 m마다 PLATEAU 차도 폭(좌우 가장자리까지 행진)을 재 차선 폭 = 폭 ÷ 차로 수. | exports: LINE_W_M, isLaneRoad, edgeDistance, laneLines, laneFrame, addLanes
+- `tools/pipeline/src/stages/derive/markings/plateau.ts` — PLATEAU 道路標示(frn LOD3, M06 사전 2): 측량 기반 면(위 향함, 삼각형)을 OSM 규칙 표시보다 우선한다. | exports: Tri2, topTriangles, isStriped, PlateauBand, plateauCrosswalkBand, inBand, inTriangles, PlateauMarks, plateauMarks, coveringBand
 - `tools/pipeline/src/stages/derive/markings/stopline.ts` — 정지선·「止まれ」 위치(M05-T02, 04 §4.3): (1) 신호 횡단 띠를 가로지르는 차도 선마다 상류 쪽 횡단 띠 끝 + 2 m에 폭 0.45 m 흰 선 — | exports: STOP_W_M, isVehicleRoad, addSignalStops, addStopSigns
 - `tools/pipeline/src/stages/derive/markings/text.ts` — 노면 문자 「止まれ」(M05-T02): 자체 제작 획 폰트(단위 상자 선분 — 외부 폰트·상표 없음)를 진행 차로 가로로 세 글자, 글자마다 진행 방향 2.5 m로 늘림 | exports: GLYPHS, addStopText
 - `tools/pipeline/src/stages/derive/props/context.ts` — 소품 배치 공용(M05-T03): 카탈로그(content/props/catalog.json), 배치 문맥(셀 소유·표면 높이·결정론 난수), 인스턴스·콜라이더 모으기. | exports: ColliderSpec, PropSpec, PropCatalog, readCatalog, V2, PlaceCtx, rngFor, owns, yawOf, place, batchesOf, toRoadEdge, towardRoad
@@ -325,6 +348,7 @@
 - `tools/pipeline/src/stages/derive/props/linear.ts` — 선형 소품(M05-T03): 가드 파이프(간선 — trunk·primary·secondary, 선 따라 4 m 모듈, 양쪽 차도 끝 너머 보도 0.35 m, 횡단 띠·교차부 근처 끊김)와 | exports: isRailRoad, walkLine, placeGuardRails, placeManholes
 - `tools/pipeline/src/stages/derive/props/points.ts` — OSM 점 소품(M05-T03): 가로등·우체통·자판기·자전거 거치대·벤치·공중전화·휴지통·버스 정류장·볼라드·정지 표지(highway=stop). | exports: pointType, placePoints
 - `tools/pipeline/src/stages/derive/props/poles.ts` — 전신주·전선(M05-T03): 좁은 생활도로(residential·unclassified·living_street·tertiary, 차도 폭 < 15 m) 선을 따라 30–40 m 간격 정거장, | exports: PoleParams, Pole, WireSpan, isPoleRoad, poleParams, poleStations, poleAt, wireSpans, placePoles
+- `tools/pipeline/src/stages/derive/props/signal-sites.ts` — 신호 현시 코드(M06-T02, ADR-0062): 신호기(소품)마다 교차로 ID·계획·그룹을 정수 코드로 → props.inst 5번째 칸(신호 종류는 scale 대신 코드). | exports: SignalPlanSite, SignalSite, axisGap, roadAxes, osmSegmentsNear, junctionsOf, siteFinder, nearerA, signalCode, decodeSignal
 - `tools/pipeline/src/stages/derive/props/signals.ts` — 신호기(M05-T03): 신호 횡단(OSM crossing=traffic_signals) 선 양끝(보도) = 보행 신호(건너편을 봄), 횡단 선 × 차도 선 교차마다 | exports: placeSignals
 - `tools/pipeline/src/stages/derive/props/signs.ts` — 가상 간판(M05-T06): 상업 용도 건물의 길가 변을 따라 — 돌출 간판(袖看板, 벽에서 바깥으로 튀어나온 세로 상자를 층마다 쌓은 열), 입간판(立て看板, 보도 위 A형), | exports: SIGN_BOX_H, BILLBOARD_UNIT_M, placeSigns
 - `tools/pipeline/src/stages/derive/props/vending.ts` — 자판기(M05-T03, 가상 브랜드 — 로고·상표 없음): 상업·주거 용도(카탈로그 usage) 건물 지면 링의 길가 변(바깥 3 m 안에 보도·차도)을 따라 | exports: Edge, streetEdges, Walls, wallTest, placeVending
@@ -358,7 +382,7 @@
 - `tools/pipeline/src/stages/materials/library.ts` — 머티리얼 라이브러리 정의(content/materials/library.json) 읽기·검사 + 런타임 매니페스트 형식(schemas/materials.schema.json). | exports: LibraryLayer, Library, MaterialsManifest, parseLibrary, readLibrary, groupsOf, zipNameOf, AMBIENTCG_GET
 - `tools/pipeline/src/stages/materials/run.ts` — materials 단계: library.json → ambientCG zip(sha256 고정) → 레이어 PNG → KTX2 배열 3장 + 실내 큐브맵 배열(자체 생성, M03-T05) + manifest.json | exports: MANIFEST_FILE, MaterialsInput, MaterialsResult, materialsHash, buildMaterials, installMaterials
 - `tools/pipeline/src/stages/normalize-osm.ts` — normalize --layer osm(M05-T02, 04 §4.1–4.2): Geofabrik 간토 PBF(sources.lock sha256) → osmium extract(영역 + 500 m, smart) → tags-filter(M05 쓰임 태그) | exports: OSM_SOURCE, OSM_FILTERS, OsmGeom, OsmRecord, ringsOf, cellsOf, OsmNormalizeInput, normalizeOsm, normalizeOsmFromLock
-- `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: PlateauLayer, PlateauSourceRoot, NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
+- `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads,bridges,markings}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: PlateauLayer, PlateauSourceRoot, NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
 - `tools/pipeline/src/stages/normalize-terrain.ts` — normalize 단계(지형): GSI DEM1A(주) + DEM5A(결측 채움) → GDAL 재투영(EPSG:6677, 1 m) → 잔여 결측 보간 → data/normalized/terrain/dem_1m.tif. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: NormalizeTerrainInput, GradeReport, NormalizeTerrainResult, gridOfBounds, normalizeTerrain, writeTerrainMeta, hasDemSources
 - `tools/pipeline/src/stages/publish/publish.ts` — publish: data/build/<buildId> → R2 `world/<buildId>/**`(동시성·재시도) → 매니페스트 → 검증(S3 HEAD 또는 Worker HEAD) → KV 빌드 목록·(선택) 현재 포인터. | exports: CURRENT_KEY, BUILDS_KEY, FILES_KEY, BuildEntry, PublishFile, PublishReport, mapLimit, buildFiles, checkBuildDir, PublishInput, publishBuild, verifyViaWorker, selectGc, GcInput, gcBuilds
 - `tools/pipeline/src/stages/publish/targets.ts` — 퍼블리시 대상(env → R2 버킷·KV 네임스페이스)을 apps/worker/wrangler.jsonc에서 읽는다(바인딩 정의의 단일 출처). | exports: PublishEnv, PublishTarget, stripJsonc, readTargets, Clients, createClients

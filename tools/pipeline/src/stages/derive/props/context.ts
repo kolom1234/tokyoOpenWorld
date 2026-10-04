@@ -1,10 +1,11 @@
 // 소품 배치 공용(M05-T03): 카탈로그(content/props/catalog.json), 배치 문맥(셀 소유·표면 높이·결정론 난수), 인스턴스·콜라이더 모으기.
 // 인스턴스 = (x, y, z, yaw, scale) 셀 로컬, yaw = +Y축 반시계(0 = 정면 −Z… 렌더 모델 규약: 로컬 +Z = 정면, yaw = atan2(fx, fz)). see ADR-0051
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createRng, hash32, type Rng, WORLD_SEED } from '@sanpo/core';
 import { JCOL_MATERIAL, type JcolShape, PROP_TYPE, type PropBatch, type PropTypeName } from '@sanpo/tile-format';
 import type { RoadIndex } from '../roads.ts';
+import type { SignalPlanSite, SignalSite } from './signal-sites.ts';
 
 export type ColliderSpec =
   | { kind: 'cylinder'; halfHeight: number; radius: number; material: keyof typeof JCOL_MATERIAL }
@@ -18,10 +19,29 @@ export interface PropSpec {
 export interface PropCatalog {
   types: Record<PropTypeName, PropSpec>;
   budget: { maxInstancesPerCell: number };
+  /** 신호 계획 사이트(content/sim/signal-plans.json sites — M06-T02). 없으면 전부 기본 계획. */
+  signalSites?: SignalPlanSite[];
+}
+
+interface SignalPlansFile {
+  plans: { name: string }[];
+  sites: { name: string; centerWF: [number, number]; radiusM: number; plan: string }[];
 }
 
 export function readCatalog(repoRoot: string): PropCatalog {
-  return JSON.parse(readFileSync(join(repoRoot, 'content/props/catalog.json'), 'utf8')) as PropCatalog;
+  const cat = JSON.parse(readFileSync(join(repoRoot, 'content/props/catalog.json'), 'utf8')) as PropCatalog;
+  const f = join(repoRoot, 'content/sim/signal-plans.json');
+  if (!existsSync(f)) return cat;
+  const sp = JSON.parse(readFileSync(f, 'utf8')) as SignalPlansFile;
+  const index = (name: string) =>
+    Math.max(
+      0,
+      sp.plans.findIndex((p) => p.name === name),
+    );
+  return {
+    ...cat,
+    signalSites: sp.sites.map((s) => ({ centerWF: s.centerWF, radiusM: s.radiusM, plan: index(s.plan) })),
+  };
 }
 
 export type V2 = [number, number];
@@ -36,6 +56,8 @@ export interface PlaceCtx {
   /** 표면 높이(셀 로컬): 보도 = 보도 윗면, 그 밖 = 지형 메시. */
   surfaceAt: (x: number, z: number) => number | undefined;
   inIntersection: (x: number, z: number) => boolean;
+  /** 신호 사이트(가까운 교차로 — M06-T02). 없으면 신호 코드 0(옛 빌드와 같음). */
+  signalSite?: (p: V2, fallback: { center: V2; axis: number }) => SignalSite;
   /** 건물 발자국 안(WF, 셀 + 여유 창). */
   inBuilding: (x: number, z: number) => boolean;
   out: Map<number, number[]>;
@@ -58,7 +80,16 @@ export function owns(c: PlaceCtx, p: V2): boolean {
 export const yawOf = (f: V2): number => Math.atan2(f[0], f[1]);
 
 /** 인스턴스 1개 + 콜라이더(카탈로그). 소유·높이 없으면 건너뛴다. yAt = 셀 로컬 높이 지정(간판 — 없으면 표면). 반환 = 놓았는지. */
-export function place(c: PlaceCtx, type: PropTypeName, p: V2, yaw: number, scale = 1, yAt?: number): boolean {
+/** stored = 5번째 칸에 쓸 값(신호 종류 = 현시 코드, 기본 = scale). 충돌체는 scale로. */
+export function place(
+  c: PlaceCtx,
+  type: PropTypeName,
+  p: V2,
+  yaw: number,
+  scale = 1,
+  yAt?: number,
+  stored = scale,
+): boolean {
   if (!owns(c, p)) return false;
   const lx = p[0] - c.ox;
   const lz = p[1] - c.oz;
@@ -71,7 +102,7 @@ export function place(c: PlaceCtx, type: PropTypeName, p: V2, yaw: number, scale
   c.left--;
   const id = PROP_TYPE[type];
   const list = c.out.get(id) ?? [];
-  list.push(lx, y, lz, yaw, scale);
+  list.push(lx, y, lz, yaw, stored);
   c.out.set(id, list);
   const col = c.catalog.types[type]?.collider;
   if (col) c.colliders.push(colliderShape(col, lx, y, lz, yaw, scale));

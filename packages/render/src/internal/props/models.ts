@@ -2,7 +2,7 @@
 // 전주 전선 부착(통신 5.6/6.1 m, 배전 8.6/9.1/9.6 m)·차도 쪽(+Z) 오프셋은 content/props/catalog.json(wireHeightsM·wireLateralM)과 맞춘다. 차량 신호 팔 = 로컬 +X(차도 위).
 // 자판기 몸체는 흰색 — 인스턴스 색(가상 브랜드 팔레트)이 곱해진다. see ADR-0051, docs/07-rendering.md §5
 import { PROP_TYPE } from '@sanpo/tile-format';
-import { BufferAttribute, BufferGeometry } from 'three/webgpu';
+import { BufferAttribute, BufferGeometry, Color } from 'three/webgpu';
 import { PartBuilder } from './geo.ts';
 
 export type PropLod = 0 | 1 | 2;
@@ -181,9 +181,21 @@ export function buildPropGeometry(typeId: number, lod: PropLod): BufferGeometry 
 }
 
 /**
- * LOD 하나의 전 종류 합친 기하 + 정점 속성 `_ptype`(종류 번호) — 풀 1개가 모든 종류를 그리고 셰이더가 인스턴스 `_itype`과 다른 정점을 퇴화시킨다
+ * LOD 하나의 전 종류 합친 기하 + 정점 속성 `_ptype`(vec2: 종류 번호, 신호 렌즈 표식 lampOf) — 풀 1개가 모든 종류를 그리고 셰이더가 인스턴스 `_itype`과 다른 정점을 퇴화시킨다
  * (three r186은 InstancedMesh마다 노드 빌드(≈ 140 ms)를 따로 해서 종류 × LOD 풀이면 부팅·첫 표시 끊김이 커진다 — ADR-0051).
  */
+/** 신호 렌즈 표식(M06-T02): 차량 1 적·2 황·3 녹, 보행 4 적·5 녹 — 렌즈 정점색으로 찾는다(렌즈 외에는 쓰지 않는 색). */
+const lampColor = new Color();
+function lampOf(t: number, r: number, g: number, b: number): number {
+  const is = (hex: number) => {
+    lampColor.setHex(hex); // 정점색과 같은 선형 공간(PartBuilder)
+    return Math.abs(r - lampColor.r) + Math.abs(g - lampColor.g) + Math.abs(b - lampColor.b) < 0.002;
+  };
+  if (t === PROP_TYPE.signalVehicle) return is(C.red) ? 1 : is(C.amber) ? 2 : is(C.green) ? 3 : 0;
+  if (t === PROP_TYPE.signalPedestrian) return is(C.red) ? 4 : is(C.green) ? 5 : 0;
+  return 0;
+}
+
 export function buildMergedPropGeometry(lod: PropLod): BufferGeometry {
   const parts = PROP_TYPE_IDS.map((t) => ({ t, g: buildPropGeometry(t, lod) as BufferGeometry }));
   const nv = parts.reduce((n, p) => n + p.g.getAttribute('position').count, 0);
@@ -191,7 +203,8 @@ export function buildMergedPropGeometry(lod: PropLod): BufferGeometry {
   const pos = new Float32Array(nv * 3);
   const nrm = new Float32Array(nv * 3);
   const col = new Float32Array(nv * 3);
-  const typ = new Float32Array(nv);
+  // (종류, 렌즈) 한 버퍼 — WebGPU 정점 버퍼 상한 8(위치·법선·색·_ptype + 인스턴스 행렬·색·_itype + 속도 패스 이전 행렬).
+  const typ = new Float32Array(nv * 2);
   const idx = nv > 65535 ? new Uint32Array(ni) : new Uint16Array(ni);
   let v = 0;
   let k = 0;
@@ -200,7 +213,15 @@ export function buildMergedPropGeometry(lod: PropLod): BufferGeometry {
     pos.set(g.getAttribute('position').array as Float32Array, v * 3);
     nrm.set(g.getAttribute('normal').array as Float32Array, v * 3);
     col.set(g.getAttribute('color').array as Float32Array, v * 3);
-    typ.fill(t, v, v + n);
+    for (let i = 0; i < n; i++) {
+      typ[(v + i) * 2] = t;
+      typ[(v + i) * 2 + 1] = lampOf(
+        t,
+        col[(v + i) * 3] as number,
+        col[(v + i) * 3 + 1] as number,
+        col[(v + i) * 3 + 2] as number,
+      );
+    }
     const gi = g.index?.array ?? [];
     for (let i = 0; i < gi.length; i++) idx[k + i] = (gi[i] as number) + v;
     k += gi.length;
@@ -211,7 +232,7 @@ export function buildMergedPropGeometry(lod: PropLod): BufferGeometry {
   out.setAttribute('position', new BufferAttribute(pos, 3));
   out.setAttribute('normal', new BufferAttribute(nrm, 3));
   out.setAttribute('color', new BufferAttribute(col, 3));
-  out.setAttribute('_ptype', new BufferAttribute(typ, 1));
+  out.setAttribute('_ptype', new BufferAttribute(typ, 2));
   out.setIndex(new BufferAttribute(idx, 1));
   out.computeBoundingSphere();
   return out;

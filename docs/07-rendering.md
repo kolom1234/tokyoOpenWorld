@@ -77,7 +77,7 @@ scene
 | 환경 조명 | `SkyEnvironmentNode`(하늘 64² 큐브 → PMREM) = `scene.environmentNode`, 라이트 간접 끔. 갱신 = 카메라 1 km 이동 또는 태양 각도 변화(라이브러리 임계값, 분할 렌더 안 함 — ADR-0028) |
 | 간접광 | `SSGINode`(High+), `GTAONode`(Medium+). 플레이어 주변 `LightProbeGrid`는 M09-T03에서 효용 평가 후 채택 |
 | 야간 광원 | `ClusteredLightsNode` — 반경 300 m 내 최대 1024개(가로등 4000 K LED, 편의점풍 5500 K, 주거 2700 K). 원거리는 발광 스프라이트 + 블룸 |
-| 신호/차량등 | 발광 머티리얼 + 근거리만 실제 광원 |
+| 신호/차량등 | 발광 머티리얼 + 근거리만 실제 광원. 신호 렌즈 = 소품 풀 `_ptype.y`(렌즈 표식) × 인스턴스 `_itype.y`(램프 값, `setSignalLamps`) 일치 시 정점색 × 6 발광(M06-T02, ADR-0062) |
 | 안개 | 고도 감쇠 높이 안개 + 대기 공중원근 강도(습도·비와 연동) |
 
 ## 7. 후처리 파이프라인 (`RenderPipeline`, r183+ 명칭)

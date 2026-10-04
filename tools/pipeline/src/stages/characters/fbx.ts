@@ -24,7 +24,6 @@ function parse(bytes: Uint8Array): Group {
   // FBXLoader가 지원 안 하는 속성(Max 머티리얼 등)마다 경고를 찍는다 — 파싱 동안만 끈다.
   // biome-ignore lint/suspicious/noConsole: 외부 로더 경고 차단
   const warn = console.warn;
-  // biome-ignore lint/suspicious/noConsole: 외부 로더 경고 차단
   console.warn = () => {};
   try {
     return new FBXLoader().parse(ab, '');

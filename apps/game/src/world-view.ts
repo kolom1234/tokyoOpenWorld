@@ -23,10 +23,11 @@ import {
   type SignageAssetUrls,
   type TreeAssetUrls,
 } from '@sanpo/render';
-import { type ClockMode, type CrowdParams, createSim, type SimService } from '@sanpo/sim';
+import { type ClockMode, type CrowdParams, createSim, type SignalPlansFile, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import CROWD_PARAMS from '../../../content/sim/crowd.json';
+import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
@@ -206,6 +207,17 @@ function startCrowdLater(
   void v.render.loadCrowd(CROWD_URLS).catch((e: unknown) => log.warn('crowd', e));
 }
 
+/** 신호 램프(M06-T02): sim 상태 → 램프 값. 보행 녹색 점멸 = 0.5 s 켜짐/꺼짐(실시간 — 정지 시계에서도 깜빡임). */
+function signalLampsOf(sim: SimService): (code: number) => number {
+  const VEH = { R: 1, Y: 2, G: 3 } as const;
+  return (code) => {
+    const s = sim.signalStateAt(code);
+    if (code % 4 < 2) return VEH[s.vehicle];
+    const blink = Math.floor(performance.now() / 500) % 2 === 0;
+    return 4 * (s.ped === 'D' ? 1 : s.ped === 'W' || blink ? 2 : 0);
+  };
+}
+
 /** 간판도 첫 표시 뒤(≈ 0.25 MB). 실패하면 무지 간판·간판 인스턴스 없이. */
 function loadSignageLater(render: RenderService, late: LateState, log: Logger): void {
   void render
@@ -287,7 +299,15 @@ async function showWorldWith(
   else loadTreesLater(render, late, wlog);
   loadSignageLater(render, late, wlog);
   if (deps.crowd) startCrowdLater(v, world, wlog);
+  render.setSignalLamps(signalLampsOf(v.sim));
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
+}
+
+/** sim(시계 + 신호 계획 content/sim/signal-plans.json — M06-T02). */
+function simFor(deps: WorldViewDeps): SimService {
+  const now = deps.now ?? Date.now;
+  const signalPlans = SIGNAL_PLANS as unknown as SignalPlansFile;
+  return createSim({ bus: deps.bus, log: deps.log, now, initialClock: deps.clock ?? defaultClock(now()), signalPlans });
 }
 
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
@@ -300,8 +320,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const late: LateState = { materialsSettled: false, avatarSettled: false, treesSettled: false, signsSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
   const traversal = createTraversalFor(deps, input, ground, late);
-  const now = deps.now ?? Date.now;
-  const sim = createSim({ bus, log, now, initialClock: deps.clock ?? defaultClock(now()) });
+  const sim = simFor(deps);
   const frameSource: FrameSource = {
     camera: () => traversal.camera,
     player: () => traversal.player,

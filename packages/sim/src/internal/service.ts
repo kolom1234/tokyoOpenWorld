@@ -6,6 +6,8 @@ import { wfToLonLat } from '@sanpo/geo';
 import type { SimDeps, SimService } from '../api.ts';
 import { clearSkyIlluminanceLux, moonPosition, sunPosition } from './clock/astronomy.ts';
 import { createWorldClock } from './clock/world-clock.ts';
+import { signalState } from './signals/controller.ts';
+import { compilePlans } from './signals/plans.ts';
 import { type SimWorkerHost, startSimWorker } from './worker/host.ts';
 
 /** 01-architecture §5: sim 시계 = phase 10. */
@@ -60,7 +62,9 @@ export function createSim(deps: SimDeps): SimService {
     dispose() {},
   };
   let worker: SimWorkerHost | undefined;
+  const plans = deps.signalPlans ? compilePlans(deps.signalPlans) : [];
   return {
+    signalStateAt: (code) => signalState(plans, code, clock.gameTimeMs / 1000),
     clock,
     startWorker(o) {
       worker ??= startSimWorker({

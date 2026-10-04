@@ -1,0 +1,33 @@
+{
+  "note": "신호 현시 계획(10 §5.2, M06-T02 — ADR-0062). 그룹 = [차량 A, 차량 B, 보행 A(∥ A), 보행 B]. 차량 G·Y·R, 보행 W(녹)·F(녹 점멸)·D(적). plans 순서 = props.inst 신호 코드의 계획 번호(0–3, 추가만). sites = 계획을 바꿀 교차로(WF 중심·반경 m). 주기 오프셋 = 교차로 ID 해시(모든 계획 공통, 결정론).",
+  "plans": [
+    {
+      "name": "standard",
+      "phases": [
+        { "durS": 47, "groups": ["G", "R", "W", "D"] },
+        { "durS": 5, "groups": ["G", "R", "F", "D"] },
+        { "durS": 3, "groups": ["Y", "R", "D", "D"] },
+        { "durS": 2, "groups": ["R", "R", "D", "D"] },
+        { "durS": 53, "groups": ["R", "G", "D", "W"] },
+        { "durS": 5, "groups": ["R", "G", "D", "F"] },
+        { "durS": 3, "groups": ["R", "Y", "D", "D"] },
+        { "durS": 2, "groups": ["R", "R", "D", "D"] }
+      ]
+    },
+    {
+      "name": "scramble",
+      "phases": [
+        { "durS": 38, "groups": ["G", "R", "D", "D"] },
+        { "durS": 3, "groups": ["Y", "R", "D", "D"] },
+        { "durS": 2, "groups": ["R", "R", "D", "D"] },
+        { "durS": 38, "groups": ["R", "G", "D", "D"] },
+        { "durS": 3, "groups": ["R", "Y", "D", "D"] },
+        { "durS": 2, "groups": ["R", "R", "D", "D"] },
+        { "durS": 26, "groups": ["R", "R", "W", "W"] },
+        { "durS": 6, "groups": ["R", "R", "F", "F"] },
+        { "durS": 2, "groups": ["R", "R", "D", "D"] }
+      ]
+    }
+  ],
+  "sites": [{ "name": "渋谷スクランブル交差点", "centerWF": [-22.3, 8.6], "radiusM": 45, "plan": "scramble" }]
+}

@@ -224,6 +224,11 @@ export interface RenderService extends SystemProvider {
   loadSignage(urls: SignageAssetUrls): Promise<void>;
   /** 군중 팩 적재 → 머티리얼 선컴파일 → pedestrians 레이어를 그리기 시작(M06-T01). 첫 표시 뒤에 부른다. */
   loadCrowd(urls: CrowdAssetUrls): Promise<void>;
+  /**
+   * 신호 램프 원천(M06-T02): props.inst 신호 기둥의 현시 코드 → 램프 값(차량 1 적·2 황·3 녹 + 4 × 보행 1 적·2 녹, 0 = 꺼짐).
+   * 배선이 sim.signalStateAt로 만든다. 매 renderPrep에 보이는 기둥만 묻는다. null = 램프 끔.
+   */
+  setSignalLamps(lamp: ((code: number) => number) | null): void;
   /** 보행자 인스턴스 레이어(sim 출력). */
   readonly pedestrians: InstanceLayer;
   stats(): RenderStats;

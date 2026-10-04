@@ -68,6 +68,8 @@ export interface CellBuildInput {
   cellRoads?: readonly RoadRecord[];
   /** 이 셀 OSM 레코드(노면 표시, M05-T02). 없으면 decals.mesh 없음. */
   osm?: readonly OsmRecord[];
+  /** 셀 + 8-이웃 OSM 차도 선(신호 그룹 도로 방향 — M06-T02). 없으면 osm 중 차도. */
+  vehicleRoadsAround?: readonly OsmRecord[];
   /** PLATEAU 道路標示(셀 + 8-이웃)·OSM 횡단 보정(M06 사전 2, ADR-0058). */
   markings?: Pick<MarkingInput, 'plateau' | 'corrections'>;
   /** 소품 카탈로그(M05-T03). 없으면 props.inst·소품 콜라이더·전선 없음. */
@@ -203,6 +205,7 @@ function propCell(
     ox: originWF[0],
     oz: originWF[2],
     osm: input.osm ?? [],
+    ...(input.vehicleRoadsAround ? { vehicleRoadsAround: input.vehicleRoadsAround } : {}),
     buildings: input.buildings,
     roads: input.roads,
     index: sc.index,
@@ -362,6 +365,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       roads: files.roadsAround(key),
       cellRoads: files.roadsOf(key),
       osm: readLayer<OsmRecord>(input.normalizedDir, 'osm', key),
+      vehicleRoadsAround: files.vehicleRoadsAround(key),
       markings: { plateau: files.markingsAround(key), corrections: input.crossingCorrections ?? [] },
       ...(input.props ? { props: input.props } : {}),
       ...(input.overrides

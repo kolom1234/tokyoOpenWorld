@@ -68,6 +68,8 @@ export interface RenderContext {
   readonly gpuTimer: GpuTimer;
   /** 프레임 카운터·마지막 HLOD 페이드 수·장면 버전(셀·HLOD 표시 변경마다 +1, 그림자 캐시 무효화)·이번 프레임 그림자 캐스케이드 수(stats). */
   readonly counters: { frames: number; fading: number; sceneVersion: number; shadowUpdates: number };
+  /** 신호 램프 원천(M06-T02 — setSignalLamps). */
+  signalLamp?: ((code: number) => number) | null;
 }
 
 /** WebGL2 고정 노출(WebGPU 자동 노출 골든뷰 배율 0.8–1.9의 기하 중간 ≈ 1.25). */
