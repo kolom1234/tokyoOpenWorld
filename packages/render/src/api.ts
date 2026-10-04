@@ -140,6 +140,8 @@ export interface RenderStats {
     casters: number;
     lods: number[];
     ready: boolean;
+    /** 원경 스프라이트(M06-T04): 셀에서 뽑은 점 수·지금 그리는 수. */
+    far: { points: number; drawn: number };
   };
 }
 
@@ -172,6 +174,8 @@ export interface CrowdAssetUrls {
 /** 10 §1: sim SAB 인스턴스 버퍼를 render가 읽는다(wiring이 1회 bindShared). */
 export interface InstanceLayer {
   bindShared(buf: SharedInstanceBuffer): void;
+  /** 원경 스프라이트(tier C, 235–800 m — M06-T04) 밀도 0..1. 게임이 sim 군중 수 ÷ 목표로(시간대·날씨). 기본 0(안 보임). */
+  setFarDensity(k: number): void;
 }
 
 /** 선컴파일 진행(M06): 단계·완료 수·총 수. */

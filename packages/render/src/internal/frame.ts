@@ -51,6 +51,7 @@ function syncProps(ctx: RenderContext, rebased: boolean): boolean {
   if (ctx.signalLamp) ctx.props.updateSignals(ctx.signalLamp);
   const signs = ctx.signs.update(scratchCam, o, rebased);
   const crowd = ctx.crowd.update(camera, o);
+  ctx.farCrowd.update(camera, o, performance.now() / 1000);
   return ctx.trees.update(scratchCam, o, rebased) || props || signs || crowd;
 }
 

@@ -2,13 +2,13 @@
 // 녹색 점멸(F)엔 새로 건너지 않고, 건너는 중 F·D면 서두른다(최고 속력 × 1.35). 신호 없는 횡단은 바로 건넌다(차량이 양보 — T05).
 // 계획(경로 탐색)은 틱당 상한이 있어 needPlan 표시만 하고 agents-detour가 순서대로 처리한다.
 import type { CrowdAgent } from '@recast-navigation/core';
-import type { Rng } from '@sanpo/core';
 import { NAV_FLAG } from '@sanpo/tile-format';
 import type { CrowdAgentsParams } from '../../api.ts';
+import { type PedIdentity, STATE } from './appearance.ts';
 import type { NavWorld } from './nav-world.ts';
 import { type CrossingHit, crossingPoints, firstCrossing, keepLeftLat, type V3 } from './route.ts';
 
-export const STATE = { walk: 0, approach: 1, wait: 2, cross: 3, dwell: 4 } as const;
+export { STATE } from './appearance.ts';
 /** crowd 필터 번호(crowd.getFilter): 0 = 걷기만, 1 = 횡단 포함. */
 export const FILTER = { walk: 0, all: 1 } as const;
 const ARRIVE_M = 1.2;
@@ -19,30 +19,14 @@ const HURRY = 1.35;
 /** 이 시간 동안 0.25 m도 못 가면 다시 계획, 그 3배면 제거. */
 export const STUCK_S = 4;
 
-export interface Agent {
+/** tier A 보행자 = 정체성 + Detour 에이전트·목표·끼임 판정. */
+export interface Agent extends PedIdentity {
   ca: CrowdAgent;
-  seq: number;
-  rng: Rng;
-  variant: number;
-  speed: number;
-  idleClip: number;
-  phase: number;
-  yaw: number;
-  state: number;
-  dest: V3 | undefined;
-  hit: CrossingHit | undefined;
-  lat: number;
-  depth: number;
   target: V3 | undefined;
-  react: number;
-  timer: number;
   stuckS: number;
   anchorX: number;
   anchorZ: number;
   needPlan: boolean;
-  /** 대기 중 바라볼 방향(xz 단위). */
-  faceX: number;
-  faceZ: number;
   /** 시나리오(스크램블 시험): 첫 계획에서 이 횡단부터. */
   forced?: CrossingHit | undefined;
 }
@@ -55,13 +39,13 @@ export interface FsmCtx {
   /** 횡단 신호 코드 → 보행 램프(NAV_NO_SIGNAL = 항상 W). */
   ped: (code: number) => PedLamp;
   /** 목적지 고르기(실패 = undefined). */
-  pickDest: (a: Agent, pos: V3) => V3 | undefined;
+  pickDest: (a: PedIdentity, pos: V3) => V3 | undefined;
 }
 
 const dist2 = (a: V3, b: V3): number => Math.hypot(a.x - b.x, a.z - b.z);
 const lerp = (r: [number, number], t: number): number => r[0] + (r[1] - r[0]) * t;
 
-function snapWalk(c: FsmCtx, p: V3, reach = 2): V3 | undefined {
+export function snapWalk(c: FsmCtx, p: V3, reach = 2): V3 | undefined {
   const r = c.nav.query.findClosestPoint(p, { filter: c.nav.walkFilter, halfExtents: { x: reach, y: 3, z: reach } });
   return r.success ? r.point : undefined;
 }
@@ -89,7 +73,7 @@ export function exitPoint(c: FsmCtx, from: V3, dir: readonly [number, number]): 
 }
 
 /** 횡단 시작(대기점 → 건너편). */
-function startCross(c: FsmCtx, a: Agent): void {
+export function startCross(c: FsmCtx, a: Agent): void {
   if (!a.hit) return;
   const pts = crossingPoints(a.hit, a.lat, a.depth);
   const exit = exitPoint(c, pts.exit, pts.dir) ?? pts.exit;
@@ -97,32 +81,28 @@ function startCross(c: FsmCtx, a: Agent): void {
   moveTo(a, exit, FILTER.all, a.speed * 1.08);
 }
 
-/** 경로 계획: 목적지(없으면 새로) → 전체 필터 경로 → 첫 횡단이 있으면 그 대기점으로, 없으면 목적지로(걷기 필터). */
-export function plan(c: FsmCtx, a: Agent): boolean {
-  a.needPlan = false;
-  const pos = a.ca.position();
+/** 다음 구간 결정(두 tier 공용): 걷기 = 목적지까지(횡단 없음), 접근 = 첫 횡단의 대기점. 목적지가 없거나 경로가 없으면 undefined. */
+export type RouteLeg = { kind: 'walk'; to: V3 } | { kind: 'approach'; to: V3 };
+
+export function decideRoute(c: FsmCtx, a: PedIdentity, pos: V3, forced?: CrossingHit): RouteLeg | undefined {
   if (!a.dest || dist2(pos, a.dest) < DEST_ARRIVE_M) a.dest = c.pickDest(a, pos);
-  if (!a.dest) return false;
-  let hit = a.forced;
-  a.forced = undefined;
-  if (hit) a.hit = hit;
+  if (!a.dest) return undefined;
+  let hit = forced;
   if (!hit) {
     const path = c.nav.query.computePath(pos, a.dest, { filter: c.nav.allFilter, halfExtents: { x: 2, y: 3, z: 2 } });
     if (!path.success || path.path.length < 2) {
       a.dest = undefined;
-      return false;
+      return undefined;
     }
-    const near = c.nav.crossingsNear(pos.x, pos.z, dist2(pos, a.dest) + 10);
-    hit = firstCrossing(path.path, near);
+    hit = firstCrossing(path.path, c.nav.crossingsNear(pos.x, pos.z, dist2(pos, a.dest) + 10));
   }
   if (!hit) {
     a.hit = undefined;
     a.state = STATE.walk;
-    moveTo(a, a.dest, FILTER.walk, a.speed);
-    return true;
+    return { kind: 'walk', to: a.dest };
   }
   // 시나리오(forced)는 스폰한 대기점(lat·depth)을 그대로 쓴다.
-  if (hit !== a.hit) {
+  if (!forced && (hit.rec.id !== a.hit?.rec.id || hit.fromA !== a.hit.fromA)) {
     a.lat = keepLeftLat(a.rng.next());
     a.depth = a.rng.next() * a.rng.next() * 3;
   }
@@ -131,7 +111,17 @@ export function plan(c: FsmCtx, a: Agent): boolean {
   a.faceX = pts.dir[0];
   a.faceZ = pts.dir[1];
   a.state = STATE.approach;
-  moveTo(a, snapWalk(c, pts.wait) ?? pts.wait, FILTER.walk, a.speed);
+  return { kind: 'approach', to: snapWalk(c, pts.wait) ?? pts.wait };
+}
+
+/** 경로 계획(tier A): decideRoute → 걷기 필터로 이동. */
+export function plan(c: FsmCtx, a: Agent): boolean {
+  a.needPlan = false;
+  const forced = a.forced;
+  a.forced = undefined;
+  const leg = decideRoute(c, a, a.ca.position(), forced);
+  if (!leg) return false;
+  moveTo(a, leg.to, FILTER.walk, a.speed);
   return true;
 }
 

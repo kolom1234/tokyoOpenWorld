@@ -4,6 +4,7 @@ import { type Logger, mergeConfig, type QualityTier } from '@sanpo/core';
 import type { Material, WebGPURenderer } from 'three/webgpu';
 import type { DepthMode, PostEffects, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
+import { createFarCrowd, type FarCrowd } from './crowd/far.ts';
 import { type CrowdField, createCrowdField } from './crowd/field.ts';
 import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
 import { attachEnvProbe, type EnvProbe } from './lighting/env-probe.ts';
@@ -49,6 +50,8 @@ export interface RenderContext {
   /** 나무(vegetation 루트, M05-T04) — 에셋은 loadTrees 뒤. 머티리얼은 적재 때 채운다(그림자 티어 재컴파일 대상). */
   readonly trees: TreeField;
   readonly crowd: CrowdField;
+  /** 원경 군중 스프라이트(tier C, M06-T04). */
+  readonly farCrowd: FarCrowd;
   /** 군중 머티리얼(적재 뒤 — 그림자 티어 재컴파일 대상). */
   readonly crowdMaterials: Material[];
   readonly treeMaterials: Material[];
@@ -121,6 +124,7 @@ function attachActors(graph: SceneGraph): {
   trees: TreeField;
   signs: SignField;
   crowd: CrowdField;
+  farCrowd: FarCrowd;
 } {
   const avatar = createAvatar();
   graph.roots.dynamic.add(avatar.group);
@@ -132,7 +136,9 @@ function attachActors(graph: SceneGraph): {
   graph.roots.prop.add(signs.root);
   const crowd = createCrowdField();
   graph.roots.dynamic.add(crowd.root);
-  return { avatar, props, trees, signs, crowd };
+  const farCrowd = createFarCrowd();
+  graph.roots.dynamic.add(farCrowd.root);
+  return { avatar, props, trees, signs, crowd, farCrowd };
 }
 
 /** 적재 뒤 붙는 머티리얼(그림자 티어 재컴파일 대상). */

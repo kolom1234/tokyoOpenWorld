@@ -30,6 +30,7 @@ import { createStreamingRenderWiring, type StreamingRenderWiring } from './wirin
 import { createStreamingSimWiring } from './wiring/streaming-sim.ts';
 import {
   type CrowdMode,
+  crowdFarDensitySystem,
   type LateState,
   loadAvatarLater,
   loadMaterialsLater,
@@ -211,7 +212,11 @@ async function showWorldWith(
   else loadTreesLater(render, late, wlog);
   loadSignageLater(render, late, wlog);
   const crowd = deps.crowd ?? 'agents';
-  if (crowd !== 'off') startCrowdLater(v, world, crowd, wlog);
+  if (crowd !== 'off') {
+    startCrowdLater(v, world, crowd, wlog);
+    const far = crowdFarDensitySystem(v.sim, render);
+    deps.scheduler.add({ systems: () => [far] });
+  }
   render.setSignalLamps(signalLampsOf(v.sim));
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }

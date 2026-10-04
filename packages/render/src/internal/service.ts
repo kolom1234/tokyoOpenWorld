@@ -35,7 +35,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     props: ctx.props.stats(),
     trees: ctx.trees.stats(),
     signs: ctx.signs.stats(),
-    crowd: ctx.crowd.stats(),
+    crowd: { ...ctx.crowd.stats(), far: ctx.farCrowd.stats() },
   };
 }
 
@@ -161,7 +161,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     backend: ctx.backend,
     depth: ctx.depth,
     ...staged.api,
-    pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf) },
+    pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf), setFarDensity: (k) => ctx.farCrowd.setDensity(k) },
     setSignalLamps: (lamp) => {
       ctx.signalLamp = lamp;
     },
@@ -171,6 +171,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       ctx.props.addCell(p.key, p.originWF, p.instances?.props);
       ctx.trees.addCell(p.key, p.originWF, p.instances?.trees);
       ctx.signs.addCell(p.key, p.originWF, p.instances?.props);
+      if (p.level === 0) ctx.farCrowd.addCell(p.key, p.originWF, p.meshes.roads);
       ctx.counters.sceneVersion++;
     },
     removeCell: (key) => {
@@ -178,6 +179,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       ctx.props.removeCell(key);
       ctx.trees.removeCell(key);
       ctx.signs.removeCell(key);
+      ctx.farCrowd.removeCell(key);
       ctx.counters.sceneVersion++;
     },
     setHlodChildVisible: (parent, child, visible) => {

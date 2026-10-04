@@ -3,7 +3,7 @@
 import { init } from '@recast-navigation/core';
 import type { Vec3, Vec3d } from '@sanpo/core';
 import type { CrowdParams, SignalPlansFile } from '../../api.ts';
-import { createTierA, type TierA, type TierAStats } from '../crowd/agents-detour.ts';
+import { type CrowdSim, type CrowdSimStats, createCrowdSim } from '../crowd/crowd-sim.ts';
 import { createNavWorld, type NavWorld } from '../crowd/nav-world.ts';
 import { signalState } from '../signals/controller.ts';
 import { type CompiledPlan, compilePlans } from '../signals/plans.ts';
@@ -18,12 +18,13 @@ export interface ClockSync {
 export interface CrowdRuntime {
   addCell(key: number, nav: ArrayBuffer): void;
   removeCell(key: number): void;
-  setPlayer(pos: Readonly<Vec3d>, vel: Readonly<Vec3>): void;
+  setPlayer(pos: Readonly<Vec3d>, vel: Readonly<Vec3>, fwd?: Readonly<Vec3>): void;
+  setDensityScale(k: number): void;
   setClock(c: ClockSync): void;
   scenario(center: Readonly<Vec3d>, radius: number, count: number): void;
   /** dt 진행 → out(WF − anchor), 반환 = 쓴 수(준비 전 0). */
   step(dt: number, nowAbs: number, out: Float32Array, anchor: Readonly<Vec3d>): number;
-  stats(): (TierAStats & { tiles: number; cells: number; crossings: number }) | undefined;
+  stats(): (CrowdSimStats & { tiles: number; cells: number; crossings: number }) | undefined;
 }
 
 export function createCrowdRuntime(
@@ -32,7 +33,8 @@ export function createCrowdRuntime(
   clock0: ClockSync,
 ): CrowdRuntime {
   let nav: NavWorld | undefined;
-  let tier: TierA | undefined;
+  let tier: CrowdSim | undefined;
+  let densityScale = 1;
   let clock = clock0;
   const pending = new Map<number, ArrayBuffer | null>();
   let pendingScenario: { center: Vec3d; radius: number; count: number } | undefined;
@@ -42,7 +44,8 @@ export function createCrowdRuntime(
   const ped = (code: number) => signalState(plans, code, nowGameS).ped;
   void init().then(() => {
     nav = createNavWorld();
-    tier = createTierA(nav, params, ped);
+    tier = createCrowdSim(nav, params, ped);
+    tier.setDensityScale(densityScale);
     for (const [k, b] of pending) if (b) nav.addCell(k, new Uint8Array(b));
     pending.clear();
   });
@@ -55,7 +58,11 @@ export function createCrowdRuntime(
       if (nav) nav.removeCell(key);
       else pending.delete(key);
     },
-    setPlayer: (pos, vel) => tier?.setPlayer(pos, vel),
+    setPlayer: (pos, vel, fwd) => tier?.setPlayer(pos, vel, fwd),
+    setDensityScale(k) {
+      densityScale = k;
+      tier?.setDensityScale(k);
+    },
     setClock(c) {
       clock = c;
     },

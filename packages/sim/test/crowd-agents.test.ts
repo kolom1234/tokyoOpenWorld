@@ -7,7 +7,7 @@ import { packCellKey } from '@sanpo/core';
 import { gunzip, readTkc } from '@sanpo/tile-format';
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { CrowdParams } from '../src/api.ts';
-import { createTierA } from '../src/internal/crowd/agents-detour.ts';
+import { createCrowdSim } from '../src/internal/crowd/crowd-sim.ts';
 import { createNavWorld, type NavWorld } from '../src/internal/crowd/nav-world.ts';
 import { firstCrossing, inBand } from '../src/internal/crowd/route.ts';
 
@@ -30,6 +30,13 @@ const params: CrowdParams = {
     phoneShare: 0.1,
     dwellShare: 0,
     dwellS: [4, 10],
+    maxB: 0,
+    radiusB: 250,
+    despawnB: 265,
+    farSpawnM: 200,
+    lodBandM: 5,
+    plansPerTickB: 10,
+    fillPerTick: 60,
   },
 };
 
@@ -84,8 +91,9 @@ describe('crowd tier A on the Scramble navmesh (world-mini)', () => {
 
   it('250 agents wait on red, cross together on the all-way walk: tick ≤ 12 ms, no penetration', () => {
     let lamp: 'W' | 'F' | 'D' = 'D';
-    const a = createTierA(nav, params, () => lamp);
-    a.setPlayer({ x: SCRAMBLE.x + 60, y: 0, z: SCRAMBLE.z + 60 }, { x: 0, y: 0, z: 0 });
+    const a = createCrowdSim(nav, params, () => lamp);
+    // 플레이어 = 스크램블 중심(250명 모두 tier A 반경 안).
+    a.setPlayer({ x: SCRAMBLE.x, y: 0, z: SCRAMBLE.z }, { x: 0, y: 0, z: 0 });
     expect(a.scenario(SCRAMBLE, 45, 250)).toBe(250);
     const out = new Float32Array(260 * 8);
     const ticks: number[] = [];

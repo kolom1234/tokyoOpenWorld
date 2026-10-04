@@ -1,5 +1,5 @@
 // sim.worker(10 §1): 30 Hz 고정 틱 — 군중 → SAB 인스턴스 버퍼(instance-buffer.ts) 게시. 모드: dummy(M06-T01 원형 걷기) | agents(M06-T03 DetourCrowd tier A).
-// 메시지: init {sab, capacity, params, center, mode, plans?, clock} · center · player {pos, vel} · clock · nav-add {key, nav} · nav-remove {key} · scenario · stop.
+// 메시지: init {sab, capacity, params, center, mode, plans?, clock} · center · player {pos, vel, fwd?} · clock · density {scale} · nav-add {key, nav} · nav-remove {key} · scenario · stop.
 import type { Vec3, Vec3d } from '@sanpo/core';
 import type { SignalPlansFile } from '../../api.ts';
 import { type CrowdParams, createDummyAgents, type DummyAgent, stepDummy } from '../crowd/dummy.ts';
@@ -20,7 +20,8 @@ export type SimWorkerMsg =
       clock: ClockSync;
     }
   | { t: 'center'; center: Vec3d }
-  | { t: 'player'; pos: Vec3d; vel: Vec3 }
+  | { t: 'player'; pos: Vec3d; vel: Vec3; fwd?: Vec3 }
+  | { t: 'density'; scale: number }
   | { t: 'clock'; clock: ClockSync }
   | { t: 'nav-add'; key: number; nav: ArrayBuffer }
   | { t: 'nav-remove'; key: number }
@@ -94,8 +95,9 @@ scope.onmessage = (e) => {
   if (m.t === 'center' || m.t === 'player') {
     st.center = { ...(m.t === 'center' ? m.center : m.pos) };
     st.anchor = anchorOf(st.center);
-    if (m.t === 'player') st.crowd?.setPlayer(m.pos, m.vel);
+    if (m.t === 'player') st.crowd?.setPlayer(m.pos, m.vel, m.fwd);
   } else if (m.t === 'clock') st.crowd?.setClock(m.clock);
+  else if (m.t === 'density') st.crowd?.setDensityScale(m.scale);
   else if (m.t === 'nav-add') st.crowd?.addCell(m.key, m.nav);
   else if (m.t === 'nav-remove') st.crowd?.removeCell(m.key);
   else if (m.t === 'scenario') st.crowd?.scenario(m.center, m.radius, m.count);

@@ -1,6 +1,6 @@
 // 첫 표시 뒤 적재(world-view에서 분리 — 400줄 한도): 머티리얼·아바타·나무·간판·군중(sim.worker + 군중 팩)·신호 램프. 실패하면 그 요소 없이 계속.
 // see docs/modules/game.md §부트 시퀀스
-import type { GroundQuery, Logger, WorkerSupervisor } from '@sanpo/core';
+import type { GameSystem, GroundQuery, Logger, WorkerSupervisor } from '@sanpo/core';
 import type { PhysicsService } from '@sanpo/physics';
 import type { AvatarAssetUrls, CrowdAssetUrls, RenderService, SignageAssetUrls, TreeAssetUrls } from '@sanpo/render';
 import type { CrowdParams, SimService } from '@sanpo/sim';
@@ -108,6 +108,25 @@ export function startCrowdLater(
   const c = SIGNAL_PLANS.sites[0]?.centerWF;
   if (mode === 'scramble' && c?.[0] !== undefined && c[1] !== undefined)
     v.sim.crowdScenario({ x: c[0], y: 0, z: c[1] }, SCRAMBLE_SCENE.radius, SCRAMBLE_SCENE.count);
+}
+
+/** 원경 군중 밀도(M06-T04): 1 s마다 sim 군중 수(A + B) ÷ 목표 최대(maxA + maxB) → render 원경 스프라이트(시간대·날씨가 원경에도). */
+export function crowdFarDensitySystem(sim: SimService, render: RenderService): GameSystem {
+  const a = (CROWD_PARAMS as unknown as CrowdParams).agents;
+  const max = a ? a.maxA + a.maxB : 0;
+  let acc = 0;
+  return {
+    id: 'wiring/crowd-far-density',
+    phase: 66,
+    update(f) {
+      acc += f.dtReal;
+      if (acc < 1 || max === 0) return;
+      acc = 0;
+      const c = sim.workerStats()?.crowd;
+      if (c) render.pedestrians.setFarDensity((c.agents + c.flow) / max);
+    },
+    dispose() {},
+  };
 }
 
 /** 신호 램프(M06-T02): sim 상태 → 램프 값. 보행 녹색 점멸 = 0.5 s 켜짐/꺼짐(실시간 — 정지 시계에서도 깜빡임). */

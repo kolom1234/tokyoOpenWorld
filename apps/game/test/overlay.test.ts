@@ -27,7 +27,16 @@ describe('describeDebug', () => {
       props: { instances: 1200, visible: 800, pools: 3, rebuilds: 3, dropped: 0 },
       trees: { instances: 500, visible: 300, pools: 5, dropped: 0, ready: true },
       signs: { instances: 40, visible: 30, pools: 2, ready: true },
-      crowd: { instances: 0, visible: 0, pools: 0, dropped: 0, casters: 0, lods: [0, 0, 0, 0], ready: false },
+      crowd: {
+        instances: 0,
+        visible: 0,
+        pools: 0,
+        dropped: 0,
+        casters: 0,
+        lods: [0, 0, 0, 0],
+        ready: false,
+        far: { points: 0, drawn: 0 },
+      },
     };
     const t = { camera: { posWF: { x: -60, y: 75.4, z: -15 } }, hud: { speedKmh: 54 } } as unknown as TraversalService;
     const lines = describeDebug(stats, 59.94, t, 15.4);

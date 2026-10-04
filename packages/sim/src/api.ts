@@ -46,6 +46,14 @@ export interface CrowdAgentsParams {
   /** 목적지 도착 뒤 멈춰 서는 확률·시간. */
   dwellShare: number;
   dwellS: [number, number];
+  /** tier B(M06-T04 — 80–250 m 흐름, High 750): 최대 수·반경·제거 반경·평소 스폰 최소 거리(그 안은 시야 밖만)·A↔B 히스테리시스 반폭·틱당 경로 계획·채우기 틱당 스폰. */
+  maxB: number;
+  radiusB: number;
+  despawnB: number;
+  farSpawnM: number;
+  lodBandM: number;
+  plansPerTickB: number;
+  fillPerTick: number;
 }
 
 /** 신호 계획 파일(content/sim/signal-plans.json — game이 넘김). 그룹 = [차량 A, 차량 B, 보행 A, 보행 B]. */
@@ -72,9 +80,12 @@ export interface SimWorkerStats {
   p95TickMs: number;
   count: number;
   ticks: number;
-  /** agents 모드(M06-T03): tier A 수·대기·횡단·경로 계획·스폰·제거(내비 밖·끼임)·내비 타일·셀·횡단보도 수. */
+  /** agents 모드(M06-T03·T04): tier A 수·tier B 수·대기·횡단·경로 계획·스폰·제거(내비 밖·끼임)·승격·강등·내비 타일·셀·횡단보도 수. */
   crowd?: {
     agents: number;
+    flow: number;
+    promoted: number;
+    demoted: number;
     waiting: number;
     crossing: number;
     plans: number;

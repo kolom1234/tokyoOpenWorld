@@ -12,6 +12,9 @@ export const PEDESTRIAN_CAPACITY = 1000;
 
 export interface CrowdWorkerStats {
   agents: number;
+  flow: number;
+  promoted: number;
+  demoted: number;
   waiting: number;
   crossing: number;
   plans: number;
@@ -27,7 +30,8 @@ export interface CrowdWorkerStats {
 export interface SimWorkerHost {
   readonly pedestrians: InstanceReader;
   setCenter(c: Readonly<Vec3d>): void;
-  setPlayer(pos: Readonly<Vec3d>, vel: Readonly<Vec3>): void;
+  setPlayer(pos: Readonly<Vec3d>, vel: Readonly<Vec3>, fwd?: Readonly<Vec3>): void;
+  setDensityScale(k: number): void;
   setClock(c: ClockSync): void;
   addCell(key: number, nav: ArrayBuffer): void;
   removeCell(key: number): void;
@@ -80,10 +84,11 @@ function hostApi(h: {
       h.setCenterLocal(c);
       h.post({ t: 'center', center: { ...c } });
     },
-    setPlayer(pos, vel) {
+    setPlayer(pos, vel, fwd) {
       h.setCenterLocal(pos);
-      h.post({ t: 'player', pos: { ...pos }, vel: { ...vel } });
+      h.post({ t: 'player', pos: { ...pos }, vel: { ...vel }, ...(fwd ? { fwd: { ...fwd } } : {}) });
     },
+    setDensityScale: (scale) => h.post({ t: 'density', scale }),
     setClock(c) {
       h.setClockLocal(c);
       h.post({ t: 'clock', clock: c });

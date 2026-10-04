@@ -1,5 +1,13 @@
 // 메인 ↔ sim.worker 연결(M06-T03): 시작 전 셀 nav는 보관, 플레이어 상태는 30 Hz로, 시계는 배속·점프가 바뀌거나 예측과 50 ms 넘게 어긋날 때 동기.
-import type { CellKey, PlayerState, SharedInstanceBuffer, Vec3d, WorkerSupervisor } from '@sanpo/core';
+import type {
+  CameraState,
+  CellKey,
+  PlayerState,
+  SharedInstanceBuffer,
+  Vec3,
+  Vec3d,
+  WorkerSupervisor,
+} from '@sanpo/core';
 import type { CrowdParams, SimDeps, SimWorkerStats, WorldClock } from '../../api.ts';
 import type { ClockSync } from './crowd-runtime.ts';
 import { type SimWorkerHost, startSimWorker } from './host.ts';
@@ -17,17 +25,27 @@ export interface WorkerLink {
   addCell(key: CellKey, nav?: ArrayBuffer): void;
   removeCell(key: CellKey): void;
   scenario(c: Vec3d, r: number, n: number): void;
-  /** 매 프레임(sim 시계 시스템): 플레이어·시계 동기. */
-  frame(player: Readonly<PlayerState>): void;
+  /** 매 프레임(sim 시계 시스템): 플레이어·카메라 전방(스폰 시야 판정)·시계·밀도 배율 동기. */
+  frame(player: Readonly<PlayerState>, camera: Readonly<CameraState>, densityScale: number): void;
   stats(): SimWorkerStats | undefined;
 }
 
 const absNow = (): number => performance.timeOrigin + performance.now();
 
+/** 쿼터니언으로 돌린 카메라 전방(로컬 −Z). */
+export function forwardOf(q: Readonly<{ x: number; y: number; z: number; w: number }>): Vec3 {
+  return {
+    x: -2 * (q.x * q.z + q.w * q.y),
+    y: -2 * (q.y * q.z - q.w * q.x),
+    z: -(1 - 2 * (q.x * q.x + q.y * q.y)),
+  };
+}
+
 export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
   let worker: SimWorkerHost | undefined;
   const early = new Map<CellKey, ArrayBuffer>();
   let lastPlayer = Number.NEGATIVE_INFINITY;
+  let lastDensity = 1;
   let synced: ClockSync | undefined;
   const sync = (): ClockSync => ({ gameMs: clock.gameTimeMs, atAbs: absNow(), scale: clock.timeScale });
   return {
@@ -57,12 +75,16 @@ export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
       worker?.removeCell(key);
     },
     scenario: (c, r, n) => worker?.scenario(c, r, n),
-    frame(player) {
+    frame(player, camera, densityScale) {
       if (!worker) return;
       const now = absNow();
       if (now - lastPlayer >= PLAYER_INTERVAL_MS) {
         lastPlayer = now;
-        worker.setPlayer(player.posWF, player.velWF);
+        worker.setPlayer(player.posWF, player.velWF, forwardOf(camera.quat));
+      }
+      if (densityScale !== lastDensity) {
+        lastDensity = densityScale;
+        worker.setDensityScale(densityScale);
       }
       const s = synced;
       const predicted = s ? s.gameMs + (now - s.atAbs) * s.scale : Number.NaN;
