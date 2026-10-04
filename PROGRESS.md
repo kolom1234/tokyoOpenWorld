@@ -1,19 +1,24 @@
 # PROGRESS
-Updated: 2026-10-02 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브랜치 `claude/m06-life`, draft PR)
+Updated: 2026-10-04 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브랜치 `claude/m06-life`, draft PR)
 
 ## Current Milestone: M06 — Life: Crowds & Traffic (사전 항목 1–5 → T01–T07)
-## Current Task: M06-T01 ✅(5b89e23) → 다음 = M06-T02 신호 제어기
+## Current Task: M06-T02 ✅(da45783) → 다음 = M06-T03 군중 tier A(DetourCrowd)
 - Done in this session: 사전 1 Rocketbox(ADR-0057), 사전 2 PLATEAU frn 横断歩道·停止線 우선 + 스크램블 보정(ADR-0058), 사전 3 freecam 진입 방지(ADR-0059), 사전 4 첫 표시 겹치기(ADR-0060), 사전 5 백로그(아래 Backlog).
 - **MVP 재빌드 미완**: 사전 2(노면 표시)는 로컬 부분 빌드 `m06-mark-test`(스폰 3×3 + shared 복사)로만 확인. 전체 재빌드·publish·staging은 사전 3–4 뒤 묶어서.
   normalized/markings는 만들어 둠(`normalize --layer plateau --plateau-layer frn`, frn GML은 zip에서 수동 해제 — data/raw/plateau-{shibuya,shinjuku}/extracted/udx/frn).
 - 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright `@playwright/test` chromium + `channel: 'chrome'` headed, open/settled/shot/waitFor), `avatar-shot.mjs`.
   `lookat.mjs out.png x,y,z yawDeg pitchDeg`(freecam 요청 → settled → 캡처). dev 서버 = preview_start `game-dev`(vite 5173), 로컬 빌드 `?world=local&debug=1`.
 - 배포 상태(2026-10-04): staging = **459c0de**(사전 1–4) + dev 버킷 current **`20261004-f0ae5ab-8de63322`**(478파일 356.7 MB, PLATEAU 횡단보도 199·정지선 107 셀-그림, validate 0). staging 첫 표시 8.46–8.59 s·전송 36–40 MB. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): M06-T02 — `docs/roadmap/M06.md` T02 블록 + 10 §5.2·04 §4.3(신호) 읽고 `packages/sim/src/internal/signals/{controller,plans}.ts` + `content/sim/signal-plans.json` 설계.
+- 로컬 부분 빌드 `m06-sig-test`(9셀 L0_-1..1 + shared 복사, 신호 코드 포함) = dev 서버 `?world=local` 최신. 신호 코드는 **MVP 재빌드 전엔 staging에 없음**(T03–T06 데이터 변경과 묶어 재빌드·publish).
+- Next step (정확히 한 걸음): M06-T03 — `docs/roadmap/M06.md` T03 블록 + Read 목록(10 §3 군중·내비메시) 읽고 recast-navigation 내비메시(파이프라인 `navmesh.bin`?) 범위·형식 결정.
 - 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창(앱 내 브라우저 패널이 게임 렌더 중 등)이 있으면 첫 표시가 3배(30 s) — preview 탭은 정적 페이지(`/third-party-notices.txt`)로 돌려 둘 것.
 - Blockers: 없음
 
 ## Recently Completed
+- M06-T02 Signal controllers — 신호 기둥 `props.inst` 5번째 칸 = 현시 코드(교차로 ID × 16 + 계획 × 4 + 그룹), 교차로 = 1020 묶음, 그룹 = OSM 차도 방향 봉우리 2개(셀 + 8-이웃),
+  `content/sim/signal-plans.json`(standard 120 s·scramble 120 s 전방향 보행 26 + 점멸 6, 사이트 = 시부야 스크램블), sim 제어기 = 게임 시각 순수 함수(`signalStateAt`), render 렌즈 발광(`setSignalLamps`).
+  **수락**: 스크램블 사이클 계획표 1 s 이내 단위 테스트 ✅. 실 GPU 북향·서향 차량 등 / 전방향 보행 녹 확인(docs/screenshots/M06/T02). 9셀 그룹 일관성 126쌍 중 6쌍 어긋남(5갈래 교차로 기둥 1개 ⚠️).
+  실 GPU에서 소품 전체 사라짐(정점 버퍼 9–10 > 8) 발견·수정 + 단위 테스트. ADR-0062 (2026-10-04)
 - M06-T01 Sim worker & instance outputs — sim.worker 30 Hz + SAB 이중 버퍼(stride 8: 위치·yaw·anim(클립+속력/10)·phase·variant·rate), 더미 1,000명 원형 걷기,
   군중 팩(Rocketbox 12종 LOD 4·팔레트 half·KTX2 12층, 3.9 MB), render 뼈 팔레트 스키닝 풀 48(틱 사이 외삽·LOD0 그림자), 후처리 NaN 정리(블룸 전체 검정 근본 원인).
   **수락 GPU(30 W, 1440p High)**: 군중 켬−끔 p50 0.33–2.34 ms(보이는 195–472명) ≤ 2.5 ✅, sim 틱 0.1–0.5 ms. 임포스터는 T04로(편차). e2e crowd 스모크(WebGL2) 추가. ADR-0061 (2026-10-04)
@@ -65,7 +70,7 @@ Updated: 2026-10-02 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브�
 - [bridges] 교량·계단은 L0 overrides에만(HLOD 없음). OSM `footway bridge=yes` 단독 육교·공원 비탈 계단(두 끝 지형) 메시 없음. 계단 블록을 걷어낸 자리에 PLATEAU 옆벽이 일부 남을 수 있음. freecam이 상판 슬래브 안이면 검은 면(블룸 켜면 화면 전체 — NaN 의심, 별도 작업 칩).
 - [trees] L1 HLOD 나무 카드·HLOD 지면 녹지 색 미구현 → L0 반경(384–768 m) 밖 공원은 회색 지면(요요기 상공 골든뷰). PLATEAU veg 원천 없음. 규칙 가로수는 PLATEAU LOD1 도로 구역(보도 분류 없음)에선 안 생김.
   빽빽한 숲 나무 GPU 3–6 ms(상세 LOD 잎·그림자) — 대안 ADR-0052. 잎은 알파 테스트 계단(TAAU 완화). `?trees=0` = 나무 끔(비용 비교·flicker e2e).
-- [props] 차량 신호(signalVehicle)가 같은 위치에 중복 인스턴스로 놓이는 경우가 있다(M05 세션 중 관찰, 미수정 — 교차로 접근 방향 중복 제거 필요).
+- [signals] 5갈래 이상 교차로의 세 번째 방향 신호는 가까운 그룹(2현시 모델, ADR-0062). 옛 빌드(코드 없음)는 모든 신호가 같은 박자. 같은 위치 중복 신호는 0.5 m 중복 제거로 해결(M06-T02).
 - [props] 전선은 전주 사이 직선(5가닥, 110–170 m에서 사라짐), 가로등 규칙 배치 없음(OSM 희소), 차량 신호 방향당 1개, 소품 야간 발광 없음(M09-T03), PLATEAU frn·무전주화 지구 미사용(ADR-0051).
   three `stats.triangles`가 합친 풀의 퇴화 삼각형까지 센다(+0.5M). 첫 표시 12.1–12.7 s ⚠️ — 선컴파일 병렬화·소품 풀 지연 컴파일 검토(T07/T08).
 - [roads] 옹벽(DEM 급락) 옆 보도는 벽 기하 없이 1.5 m 띠 뒤 급경사 흙면, 횡단보도 앞 연석 낮춤 없음, 보도 윗면 가장자리 정점 4 m 간격 → 치마 사이 ≤ 1 cm 선(ADR-0049).
