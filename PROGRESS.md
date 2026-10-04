@@ -2,18 +2,23 @@
 Updated: 2026-10-05 (session #19 — 큐 모드 M06 2차 T03→T07, 브랜치 `claude/m06-crowds-traffic`, draft PR #19)
 
 ## Current Milestone: M06 — Life: Crowds & Traffic (T01·T02 ✅ PR #18 병합 → 이번 PR #19: 사전 정리 + T03–T07 + MVP 재빌드·staging)
-## Current Task: M06-T07 ✅ → 다음 = MVP 전체 재빌드 → dev publish → staging → 실제 GPU 확인
+## Current Task: M06 큐 2차 완료(T03–T07 ✅ + MVP 재빌드·staging ✅) → 다음 = PR #19 리뷰·병합 뒤 M07
 - Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063), M06-T04(ADR-0064), M06-T05(ADR-0065), M06-T06(ADR-0066), M06-T07(ADR-0067).
 - 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright chrome headed + `power()` = nvidia-smi 소비·상한 W), `bootblock.mjs`(long task·rAF 간격·첫 표시),
   `crowdview.mjs out base query pose shots`(freecam 포즈 → 3 s마다 캡처 + 워커 통계·전력), `navviz.ts`(빌드 nav.bin → 위에서 본 area 색 PNG), `copy-shared.mjs`(부분 빌드에 MVP shared 복사).
 - 로컬 부분 빌드 `m06-t07-test`(9셀 L0_-1..1, nav(끝 조각 병합) + lanes(점 4 m), shared = `20261004-f0ae5ab-8de63322`에서 복사) = dev 서버 `?world=local` 최신. **MVP 전체 재빌드 미완**(신호·내비 포함 → T07 뒤 publish·staging).
-- 배포 상태(2026-10-04): staging = 459c0de(M06 사전 1–4) + dev 버킷 current `20261004-f0ae5ab-8de63322`. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): MVP 전체 재빌드(`pnpm pipeline build` 전체 → hlod → validate, 신호 코드·nav(병합)·lanes(점 4 m) 포함) → dev 버킷 publish(--set-current) → staging 배포 → 실제 GPU 확인(첫 표시 ≤ 12 s·첫 로드 ≤ 60 MB, 군중·신호·차량).
+- 배포 상태(2026-10-05): staging = ed3d33c(Worker 버전 a942c765) + dev 버킷 current `20261004-ed3d33c-8de63322`(MVP 294 + HLOD 177, nav·lanes·신호 v2, 376.4 MB, validate 0). 실제 GPU 첫 표시 7.15–7.94 s·첫 로드 23.3–24.5 MB.
+  **옛 dev 빌드 gc는 2026-10-06 이후**(`pnpm pipeline gc --env dev` → 확인 뒤 `--apply`, prod는 건드리지 않음).
+- Next step (정확히 한 걸음): PR #19 사용자 리뷰(👀 docs/screenshots/M06/T04·T06·T07 GIF·JPG) → 병합 → M07 시작(`docs/roadmap/M07.md` 첫 태스크). 10/6 이후 dev 옛 빌드 gc.
+  남은 ⚠️: 메이지도리 속도 비율 0.36(T05), 소지품(T04), 나무·간판 TAA 모션 벡터(별도 작업 칩), 스크램블 대기 무리 크기(tier A 상한), 늦은 적재 프레임 멈춤 0.5–1 s(군중·간판·나무).
   scratch: `crowdperf.mjs`(군중 켬/끔 GPU), `vehperf.mjs`(교통 켬/`traffic=0` GPU), `walkbot.mjs min seed`(걷기 봇 — 차 관통·낙하·끼임), `carview.mjs out time`(차종별 근접 캡처), `attachstall.mjs`(늦은 적재 rAF 멈춤), `yprobe.mjs`(차 높이 − 지면), `laneviz.ts`.
 - 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창이 있으면 첫 표시가 3배 — preview 탭은 정적 페이지(`/third-party-notices.txt`). 전력 상한이 측정 중 22 ↔ 34 W로 오르내림(행마다 기록).
 - Blockers: 없음
 
 ## Recently Completed
+- M06 MVP 재빌드·staging(2026-10-05) — `20261004-ed3d33c-8de63322`: L0 294(243.5 s, 260.4 MB — nav 18.3 MB·횡단 1,500(신호 522), 차선 4,432 + 연결로 4,227(신호 1,101), 1.32 MB) + HLOD 177 + 머티리얼 32층, validate 0(도로 간극 최대 1.9 cm).
+  dev 버킷 publish(478파일 376.4 MB, current 설정) + staging Worker 배포(ed3d33c) + 스모크. 실제 GPU staging: 첫 표시 7.15–7.94 s·첫 로드 23.3–24.5 MB ✅, 스크램블 대기 무리·횡단·차량 정지 확인,
+  걷기 봇 3분 319 m 낙하·끼임 0(차 접촉 3프레임 5.8 cm — 측정 시간 기준 차 수준). production 배포·버킷 쓰기 없음.
 - M06-T07 Scramble showcase — 늦은 출발 금지(보행 적까지 남은 시간 `pedWalkLeftS`), 핫스팟 건너편 목적지 crossShare 0.6, 대기 깊이 4.5 m, Detour 분리 1.5, nav 횡단 끝 조각 병합(북쪽 3 → 1),
   골든뷰 12:01:36(전방향 보행) + 군중 준비 조건. **수락(체크리스트 수치 테스트)**: 대기 무리 10곳 108명·깊이 p90 2.9–4.7 m, 대각 27 %, 출발 p50 0.87·p90 1.4 s, 점멸 출발 0,
   차량 녹색 때 횡단 위 0–3명(전 14–26). 실제 GPU 주기 GIF docs/screenshots/M06/T07. ADR-0067 (2026-10-05)
