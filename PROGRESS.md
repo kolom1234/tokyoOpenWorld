@@ -50,39 +50,7 @@ Updated: 2026-10-05 (session #19 — 큐 모드 M06 2차 T03→T07, 브랜치 `c
   **수락 GPU(30 W, 1440p High)**: 군중 켬−끔 p50 0.33–2.34 ms(보이는 195–472명) ≤ 2.5 ✅, sim 틱 0.1–0.5 ms. 임포스터는 T04로(편차). e2e crowd 스모크(WebGL2) 추가. ADR-0061 (2026-10-04)
 - M06 사전 4 첫 표시 — 원인 측정(bootprobe·rAF 긴 프레임): 선컴파일 5 s 동안 스트리밍 미시작 + 셀 첫 프레임 동기 생성 1.45 s, 다른 GPU 작업 시 30 s(측정 민감도).
   선컴파일을 렌더 생성 직후 시작 + 스폰 셀 대기 그룹 compileAsync(선컴파일과 겹침) → 로컬 같은 빌드 9.7–10.1 → **7.6–8.4 s**(staging 유휴 기준 M05 빌드 9.8–10.0 s). e2e 10/10. ADR-0060 (2026-10-04)
-- M06 사전 3 freecam 진입 방지 — 구 캐스트 쓸기(접촉 앞 멈춤·접선 미끄러짐) + 진입 때 6방향 레이 뒷면 ≥ 3 → 가장 가까운 뒷면 너머. 실제 GPU: 건물 안 → 벽 밖, 3.6 m 상판 안 → 위.
-  원래 검은 화면은 재현 안 됨(뒷면 컬링이라 부피 안에서도 바깥이 보임). ADR-0059 (2026-10-02)
-- M06 사전 2 횡단보도 — PLATEAU tran엔 横断歩道 코드 없음, **frn LOD3 道路標示**에 있음(M05-T03 "MVP 원천 없음" 기록은 틀림): 7메시 864개(横断歩道 190·停止線 106) → normalized/markings,
-  build는 PLATEAU 우선(줄무늬형 삼각형 그대로·영역형 막대 채우기, 덮인 OSM 횡단·정지선 대체). 스크램블은 frn에 없음 → `content/markings/osm-crossing-corrections.json`(GSI 사진 대조: 동쪽 1.6 m 이동·폭, 북·대각·남 폭 9/8.5/6.5 m).
-  ⚠️ z18 사진 지표의 PLATEAU 참값 오차 중앙값 0.8 m → ≤ 0.5 m 수치 증명 불가(대안: 고해상도 정사영상·현장). 스크린샷 docs/screenshots/M06/pre. ADR-0058 (2026-10-02)
-- M06 사전 1 Rocketbox 캐릭터 — 사용자 결정(Quaternius 유료 안 삼) → Microsoft Rocketbox(MIT, LICENSE.md 원문 확인, 커밋 0943055) 채택. 실측: hipoly 1단계만(6.7–8.7k 삼각형, 81뼈 Biped),
-  LOD는 meshopt(6,732 → 2,399/800/258), VAT는 가능하나 12종 ≈ 180 MB → **뼈 팔레트 텍스처**(≈ 2 MB)로. `pnpm pipeline characters`(컨테이너, 커밋 고정 URL + 파일별 sha256),
-  리그 23뼈(얼굴→머리, 편 손 굽기), 클립 제자리·자연 속력·6 s 반복 자르기, 아틀라스 사분면 KTX2. 플레이어 = Male_Adult_10(GLB 333 KB + KTX2 477 KB) 실제 GPU 3인칭 정지·걷기 확인.
-  군중 12종 선정(정장 비중, 로고 검사 — Male_Adult_09 문구 프린트 제외). Quaternius 단계·GLB·lock·ATTRIBUTION 삭제, MIT 고지 `/third-party-notices.txt`. ADR-0057 (2026-10-02)
-- M05-T08 Bridges, footbridges & stairs — PLATEAU brid 리더(`BridgeRecord`, 상판 윗면 = OuterFloorSurface) + `normalize --plateau-layer brid`, 교량 면 = overrides 스트림(UV 0) + 정밀 지면 충돌,
-  계단 = PLATEAU 상판에 닿는 OSM `highway=steps`(높이 차 0.5–10 m·경사 ≤ 45°, 상판 가장자리에서 자름, 착지판) → 챌면 ≤ 0.20 m 메시 + JCOL 램프 프록시(bit0) + 옆 벽 박스,
-  계단 통로 안 PLATEAU 블록 면 버림·위 끝 난간 자르기(`overrides/carve.ts`). physics: 램프 프록시 위 수평 속력 유지(접촉 투영만이면 오르막 ≈ v·cos²θ), traversal: 공중 프레임 카메라 오프셋 유지·착지 속도 ≤ 1 m/s·헤드밥 0.3 s 유지.
-  **수락(계단 봇, 로컬 실제 GPU, 왕복 2회)**: 시부야역 동쪽 보도육교 수평 최소 1.17 m/s·카메라 1.54 cm/프레임(60 fps)·낙하 0, 新都心歩道橋 직선 1.15·1.52, 곡선 1.21·2.53 — 낙하 0(수정 전 0.86 m/s·11.8 cm).
-  MVP `20261001-b779645-03883ce7`: 교량 86·계단 65(챌면 1,620)·교량 면 3,105 걷어냄/자름, overrides 482만 삼각형, L0 238.2 MB(+0.6 %), validate 0. **첫 로드 21.4 MB·첫 표시 13.8 s**.
-  걷기 봇 5분 × 3(스폰 seed 3·11 + 시부야 동쪽 보도육교 반경 45 m seed 5): **낙하 0·끼임 0**(233·405·327 m, 연석 5·14·23회).
-  골든뷰 docs/screenshots/M05/T08(`footbridge-shibuya`·`footbridge-shinjuku` + 코어 4). ⚠️ `footway bridge=yes` 단독 육교 미구현(MVP는 PLATEAU), freecam 상판 슬래브 안 검은 화면(별도 작업). ADR-0056 (2026-10-02)
-- M05-T07 Rooftops & facade details — 옥상 설비(塔屋·물탱크·실외기·난간·안테나)·소형 건물 외부 비상계단 = overrides.mesh 절차 기하(대체 안 한 모든 건물, UV 0, LOD2 옥상 부속물 있으면 생략),
-  맨션 발코니 = 파사드 시차 셰이더(난간판·슬래브·칸막이 + 깊이 1.2 m), 평지붕 방수 마감 색(L0 + HLOD). MVP 실외기 130,876·塔屋 5,681·비상계단 5,234, L0 236.7 MB(+27 %),
-  **첫 로드 20.9 MB·첫 표시 12.9–14.1 s**. 수락: 골든뷰 `aerial-shinjuku-400m` 전·후(docs/screenshots/M05/T07) — HLOD 지붕 색 변화로 원경 평지붕 인상 감소(리뷰 체크리스트). ADR-0055 (2026-10-02)
-- M05-T06 Fictional signage — 가상 브랜드 64개(`content/signage/brands.json` 규칙 + `real-brands.txt` 실존 254개 정규화 대조 **일치 0건**), Noto Sans JP Bold(OFL, lock) → 자체 래스터라이저 →
-  색까지 구운 sRGB 아틀라스 1024 × 2048(400 KB, 팔레트 uniform 배열은 파사드 uniform 버퍼 12개 한도 초과로 폐기), props.inst PROP_TYPE 16 돌출·17 입간판·18 옥상(상업 길가 변),
-  render 간판 필드(종류별 풀, 위치 해시 브랜드) + 파사드 1층 간판 띠 같은 아틀라스. ⚠️ 창문 시트 미구현. MVP 돌출 37,838·입간판 2,469·옥상 753, L0 186.3 MB,
-  **첫 로드 23.7 MB·첫 표시 13.3 s**, 걷기 봇 5분 × 2 낙하 0·끼임 0. 골든뷰 docs/screenshots/M05/T06(`signage-street`). ADR-0054 (2026-10-02)
-- M05-T05 Landmark overrides — `content/overrides/<id>/meta.json`(PLATEAU 셸 재머티리얼 + 절차 부품) → `overrides.mesh`(`_LMAT` 15종, render `landmark` 머티리얼), 대체 건물 렌더만 제외(충돌·meta 유지),
-  빌드 시 수평 ≤ 0.5 m·높이 ≤ 1 m 검사. 1) 스크램블 스퀘어·마크시티 연결부 2) 하치코 동상·화단 3) 교차로 비전 4면(가상 영상) 4) 요요기 제1·제2체육관(LOD1 → 절차 현수 지붕) 5) 메이지 신궁
-  大鳥居·北参道 도리이 + 자갈 참도(숲 채우기 OSM 길 비우기) 6) 도쿄도청 화강암 격자 7) 신주쿠 서쪽 출구 지하 광장 개구부(짙은 바닥 + 유리 난간 ⚠️ 지형 구멍 불가).
-  **수락**: 셸 오차 0 m, 화면 ≤ 0.31 m, 요요기 기둥 +0.6 m(measuredHeight 기준), 도리이 = OSM 높이·공개 치수. MVP 22,497 삼각형/16셀, L0 186.1 MB, validate 0,
-  걷기 봇 5분 × 2 낙하 0·끼임 0, **첫 로드 19.6 MB·첫 표시 13.3 s** ⚠️(T04 11.3–12.1 s — 선컴파일 +1). 골든뷰 docs/screenshots/M05/T05(랜드마크 7장 views.json 추가). ADR-0053 (2026-10-01)
-- M05-T04 Trees & vegetation — OSM 녹지 면 → 지형 `_SURF` 잔디, `derive/trees/*`(OSM 나무 점·열 → 간선 규칙 가로수 → 숲 6.5 m·공원·정원·관목 격자, 수종 = 태그·도로 이름·해시, 줄기 콜라이더) → `trees.inst`,
-  `pnpm pipeline trees`(ez-tree MIT 6종 + 자체 잎 아틀라스 + CPU 반팔면체 임포스터 → `apps/game/src/assets/trees` 1.56 MB, 첫 표시 뒤 적재), render `trees/*`(Mesh + InstancedBufferGeometry 셰이더 인스턴싱,
-  LOD 30/60 m·임포스터 2 km, 바람, 07 §8 계절, 잎·임포스터 Lambert + 하늘 간접광 보조 AtmosphereLight). **수락**: 오모테산도 느티나무길 골든뷰(11/15 단풍, 시점을 가로수길로 수정) ✅,
-  **나무 GPU 0.77 ms ≤ 2 ✅**(실제 GPU 수직 동기 해제, 켬 − `?trees=0`). ⚠️ 숲: 상공 2.96·숲 안 6.07 ms. 걷기 봇 5분 × 2 낙하 0·끼임 0. MVP 나무 28,577(셀 ≤ 1,129), L0 185.8 MB.
-  **첫 로드(staging) 20.4–23.7 MB·첫 표시 11.3–12.1 s**. 골든뷰 docs/screenshots/M05/T04. ADR-0052 (2026-10-01)
+
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
 - [bridges] **PLATEAU 상판 없는 OSM 단독 육교**(M05-T08 ⚠️): `highway=footway + bridge=yes`(+ 계단 두 끝) 중 PLATEAU brid가 없는 것 — OSM 선 + 폭 태그(없으면 2.5 m)로 절차 상판·난간·계단 메시 + JCOL 램프. 공원 비탈 계단(두 끝 지형)도 같은 경로.
