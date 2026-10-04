@@ -46,7 +46,7 @@ scene
 | `M_PROP` | 소품 | PBR + 텍스처 배열, 발광 마스크(자판기 등). **구현(M05-T03)** `materials/prop.ts` `street_prop` = 정점색 × 인스턴스 색(자판기 가상 브랜드), 텍스처·발광 없음(야간 = M09-T03). 전선 `power_wire` = 중심선 + `_OFF` 거리 비례 최소 폭(≈ 1.5 px) |
 | `M_FOLIAGE` | 잎 | alpha-to-coverage/해시 알파, 투과광, 바람 흔들림, 계절 틴트. **구현(M05-T04, ADR-0052)** `trees/materials.ts` `tree_leaf`: 자체 잎 아틀라스 알파 테스트, Lambert + 태양 + 하늘 간접광(보조 AtmosphereLight) + 투과 22 %, 높이² 흔들림·떨림, 수종 계절 표. 인스턴싱 = InstancedBufferGeometry 속성(`_ipos`·`_iext`) |
 | `M_IMPOSTOR` | 원거리 나무/소품 | 옥타헤드럴 임포스터. **구현(M05-T04)** `tree_impostor`: 반팔면체 8 × 8 틀(CPU 굽기), 나무 로컬 방향으로 틀 선택, 구면 법선, 수종 타일 3 × 2 |
-| `M_CHARACTER` | 보행자 | VAT(정점 애니메이션 텍스처) + 인스턴스 색 변형 + 소지품(우산) |
+| `M_CHARACTER` | 보행자 | ~~VAT~~ → **뼈 팔레트 텍스처 스키닝**(ADR-0057·0061: Rocketbox 리그 23뼈, 4영향 × 사원수+이동 RGBA16F, `crowd/material.ts`) + 아틀라스 배열 층·밝기·키 변형, 소지품은 T04 |
 | `M_VEHICLE` | 차량 | 클리어코트 도장, 유리, 라이트 발광 |
 | `M_WATER` | 강·연못 | 법선 스크롤 + SSR + 빗방울 파문 |
 | `M_SIGN` | 간판/전광판 | **가상 브랜드** 텍스트 아틀라스 발광, 밤 점등. **구현(M05-T06, ADR-0054)** `signs/{atlas,material,field,models}.ts` `sign`: 색까지 구운 sRGB 아틀라스(가로 4:1·세로 1:4 타일) 표본 1회, 돌출 상자·입간판·옥상 광고탑 풀(InstancedBufferGeometry `_ipos`·`_isig`, 브랜드 = WF 위치 해시). 발광·점등은 M09 |
@@ -116,7 +116,7 @@ scenePass(MRT: color, normal, depth, velocity, metalRough)
 | AO / GI / SSR | – / – / – | GTAO / – / – | GTAO / SSGI(½) / SSR | GTAO / SSGI / SSR |
 | 클러스터 광원 | 64 | 256 | 1024 | 2048 |
 | 구름 | 하늘만 | 2D | 2D | 볼류메트릭 |
-| 보행자(VAT 근거리/총) | 60/200 | 120/500 | 250/1000 | 400/2000 |
+| 보행자(근거리 A/총) | 60/200 | 120/500 | 250/1000 | 400/2000 |
 | L0 반경 배율 | 0.75 | 1.0 | 1.0 | 1.25 |
 - **M03-T07 이탈(ADR-0035)**: 1440p RTX 3050 Laptop 실측으로 High의 SSGI(½)를 GTAO로 — r186 SSGINode는 해상도 배율이 없고 +100 ms 이상.
   High = GTAO(½, 8표본 — 고정 노이즈 + 5×5 깊이 인지 블러, ADR-0038) + SSR(½) + Bloom + 자동 노출 + TAAU 0.85 + LUT, Sharpen은 Ultra만(2.2 ms). `RenderConfig.quality`·`post`(`?quality=`·`?post=`).

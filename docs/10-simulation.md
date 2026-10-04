@@ -3,6 +3,7 @@
 ## 1. 구조
 - 메인: `SimHost`(시계, 날씨, 계절, POI 발견 — 가벼운 로직) + sim.worker 프록시.
 - `sim.worker` (30 Hz 고정): 군중, 교통, 신호, 열차. 출력은 `SharedInstanceBuffer`(core 타입, SAB) 3개(보행자/차량/열차 칸) → wiring이 `render.layers.*.bindShared()`로 연결.
+  구현(M06-T01, ADR-0061): `worker/{sim.worker,instance-buffer,host}.ts` — SAB 이중 영역(front 뒤집기), 필드 = x,y,z(WF − anchor)·yaw·anim(클립 + 속력/10)·phase·variant(u16)·rate(주기/s, 외삽용), render가 틱 사이 외삽. 조정값 = `content/sim/*.json`(YAML 대신).
 - 태양·달 방향/조도, 계절은 SimHost가 계산해 `environment(): EnvironmentState`로 제공(suncalc 2.x: 도 단위·북 기준 방위).
 - 결정론: 모든 난수는 `createRng(hash32(WORLD_SEED, cellId, entityKind, spawnIndex))`(`WORLD_SEED`는 core 상수). 같은 시각·위치면 같은 풍경.
 
@@ -34,8 +35,8 @@
 - 신호 준수: 적신호면 연석 대기선에 정렬 대기. **스크램블 교차로(보차분리 전방향 보행 현시)** 재현. 녹색 점멸 시 새 진입 중단.
 - 차량 회피: 차선 가로지르지 않음(횡단보도만), 플레이어 차량 근접 시 정지·회피.
 ### 4.3 외형
-- 베이스 바디 12종(성인, 체형 다양) × 의상 팔레트 16 × 소지품(가방, 우산, 스마트폰) × 계절 의상.
-- 애니메이션(VAT): 걷기(속도 블렌드 2종), 대기, 휴대폰 보기, 우산 걷기, 계단 오르기.
+- 베이스 바디 12종(Microsoft Rocketbox, 성인 남녀 6·6 — ADR-0057) × 밝기·키 변형(variant) × 소지품(가방, 우산 — T04) × 계절 의상(M09).
+- 애니메이션(뼈 팔레트, ADR-0057): 걷기(보통·느림·빠름), 대기, 휴대폰. 우산 걷기·계단 오르기는 Rocketbox에 없음(우산 = idle만).
 
 ## 5. 교통
 ### 5.1 차량 모델

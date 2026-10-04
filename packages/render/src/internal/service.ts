@@ -3,6 +3,8 @@ import type { CellKey } from '@sanpo/core';
 import { Group, type Object3D } from 'three/webgpu';
 import type { RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
+import { loadCrowdAssets } from './crowd/assets.ts';
+import { createCrowdMaterial } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
 import { precompileMaterials } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
@@ -33,6 +35,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     props: ctx.props.stats(),
     trees: ctx.trees.stats(),
     signs: ctx.signs.stats(),
+    crowd: ctx.crowd.stats(),
   };
 }
 
@@ -72,7 +75,9 @@ function createStaging(ctx: RenderContext) {
   };
 }
 
-function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAvatar' | 'loadTrees' | 'loadSignage'> {
+function loaders(
+  ctx: RenderContext,
+): Pick<RenderService, 'precompile' | 'loadAvatar' | 'loadTrees' | 'loadSignage' | 'loadCrowd'> {
   const { renderer, view, graph, log } = ctx;
   return {
     async precompile() {
@@ -115,6 +120,22 @@ function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAv
       await loadSignageInto(ctx, urls);
       log.info('signage attached');
     },
+    async loadCrowd(urls) {
+      const t0 = performance.now();
+      const assets = await loadCrowdAssets(urls, ctx.library.ktx2(renderer));
+      const material = createCrowdMaterial(assets);
+      ctx.crowdMaterials.push(material);
+      ctx.crowd.attach(assets, material);
+      const restore = ctx.crowd.primeForCompile();
+      try {
+        await renderer.compileAsync(ctx.crowd.root, view.camera, graph.scene);
+      } finally {
+        restore();
+      }
+      log.info(
+        `crowd attached (${assets.bases.length} bases, lod idx ${assets.bases[0]?.lods.map((l) => l.index.count).join('/')}) ${Math.round(performance.now() - t0)} ms`,
+      );
+    },
   };
 }
 
@@ -130,6 +151,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     backend: ctx.backend,
     depth: ctx.depth,
     ...staged.api,
+    pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf) },
     addCell: (p) => {
       cells.add(p, view.renderOriginWF);
       staged.take(p.key);

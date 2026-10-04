@@ -49,7 +49,8 @@ function syncProps(ctx: RenderContext, rebased: boolean): boolean {
   scratchCam.z = o.z + camera.position.z;
   const props = ctx.props.update(scratchCam, o, rebased);
   const signs = ctx.signs.update(scratchCam, o, rebased);
-  return ctx.trees.update(scratchCam, o, rebased) || props || signs;
+  const crowd = ctx.crowd.update(camera, o);
+  return ctx.trees.update(scratchCam, o, rebased) || props || signs || crowd;
 }
 
 export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw: GameSystem } {
@@ -92,6 +93,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
       ctx.props.dispose();
       ctx.trees.dispose();
       ctx.signs.dispose();
+      ctx.crowd.dispose();
       ctx.avatar.dispose();
       ctx.quality.dispose();
       ctx.post.dispose();

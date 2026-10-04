@@ -9,6 +9,7 @@ import type {
   EventBus,
   Logger,
   QualityTier,
+  SharedInstanceBuffer,
   SystemProvider,
   Vec3d,
 } from '@sanpo/core';
@@ -130,6 +131,16 @@ export interface RenderStats {
   trees: { instances: number; visible: number; pools: number; dropped: number; ready: boolean };
   /** 가상 간판(M05-T06): 적재 인스턴스(돌출·입간판·옥상)·보이는 인스턴스·그리는 풀·에셋 준비. */
   signs: { instances: number; visible: number; pools: number; ready: boolean };
+  /** 군중(M06-T01): sim 인스턴스 수·그린 수·쓰는 풀(드로우콜)·용량 초과·그림자 드리우는 수(LOD0)·에셋 준비. */
+  crowd: {
+    instances: number;
+    visible: number;
+    pools: number;
+    dropped: number;
+    casters: number;
+    lods: number[];
+    ready: boolean;
+  };
 }
 
 /** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */
@@ -149,6 +160,18 @@ export interface TreeAssetUrls {
 /** 간판 에셋 URL(파이프라인 `signage` 산출 — 브랜드 색까지 구운 아틀라스 PNG, 게임 번들 해시 에셋). */
 export interface SignageAssetUrls {
   atlas: string;
+}
+
+/** 군중 팩 URL(파이프라인 `characters` 군중 — Rocketbox 베이스 12종, ADR-0057). */
+export interface CrowdAssetUrls {
+  manifest: string;
+  bin: string;
+  texture: string;
+}
+
+/** 10 §1: sim SAB 인스턴스 버퍼를 render가 읽는다(wiring이 1회 bindShared). */
+export interface InstanceLayer {
+  bindShared(buf: SharedInstanceBuffer): void;
 }
 
 export interface RenderService extends SystemProvider {
@@ -199,6 +222,10 @@ export interface RenderService extends SystemProvider {
   loadTrees(urls: TreeAssetUrls): Promise<void>;
   /** 간판 아틀라스(M05-T06) 적재 → 간판 머티리얼 선컴파일 → 셀 props.inst 간판 종류 + 파사드 1층 간판 띠에 가상 브랜드. */
   loadSignage(urls: SignageAssetUrls): Promise<void>;
+  /** 군중 팩 적재 → 머티리얼 선컴파일 → pedestrians 레이어를 그리기 시작(M06-T01). 첫 표시 뒤에 부른다. */
+  loadCrowd(urls: CrowdAssetUrls): Promise<void>;
+  /** 보행자 인스턴스 레이어(sim 출력). */
+  readonly pedestrians: InstanceLayer;
   stats(): RenderStats;
   dispose(): void;
 }

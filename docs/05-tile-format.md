@@ -12,7 +12,7 @@ L1/<ix>/<iz>.tkc … L3/…       HLOD 셀
 shared/materials/manifest.json + *.ktx2    머티리얼 라이브러리 (텍스처 배열 레이어 정의)
 shared/props/<typeId>.glb     소품 프로토타입 (LOD0/1/2 포함) — M05-T03은 렌더 코드 절차 모델(ADR-0051), 파일 없음
 shared/trees/<species>.glb    나무 프로토타입 + 임포스터 아틀라스 — M05-T04는 게임 해시 에셋(apps/game/src/assets/trees, ADR-0052)
-shared/characters/*.glb       보행자 베이스 메시 + VAT 텍스처
+(shared/characters 없음 — 보행자 팩은 게임 해시 에셋 apps/game/src/assets/characters/crowd.{json,bin,ktx2}, ADR-0057·0061)
 shared/vehicles/*.glb         차량 (교통/플레이어)
 global/rail.bin               전 노선 선로 스플라인·역·정차위치
 global/timetables/<lineId>.json  컴파일된 운행표 (GTFS 또는 합성)

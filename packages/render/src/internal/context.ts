@@ -4,6 +4,7 @@ import { type Logger, mergeConfig, type QualityTier } from '@sanpo/core';
 import type { Material, WebGPURenderer } from 'three/webgpu';
 import type { DepthMode, PostEffects, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
+import { type CrowdField, createCrowdField } from './crowd/field.ts';
 import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
 import { attachEnvProbe, type EnvProbe } from './lighting/env-probe.ts';
 import { enableSunShadows, type SunShadows } from './lighting/shadows.ts';
@@ -47,6 +48,9 @@ export interface RenderContext {
   readonly props: PropField;
   /** 나무(vegetation 루트, M05-T04) — 에셋은 loadTrees 뒤. 머티리얼은 적재 때 채운다(그림자 티어 재컴파일 대상). */
   readonly trees: TreeField;
+  readonly crowd: CrowdField;
+  /** 군중 머티리얼(적재 뒤 — 그림자 티어 재컴파일 대상). */
+  readonly crowdMaterials: Material[];
   readonly treeMaterials: Material[];
   treeUniforms?: TreeUniforms;
   /** 가상 간판(prop 루트, M05-T06) — 에셋은 loadSignage 뒤. */
@@ -109,7 +113,13 @@ function attachAtmosphere(renderer: WebGPURenderer, graph: SceneGraph, view: Ren
 }
 
 /** 아바타(dynamic 루트)·거리 소품 풀(prop 루트, M05-T03). */
-function attachActors(graph: SceneGraph): { avatar: Avatar; props: PropField; trees: TreeField; signs: SignField } {
+function attachActors(graph: SceneGraph): {
+  avatar: Avatar;
+  props: PropField;
+  trees: TreeField;
+  signs: SignField;
+  crowd: CrowdField;
+} {
   const avatar = createAvatar();
   graph.roots.dynamic.add(avatar.group);
   const props = createPropField(createPropMaterial());
@@ -118,7 +128,31 @@ function attachActors(graph: SceneGraph): { avatar: Avatar; props: PropField; tr
   graph.roots.vegetation.add(trees.root);
   const signs = createSignField();
   graph.roots.prop.add(signs.root);
-  return { avatar, props, trees, signs };
+  const crowd = createCrowdField();
+  graph.roots.dynamic.add(crowd.root);
+  return { avatar, props, trees, signs, crowd };
+}
+
+/** 적재 뒤 붙는 머티리얼(그림자 티어 재컴파일 대상). */
+interface LateMaterials {
+  treeMaterials: Material[];
+  signMaterials: Material[];
+  crowdMaterials: Material[];
+}
+
+function casterMaterials(
+  m: MaterialRegistry,
+  a: { avatar: Avatar; props: PropField },
+  late: LateMaterials,
+): Material[] {
+  return [
+    ...m.all(),
+    ...a.avatar.materials,
+    a.props.material,
+    ...late.treeMaterials,
+    ...late.signMaterials,
+    ...late.crowdMaterials,
+  ];
 }
 
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
@@ -138,10 +172,9 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const atmosphere = attachAtmosphere(renderer, graph, view, !post);
   if (backend === 'webgl2') glassRoughness.value = WEBGL2_GLASS_ROUGHNESS;
   const postFor = postEffectsFor(cfg, backend);
-  const { avatar, props, trees, signs } = attachActors(graph);
-  const treeMaterials: Material[] = [];
-  const signMaterials: Material[] = [];
-  const casters = () => [...materials.all(), ...avatar.materials, props.material, ...treeMaterials, ...signMaterials];
+  const actors = attachActors(graph);
+  const late: LateMaterials = { treeMaterials: [], signMaterials: [], crowdMaterials: [] };
+  const casters = () => casterMaterials(materials, actors, late);
   const makePost = (tier: QualityTier): PostPipeline =>
     post
       ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad)
@@ -159,12 +192,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     view,
     hlod,
     cells: createCellSet(materials, graph.roots, hlod),
-    avatar,
-    props,
-    trees,
-    treeMaterials,
-    signs,
-    signMaterials,
+    ...actors,
+    ...late,
     atmosphere,
     envUniforms,
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },

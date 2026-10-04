@@ -10,20 +10,23 @@ import {
   type Scheduler,
   type SystemProvider,
   type Vec3d,
+  type WorkerSupervisor,
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import {
   type AvatarAssetUrls,
+  type CrowdAssetUrls,
   createRender,
   type RenderConfig,
   type RenderService,
   type SignageAssetUrls,
   type TreeAssetUrls,
 } from '@sanpo/render';
-import { type ClockMode, createSim, type SimService } from '@sanpo/sim';
+import { type ClockMode, type CrowdParams, createSim, type SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
+import CROWD_PARAMS from '../../../content/sim/crowd.json';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
@@ -81,6 +84,8 @@ export interface WorldViewDeps {
   weather?: WeatherOverride;
   /** false = 나무 에셋 적재 안 함(`?trees=0`, GPU 비용 비교). */
   trees?: boolean;
+  /** 군중(M06-T01: 'dummy' = 더미 1,000명). 없으면 군중 없음. */
+  crowd?: 'dummy';
 }
 
 /** 월드 로드 뒤 생기는 것들(getter로 노출). */
@@ -93,6 +98,8 @@ interface LateState {
   avatarSettled: boolean;
   treesSettled: boolean;
   signsSettled: boolean;
+  /** startStreaming이 만든 워커 감독자(sim.worker도 같이 — M06-T01). */
+  supervisor?: WorkerSupervisor;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -105,6 +112,7 @@ async function startStreaming(
 ): Promise<StreamingService> {
   const { bus, log } = deps;
   const supervisor = createWorkerSupervisor({ log });
+  late.supervisor = supervisor;
   const s = createStreaming({
     bus,
     log,
@@ -176,6 +184,28 @@ export const SIGNAGE_URLS: SignageAssetUrls = {
   atlas: new URL('./assets/signage/atlas.png', import.meta.url).href,
 };
 
+/** 군중 팩(파이프라인 `characters` 군중 — Rocketbox 베이스 12종, ADR-0057). Vite 해시 에셋. */
+export const CROWD_URLS: CrowdAssetUrls = {
+  manifest: new URL('./assets/characters/crowd.json', import.meta.url).href,
+  bin: new URL('./assets/characters/crowd.bin', import.meta.url).href,
+  texture: new URL('./assets/characters/crowd.ktx2', import.meta.url).href,
+};
+
+/** 군중(M06-T01 더미): 첫 표시 뒤 sim.worker 시작 → render.pedestrians 연결 → 군중 팩 적재(≈ 3.9 MB). 실패 = 군중 없이. */
+function startCrowdLater(
+  v: { render: RenderService; sim: SimService; ground: GroundQuery; late: LateState },
+  world: LoadedWorld,
+  log: Logger,
+): void {
+  const s = world.spawnWF;
+  const centerWF = { x: s.x, y: v.ground.groundHeightAt(s.x, s.z) ?? s.y, z: s.z };
+  const supervisor = v.late.supervisor;
+  const buf = supervisor ? v.sim.startWorker({ supervisor, crowd: CROWD_PARAMS as CrowdParams, centerWF }) : undefined;
+  if (!buf) return;
+  v.render.pedestrians.bindShared(buf);
+  void v.render.loadCrowd(CROWD_URLS).catch((e: unknown) => log.warn('crowd', e));
+}
+
 /** 간판도 첫 표시 뒤(≈ 0.25 MB). 실패하면 무지 간판·간판 인스턴스 없이. */
 function loadSignageLater(render: RenderService, late: LateState, log: Logger): void {
   void render
@@ -233,6 +263,7 @@ async function showWorldWith(
     late: LateState;
     /** createWorldView에서 렌더 생성 직후 시작한 선컴파일(world.json 조회와 겹침 — M06 사전 4). */
     precompiled: Promise<void>;
+    sim: SimService;
   },
   world: LoadedWorld,
 ): Promise<number> {
@@ -255,6 +286,7 @@ async function showWorldWith(
   if (deps.trees === false) late.treesSettled = true;
   else loadTreesLater(render, late, wlog);
   loadSignageLater(render, late, wlog);
+  if (deps.crowd) startCrowdLater(v, world, wlog);
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
@@ -314,6 +346,6 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     get signsSettled() {
       return late.signsSettled;
     },
-    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled }, world),
+    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim }, world),
   };
 }

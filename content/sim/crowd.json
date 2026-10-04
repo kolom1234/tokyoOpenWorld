@@ -1,0 +1,6 @@
+{
+  "note": "군중 조정값(10 §4, M06-T01~) — content/sim은 JSON(YAML 파서 의존성 없이 Vite·Node 공통, ADR-0061). game이 읽어 sim·render에 넘긴다.",
+  "gaitCycleM": 1.45,
+  "idleLoopS": 6,
+  "dummy": { "count": 1000, "minRadiusM": 4, "maxRadiusM": 160, "idleShare": 0.1, "phoneShare": 0.05 }
+}
