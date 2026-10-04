@@ -1,9 +1,9 @@
 // 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 // 구현된 단계: normalize(--layer plateau: 건물·도로, terrain: dem_1m.tif), build(L0: 지형·건물·meta → TKC),
-// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열)·avatar(Quaternius → 게임 GLB)·trees(수종 에셋 — cli-assets.ts), validate, publish·gc(R2 + KV).
+// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열)·characters(Rocketbox → 플레이어 아바타·군중 팩)·trees(수종 에셋 — cli-assets.ts), validate, publish·gc(R2 + KV).
 // TODO: fetch | derive.
 import { execFile } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs, promisify } from 'node:util';
 import { type CellKey, createLogger, packCellKey } from '@sanpo/core';
@@ -13,6 +13,7 @@ import { createPlateauReader } from './readers/plateau/index.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
 import { readOverrides } from './stages/build/overrides/index.ts';
+import { readCrossingCorrections } from './stages/derive/markings/corrections.ts';
 import { readCatalog } from './stages/derive/props/context.ts';
 import { buildPlateauMini, buildWorldMini, type LockSource } from './stages/fixture.ts';
 import { fetchDemTiles, resampleFarDem, writeFarDem } from './stages/hlod/dem-far.ts';
@@ -83,7 +84,7 @@ async function normalizePlateauLayer(
   const perSource = ids.map((id) => `${id} ${res.files.filter((f) => f.sourceId === id).length}`).join(', ');
   log.info(
     `plateau: files (${perSource}), ${res.features} features → ${res.buildings} buildings, ` +
-      `${res.roadPieces} road pieces, ${res.bridges} bridges, ${res.written.length} cell files`,
+      `${res.roadPieces} road pieces, ${res.bridges} bridges, ${res.markings} markings, ${res.written.length} cell files`,
   );
 }
 
@@ -155,6 +156,7 @@ async function build(args: string[]): Promise<void> {
     log: log.child('build'),
     props: readCatalog(REPO_ROOT),
     overrides: readOverrides(REPO_ROOT),
+    crossingCorrections: readCrossingCorrections(REPO_ROOT),
   });
   const bytes = stats.reduce((a, s) => a + s.bytes, 0);
   log.info(`build ${buildId}: ${stats.length} cells, ${bytes} B in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
@@ -335,7 +337,7 @@ async function fixture(args: string[]): Promise<void> {
   if (values.only !== 'world-mini') log.info(`plateau-mini snapshot ${JSON.stringify(await buildPlateauMini(input))}`);
 }
 
-/** 플레이어 아바타 GLB(M05 결정 2, ADR-0048): data/raw Quaternius zip(sha256 lock) → apps/game/src/assets. 호스트 Node로 실행 가능. */
+/** 에셋 단계 공용 문맥(cli-assets.ts). */
 const assets = { repoRoot: REPO_ROOT, log, lockSources };
 
 const STAGES: Record<string, (args: string[]) => Promise<void>> = {
@@ -344,7 +346,7 @@ const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   'hlod-prep': hlodPrep,
   hlod,
   materials: (args) => assetStages.materials(assets, args),
-  avatar: () => assetStages.avatar(assets),
+  characters: (args) => assetStages.characters(assets, args),
   trees: () => assetStages.trees(assets),
   signage: () => assetStages.signage(assets),
   validate,

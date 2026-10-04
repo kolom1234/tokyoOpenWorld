@@ -19,7 +19,7 @@ import type { BridgeRecord, BuildingRecord, RoadRecord } from '../../readers/pla
 import { burnOuterEdges, outerEdgesAround } from '../derive/edge-burn.ts';
 import { type FootprintSource, footprintGrid, footprintSources } from '../derive/footprints.ts';
 import type { LocalGrid } from '../derive/grid.ts';
-import { buildMarkings } from '../derive/markings/index.ts';
+import { buildMarkings, type MarkingInput } from '../derive/markings/index.ts';
 import type { PropCatalog } from '../derive/props/context.ts';
 import type { WireBuf } from '../derive/props/wires.ts';
 import { roadIndex, roadRaster } from '../derive/roads.ts';
@@ -68,6 +68,10 @@ export interface CellBuildInput {
   cellRoads?: readonly RoadRecord[];
   /** 이 셀 OSM 레코드(노면 표시, M05-T02). 없으면 decals.mesh 없음. */
   osm?: readonly OsmRecord[];
+  /** 셀 + 8-이웃 OSM 차도 선(신호 그룹 도로 방향 — M06-T02). 없으면 osm 중 차도. */
+  vehicleRoadsAround?: readonly OsmRecord[];
+  /** PLATEAU 道路標示(셀 + 8-이웃)·OSM 횡단 보정(M06 사전 2, ADR-0058). */
+  markings?: Pick<MarkingInput, 'plateau' | 'corrections'>;
   /** 소품 카탈로그(M05-T03). 없으면 props.inst·소품 콜라이더·전선 없음. */
   props?: PropCatalog;
   /** 건물이 없는 셀의 meta.json sources(영역의 PLATEAU 소스). */
@@ -180,9 +184,8 @@ async function markCell(
   terrainAt: (x: number, z: number) => number | undefined,
   wires: WireBuf | undefined,
 ) {
-  const marks = input.osm
-    ? buildMarkings({ osm: input.osm, roads: input.roads, ox: originWF[0], oz: originWF[2], terrainAt })
-    : undefined;
+  const o = { roads: input.roads, ox: originWF[0], oz: originWF[2], terrainAt, ...input.markings };
+  const marks = input.osm ? buildMarkings({ osm: input.osm, ...o }) : undefined;
   const decals = marks ? await encodeDecals(marks.decals, wires) : null;
   const tris = (marks ? marks.decals.idx.length / 3 : 0) + (wires ? wires.idx.length / 3 : 0);
   return { decals, decalTris: decals ? tris : 0, marks };
@@ -202,6 +205,7 @@ function propCell(
     ox: originWF[0],
     oz: originWF[2],
     osm: input.osm ?? [],
+    ...(input.vehicleRoadsAround ? { vehicleRoadsAround: input.vehicleRoadsAround } : {}),
     buildings: input.buildings,
     roads: input.roads,
     index: sc.index,
@@ -318,6 +322,8 @@ export interface AreaBuildInput {
   props?: PropCatalog;
   /** 랜드마크 오버라이드(M05-T05, content/overrides). */
   overrides?: OverrideSet;
+  /** OSM 횡단 선 보정(M06 사전 2, content/markings). */
+  crossingCorrections?: MarkingInput['corrections'];
 }
 
 /** 셀 목록의 합집합(양끝 포함) WF 경계. */
@@ -359,6 +365,8 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       roads: files.roadsAround(key),
       cellRoads: files.roadsOf(key),
       osm: readLayer<OsmRecord>(input.normalizedDir, 'osm', key),
+      vehicleRoadsAround: files.vehicleRoadsAround(key),
+      markings: { plateau: files.markingsAround(key), corrections: input.crossingCorrections ?? [] },
       ...(input.props ? { props: input.props } : {}),
       ...(input.overrides
         ? {

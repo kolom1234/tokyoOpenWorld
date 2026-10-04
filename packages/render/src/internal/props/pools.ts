@@ -31,6 +31,8 @@ export interface PropField {
   update(cameraWF: Readonly<Vec3d>, renderOriginWF: Readonly<Vec3d>, force: boolean): boolean;
   /** 선컴파일용: 풀마다 인스턴스 1개(원점) → 복원 함수. */
   primeForCompile(): () => void;
+  /** 신호 램프(M06-T02): 보이는 신호 기둥마다 lamp(code) = 차량 등(1 적·2 황·3 녹) + 4 × 보행 등(1 적·2 녹), 바뀐 슬롯만 올린다. */
+  updateSignals(lamp: (code: number) => number): void;
   stats(): PropFieldStats;
   dispose(): void;
 }
@@ -38,7 +40,8 @@ export interface PropField {
 function createPool(lod: PropLod, material: Material): InstancedMesh {
   const cap = PROP_POOL_CAPACITY[lod];
   const geo = buildMergedPropGeometry(lod);
-  geo.setAttribute('_itype', new InstancedBufferAttribute(new Float32Array(cap), 1));
+  // vec2(종류, 신호 램프 값) 한 버퍼 — 정점 버퍼 상한 8(models.ts buildMergedPropGeometry).
+  geo.setAttribute('_itype', new InstancedBufferAttribute(new Float32Array(cap * 2), 2));
   const m = new InstancedMesh(geo, material, cap);
   m.name = `props/lod${lod}`;
   m.instanceColor = new InstancedBufferAttribute(new Float32Array(cap * 3).fill(1), 3);
@@ -50,11 +53,12 @@ function createPool(lod: PropLod, material: Material): InstancedMesh {
   return m;
 }
 
-/** 풀 버퍼에 조각들을 복사(셀 원점 − 렌더 원점 평행이동, 종류 번호)하고 쓴 범위만 올린다. 반환 = 잘린 수. */
+/** 풀 버퍼에 조각들을 복사(셀 원점 − 렌더 원점 평행이동, 종류 번호)하고 쓴 범위만 올린다. signals = (슬롯, 코드) 기록. 반환 = 잘린 수. */
 function writeInstances(
   m: InstancedMesh,
   parts: readonly { t: number; s: TypeSlice; b: Block }[],
   origin: Readonly<Vec3d>,
+  signals: number[],
 ): number {
   const cap = m.instanceMatrix.count;
   const mats = m.instanceMatrix.array as Float32Array;
@@ -69,7 +73,11 @@ function writeInstances(
     if (n <= 0) continue;
     mats.set(s.mats.subarray(0, n * 16), at * 16);
     cols.set(s.colors.subarray(0, n * 3), at * 3);
-    types.fill(t, at, at + n);
+    for (let k = at; k < at + n; k++) {
+      types[k * 2] = t;
+      types[k * 2 + 1] = 0;
+    }
+    if (s.codes) for (let k = 0; k < n; k++) signals.push(at + k, s.codes[k] as number);
     const [dx, dy, dz] = [b.origin.x - origin.x, b.origin.y - origin.y, b.origin.z - origin.z];
     for (let k = at; k < at + n; k++) {
       mats[k * 16 + 12] = (mats[k * 16 + 12] as number) + dx;
@@ -95,6 +103,8 @@ class PropFieldImpl implements PropField {
   private readonly pools: InstancedMesh[];
   private readonly dirty = new Set<PropLod>(LODS);
   private readonly dropped: Record<PropLod, number> = { 0: 0, 1: 0, 2: 0 };
+  /** 풀별 신호 슬롯 [슬롯, 코드, …]. */
+  private readonly signals: Record<PropLod, number[]> = { 0: [], 1: [], 2: [] };
   private rebuilds = 0;
   private lastCam: Vec3d | undefined;
 
@@ -109,7 +119,8 @@ class PropFieldImpl implements PropField {
     const parts: { t: number; s: TypeSlice; b: Block }[] = [];
     for (const blocks of this.cells.values())
       for (const b of blocks) for (const [t, s] of b.types) if (s.band === lod) parts.push({ t, s, b });
-    this.dropped[lod] = writeInstances(this.pools[lod] as InstancedMesh, parts, origin);
+    this.signals[lod] = [];
+    this.dropped[lod] = writeInstances(this.pools[lod] as InstancedMesh, parts, origin, this.signals[lod]);
   }
 
   private markBands(blocks: readonly Block[]): void {
@@ -153,6 +164,29 @@ class PropFieldImpl implements PropField {
     this.dirty.clear();
     this.rebuilds++;
     return true;
+  }
+
+  updateSignals(lamp: (code: number) => number): void {
+    for (const lod of LODS) {
+      const sig = this.signals[lod];
+      if (sig.length === 0) continue;
+      const a = (this.pools[lod] as InstancedMesh).geometry.getAttribute('_itype') as InstancedBufferAttribute;
+      const arr = a.array as Float32Array;
+      let lo = Number.POSITIVE_INFINITY;
+      let hi = -1;
+      for (let i = 0; i < sig.length; i += 2) {
+        const slot = sig[i] as number;
+        const v = lamp(sig[i + 1] as number);
+        if (arr[slot * 2 + 1] === v) continue;
+        arr[slot * 2 + 1] = v;
+        lo = Math.min(lo, slot);
+        hi = Math.max(hi, slot);
+      }
+      if (hi < 0) continue;
+      a.clearUpdateRanges();
+      a.addUpdateRange(lo * 2, (hi - lo + 1) * 2);
+      a.needsUpdate = true;
+    }
   }
 
   primeForCompile(): () => void {

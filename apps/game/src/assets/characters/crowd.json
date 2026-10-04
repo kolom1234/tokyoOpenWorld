@@ -1,0 +1,948 @@
+{
+  "version": 1,
+  "fps": 30,
+  "bones": 23,
+  "files": {
+    "bin": "crowd.bin",
+    "texture": "crowd.ktx2"
+  },
+  "clips": ["walk", "walk_slow", "walk_fast", "idle", "phone"],
+  "bases": [
+    {
+      "id": "bm01",
+      "sex": "m",
+      "weight": 1.2,
+      "heightM": 1.8064532949168035,
+      "feetY": -0.0009263852606347456,
+      "vertexCount": 4606,
+      "streams": {
+        "position": [0, 41294],
+        "normal": [41294, 13697],
+        "uv": [54991, 14683],
+        "joints": [69674, 1926],
+        "weights": [71600, 3203]
+      },
+      "lods": [
+        {
+          "index": [74803, 16200],
+          "count": 22305,
+          "maxDistM": 12
+        },
+        {
+          "index": [91003, 8294],
+          "count": 7200,
+          "maxDistM": 30
+        },
+        {
+          "index": [99297, 2885],
+          "count": 2397,
+          "maxDistM": 70
+        },
+        {
+          "index": [102182, 1475],
+          "count": 1191,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [103657, 69754],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.008644495476441
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 44,
+            "durationS": 1.4666666666666666,
+            "speedMs": 0.8168083151458423
+          },
+          {
+            "name": "walk_fast",
+            "start": 80,
+            "frames": 32,
+            "durationS": 1.0666666666666667,
+            "speedMs": 1.4905906402950382
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "bm02",
+      "sex": "m",
+      "weight": 1.4,
+      "heightM": 1.823284862795471,
+      "feetY": -0.000926309617477317,
+      "vertexCount": 4585,
+      "streams": {
+        "position": [173411, 41183],
+        "normal": [214594, 13753],
+        "uv": [228347, 14529],
+        "joints": [242876, 2367],
+        "weights": [245243, 4297]
+      },
+      "lods": [
+        {
+          "index": [249540, 16263],
+          "count": 22344,
+          "maxDistM": 12
+        },
+        {
+          "index": [265803, 8334],
+          "count": 7197,
+          "maxDistM": 30
+        },
+        {
+          "index": [274137, 2824],
+          "count": 2400,
+          "maxDistM": 70
+        },
+        {
+          "index": [276961, 1280],
+          "count": 1128,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [278241, 69764],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.008644495476441
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 44,
+            "durationS": 1.4666666666666666,
+            "speedMs": 0.8168083151458423
+          },
+          {
+            "name": "walk_fast",
+            "start": 80,
+            "frames": 32,
+            "durationS": 1.0666666666666667,
+            "speedMs": 1.4905906402950382
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "bm03",
+      "sex": "m",
+      "weight": 1.2,
+      "heightM": 1.8191582448947425,
+      "feetY": -0.000926298621605699,
+      "vertexCount": 4843,
+      "streams": {
+        "position": [348005, 43511],
+        "normal": [391516, 14436],
+        "uv": [405952, 15436],
+        "joints": [421388, 2370],
+        "weights": [423758, 3872]
+      },
+      "lods": [
+        {
+          "index": [427630, 17103],
+          "count": 23430,
+          "maxDistM": 12
+        },
+        {
+          "index": [444733, 8582],
+          "count": 7200,
+          "maxDistM": 30
+        },
+        {
+          "index": [453315, 2844],
+          "count": 2400,
+          "maxDistM": 70
+        },
+        {
+          "index": [456159, 1431],
+          "count": 1188,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [457590, 69764],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.008644495476441
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 44,
+            "durationS": 1.4666666666666666,
+            "speedMs": 0.8168083151458423
+          },
+          {
+            "name": "walk_fast",
+            "start": 80,
+            "frames": 32,
+            "durationS": 1.0666666666666667,
+            "speedMs": 1.4905906402950382
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "bm04",
+      "sex": "m",
+      "weight": 0.8,
+      "heightM": 1.8009338232782415,
+      "feetY": -0.0009263093876408023,
+      "vertexCount": 4412,
+      "streams": {
+        "position": [527354, 39650],
+        "normal": [567004, 13173],
+        "uv": [580177, 13885],
+        "joints": [594062, 1862],
+        "weights": [595924, 3103]
+      },
+      "lods": [
+        {
+          "index": [599027, 16332],
+          "count": 21978,
+          "maxDistM": 12
+        },
+        {
+          "index": [615359, 8362],
+          "count": 7197,
+          "maxDistM": 30
+        },
+        {
+          "index": [623721, 2942],
+          "count": 2400,
+          "maxDistM": 70
+        },
+        {
+          "index": [626663, 1080],
+          "count": 780,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [627743, 69764],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.008644495476441
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 44,
+            "durationS": 1.4666666666666666,
+            "speedMs": 0.8168083151458423
+          },
+          {
+            "name": "walk_fast",
+            "start": 80,
+            "frames": 32,
+            "durationS": 1.0666666666666667,
+            "speedMs": 1.4905906402950382
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "am08",
+      "sex": "m",
+      "weight": 1,
+      "heightM": 1.8257220190337038,
+      "feetY": -0.0009263270977979814,
+      "vertexCount": 4482,
+      "streams": {
+        "position": [697507, 40401],
+        "normal": [737908, 13353],
+        "uv": [751261, 14274],
+        "joints": [765535, 1489],
+        "weights": [767024, 2773]
+      },
+      "lods": [
+        {
+          "index": [769797, 16221],
+          "count": 22092,
+          "maxDistM": 12
+        },
+        {
+          "index": [786018, 8308],
+          "count": 7200,
+          "maxDistM": 30
+        },
+        {
+          "index": [794326, 2910],
+          "count": 2400,
+          "maxDistM": 70
+        },
+        {
+          "index": [797236, 1107],
+          "count": 810,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [798343, 69764],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.008644495476441
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 44,
+            "durationS": 1.4666666666666666,
+            "speedMs": 0.8168083151458423
+          },
+          {
+            "name": "walk_fast",
+            "start": 80,
+            "frames": 32,
+            "durationS": 1.0666666666666667,
+            "speedMs": 1.4905906402950382
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "am01",
+      "sex": "m",
+      "weight": 0.8,
+      "heightM": 1.8236786852659779,
+      "feetY": -0.0009263069833066284,
+      "vertexCount": 4687,
+      "streams": {
+        "position": [868107, 42386],
+        "normal": [910493, 13734],
+        "uv": [924227, 15024],
+        "joints": [939251, 2076],
+        "weights": [941327, 3632]
+      },
+      "lods": [
+        {
+          "index": [944959, 16385],
+          "count": 22320,
+          "maxDistM": 12
+        },
+        {
+          "index": [961344, 8523],
+          "count": 7200,
+          "maxDistM": 30
+        },
+        {
+          "index": [969867, 2952],
+          "count": 2400,
+          "maxDistM": 70
+        },
+        {
+          "index": [972819, 1299],
+          "count": 1068,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [974118, 69764],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.008644495476441
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 44,
+            "durationS": 1.4666666666666666,
+            "speedMs": 0.8168083151458423
+          },
+          {
+            "name": "walk_fast",
+            "start": 80,
+            "frames": 32,
+            "durationS": 1.0666666666666667,
+            "speedMs": 1.4905906402950382
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "bf01",
+      "sex": "f",
+      "weight": 1,
+      "heightM": 1.7403595730908898,
+      "feetY": -0.0005010859639043119,
+      "vertexCount": 5998,
+      "streams": {
+        "position": [1043882, 54146],
+        "normal": [1098028, 17954],
+        "uv": [1115982, 19075],
+        "joints": [1135057, 2492],
+        "weights": [1137549, 4585]
+      },
+      "lods": [
+        {
+          "index": [1142134, 19489],
+          "count": 26898,
+          "maxDistM": 12
+        },
+        {
+          "index": [1161623, 8489],
+          "count": 7191,
+          "maxDistM": 30
+        },
+        {
+          "index": [1170112, 3082],
+          "count": 2394,
+          "maxDistM": 70
+        },
+        {
+          "index": [1173194, 2479],
+          "count": 1938,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [1175673, 66845],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.2224838862823049
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 45,
+            "durationS": 1.5,
+            "speedMs": 0.8904176892965081
+          },
+          {
+            "name": "walk_fast",
+            "start": 81,
+            "frames": 31,
+            "durationS": 1.0333333333333334,
+            "speedMs": 1.5320306951074274
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "bf03",
+      "sex": "f",
+      "weight": 1.4,
+      "heightM": 1.7430569460028142,
+      "feetY": -0.0005010496362506528,
+      "vertexCount": 5681,
+      "streams": {
+        "position": [1242518, 51591],
+        "normal": [1294109, 16937],
+        "uv": [1311046, 18022],
+        "joints": [1329068, 2925],
+        "weights": [1331993, 5123]
+      },
+      "lods": [
+        {
+          "index": [1337116, 18066],
+          "count": 25314,
+          "maxDistM": 12
+        },
+        {
+          "index": [1355182, 8305],
+          "count": 7200,
+          "maxDistM": 30
+        },
+        {
+          "index": [1363487, 2961],
+          "count": 2400,
+          "maxDistM": 70
+        },
+        {
+          "index": [1366448, 2465],
+          "count": 2016,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [1368913, 66845],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.2224838862823049
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 45,
+            "durationS": 1.5,
+            "speedMs": 0.8904176892965081
+          },
+          {
+            "name": "walk_fast",
+            "start": 81,
+            "frames": 31,
+            "durationS": 1.0333333333333334,
+            "speedMs": 1.5320306951074274
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "af02",
+      "sex": "f",
+      "weight": 1,
+      "heightM": 1.7351624695228351,
+      "feetY": -0.00462164639268151,
+      "vertexCount": 5600,
+      "streams": {
+        "position": [1435758, 50167],
+        "normal": [1485925, 16659],
+        "uv": [1502584, 17659],
+        "joints": [1520243, 2579],
+        "weights": [1522822, 5218]
+      },
+      "lods": [
+        {
+          "index": [1528040, 18908],
+          "count": 26820,
+          "maxDistM": 12
+        },
+        {
+          "index": [1546948, 8246],
+          "count": 7200,
+          "maxDistM": 30
+        },
+        {
+          "index": [1555194, 2763],
+          "count": 2400,
+          "maxDistM": 70
+        },
+        {
+          "index": [1557957, 1745],
+          "count": 1536,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [1559702, 66846],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.2224838862823049
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 45,
+            "durationS": 1.5,
+            "speedMs": 0.8904176892965081
+          },
+          {
+            "name": "walk_fast",
+            "start": 81,
+            "frames": 31,
+            "durationS": 1.0333333333333334,
+            "speedMs": 1.5320306951074274
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "af03",
+      "sex": "f",
+      "weight": 1.4,
+      "heightM": 1.7388938372045564,
+      "feetY": -0.00008006429290423514,
+      "vertexCount": 6115,
+      "streams": {
+        "position": [1626548, 54984],
+        "normal": [1681532, 18180],
+        "uv": [1699712, 19447],
+        "joints": [1719159, 3440],
+        "weights": [1722599, 6400]
+      },
+      "lods": [
+        {
+          "index": [1728999, 19286],
+          "count": 27624,
+          "maxDistM": 12
+        },
+        {
+          "index": [1748285, 7933],
+          "count": 7200,
+          "maxDistM": 30
+        },
+        {
+          "index": [1756218, 2885],
+          "count": 2757,
+          "maxDistM": 70
+        },
+        {
+          "index": [1759103, 2884],
+          "count": 2757,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [1761987, 66842],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.2224838862823049
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 45,
+            "durationS": 1.5,
+            "speedMs": 0.8904176892965081
+          },
+          {
+            "name": "walk_fast",
+            "start": 81,
+            "frames": 31,
+            "durationS": 1.0333333333333334,
+            "speedMs": 1.5320306951074274
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "af05",
+      "sex": "f",
+      "weight": 1,
+      "heightM": 1.736178590223187,
+      "feetY": -0.0003323502056655923,
+      "vertexCount": 5571,
+      "streams": {
+        "position": [1828829, 50378],
+        "normal": [1879207, 16541],
+        "uv": [1895748, 17847],
+        "joints": [1913595, 2525],
+        "weights": [1916120, 4872]
+      },
+      "lods": [
+        {
+          "index": [1920992, 17231],
+          "count": 24864,
+          "maxDistM": 12
+        },
+        {
+          "index": [1938223, 7858],
+          "count": 7197,
+          "maxDistM": 30
+        },
+        {
+          "index": [1946081, 2879],
+          "count": 2730,
+          "maxDistM": 70
+        },
+        {
+          "index": [1948960, 2863],
+          "count": 2718,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [1951823, 66845],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.2224838862823049
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 45,
+            "durationS": 1.5,
+            "speedMs": 0.8904176892965081
+          },
+          {
+            "name": "walk_fast",
+            "start": 81,
+            "frames": 31,
+            "durationS": 1.0333333333333334,
+            "speedMs": 1.5320306951074274
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "af11",
+      "sex": "f",
+      "weight": 0.8,
+      "heightM": 1.7364207739429578,
+      "feetY": -0.00038064687681003067,
+      "vertexCount": 6179,
+      "streams": {
+        "position": [2018668, 54826],
+        "normal": [2073494, 16827],
+        "uv": [2090321, 19317],
+        "joints": [2109638, 2008],
+        "weights": [2111646, 3712]
+      },
+      "lods": [
+        {
+          "index": [2115358, 19149],
+          "count": 26688,
+          "maxDistM": 12
+        },
+        {
+          "index": [2134507, 8314],
+          "count": 7200,
+          "maxDistM": 30
+        },
+        {
+          "index": [2142821, 3115],
+          "count": 2700,
+          "maxDistM": 70
+        },
+        {
+          "index": [2145936, 3071],
+          "count": 2676,
+          "maxDistM": 250
+        }
+      ],
+      "anim": {
+        "frames": 472,
+        "range": [2149007, 66845],
+        "clips": [
+          {
+            "name": "walk",
+            "start": 0,
+            "frames": 36,
+            "durationS": 1.2,
+            "speedMs": 1.2224838862823049
+          },
+          {
+            "name": "walk_slow",
+            "start": 36,
+            "frames": 45,
+            "durationS": 1.5,
+            "speedMs": 0.8904176892965081
+          },
+          {
+            "name": "walk_fast",
+            "start": 81,
+            "frames": 31,
+            "durationS": 1.0333333333333334,
+            "speedMs": 1.5320306951074274
+          },
+          {
+            "name": "idle",
+            "start": 112,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          },
+          {
+            "name": "phone",
+            "start": 292,
+            "frames": 180,
+            "durationS": 6,
+            "speedMs": 0
+          }
+        ]
+      }
+    }
+  ]
+}

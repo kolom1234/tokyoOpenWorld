@@ -12,11 +12,14 @@ import {
   smoothstep,
   vec3,
   vec4,
+  vertexColor,
 } from 'three/tsl';
 import { DoubleSide, type Material, MeshStandardNodeMaterial } from 'three/webgpu';
 
 /** 전선 실제 반폭(m). */
 const WIRE_HALF_M = 0.015;
+/** 켜진 신호 렌즈 발광 배율(HDR — 낮에도 블룸이 살짝 번지는 정도). */
+const LAMP_EMISSIVE = 6;
 /** 거리당 반폭 — 전체 폭 ≈ 1.5 px(1080p·렌더 스케일 0.85·세로 FOV 70° 내부 해상도 기준). */
 const WIRE_PX_K = 0.0012;
 /** 이 거리 사이에서 폭을 0으로 — 먼 전선이 겹쳐 검은 띠가 되지 않게(골든뷰 저층 주거지에서 확인). */
@@ -26,8 +29,22 @@ const WIRE_FADE_M = [110, 170] as const;
 export function createPropMaterial(): Material {
   const m = new MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.65, metalness: 0.1 });
   m.name = 'street_prop';
-  const same = attribute('_ptype', 'float').sub(attribute('_itype', 'float')).abs().lessThan(0.5);
+  const ptype = attribute('_ptype', 'vec2');
+  const itype = attribute('_itype', 'vec2');
+  const same = ptype.x.sub(itype.x).abs().lessThan(0.5);
   m.positionNode = select(same, positionLocal, vec3(0, 0, 0));
+  // 신호 램프(M06-T02): 렌즈 `_ptype.y`(1–3 차량 적·황·녹, 4–5 보행 적·녹)가 인스턴스 `_itype.y`(차량 + 4 × 보행)와 맞으면 발광, 아니면 어둡게.
+  const lamp = ptype.y;
+  const sig = itype.y;
+  const veh = sig.mod(4);
+  const ped = sig.div(4).floor();
+  const vehLit = lamp.greaterThan(0.5).and(lamp.lessThan(3.5)).and(lamp.sub(veh).abs().lessThan(0.5));
+  const pedLit = lamp.greaterThan(3.5).and(lamp.sub(3).sub(ped).abs().lessThan(0.5));
+  const lit = vehLit.or(pedLit);
+  const lens = lamp.greaterThan(0.5);
+  // colorNode = 밝기 계수만(three가 정점색 × 인스턴스색을 곱한다 — 자판기 가상 브랜드색 유지).
+  m.colorNode = vec4(vec3(select(lens.and(lit.not()), float(0.18), float(1))), 1);
+  m.emissiveNode = select(lit, vertexColor().mul(LAMP_EMISSIVE), vec3(0));
   return m;
 }
 

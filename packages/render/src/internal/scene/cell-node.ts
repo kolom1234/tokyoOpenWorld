@@ -162,6 +162,8 @@ export interface CellSet {
   add(p: CellPayload, renderOriginWF: Readonly<Vec3d>): void;
   remove(key: CellKey): void;
   placeAll(renderOriginWF: Readonly<Vec3d>): void;
+  /** 셀 슬롯 그룹(부팅 대기 셀 — M06 사전 4). 없으면 빈 배열. */
+  groupsOf(key: CellKey): readonly Group[];
   /** renderPrep(HLOD 페이드 진행 뒤): 페이드 중인 셀만 HLOD 디더 변형, 나머지는 불투명 변형. 반환 = 디더 중인 셀 수. */
   syncHlodMaterials(): number;
   dispose(): void;
@@ -199,6 +201,7 @@ export function createCellSet(
       if (node.hlodFades) hlod?.attach(p.key, node.hlodFades);
     },
     remove,
+    groupsOf: (key) => cells.get(key)?.groups ?? [],
     placeAll(origin) {
       for (const node of cells.values()) placeCellNode(node, origin);
     },

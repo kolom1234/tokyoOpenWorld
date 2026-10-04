@@ -15,6 +15,7 @@ import {
   SRGBColorSpace,
   type Texture,
   type Node as TslNode,
+  type UniformNode,
   Vector2,
   Vector3,
   type WebGPURenderer,
@@ -95,6 +96,8 @@ export interface MaterialLibrary {
   setOrigin(originWF: Readonly<Vec3d>): void;
   /** manifest URL → 평균값 적용 → KTX2 3장 적재 → 교체. 실패는 reject(평균색 유지). */
   load(manifestUrl: string, renderer: WebGPURenderer, log: Logger): Promise<LibraryStats>;
+  /** 공용 KTX2Loader(트랜스코더 워커 1벌 — 아바타·군중 아틀라스도 같이 쓴다, ADR-0057). */
+  ktx2(renderer: WebGPURenderer): KTX2Loader;
   stats(): LibraryStats;
   dispose(): void;
 }
@@ -163,18 +166,17 @@ async function loadArray(loader: KTX2Loader, url: string, linear: boolean): Prom
   return t;
 }
 
-/** manifest → onManifest(평균값 먼저) → KTX2 3장 병렬 적재. */
+/** manifest → onManifest(평균값 먼저) → KTX2 3장 병렬 적재. 로더는 manifest 뒤에 만든다(실패한 manifest는 트랜스코더를 띄우지 않음). */
 async function fetchLibrary(
   manifestUrl: string,
-  renderer: WebGPURenderer,
-  basisPath: string,
+  loaderOf: () => KTX2Loader,
   onManifest: (m: MaterialsManifest) => void,
 ) {
   const res = await fetch(manifestUrl);
   if (!res.ok) throw new Error(`materials manifest HTTP ${res.status}`);
   const m = (await res.json()) as MaterialsManifest;
   onManifest(m);
-  const loader = useBootstrapWorker(new KTX2Loader().setTranscoderPath(basisPath), basisPath).detectSupport(renderer);
+  const loader = loaderOf();
   const base = manifestUrl.slice(0, manifestUrl.lastIndexOf('/') + 1);
   const [albedo, normal, orm] = await Promise.all([
     loadArray(loader, base + m.textures.albedo.file, false),
@@ -187,7 +189,7 @@ async function fetchLibrary(
     interiors.wrapT = ClampToEdgeWrapping;
   }
   const bytes = m.textures.albedo.bytes + m.textures.normal.bytes + m.textures.orm.bytes + (m.interiors?.bytes ?? 0);
-  return { loader, albedo, normal, orm, interiors, bytes };
+  return { albedo, normal, orm, interiors, bytes };
 }
 
 function createMaps() {
@@ -242,6 +244,30 @@ async function timed(st: LibraryStats, log: Logger, fn: () => Promise<void>): Pr
   return { ...st };
 }
 
+type Fetched = Awaited<ReturnType<typeof fetchLibrary>>;
+
+/** 적재 결과 → 텍스처 노드 교체·준비 플래그·통계(바이트). */
+function applyFetched(
+  r: Fetched,
+  maps: MaterialLibrary['maps'],
+  flags: { ready: UniformNode<'float', number>; interiorsReady: UniformNode<'float', number> },
+  loaded: Texture[],
+  st: LibraryStats,
+): void {
+  loaded.push(r.albedo, r.normal, r.orm);
+  maps.albedo.value = r.albedo;
+  maps.normal.value = r.normal;
+  maps.orm.value = r.orm;
+  flags.ready.value = 1;
+  if (r.interiors) {
+    loaded.push(r.interiors);
+    maps.interiors.value = r.interiors;
+    flags.interiorsReady.value = 1;
+  }
+  st.gpuBytes = [r.albedo, r.normal, r.orm, r.interiors].reduce((n, t) => n + (t ? uploadBytes(t) : 0), 0);
+  st.downloadBytes = r.bytes;
+}
+
 export function createMaterialLibrary(basisPath: string): MaterialLibrary {
   const { holders, maps } = createMaps();
   const u = createLayerUniforms();
@@ -258,26 +284,23 @@ export function createMaterialLibrary(basisPath: string): MaterialLibrary {
     return int(r.x.add(h.mul(r.y).floor().min(r.y.sub(1))));
   };
 
+  const ktx2 = (renderer: WebGPURenderer): KTX2Loader => {
+    loader ??= useBootstrapWorker(new KTX2Loader().setTranscoderPath(basisPath), basisPath).detectSupport(renderer);
+    return loader;
+  };
+
   const loadAll = async (manifestUrl: string, renderer: WebGPURenderer): Promise<void> => {
-    const r = await fetchLibrary(manifestUrl, renderer, basisPath, (m) => {
-      u.apply(m);
-      rooms.apply(m);
-      st.layers = m.layerCount;
-      st.state = 'manifest';
-    });
-    loader = r.loader;
-    loaded.push(r.albedo, r.normal, r.orm);
-    maps.albedo.value = r.albedo;
-    maps.normal.value = r.normal;
-    maps.orm.value = r.orm;
-    ready.value = 1;
-    if (r.interiors) {
-      loaded.push(r.interiors);
-      maps.interiors.value = r.interiors;
-      interiorsReady.value = 1;
-    }
-    st.gpuBytes = [r.albedo, r.normal, r.orm, r.interiors].reduce((n, t) => n + (t ? uploadBytes(t) : 0), 0);
-    st.downloadBytes = r.bytes;
+    const r = await fetchLibrary(
+      manifestUrl,
+      () => ktx2(renderer),
+      (m) => {
+        u.apply(m);
+        rooms.apply(m);
+        st.layers = m.layerCount;
+        st.state = 'manifest';
+      },
+    );
+    applyFetched(r, maps, { ready, interiorsReady }, loaded, st);
     st.state = 'ready';
   };
 
@@ -297,6 +320,7 @@ export function createMaterialLibrary(basisPath: string): MaterialLibrary {
       offset.set(o.x % WORLD_UV_PERIOD_M, o.z % WORLD_UV_PERIOD_M);
     },
     load: (manifestUrl, renderer, log) => timed(st, log, () => loadAll(manifestUrl, renderer)),
+    ktx2,
     stats: () => ({ ...st }),
     dispose() {
       for (const t of [...Object.values(holders), ...loaded]) t.dispose();

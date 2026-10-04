@@ -1,4 +1,4 @@
-// normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2
+// normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads,bridges,markings}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2
 // 규칙: 건물은 중심점 셀에만(분할 금지), 도로면은 셀 경계에서 클리핑. 셀 파일 내부는 id 오름차순(결정론).
 // 여러 소스(구)는 한 번에 같은 버킷으로 — 都 pref 판은 3차 메시 단위라 같은 메시 파일이 여러 구 zip에 있다 → 파일명 기준 첫 소스만 읽는다.
 import { existsSync, readdirSync } from 'node:fs';
@@ -7,11 +7,12 @@ import { type CellKey, cellIdString, type Logger, unpackCellKey } from '@sanpo/c
 import { type CellBoundsWF, cellBoundsWF, cellOf, jisMesh3CodesInBBox, lonLatBBoxOfWF } from '@sanpo/geo';
 import { writeNdjsonGz } from '../lib/ndjson-gz.ts';
 import { clipRingsToRect } from '../lib/polygon.ts';
+import { type MarkingRecord, readMarkings } from '../readers/plateau/frn-markings.ts';
 import { centroidXZ } from '../readers/plateau/geometry.ts';
 import type { NormalizedFeature, PlateauReader, RoadRecord } from '../readers/plateau/index.ts';
 
-/** normalize가 읽는 PLATEAU 레이어(파일명 `<mesh>_<layer>_<epsg>_op.gml`). brid = 교량(M05-T08, 없으면 건너뜀). */
-const LAYERS = ['bldg', 'tran', 'brid'] as const;
+/** normalize가 읽는 PLATEAU 레이어(파일명 `<mesh>_<layer>_<epsg>_op.gml`). brid = 교량(M05-T08), frn = 道路標示만(M06 사전 2 — frn-markings.ts). 없으면 건너뜀. */
+const LAYERS = ['bldg', 'tran', 'brid', 'frn'] as const;
 export type PlateauLayer = (typeof LAYERS)[number];
 
 export interface PlateauSourceRoot {
@@ -40,6 +41,8 @@ export interface NormalizePlateauResult {
   roadPieces: number;
   /** 교량(M05-T08). */
   bridges: number;
+  /** 道路標示(frn 1xxx, M06 사전 2). */
+  markings: number;
   written: string[];
 }
 
@@ -83,6 +86,24 @@ function bucketOf(m: Map<CellKey, Bucket>, k: CellKey): Bucket {
   const b: Bucket = new Map();
   m.set(k, b);
   return b;
+}
+
+/** 道路標示 1개 → 모든 정점 xz 평균 셀(분할 안 함 — 데칼 조각 소유는 build에서 삼각형 중심으로). */
+function placeMarking(r: MarkingRecord, targets: Map<CellKey, CellBoundsWF>, out: Map<CellKey, Bucket>): number {
+  let sx = 0;
+  let sz = 0;
+  let n = 0;
+  for (const p of r.polygonsWF)
+    for (let i = 0; i + 2 < p.length; i += 3) {
+      sx += p[i] as number;
+      sz += p[i + 2] as number;
+      n++;
+    }
+  const k = n ? cellOf(0, sx / n, sz / n) : null;
+  if (k === null || !targets.has(k)) return 0;
+  const b = bucketOf(out, k);
+  if (!b.has(r.id)) b.set(r.id, JSON.stringify(r));
+  return 1;
 }
 
 /** 레코드 1개를 셀 버킷에 넣는다. 반환 = 넣은 조각 수. 같은 id가 이미 있으면(구 경계 중복 등) 먼저 온 것 유지. */
@@ -136,9 +157,23 @@ export async function normalizePlateau(input: NormalizePlateauInput): Promise<No
   const buildings = new Map<CellKey, Bucket>();
   const roads = new Map<CellKey, Bucket>();
   const bridges = new Map<CellKey, Bucket>();
-  const res: NormalizePlateauResult = { files, features: 0, buildings: 0, roadPieces: 0, bridges: 0, written: [] };
+  const markings = new Map<CellKey, Bucket>();
+  const res: NormalizePlateauResult = {
+    files,
+    features: 0,
+    buildings: 0,
+    roadPieces: 0,
+    bridges: 0,
+    markings: 0,
+    written: [],
+  };
   for (const { sourceId, file } of files) {
     const t0 = performance.now();
+    if (/_frn_\d+_op\.gml$/.test(file)) {
+      for await (const r of readMarkings(file, sourceId)) res.markings += placeMarking(r, targets, markings);
+      log.info(`frn-markings ${file} ${Math.round(performance.now() - t0)} ms`);
+      continue;
+    }
     for await (const f of reader.read(file, { sourceId })) {
       res.features++;
       const n = place(f, targets, f.layer === 'buildings' ? buildings : f.layer === 'bridges' ? bridges : roads);
@@ -152,6 +187,7 @@ export async function normalizePlateau(input: NormalizePlateauInput): Promise<No
     ...flush(input.outDir, 'buildings', buildings),
     ...flush(input.outDir, 'roads', roads),
     ...flush(input.outDir, 'bridges', bridges),
+    ...flush(input.outDir, 'markings', markings),
   ];
   return res;
 }

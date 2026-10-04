@@ -9,6 +9,7 @@ import type {
   EventBus,
   Logger,
   QualityTier,
+  SharedInstanceBuffer,
   SystemProvider,
   Vec3d,
 } from '@sanpo/core';
@@ -130,6 +131,22 @@ export interface RenderStats {
   trees: { instances: number; visible: number; pools: number; dropped: number; ready: boolean };
   /** 가상 간판(M05-T06): 적재 인스턴스(돌출·입간판·옥상)·보이는 인스턴스·그리는 풀·에셋 준비. */
   signs: { instances: number; visible: number; pools: number; ready: boolean };
+  /** 군중(M06-T01): sim 인스턴스 수·그린 수·쓰는 풀(드로우콜)·용량 초과·그림자 드리우는 수(LOD0)·에셋 준비. */
+  crowd: {
+    instances: number;
+    visible: number;
+    pools: number;
+    dropped: number;
+    casters: number;
+    lods: number[];
+    ready: boolean;
+  };
+}
+
+/** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */
+export interface AvatarAssetUrls {
+  glb: string;
+  texture: string;
 }
 
 /** 나무 에셋 URL(파이프라인 `trees` 산출, 게임 번들 해시 에셋). */
@@ -143,6 +160,18 @@ export interface TreeAssetUrls {
 /** 간판 에셋 URL(파이프라인 `signage` 산출 — 브랜드 색까지 구운 아틀라스 PNG, 게임 번들 해시 에셋). */
 export interface SignageAssetUrls {
   atlas: string;
+}
+
+/** 군중 팩 URL(파이프라인 `characters` 군중 — Rocketbox 베이스 12종, ADR-0057). */
+export interface CrowdAssetUrls {
+  manifest: string;
+  bin: string;
+  texture: string;
+}
+
+/** 10 §1: sim SAB 인스턴스 버퍼를 render가 읽는다(wiring이 1회 bindShared). */
+export interface InstanceLayer {
+  bindShared(buf: SharedInstanceBuffer): void;
 }
 
 export interface RenderService extends SystemProvider {
@@ -170,15 +199,22 @@ export interface RenderService extends SystemProvider {
   setEnvironment(e: Readonly<EnvironmentState>): void;
   /** 고정 머티리얼(+ HLOD 변형) 셰이더 선컴파일(06 §6) — 스트리밍 중 컴파일 끊김 방지. */
   precompile(): Promise<void>;
+  /**
+   * 부팅 첫 표시(M06 사전 4): on이면 이후 addCell의 셀 메시를 장면 밖 대기 그룹에 둔다(그리지 않음 → 첫 렌더 동기 컴파일 없음).
+   * `compileStaged`로 선컴파일과 겹쳐 파이프라인을 만들고 `commitStaged`로 장면에 붙인다(대기 모드 끝). 소품·나무·간판 풀은 대상 아님.
+   */
+  stageCells(on: boolean): void;
+  compileStaged(): Promise<void>;
+  commitStaged(): void;
   /** WF float64 카메라. 다음 renderPrep(phase 70)에서 원점 재설정·투영에 반영. */
   setCamera(c: Readonly<CameraState>): void;
   /** 플레이어 아바타 상태(절차 마네킹 M04-T05 → 모델 ADR-0048). 매 프레임 renderPrep 전에. */
   setAvatar(a: Readonly<AvatarState>): void;
   /**
-   * 아바타 모델 GLB(파이프라인 `avatar` — Quaternius UBC + UAL 클립, ADR-0048) 적재 → 선컴파일 → 마네킹 교체. 첫 표시 뒤에 부른다.
+   * 아바타 모델(파이프라인 `characters` — Rocketbox GLB + KTX2 아틀라스, ADR-0057) 적재 → 선컴파일 → 마네킹 교체. 첫 표시 뒤에 부른다.
    * 실패하면 reject하고 절차 마네킹을 계속 쓴다.
    */
-  loadAvatar(url: string): Promise<void>;
+  loadAvatar(urls: AvatarAssetUrls): Promise<void>;
   /**
    * 나무 에셋(파이프라인 `trees` — 수종 GLB·잎·임포스터 아틀라스, M05-T04) 적재 → 머티리얼 선컴파일 → 셀 trees.inst를 그리기 시작.
    * 첫 표시 뒤에 부른다(초기 다운로드 밖). 그 전 셀의 나무도 기억했다가 그린다.
@@ -186,6 +222,15 @@ export interface RenderService extends SystemProvider {
   loadTrees(urls: TreeAssetUrls): Promise<void>;
   /** 간판 아틀라스(M05-T06) 적재 → 간판 머티리얼 선컴파일 → 셀 props.inst 간판 종류 + 파사드 1층 간판 띠에 가상 브랜드. */
   loadSignage(urls: SignageAssetUrls): Promise<void>;
+  /** 군중 팩 적재 → 머티리얼 선컴파일 → pedestrians 레이어를 그리기 시작(M06-T01). 첫 표시 뒤에 부른다. */
+  loadCrowd(urls: CrowdAssetUrls): Promise<void>;
+  /**
+   * 신호 램프 원천(M06-T02): props.inst 신호 기둥의 현시 코드 → 램프 값(차량 1 적·2 황·3 녹 + 4 × 보행 1 적·2 녹, 0 = 꺼짐).
+   * 배선이 sim.signalStateAt로 만든다. 매 renderPrep에 보이는 기둥만 묻는다. null = 램프 끔.
+   */
+  setSignalLamps(lamp: ((code: number) => number) | null): void;
+  /** 보행자 인스턴스 레이어(sim 출력). */
+  readonly pedestrians: InstanceLayer;
   stats(): RenderStats;
   dispose(): void;
 }

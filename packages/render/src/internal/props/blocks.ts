@@ -33,7 +33,11 @@ export interface TypeSlice {
   mats: Float32Array;
   colors: Float32Array;
   band: number;
+  /** 신호 현시 코드(신호 종류만 — props.inst 5번째 칸, M06-T02). 옛 빌드 = 1(코드 없음). */
+  codes?: Float32Array;
 }
+
+const isSignal = (t: number): boolean => t === PROP_TYPE.signalVehicle || t === PROP_TYPE.signalPedestrian;
 
 export interface Block {
   key: CellKey;
@@ -47,8 +51,11 @@ export interface Block {
 function sliceOf(t: Float32Array, typeId: number, idx: readonly number[]): TypeSlice {
   const mats = new Float32Array(idx.length * 16);
   const colors = new Float32Array(idx.length * 3).fill(1);
+  const codes = isSignal(typeId) ? new Float32Array(idx.length) : undefined;
   idx.forEach((i, k) => {
-    const [x, y, z, yaw, s] = [t[i * 5], t[i * 5 + 1], t[i * 5 + 2], t[i * 5 + 3], t[i * 5 + 4]] as number[];
+    const [x, y, z, yaw, raw] = [t[i * 5], t[i * 5 + 1], t[i * 5 + 2], t[i * 5 + 3], t[i * 5 + 4]] as number[];
+    if (codes) codes[k] = raw as number;
+    const s = codes ? 1 : raw;
     const c = Math.cos(yaw as number) * (s as number);
     const n = Math.sin(yaw as number) * (s as number);
     mats.set([c, 0, -n, 0, 0, s as number, 0, 0, n, 0, c, 0, x as number, y as number, z as number, 1], k * 16);
@@ -57,7 +64,7 @@ function sliceOf(t: Float32Array, typeId: number, idx: readonly number[]): TypeS
       colors.set(VENDING_TINTS[h] as readonly number[], k * 3);
     }
   });
-  return { n: idx.length, mats, colors, band: -1 };
+  return codes ? { n: idx.length, mats, colors, band: -1, codes } : { n: idx.length, mats, colors, band: -1 };
 }
 
 /** 셀 배치 → 64 m 블록들. */

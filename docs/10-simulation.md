@@ -3,6 +3,7 @@
 ## 1. 구조
 - 메인: `SimHost`(시계, 날씨, 계절, POI 발견 — 가벼운 로직) + sim.worker 프록시.
 - `sim.worker` (30 Hz 고정): 군중, 교통, 신호, 열차. 출력은 `SharedInstanceBuffer`(core 타입, SAB) 3개(보행자/차량/열차 칸) → wiring이 `render.layers.*.bindShared()`로 연결.
+  구현(M06-T01, ADR-0061): `worker/{sim.worker,instance-buffer,host}.ts` — SAB 이중 영역(front 뒤집기), 필드 = x,y,z(WF − anchor)·yaw·anim(클립 + 속력/10)·phase·variant(u16)·rate(주기/s, 외삽용), render가 틱 사이 외삽. 조정값 = `content/sim/*.json`(YAML 대신).
 - 태양·달 방향/조도, 계절은 SimHost가 계산해 `environment(): EnvironmentState`로 제공(suncalc 2.x: 도 단위·북 기준 방위).
 - 결정론: 모든 난수는 `createRng(hash32(WORLD_SEED, cellId, entityKind, spawnIndex))`(`WORLD_SEED`는 core 상수). 같은 시각·위치면 같은 풍경.
 
@@ -34,8 +35,8 @@
 - 신호 준수: 적신호면 연석 대기선에 정렬 대기. **스크램블 교차로(보차분리 전방향 보행 현시)** 재현. 녹색 점멸 시 새 진입 중단.
 - 차량 회피: 차선 가로지르지 않음(횡단보도만), 플레이어 차량 근접 시 정지·회피.
 ### 4.3 외형
-- 베이스 바디 12종(성인, 체형 다양) × 의상 팔레트 16 × 소지품(가방, 우산, 스마트폰) × 계절 의상.
-- 애니메이션(VAT): 걷기(속도 블렌드 2종), 대기, 휴대폰 보기, 우산 걷기, 계단 오르기.
+- 베이스 바디 12종(Microsoft Rocketbox, 성인 남녀 6·6 — ADR-0057) × 밝기·키 변형(variant) × 소지품(가방, 우산 — T04) × 계절 의상(M09).
+- 애니메이션(뼈 팔레트, ADR-0057): 걷기(보통·느림·빠름), 대기, 휴대폰. 우산 걷기·계단 오르기는 Rocketbox에 없음(우산 = idle만).
 
 ## 5. 교통
 ### 5.1 차량 모델
@@ -46,7 +47,9 @@
 - 차종(가상 디자인): 소형 세단, 택시(일반형 + 지붕 표시등 "TAXI"), 경차, 경트럭, 미니밴, 택배 트럭, 노선버스(가상 도색). 실제 로고 없음.
 - 플레이어 60 m 내 차량은 물리 키네마틱 바디 동기화(08-physics §3).
 ### 5.2 신호
-- 교차로별 `SignalController`: 현시 계획(기본 2현시 사이클 120 s, 황색 3 s, 전적 2 s, 보행 녹색 점멸 5 s). 특정 교차로 계획은 `content/sim/signal-plans.yaml`로 덮어씀(스크램블: 차량 현시 2개 + 전방향 보행 현시).
+- 교차로별 `SignalController`: 현시 계획(기본 2현시 사이클 120 s, 황색 3 s, 전적 2 s, 보행 녹색 점멸 5 s). 특정 교차로 계획은 `content/sim/signal-plans.json`(ADR-0061 §4 — JSON)의 sites로 덮어씀(스크램블: 차량 현시 2개 + 전방향 보행 현시).
+- 구현(M06-T02, ADR-0062): 신호 기둥 = `props.inst` 현시 코드(교차로 ID × 16 + 계획 × 4 + 그룹 0 차량 A·1 차량 B·2 보행 A·3 보행 B — 파이프라인이 OSM 차도 방향 두 봉우리로 그룹을 정함).
+  상태 = 게임 시각의 순수 함수 `sim.signalStateAt(code)`(메인 — 빨리감기·점프 일관), 기본 계획 주기 오프셋 = `hash32(WORLD_SEED, 'signal', ID)`, 사이트 계획 = 0. T05 차선 그룹도 같은 방향 규칙.
 - 신호 상태는 render(신호등 발광), 군중, 교통, 오디오(보행자 신호 유도음: **자체 합성 "뻐꾹/삐요" 계열 톤**)가 공유.
 
 ## 6. 열차

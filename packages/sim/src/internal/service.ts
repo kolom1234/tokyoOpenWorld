@@ -1,10 +1,14 @@
 // createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시). 날씨·계절은 기본값(M06/M09).
 // see docs/modules/sim.md, docs/10-simulation.md §2
+
 import type { EnvironmentState, GameSystem, SeasonParams, Vec3d, WeatherParams } from '@sanpo/core';
 import { wfToLonLat } from '@sanpo/geo';
 import type { SimDeps, SimService } from '../api.ts';
 import { clearSkyIlluminanceLux, moonPosition, sunPosition } from './clock/astronomy.ts';
 import { createWorldClock } from './clock/world-clock.ts';
+import { signalState } from './signals/controller.ts';
+import { compilePlans } from './signals/plans.ts';
+import { type SimWorkerHost, startSimWorker } from './worker/host.ts';
 
 /** 01-architecture §5: sim 시계 = phase 10. */
 export const SIM_CLOCK_PHASE = 10;
@@ -57,8 +61,21 @@ export function createSim(deps: SimDeps): SimService {
     },
     dispose() {},
   };
+  let worker: SimWorkerHost | undefined;
+  const plans = deps.signalPlans ? compilePlans(deps.signalPlans) : [];
   return {
+    signalStateAt: (code) => signalState(plans, code, clock.gameTimeMs / 1000),
     clock,
+    startWorker(o) {
+      worker ??= startSimWorker({
+        supervisor: o.supervisor,
+        params: o.crowd,
+        centerWF: o.centerWF,
+        log: deps.log.child('sim'),
+      });
+      return worker?.pedestrians;
+    },
+    workerStats: () => worker?.stats(),
     environment() {
       const ms = clock.gameTimeMs;
       const x = Math.round(observer.x / OBSERVER_GRID_M) * OBSERVER_GRID_M;

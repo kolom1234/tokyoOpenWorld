@@ -17,6 +17,7 @@ import {
   diffuseColor,
   Fn,
   float,
+  floatBitsToUint,
   Loop,
   metalness,
   mrt,
@@ -28,8 +29,10 @@ import {
   roughness,
   sample,
   screenUV,
+  select,
   sin,
   texture3D,
+  uint,
   uniform,
   unpackRGBToNormal,
   vec4,
@@ -215,6 +218,14 @@ function aerialOf(
   return ap as unknown as V4;
 }
 
+/** 지수 비트가 모두 1(NaN·Inf)인 성분이 하나라도 있으면 0(검정). 카메라와 거의 같은 위치의 조각(아바타 머리·슬래브 안 등)이 내는 NaN을
+ * 블룸(넓은 흐림)·TAAU(이력)가 화면 전체로 번져 검게 만들던 문제(M06 사전 3 근본 원인, ADR-0059). x != x는 컴파일러가 접을 수 있어 비트로 검사. */
+function sanitize(c: V4): V4 {
+  const bad = (x: TslNode<'float'>) =>
+    (floatBitsToUint(x) as unknown as TslNode<'uint'>).bitAnd(uint(0x7f800000)).equal(uint(0x7f800000));
+  return select(bad(c.x).or(bad(c.y)).or(bad(c.z)).or(bad(c.w)), vec4(0, 0, 0, 1), c) as unknown as V4;
+}
+
 export function createPostPipeline(
   renderer: WebGPURenderer,
   scene: Scene,
@@ -232,7 +243,7 @@ export function createPostPipeline(
     ? createAutoExposure(scenePass.getTexture('output'))
     : undefined;
   // 자동 노출이 없으면(WebGL2 — 컴퓨트 없음) 골든뷰 평균 배율(맑은 낮 0.8–1.9의 가운데)로 고정.
-  let hdr: V4 = ap.mul(exposure ? exposure.scale : float(fx.fixedExposure ?? 1));
+  let hdr: V4 = sanitize(ap.mul(exposure ? exposure.scale : float(fx.fixedExposure ?? 1)));
   if (fx.bloom) {
     const b = bloom(hdr, 0.08, 0.35, 1.2);
     // 넓은 흐림이라 ¼ 해상도로 충분(기본 ½ 대비 ≈ −1.5 ms).

@@ -1,4 +1,4 @@
-// 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리)으로 시작 → `attach`로 Quaternius 모델(ADR-0048,
+// 플레이어 아바타(09 §3 3인칭, M04-T05, ADR-0045): 자체 제작 절차 마네킹(캡슐 몸통·팔다리·구 머리)으로 시작 → `attach`로 Rocketbox 모델(ADR-0057,
 // avatar-model.ts)이 붙으면 교체. 마네킹 = 속도 블렌드 대기·걷기·달리기(팔다리 진자 진폭·주기·몸 기울기가 속력에 연속), 근접 디더 페이드(opacity → alphaHash).
 // 위치 = WF − 렌더 원점(renderPrep).
 import type { AvatarState, Vec3d } from '@sanpo/core';

@@ -32,6 +32,8 @@ export interface MarkCtx {
   roads: RoadIndex;
   /** 車道交差部(1020) 안인지(WF) — 차선은 교차부에서 끊는다. */
   inIntersection: (x: number, z: number) => boolean;
+  /** 이 점(WF)의 OSM 정지선을 막는다(PLATEAU 停止線이 있는 곳 — M06 사전 2). */
+  stopBlocked?: (p: V2) => boolean;
 }
 
 export type V2 = [number, number];
@@ -70,9 +72,16 @@ function emitVertex(c: MarkCtx, x: number, z: number, paint: number): number | u
 
 /**
  * 사각형 띠: 중심선 a→b(WF), 폭 w(m) → PIECE_M 칸 격자로 나눈 사각형들(위에서 CCW). 칸마다 중심이 차도 위(보도·교차 제외는 호출 측)여야 그린다.
- * 반환 = 그린 칸 수.
+ * keep = true(차도 위만) | false(전부) | 술어(칸 중심 WF — PLATEAU 영역형 横断歩道 면 안만). 반환 = 그린 칸 수.
  */
-export function stripe(c: MarkCtx, a: V2, b: V2, w: number, paint: number, onRoad = true): number {
+export function stripe(
+  c: MarkCtx,
+  a: V2,
+  b: V2,
+  w: number,
+  paint: number,
+  keep: boolean | ((p: V2) => boolean) = true,
+): number {
   const d = sub(b, a);
   const L = len(d);
   if (L < 1e-3) return 0;
@@ -85,7 +94,7 @@ export function stripe(c: MarkCtx, a: V2, b: V2, w: number, paint: number, onRoa
     for (let j = 0; j < nv; j++) {
       const p = (s: number, t: number): V2 => add(add(a, mul(u, (L * (i + s)) / nu)), mul(v, w * ((j + t) / nv - 0.5)));
       const mid = p(0.5, 0.5);
-      if (onRoad && c.roads.classify(mid[0], mid[1]) !== 'road') continue;
+      if (keep === true ? c.roads.classify(mid[0], mid[1]) !== 'road' : keep !== false && !keep(mid)) continue;
       const q = [p(0, 0), p(1, 0), p(1, 1), p(0, 1)].map((pt) => emitVertex(c, pt[0], pt[1], paint));
       if (q.some((x) => x === undefined)) continue;
       const [q0, q1, q2, q3] = q as [number, number, number, number];
@@ -95,6 +104,29 @@ export function stripe(c: MarkCtx, a: V2, b: V2, w: number, paint: number, onRoa
     }
   }
   return drawn;
+}
+
+/** 삼각형 데칼(WF, 위에서 CCW로 맞춤): 변이 PIECE_M보다 길면 4분할 반복(지형 따라가기). 반환 = 그린 삼각형 수. */
+export function triangle(c: MarkCtx, a: V2, b: V2, d: V2, paint: number): number {
+  const cross = (b[0] - a[0]) * (d[1] - a[1]) - (d[0] - a[0]) * (b[1] - a[1]);
+  // WF z = 남 → 위에서 볼 때 CCW = (x, z) 평면에서 cross < 0.
+  if (cross > 0) [b, d] = [d, b];
+  const longest = Math.max(len(sub(b, a)), len(sub(d, b)), len(sub(a, d)));
+  if (longest > PIECE_M * 1.5) {
+    const ab = mul(add(a, b), 0.5);
+    const bd = mul(add(b, d), 0.5);
+    const da = mul(add(d, a), 0.5);
+    return (
+      triangle(c, a, ab, da, paint) +
+      triangle(c, ab, b, bd, paint) +
+      triangle(c, da, bd, d, paint) +
+      triangle(c, ab, bd, da, paint)
+    );
+  }
+  const q = [a, b, d].map((p) => emitVertex(c, p[0], p[1], paint));
+  if (q.some((x) => x === undefined)) return 0;
+  c.out.idx.push(...(q as number[]));
+  return 1;
 }
 
 /** 꺾은선(WF xz 쌍 배열) → 길이 누적 표본 함수(0 ≤ s ≤ 전체). */

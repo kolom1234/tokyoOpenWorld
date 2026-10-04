@@ -226,6 +226,11 @@ export interface WhenReadyRequest {
    * 준비 집합으로 묶는다(14 §2 초기 다운로드 ≤ 60 MB, M03-T06 측정). 이미 진행 중인 요청은 취소하지 않는다.
    */
   exclusive?: boolean;
+  /**
+   * exclusive를 이 Promise가 끝날 때까지 유지한다(대상이 먼저 준비돼도 — resolve는 그대로 대상 준비 시점). 부팅: 선컴파일과 셀 준비를 겹치면서
+   * 첫 표시 전 선적재를 막는다(M06 사전 4, ADR-0060 — 없으면 대상 준비 뒤 선컴파일 동안 HLOD·주변을 받아 초기 다운로드가 21 → 91 MB).
+   */
+  holdExclusiveUntil?: Promise<unknown>;
 }
 
 export interface StreamingStats {

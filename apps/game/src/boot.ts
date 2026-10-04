@@ -78,6 +78,8 @@ export interface BootFlags {
   mode?: 'freecam';
   /** `?trees=0` → 나무 에셋을 적재하지 않는다(나무 GPU 비용 비교, M05-T04). */
   noTrees?: boolean;
+  /** `?crowd=dummy` → 더미 보행자 1,000명 원형 걷기(M06-T01 수락 장면). 기본 = 군중 없음(T03 이후 실제 군중). */
+  crowd?: 'dummy';
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -118,6 +120,7 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('forcePost') === '1' ? { forcePost: true } : {}),
     ...(q.get('mode') === 'freecam' ? { mode: 'freecam' as const } : {}),
     ...(q.get('trees') === '0' ? { noTrees: true } : {}),
+    ...(q.get('crowd') === 'dummy' ? { crowd: 'dummy' as const } : {}),
   };
 }
 
@@ -232,6 +235,7 @@ async function setupWorldView(
       ...(weather ? { weather } : {}),
       ...(flags.mode ? { startMode: flags.mode } : {}),
       ...(flags.noTrees ? { trees: false } : {}),
+      ...(flags.crowd ? { crowd: flags.crowd } : {}),
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),
