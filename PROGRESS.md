@@ -2,17 +2,22 @@
 Updated: 2026-10-04 (session #19 — 큐 모드 M06 2차 T03→T07, 브랜치 `claude/m06-crowds-traffic`, draft PR #19)
 
 ## Current Milestone: M06 — Life: Crowds & Traffic (T01·T02 ✅ PR #18 병합 → 이번 PR #19: 사전 정리 + T03–T07 + MVP 재빌드·staging)
-## Current Task: M06-T03 ✅ → 다음 = M06-T04 군중 tier B/C & LOD manager
-- Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063).
+## Current Task: M06-T04 ✅ → 다음 = M06-T05 교통(IDM·차선·양보)
+- Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063), M06-T04(ADR-0064).
 - 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright chrome headed + `power()` = nvidia-smi 소비·상한 W), `bootblock.mjs`(long task·rAF 간격·첫 표시),
   `crowdview.mjs out base query pose shots`(freecam 포즈 → 3 s마다 캡처 + 워커 통계·전력), `navviz.ts`(빌드 nav.bin → 위에서 본 area 색 PNG), `copy-shared.mjs`(부분 빌드에 MVP shared 복사).
 - 로컬 부분 빌드 `m06-nav-test`(9셀 L0_-1..1, nav 포함, shared = `20261004-f0ae5ab-8de63322`에서 복사) = dev 서버 `?world=local` 최신. **MVP 전체 재빌드 미완**(신호·내비 포함 → T07 뒤 publish·staging).
 - 배포 상태(2026-10-04): staging = 459c0de(M06 사전 1–4) + dev 버킷 current `20261004-f0ae5ab-8de63322`. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): M06-T04 — `packages/sim/src/internal/crowd/flow.ts`(tier B 80–250 m 꺾은선 추종, 4틱 분할) + `lod-manager.ts`(A↔B 승강격 75/85 m 히스테리시스, id·외형·목적지·위상 유지).
+- Next step (정확히 한 걸음): M06-T05 — `docs/roadmap/M06.md` T05 블록 + 10 §5.1·05 §7 → `tools/pipeline/src/stages/derive/lanes.ts`(간선 OSM 중심선 + lanes → 차선 중심선·교차로 연결·신호 그룹, 셀 포털) 설계.
+  `scratchpad/crowdperf.mjs`(군중 켬/끔 rAF p50 + 1 s 전력, 1440p High 수직 동기 해제), `popwalk.mjs`(지상 freecam 이동 4 fps 캡처 + 승격·강등 수).
 - 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창이 있으면 첫 표시가 3배 — preview 탭은 정적 페이지(`/third-party-notices.txt`). 전력 상한이 측정 중 22 ↔ 34 W로 오르내림(행마다 기록).
 - Blockers: 없음
 
 ## Recently Completed
+- M06-T04 Crowd tier B/C & LOD — 공유 정체성(`appearance.ts`), tier B 꺾은선 흐름(`flow.ts` — 경로·횡단·신호는 A와 같은 함수, 가로 오프셋 저역 통과), 80 ± 5 m 승강격(`lod-manager.ts` —
+  횡단 중 승격은 횡단 필터로), 오케스트레이터(`crowd-sim.ts` — 목표 1,000 × 시간대 × 날씨(비 ×0.6), 면적 균일 스폰·평소 멀리/시야 밖), render 원경 tier C 스프라이트(`crowd/far.ts` 보도 점 235–800 m,
+  밀도 = sim 수 ÷ 1,000). **수락**: 총 950–1,000 유지 ✅, 승강격 100+회 위치 튐 < 0.25 m/틱 ✅(단위), 팝핑 리뷰 GIF docs/screenshots/M06/T04(승격 150·강등 97 — 육안 팝핑 없음),
+  GPU(1440p High, 22 W 소비) 군중 켬−끔 +0.44 ms(지상)·+0.56 ms(상공) ≤ 2.5 ✅. ⚠️ 소지품(가방·우산) 미구현. ADR-0064 (2026-10-04)
 - M06-T03 Crowd tier A (DetourCrowd) — 파이프라인 `derive/nav/*`·`derive/navmesh.ts`·`build/nav-cell.ts`: 0.5 m 보행면 분류(보도·생활도로·횡단 띠(끝 +1.5 m)·OSM 보행로, 간선 차도·건물·소품 없음) →
   Recast 64 m 타일 16개(WF 좌표) + 횡단 기록(보행 신호 코드 = 소품 신호기 규칙) → `nav.bin` v1 bin+gzip(셀 66–161 KB). sim.worker: 타일 NavMesh·DetourCrowd tier A 상태 기계
   (걷기 → 대기점 접근 → 보행 W 대기·반응 → 횡단(좌측 보행 차로) → 재계획), 플레이어 = 조향 없는 에이전트, game `wiring/streaming-sim.ts`(256 m nav 공급), 군중 기본 켬(`?crowd=0|dummy|scramble`).
