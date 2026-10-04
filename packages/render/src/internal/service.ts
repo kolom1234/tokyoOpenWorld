@@ -1,4 +1,6 @@
 // createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3
+import type { CellKey } from '@sanpo/core';
+import { Group, type Object3D } from 'three/webgpu';
 import type { RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
 import { createFrameSystems } from './frame.ts';
@@ -35,11 +37,48 @@ function statsOf(ctx: RenderContext): RenderStats {
 }
 
 /** 선컴파일·지연 적재(아바타·나무) — 첫 표시 전후 비동기 작업. */
+/** 부팅 대기 셀(M06 사전 4): 장면 밖 그룹에 셀 슬롯 그룹을 모았다가 compileAsync(그룹, 카메라, 장면) → 원래 부모로. */
+function createStaging(ctx: RenderContext) {
+  let holder: Group | null = null;
+  const parents = new Map<Group, Object3D>();
+  return {
+    take(key: CellKey) {
+      if (!holder) return;
+      for (const g of ctx.cells.groupsOf(key)) {
+        if (!g.parent || g.parent === holder) continue;
+        parents.set(g, g.parent);
+        holder.add(g);
+      }
+    },
+    api: {
+      stageCells(on: boolean) {
+        holder = on ? (holder ?? new Group()) : holder;
+      },
+      async compileStaged() {
+        if (!holder || holder.children.length === 0) return;
+        const t0 = performance.now();
+        await ctx.renderer.compileAsync(holder, ctx.view.camera, ctx.graph.scene);
+        ctx.log.info(
+          `staged cells compiled (${holder.children.length} groups) ${Math.round(performance.now() - t0)} ms`,
+        );
+      },
+      commitStaged() {
+        for (const [g, parent] of parents) if (g.parent === holder) parent.add(g);
+        parents.clear();
+        holder = null;
+        ctx.counters.sceneVersion++;
+      },
+    } satisfies Pick<RenderService, 'stageCells' | 'compileStaged' | 'commitStaged'>,
+  };
+}
+
 function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAvatar' | 'loadTrees' | 'loadSignage'> {
   const { renderer, view, graph, log } = ctx;
   return {
     async precompile() {
+      const t0 = performance.now();
       await ctx.atmosphere.prepare();
+      const t1 = performance.now();
       // 소품 풀(한 머티리얼 × 인스턴싱): 종류별 LOD0 풀에 1개씩 잠깐 채워 같은 compileAsync로.
       const restore = ctx.props.primeForCompile();
       try {
@@ -47,12 +86,17 @@ function loaders(ctx: RenderContext): Pick<RenderService, 'precompile' | 'loadAv
       } finally {
         restore();
       }
+      const t2 = performance.now();
       // 아바타(3인칭 첫 표시 끊김 방지): 잠깐 보이게 해 파이프라인만 만든다.
       ctx.avatar.group.visible = true;
       await renderer
         .compileAsync(ctx.avatar.group, view.camera, graph.scene)
         .catch((e: unknown) => log.warn('avatar precompile', e));
       ctx.avatar.group.visible = false;
+      const ms = (a: number, b: number) => Math.round(b - a);
+      log.info(
+        `precompile atmosphere ${ms(t0, t1)} ms, materials ${ms(t1, t2)} ms, avatar ${ms(t2, performance.now())} ms`,
+      );
     },
     async loadAvatar(urls) {
       const model = await loadAvatarModel(urls, ctx.avatar.opacity, ctx.library.ktx2(renderer));
@@ -78,14 +122,17 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
   const ctx = await createRenderContext(deps);
   const { prep, draw } = createFrameSystems(ctx);
   const { renderer, view, cells, hlod, library, log } = ctx;
+  const staged = createStaging(ctx);
   return {
     renderOriginWF: view.renderOriginWF,
     setQuality: (tier) => ctx.quality.setTier(tier),
     detectQuality: () => ctx.quality.detect(),
     backend: ctx.backend,
     depth: ctx.depth,
+    ...staged.api,
     addCell: (p) => {
       cells.add(p, view.renderOriginWF);
+      staged.take(p.key);
       ctx.props.addCell(p.key, p.originWF, p.instances?.props);
       ctx.trees.addCell(p.key, p.originWF, p.instances?.trees);
       ctx.signs.addCell(p.key, p.originWF, p.instances?.props);

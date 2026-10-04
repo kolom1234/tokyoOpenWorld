@@ -220,21 +220,33 @@ function createTraversalFor(
 }
 
 /**
- * 첫 표시: 선컴파일 → streaming 시작 → 스폰 영역 whenReady → 시작 모드 → 머티리얼·아바타(비동기). 반환 = 스폰 영역 live L0 셀 수.
+ * 첫 표시: 선컴파일 ∥ (streaming 시작 → 스폰 영역 다운로드·디코드·적용(대기 그룹) → 셀 compileStaged) → 붙이기 → 시작 모드 → 머티리얼·아바타(비동기).
+ * 선컴파일(≈ 5 s)과 셀 준비·컴파일을 겹친다(M06 사전 4). 반환 = 스폰 영역 live L0 셀 수.
  * 지면 높이를 알게 된 뒤 시작 포즈를 다시 잡는다(freecam "지면 위 60 m" 또는 스폰에서 걷기 — 착지점은 walk가 콜라이더로 찾는다).
  */
 async function showWorldWith(
   deps: WorldViewDeps,
-  v: { render: RenderService; traversal: TraversalService; ground: GroundQuery; late: LateState },
+  v: {
+    render: RenderService;
+    traversal: TraversalService;
+    ground: GroundQuery;
+    late: LateState;
+    /** createWorldView에서 렌더 생성 직후 시작한 선컴파일(world.json 조회와 겹침 — M06 사전 4). */
+    precompiled: Promise<void>;
+  },
   world: LoadedWorld,
 ): Promise<number> {
   const { render, traversal, ground, late } = v;
   const wlog = deps.log.child('world');
-  await render.precompile().catch((e: unknown) => wlog.warn('precompile', e));
+  // 스폰 셀은 대기 그룹에(그리지 않음) → 선컴파일과 겹쳐 셀 파이프라인을 만든 뒤 붙인다(첫 렌더 동기 컴파일 1.4 s 제거).
+  render.stageCells(true);
+  const pre = v.precompiled;
   const s = await startStreaming(deps, render, traversal, world, late);
   const centerWF = deps.start?.centerWF ?? world.spawnWF;
   // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
   await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true });
+  await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
+  render.commitStaged();
   if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
     traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
   else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
@@ -250,6 +262,8 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
   const config = { ...deps.renderConfig, backend: deps.backend };
   const render = await createRender({ canvas, bus, log, config });
+  // 선컴파일은 월드와 무관 → 렌더 생성 직후 시작(world.json·cells.idx 조회와 겹침). showWorld가 기다린다.
+  const precompiled = render.precompile().catch((e: unknown) => log.child('world').warn('precompile', e));
   const input = createInput({ target: canvas, bus, log });
   const late: LateState = { materialsSettled: false, avatarSettled: false, treesSettled: false, signsSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
@@ -300,6 +314,6 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     get signsSettled() {
       return late.signsSettled;
     },
-    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late }, world),
+    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled }, world),
   };
 }
