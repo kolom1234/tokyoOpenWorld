@@ -1,24 +1,25 @@
 # PROGRESS
-Updated: 2026-10-04 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브랜치 `claude/m06-life`, draft PR · 이어서 PR #18 CI 수정 records·e2e)
+Updated: 2026-10-04 (session #19 — 큐 모드 M06 2차 T03→T07, 브랜치 `claude/m06-crowds-traffic`, draft PR #19)
 
-## Current Milestone: M06 — Life: Crowds & Traffic (사전 항목 1–5 → T01–T07)
-## Current Task: M06-T02 ✅(da45783) → 다음 = M06-T03 군중 tier A(DetourCrowd)
-- Done in this session: 사전 1 Rocketbox(ADR-0057), 사전 2 PLATEAU frn 横断歩道·停止線 우선 + 스크램블 보정(ADR-0058), 사전 3 freecam 진입 방지(ADR-0059), 사전 4 첫 표시 겹치기(ADR-0060), 사전 5 백로그(아래 Backlog).
-- **MVP 재빌드 미완**: 사전 2(노면 표시)는 로컬 부분 빌드 `m06-mark-test`(스폰 3×3 + shared 복사)로만 확인. 전체 재빌드·publish·staging은 사전 3–4 뒤 묶어서.
-  normalized/markings는 만들어 둠(`normalize --layer plateau --plateau-layer frn`, frn GML은 zip에서 수동 해제 — data/raw/plateau-{shibuya,shinjuku}/extracted/udx/frn).
-- 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright `@playwright/test` chromium + `channel: 'chrome'` headed, open/settled/shot/waitFor), `avatar-shot.mjs`.
-  `lookat.mjs out.png x,y,z yawDeg pitchDeg`(freecam 요청 → settled → 캡처). dev 서버 = preview_start `game-dev`(vite 5173), 로컬 빌드 `?world=local&debug=1`.
-- 배포 상태(2026-10-04): staging = **459c0de**(사전 1–4) + dev 버킷 current **`20261004-f0ae5ab-8de63322`**(478파일 356.7 MB, PLATEAU 횡단보도 199·정지선 107 셀-그림, validate 0). staging 첫 표시 8.46–8.59 s·전송 36–40 MB. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- 로컬 부분 빌드 `m06-sig-test`(9셀 L0_-1..1 + shared 복사, 신호 코드 포함) = dev 서버 `?world=local` 최신. 신호 코드는 **MVP 재빌드 전엔 staging에 없음**(T03–T06 데이터 변경과 묶어 재빌드·publish).
-- Next step (정확히 한 걸음): M06-T03 — `docs/roadmap/M06.md` T03 블록 + Read 목록(10 §3 군중·내비메시) 읽고 recast-navigation 내비메시(파이프라인 `navmesh.bin`?) 범위·형식 결정.
-- 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창(앱 내 브라우저 패널이 게임 렌더 중 등)이 있으면 첫 표시가 3배(30 s) — preview 탭은 정적 페이지(`/third-party-notices.txt`)로 돌려 둘 것.
-- **PR #18 CI 수정(2026-10-04, 기능 변경 없음)**: records = `streaming/src/api.ts`(사전 4 `holdExclusiveUntil`)인데 `docs/modules/streaming.md` 미갱신 → 카드 갱신.
-  e2e = ① 선컴파일을 렌더 생성 직후로(사전 4) 옮겨 SwiftShader 2병렬에서 `data-world=loaded` 12.9 s, 스폰 셀 대기 그룹 붙인 뒤 첫 프레임 5–6 s → boot·render 스펙의 도달 대기를 기본 5 s → `STATE_TIMEOUT_MS`(단언 값 그대로).
-  ② render 스펙 픽셀 판정이 브라우저 decode·getImageData(CI headless shell에서 호출당 14–23 s, main에서도 첫 시도 180 s 초과 flaky) → Node PNG 디코드 `tests/e2e/png.ts`(zlib, Chromium 디코드와 SHA-256 일치).
-  군중 e2e는 커밋된 군중 팩(`apps/game/src/assets/characters`, ATTRIBUTION rocketbox)만 씀 — 로컬 산출물 의존 없음. 원점 재설정 스펙의 픽셀 차는 아직 브라우저 안(headless shell 1.2분, 한도 3분).
+## Current Milestone: M06 — Life: Crowds & Traffic (T01·T02 ✅ PR #18 병합 → 이번 PR #19: 사전 정리 + T03–T07 + MVP 재빌드·staging)
+## Current Task: M06-T03 ✅ → 다음 = M06-T04 군중 tier B/C & LOD manager
+- Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063).
+- 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright chrome headed + `power()` = nvidia-smi 소비·상한 W), `bootblock.mjs`(long task·rAF 간격·첫 표시),
+  `crowdview.mjs out base query pose shots`(freecam 포즈 → 3 s마다 캡처 + 워커 통계·전력), `navviz.ts`(빌드 nav.bin → 위에서 본 area 색 PNG), `copy-shared.mjs`(부분 빌드에 MVP shared 복사).
+- 로컬 부분 빌드 `m06-nav-test`(9셀 L0_-1..1, nav 포함, shared = `20261004-f0ae5ab-8de63322`에서 복사) = dev 서버 `?world=local` 최신. **MVP 전체 재빌드 미완**(신호·내비 포함 → T07 뒤 publish·staging).
+- 배포 상태(2026-10-04): staging = 459c0de(M06 사전 1–4) + dev 버킷 current `20261004-f0ae5ab-8de63322`. 옛 빌드 gc는 10/6 이후(7일 규칙).
+- Next step (정확히 한 걸음): M06-T04 — `packages/sim/src/internal/crowd/flow.ts`(tier B 80–250 m 꺾은선 추종, 4틱 분할) + `lod-manager.ts`(A↔B 승강격 75/85 m 히스테리시스, id·외형·목적지·위상 유지).
+- 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창이 있으면 첫 표시가 3배 — preview 탭은 정적 페이지(`/third-party-notices.txt`). 전력 상한이 측정 중 22 ↔ 34 W로 오르내림(행마다 기록).
 - Blockers: 없음
 
 ## Recently Completed
+- M06-T03 Crowd tier A (DetourCrowd) — 파이프라인 `derive/nav/*`·`derive/navmesh.ts`·`build/nav-cell.ts`: 0.5 m 보행면 분류(보도·생활도로·횡단 띠(끝 +1.5 m)·OSM 보행로, 간선 차도·건물·소품 없음) →
+  Recast 64 m 타일 16개(WF 좌표) + 횡단 기록(보행 신호 코드 = 소품 신호기 규칙) → `nav.bin` v1 bin+gzip(셀 66–161 KB). sim.worker: 타일 NavMesh·DetourCrowd tier A 상태 기계
+  (걷기 → 대기점 접근 → 보행 W 대기·반응 → 횡단(좌측 보행 차로) → 재계획), 플레이어 = 조향 없는 에이전트, game `wiring/streaming-sim.ts`(256 m nav 공급), 군중 기본 켬(`?crowd=0|dummy|scramble`).
+  **수락**: world-mini 실데이터 250명 적색 대기 → 녹색 동시 횡단 250, 틱 p95 1.6–1.7 ms ≤ 12 ✅, 관통 0·내비 밖 0 ✅(단위 테스트, 결정론). 실제 GPU 워커 p95 1.6–2.6 ms(22–34 W), 60 FPS,
+  docs/screenshots/M06/T03. world-mini 픽스처 재빌드(nav 포함·OSM 횡단 보정, 5.7 MB). e2e `crowd.spec.ts` agents 추가, 픽셀·물리 스펙 `crowd=0`. ADR-0063 (2026-10-04)
+- M06 사전 정리(9bc9241) — 원점 재설정 e2e 픽셀 차 = Node PNG 디코드(19 s). 부팅 실측(실제 GPU): 메인 long task 최대 0.44 s, 프레임 멈춤 1.4–1.9 s × 3(GPU 파이프라인 생성)·진행 표시 없음 →
+  선컴파일 머티리얼 묶음마다 1프레임 양보 + 대기 LUT 비동기 컴파일 + 로딩 패널 "준비" 행: 첫 표시 7.37–7.51 → 6.41–6.73 s, 머티리얼 멈춤 ≤ 0.77 s(대기 LUT 1.3–1.55 s 남음). ADR-0060 보충
 - M06-T02 Signal controllers — 신호 기둥 `props.inst` 5번째 칸 = 현시 코드(교차로 ID × 16 + 계획 × 4 + 그룹), 교차로 = 1020 묶음, 그룹 = OSM 차도 방향 봉우리 2개(셀 + 8-이웃),
   `content/sim/signal-plans.json`(standard 120 s·scramble 120 s 전방향 보행 26 + 점멸 6, 사이트 = 시부야 스크램블), sim 제어기 = 게임 시각 순수 함수(`signalStateAt`), render 렌즈 발광(`setSignalLamps`).
   **수락**: 스크램블 사이클 계획표 1 s 이내 단위 테스트 ✅. 실 GPU 북향·서향 차량 등 / 전방향 보행 녹 확인(docs/screenshots/M06/T02). 9셀 그룹 일관성 126쌍 중 6쌍 어긋남(5갈래 교차로 기둥 1개 ⚠️).
