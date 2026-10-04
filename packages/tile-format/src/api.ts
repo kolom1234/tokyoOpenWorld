@@ -1,10 +1,13 @@
 // @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md
 import type { CellId, CellKey, CellLevel, Vec3d } from '@sanpo/core';
 
+export * from './api-nav.ts';
+
 // ── 포맷 상수 (05 §3, §5–7) ──
 
 /** TKC 매직 "TKC1"을 u32 LE로 읽은 값. */
 export const TKC_MAGIC = 0x3143_4b54;
+
 /** 런타임이 지원하는 유일한 TKC formatVersion (05 §8). */
 export const FORMAT_VERSION = 1;
 /** 섹션 시작 정렬(바이트). 헤더 JSON 뒤·섹션 사이는 0 패딩. */
@@ -32,7 +35,7 @@ export const HEIGHTFIELD_BASE_M = -100;
 
 // ── 섹션 레지스트리 (05 §4 표와 1:1. 새 섹션은 표와 여기 동시 등록) ──
 
-export type SectionCodec = 'glb' | 'bin' | 'bin+gzip' | 'json+gzip';
+export type SectionCodec = 'glb' | 'bin+gzip' | 'json+gzip';
 export interface SectionSpec {
   /** 섹션 바이트의 인코딩. writeTkc는 데이터를 변환하지 않고 이 값을 헤더에 기록한다. */
   readonly codec: SectionCodec;
@@ -48,7 +51,7 @@ export const SECTION_REGISTRY = {
   'lanes.bin': { codec: 'bin+gzip', levels: [0] },
   'lights.bin': { codec: 'bin+gzip', levels: [0] },
   'meta.json': { codec: 'json+gzip', levels: [0] },
-  'nav.bin': { codec: 'bin', levels: [0] },
+  'nav.bin': { codec: 'bin+gzip', levels: [0] },
   'overrides.mesh': { codec: 'glb', levels: [0] },
   'props.inst': { codec: 'bin+gzip', levels: [0] },
   'roads.mesh': { codec: 'glb', levels: [0] },

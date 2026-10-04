@@ -8,7 +8,7 @@ import { clearSkyIlluminanceLux, moonPosition, sunPosition } from './clock/astro
 import { createWorldClock } from './clock/world-clock.ts';
 import { signalState } from './signals/controller.ts';
 import { compilePlans } from './signals/plans.ts';
-import { type SimWorkerHost, startSimWorker } from './worker/host.ts';
+import { createWorkerLink } from './worker/link.ts';
 
 /** 01-architecture §5: sim 시계 = phase 10. */
 export const SIM_CLOCK_PHASE = 10;
@@ -50,6 +50,7 @@ export function createSim(deps: SimDeps): SimService {
   const clock = createWorldClock(deps.now ?? Date.now, deps.initialClock);
   const observer: Vec3d = { x: 0, y: 0, z: 0 };
   let cache: { ms: number; x: number; z: number; env: EnvironmentState } | undefined;
+  const link = createWorkerLink(clock, deps);
   const system: GameSystem = {
     id: 'sim/clock',
     phase: SIM_CLOCK_PHASE,
@@ -58,24 +59,19 @@ export function createSim(deps: SimDeps): SimService {
       observer.x = f.camera.posWF.x;
       observer.y = f.camera.posWF.y;
       observer.z = f.camera.posWF.z;
+      link.frame(f.player);
     },
     dispose() {},
   };
-  let worker: SimWorkerHost | undefined;
   const plans = deps.signalPlans ? compilePlans(deps.signalPlans) : [];
   return {
     signalStateAt: (code) => signalState(plans, code, clock.gameTimeMs / 1000),
     clock,
-    startWorker(o) {
-      worker ??= startSimWorker({
-        supervisor: o.supervisor,
-        params: o.crowd,
-        centerWF: o.centerWF,
-        log: deps.log.child('sim'),
-      });
-      return worker?.pedestrians;
-    },
-    workerStats: () => worker?.stats(),
+    startWorker: (o) => link.start(o),
+    addCell: (key, nav) => link.addCell(key, nav),
+    removeCell: (key) => link.removeCell(key),
+    crowdScenario: (c, r, n) => link.scenario(c, r, n),
+    workerStats: () => link.stats(),
     environment() {
       const ms = clock.gameTimeMs;
       const x = Math.round(observer.x / OBSERVER_GRID_M) * OBSERVER_GRID_M;

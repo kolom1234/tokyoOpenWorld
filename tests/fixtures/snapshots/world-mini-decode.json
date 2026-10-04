@@ -1,6 +1,6 @@
 {
   "L0_-1_-1": {
-    "tris": 162376,
+    "tris": 162494,
     "sections": {
       "buildings.mesh": [
         {
@@ -51,27 +51,27 @@
       "decals.mesh": [
         {
           "materialId": "road_marking",
-          "vertices": 6288,
-          "indices": 9432,
-          "indexHash": 1952946383,
+          "vertices": 6524,
+          "indices": 9786,
+          "indexHash": 424716880,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 292052937
+              "hash": 1584354311
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 3416897050
+              "hash": 1235354589
             },
             "_PAINT": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1763154745
+              "hash": 345375598
             }
           }
         },
@@ -161,7 +161,7 @@
     }
   },
   "L0_0_-1": {
-    "tris": 119971,
+    "tris": 124571,
     "sections": {
       "buildings.mesh": [
         {
@@ -212,27 +212,27 @@
       "decals.mesh": [
         {
           "materialId": "road_marking",
-          "vertices": 4984,
-          "indices": 7476,
-          "indexHash": 1518826926,
+          "vertices": 19416,
+          "indices": 21276,
+          "indexHash": 3633233348,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 1177832317
+              "hash": 1379791722
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1763706273
+              "hash": 3542720022
             },
             "_PAINT": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1591031744
+              "hash": 1922850390
             }
           }
         },
@@ -322,7 +322,7 @@
     }
   },
   "L0_-1_0": {
-    "tris": 135681,
+    "tris": 135959,
     "sections": {
       "buildings.mesh": [
         {
@@ -373,27 +373,27 @@
       "decals.mesh": [
         {
           "materialId": "road_marking",
-          "vertices": 7496,
-          "indices": 11244,
-          "indexHash": 1620568909,
+          "vertices": 8052,
+          "indices": 12078,
+          "indexHash": 3922162153,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 113621465
+              "hash": 2205456595
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 2213246171
+              "hash": 516072237
             },
             "_PAINT": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 34602767
+              "hash": 1213449747
             }
           }
         },
@@ -407,7 +407,7 @@
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 2293131841
+              "hash": 3590413710
             },
             "NORMAL": {
               "itemSize": 3,
@@ -483,7 +483,7 @@
     }
   },
   "L0_0_0": {
-    "tris": 106922,
+    "tris": 123377,
     "sections": {
       "buildings.mesh": [
         {
@@ -534,27 +534,27 @@
       "decals.mesh": [
         {
           "materialId": "road_marking",
-          "vertices": 5328,
-          "indices": 7992,
-          "indexHash": 3629661653,
+          "vertices": 55267,
+          "indices": 57357,
+          "indexHash": 1200643836,
           "attributes": {
             "POSITION": {
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3732611756
+              "hash": 138229991
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 1854696025
+              "hash": 4009150683
             },
             "_PAINT": {
               "itemSize": 1,
               "type": "Uint8Array",
               "normalized": false,
-              "hash": 1406325592
+              "hash": 253386592
             }
           }
         },
@@ -568,7 +568,7 @@
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3701090676
+              "hash": 1823457852
             },
             "NORMAL": {
               "itemSize": 3,

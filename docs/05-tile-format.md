@@ -81,7 +81,7 @@ credits.json                  출처 표기
 | `props.inst` | bin+gzip | 반복 `{u16 typeId, u16 pad, u32 count, f32[count*5] (x,y,z,yawRad,scale)}` — typeId = `PROP_TYPE`(1–15 소품, 16–18 가상 간판 돌출·입간판·옥상 — M05-T06: y = 벽면·지붕 높이, 옥상 scale = 폭 / 10 m, 추가만), **신호 3·4의 5번째 칸 = 현시 코드**(교차로 ID × 16 + 계획 × 4 + 그룹 — M06-T02, ADR-0062, 배율 1 고정), 셀 로컬, yaw = 로컬 +Z(정면)를 `atan2(fx, fz)`로 | render (충돌 있는 소품은 파이프라인이 `collision.bin`에 프리미티브로 굽는다, ADR-0051) | L0 |
 | `trees.inst` | bin+gzip | `{u32 count}` + 레코드 `{u8 species, u8 seed, u16 pad, f32 x,y,z, f32 height, f32 crownR}` — species = `TREE_SPECIES`(1–6, 0 금지), seed → yaw·색 변형 | render (줄기 충돌은 `collision.bin`의 원기둥, ADR-0052) | L0–L1(L1은 미구현) |
 | `collision.bin` | bin+gzip | §6 JCOL 포맷 | physics | L0 |
-| `nav.bin` | bin | Detour NavMesh 타일 16개 연결 바이트열 (`{u32 count, (u32 len, u8[len])*}`) | sim | L0 |
+| `nav.bin` | bin+gzip | M06-T03(ADR-0063): `u32 'NAVT', u16 version=1, u16 tileCount` + 반복 `{i16 tx, i16 tz, u32 len, u8[len] Detour 타일(dtCreateNavMeshData, **WF 좌표**, 타일 = floor(WF/64)), 0 채움 4바이트 정렬}` + `u32 crossCount` + 반복 `{u32 id, f32 a[3], f32 b[3], f32 halfWidth, u32 보행 신호 코드 \| 0xFFFFFFFF}`(36 B, WF). 폴리곤 area 1 보도·2 생활도로·3 횡단·4 보행로, flags bit0 걷기·bit1 횡단 | sim | L0 |
 | `lanes.bin` | bin+gzip | 차선 그래프 §7 | sim | L0 |
 | `lights.bin` | bin+gzip | `{u32 count}` + `{u8 kind, u8 schedule, u16 kelvin, f32 x,y,z, i8x2 dirOct, u16 lumen, f32 range}` | render | L0 (L1은 발광 마스크) |
 | `audio.json` | json+gzip | `{zones:[{kind, polygonLocal:[[x,z]…], y0, y1}], emitters:[{kind, pos}]}` | audio | L0 |

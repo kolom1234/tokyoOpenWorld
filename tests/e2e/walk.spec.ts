@@ -59,7 +59,7 @@ function speedsOverFrames(page: Page, n: number): Promise<{ speed: number; mode:
 
 /** 부트(첫 표시 = walk) → 셀 콜라이더 4셀 적재 → 착지(발 = 지면 ±5 cm) → 안정(첫 품질 티어 등). */
 async function bootAndLand(page: Page): Promise<void> {
-  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00');
+  await page.goto('/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&crowd=0');
   await expect(page.locator('#app')).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
   expect((await state(page)).mode).toBe('walk');
   const colliders = async () => {

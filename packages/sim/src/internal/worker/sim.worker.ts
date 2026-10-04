@@ -1,20 +1,37 @@
-// sim.worker(10 §1, M06-T01): 30 Hz 고정 틱 — 군중(지금은 더미 원형 걷기) → SAB 인스턴스 버퍼(instance-buffer.ts) 게시.
-// 메시지: init {sab, capacity, params, center} · center {x,y,z} · stop. 이후 태스크(T02–T05)가 신호·내비메시·교통을 여기에 붙인다.
-import type { Vec3d } from '@sanpo/core';
+// sim.worker(10 §1): 30 Hz 고정 틱 — 군중 → SAB 인스턴스 버퍼(instance-buffer.ts) 게시. 모드: dummy(M06-T01 원형 걷기) | agents(M06-T03 DetourCrowd tier A).
+// 메시지: init {sab, capacity, params, center, mode, plans?, clock} · center · player {pos, vel} · clock · nav-add {key, nav} · nav-remove {key} · scenario · stop.
+import type { Vec3, Vec3d } from '@sanpo/core';
+import type { SignalPlansFile } from '../../api.ts';
 import { type CrowdParams, createDummyAgents, type DummyAgent, stepDummy } from '../crowd/dummy.ts';
+import { type ClockSync, type CrowdRuntime, createCrowdRuntime } from './crowd-runtime.ts';
 import { type InstanceWriter, instanceWriter } from './instance-buffer.ts';
 
 export const TICK_HZ = 30;
 
-type Msg =
-  | { t: 'init'; sab: SharedArrayBuffer; capacity: number; params: CrowdParams; center: Vec3d }
+export type SimWorkerMsg =
+  | {
+      t: 'init';
+      sab: SharedArrayBuffer;
+      capacity: number;
+      params: CrowdParams;
+      center: Vec3d;
+      mode: 'dummy' | 'agents';
+      plans?: SignalPlansFile;
+      clock: ClockSync;
+    }
   | { t: 'center'; center: Vec3d }
+  | { t: 'player'; pos: Vec3d; vel: Vec3 }
+  | { t: 'clock'; clock: ClockSync }
+  | { t: 'nav-add'; key: number; nav: ArrayBuffer }
+  | { t: 'nav-remove'; key: number }
+  | { t: 'scenario'; center: Vec3d; radius: number; count: number }
   | { t: 'stop' };
 
 interface State {
   writer: InstanceWriter;
   params: CrowdParams;
-  agents: DummyAgent[];
+  dummy: DummyAgent[] | undefined;
+  crowd: CrowdRuntime | undefined;
   center: Vec3d;
   anchor: Vec3d;
   last: number;
@@ -25,7 +42,7 @@ interface State {
 /** 워커 전역(tsconfig lib = DOM — WebWorker 타입 없음, physics.worker와 같은 방식). */
 interface WorkerScope {
   postMessage(msg: unknown): void;
-  onmessage: ((e: MessageEvent<Msg>) => void) | null;
+  onmessage: ((e: MessageEvent<SimWorkerMsg>) => void) | null;
 }
 const scope = self as unknown as WorkerScope;
 
@@ -44,31 +61,45 @@ function tick(): void {
   const now = nowAbs();
   const dt = Math.min(Math.max((now - st.last) / 1000, 0), 0.1);
   st.last = now;
-  const n = stepDummy(st.agents, st.params, dt, st.center, st.anchor, st.writer.back());
+  const back = st.writer.back();
+  const n = st.crowd
+    ? st.crowd.step(dt, now, back, st.anchor)
+    : stepDummy(st.dummy ?? [], st.params, dt, st.center, st.anchor, back);
   st.writer.publish(n, st.anchor, now);
   st.tickMs = performance.now() - t0;
-  scope.postMessage({ t: 'tick', ms: st.tickMs, count: n });
+  scope.postMessage({ t: 'tick', ms: st.tickMs, count: n, crowd: st.crowd?.stats() });
+}
+
+function start(m: Extract<SimWorkerMsg, { t: 'init' }>): void {
+  if (st?.timer) clearInterval(st.timer);
+  const agents = m.mode === 'agents';
+  st = {
+    writer: instanceWriter(m.sab, m.capacity),
+    params: m.params,
+    dummy: agents ? undefined : createDummyAgents(m.params),
+    crowd: agents ? createCrowdRuntime(m.params, m.plans, m.clock) : undefined,
+    center: { ...m.center },
+    anchor: anchorOf(m.center),
+    last: nowAbs(),
+    timer: undefined,
+    tickMs: 0,
+  };
+  st.timer = setInterval(tick, 1000 / TICK_HZ);
 }
 
 scope.onmessage = (e) => {
   const m = e.data;
-  if (m.t === 'init') {
-    if (st?.timer) clearInterval(st.timer);
-    st = {
-      writer: instanceWriter(m.sab, m.capacity),
-      params: m.params,
-      agents: createDummyAgents(m.params),
-      center: { ...m.center },
-      anchor: anchorOf(m.center),
-      last: nowAbs(),
-      timer: undefined,
-      tickMs: 0,
-    };
-    st.timer = setInterval(tick, 1000 / TICK_HZ);
-  } else if (m.t === 'center' && st) {
-    st.center = { ...m.center };
-    st.anchor = anchorOf(m.center);
-  } else if (m.t === 'stop' && st) {
+  if (m.t === 'init') return start(m);
+  if (!st) return;
+  if (m.t === 'center' || m.t === 'player') {
+    st.center = { ...(m.t === 'center' ? m.center : m.pos) };
+    st.anchor = anchorOf(st.center);
+    if (m.t === 'player') st.crowd?.setPlayer(m.pos, m.vel);
+  } else if (m.t === 'clock') st.crowd?.setClock(m.clock);
+  else if (m.t === 'nav-add') st.crowd?.addCell(m.key, m.nav);
+  else if (m.t === 'nav-remove') st.crowd?.removeCell(m.key);
+  else if (m.t === 'scenario') st.crowd?.scenario(m.center, m.radius, m.count);
+  else if (m.t === 'stop') {
     if (st.timer) clearInterval(st.timer);
     st = undefined;
   }

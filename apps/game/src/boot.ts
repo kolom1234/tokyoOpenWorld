@@ -25,6 +25,7 @@ import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
 import { loadTier, type QualityWiring, startQualityWiring } from './wiring/quality.ts';
+import type { CrowdMode } from './world-late.ts';
 import {
   type LoadedWorld,
   loadWorld,
@@ -79,16 +80,19 @@ export interface BootFlags {
   mode?: 'freecam';
   /** `?trees=0` → 나무 에셋을 적재하지 않는다(나무 GPU 비용 비교, M05-T04). */
   noTrees?: boolean;
-  /** `?crowd=dummy` → 더미 보행자 1,000명 원형 걷기(M06-T01 수락 장면). 기본 = 군중 없음(T03 이후 실제 군중). */
-  crowd?: 'dummy';
+  /** `?clock=run`: `?time=` 시각부터 1배속(기본은 그 시각에 정지). */
+  clockRun?: boolean;
+  /** `?crowd=` agents(기본 — M06-T03 DetourCrowd) | dummy(M06-T01 원형 1,000명) | scramble(스크램블 시험 250명) | 0(끔). */
+  crowd?: CrowdMode;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
 
-/** 시계: `?time=` > 골든뷰 time > 기본(world-view). 둘 다 frozen(결정론). */
+/** 시계: `?time=` > 골든뷰 time > 기본(world-view). 둘 다 frozen(결정론) — `?clock=run`이면 그 시각부터 1배속(신호·군중 e2e). */
 function clockOf(flags: BootFlags, golden: GoldenView | undefined): { clock?: ClockMode } {
   const ms = flags.timeMs ?? (golden ? Date.parse(golden.time) : undefined);
-  return ms === undefined ? {} : { clock: { kind: 'frozen', atMs: ms } };
+  if (ms === undefined) return {};
+  return { clock: flags.clockRun ? { kind: 'custom', startMs: ms, scale: 1 } : { kind: 'frozen', atMs: ms } };
 }
 
 function sunFlag(v: string | null): Pick<BootFlags, 'sun'> {
@@ -111,6 +115,7 @@ export function parseFlags(search: string): BootFlags {
     ...sunFlag(q.get('sun')),
     ...(q.get('gpuTiming') === '1' ? { gpuTiming: true } : {}),
     ...(Number.isFinite(Date.parse(q.get('time') ?? '')) ? { timeMs: Date.parse(q.get('time') ?? '') } : {}),
+    ...(q.get('clock') === 'run' ? { clockRun: true } : {}),
     ...(q.get('shadows') === '0' ? { noShadows: true } : {}),
     ...(q.get('facade') === 'flat' ? { flatFacade: true } : {}),
     ...(parseWetFlag(q.get('wet')) !== undefined ? { wet: parseWetFlag(q.get('wet')) as number } : {}),
@@ -121,8 +126,13 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('forcePost') === '1' ? { forcePost: true } : {}),
     ...(q.get('mode') === 'freecam' ? { mode: 'freecam' as const } : {}),
     ...(q.get('trees') === '0' ? { noTrees: true } : {}),
-    ...(q.get('crowd') === 'dummy' ? { crowd: 'dummy' as const } : {}),
+    ...crowdFlag(q.get('crowd')),
   };
+}
+
+function crowdFlag(v: string | null): { crowd?: CrowdMode } {
+  if (v === '0' || v === 'off') return { crowd: 'off' };
+  return v === 'dummy' || v === 'scramble' || v === 'agents' ? { crowd: v } : {};
 }
 
 /** 골든뷰 비(`weather: 'rain'`)의 노면 젖음 — sim 날씨(M06) 전까지 고정값. */

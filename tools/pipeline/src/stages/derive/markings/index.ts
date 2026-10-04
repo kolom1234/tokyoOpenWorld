@@ -83,7 +83,8 @@ function addPlateau(c: MarkCtx, m: PlateauMarks): [number, number] {
   return [cw, sl];
 }
 
-export function buildMarkings(i: MarkingInput): { decals: DecalBuf; stats: MarkingStats } {
+/** bands = 신호·정지선 기준 횡단 띠(보정·PLATEAU 대체 뒤 — 내비 횡단보도 M06-T03도 이것). */
+export function buildMarkings(i: MarkingInput): { decals: DecalBuf; stats: MarkingStats; bands: CrossBand[] } {
   const intersections = roadIndex(i.roads.filter((r) => r.functionCode === INTERSECTION_CODE));
   const osm = applyCrossingCorrections(i.osm, i.corrections ?? []);
   const pm = plateauMarks(
@@ -120,5 +121,5 @@ export function buildMarkings(i: MarkingInput): { decals: DecalBuf; stats: Marki
   stats.stopLines = addSignalStops(c, bands, vehicle);
   stats.stopSigns = addStopSigns(c, osm, vehicle);
   for (const r of osm) if (isLaneRoad(r)) stats.lanePieces += addLanes(c, r, bands);
-  return { decals: c.out, stats };
+  return { decals: c.out, stats, bands };
 }

@@ -29,11 +29,13 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | public/basis/ktx2-worker.js | KTX2 트랜스코더 부트스트랩 워커(첫 메시지 본문을 전역 eval — render `materials/ktx2-csp.ts`와 짝) |
 | src/main.ts | 엔트리, 오류 화면, `?probe=decode`면 부트 대신 `debug/decode-probe.ts` 동적 import |
 | src/caps.ts | 기능 감지 `detectCaps(env?)` → `Caps`(webgpu `available/no-adapter/unsupported`, crossOriginIsolated, `IsolationMode`, decodeWorkers) |
-| src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini|local`, `backend=webgl`, `probe=decode`, `view=<id>`, `exposure=<n>`, `sun=<방위>,<고도>`, `gpuTiming=1`, `time=<ISO>`, `shadows=0`, `mode=freecam` — 첫 표시 freecam, 기본 walk ADR-0047), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
+| src/boot.ts | 위 시퀀스(M01: 1·2·4·7·8 일부 + 루프), `parseFlags`(`debug`, `world=mini|local`, `backend=webgl`, `probe=decode`, `view=<id>`, `exposure=<n>`, `sun=<방위>,<고도>`, `gpuTiming=1`, `time=<ISO>`, `clock=run`(time부터 1배속 — M06-T03), `crowd=agents|dummy|scramble|0`, `shadows=0`, `mode=freecam` — 첫 표시 freecam, 기본 walk ADR-0047), 전체 화면 캔버스, `startWorld`(API 또는 픽스처 → loadWorld → 상태, `LoadedWorld` 반환) → `world.showWorld`, 렌더 초기화 실패 시 오류 표시 + 유휴 루프, `createIdleFrameSource` |
 | src/world-view.ts | (`start` 옵션: 골든뷰 시작 포즈·대기 중심·fov) 조립: `createRender`·`createInput(canvas)`·`createTraversal({ ground: streaming 높이장(프록시) }, 로딩 중 freecam)`·카메라 배선 → `providers`·`frameSource`. `render.precompile`은 `createRender` 직후 시작(ADR-0060). `showWorld(loaded)` = `render.stageCells(true)` → `createStreaming`(디코드 워커) + streaming-render 배선 → `whenReady(스폰 384 m, L0)` → `precompile ∥ compileStaged` → `commitStaged` → 시작: `startMode` walk(기본 — `startWalkParams`, ADR-0047) 또는 freecam 시작 시점(골든뷰·`?mode=freecam`) → `render.loadMaterials(materialsUrl)`(비동기, 첫 표시 뒤 — `materialsSettled`) → 스폰 3×3 live 수(M02-T05) |
 | src/start-view.ts | `startWalkParams(spawnWF, yawRad, ground)` = 스폰 xz 눈높이(지면 + 1.6)·world.json 방위·피치 0(M05 결정 1). freecam 시작 시점: 스크램블 교차로 북서 상공(WF −60, −15) 지면 위 60 m → Scramble Square(WF 130.8, 130, 132.5) 바라봄 |
 | content/sim/signal-plans.json | 신호 계획(M06-T02, ADR-0062) — `world-view.ts simFor`가 `createSim({signalPlans})`, 첫 표시 뒤 `render.setSignalLamps(signalLampsOf(sim))`(보행 점멸 0.5 s 실시간). 사이트 표는 파이프라인도 읽는다(코드의 계획 번호) |
-| src/assets/characters/crowd.{json,bin,ktx2} | 군중 팩(파이프라인 `characters` 군중, ADR-0057·0061). `world-view.ts` `CROWD_URLS`, `?crowd=dummy`일 때 첫 표시 뒤 `sim.startWorker` → `render.pedestrians.bindShared` → `render.loadCrowd`(조정값 = content/sim/crowd.json) |
+| src/assets/characters/crowd.{json,bin,ktx2} | 군중 팩(파이프라인 `characters` 군중, ADR-0057·0061). `world-late.ts` `CROWD_URLS`, 첫 표시 뒤 `sim.startWorker`(`?crowd=` agents 기본·dummy·scramble(시험 250명)·0 끔 — M06-T03) → `render.pedestrians.bindShared` → `render.loadCrowd`(조정값 = content/sim/crowd.json) |
+| src/world-late.ts | 첫 표시 뒤 적재(world-view에서 분리): 머티리얼·아바타·나무·간판·군중·신호 램프, `LateState`, `CrowdMode` |
+| src/boot-progress.ts | 로딩 패널 "준비" 행(M06 — 선컴파일 단계·스폰 셀 live 수·경과 s, ADR-0060 보충) |
 | src/assets/characters/avatar-rb.{glb,ktx2} | 플레이어 아바타(파이프라인 `characters` 산출물, Microsoft Rocketbox MIT — ADR-0057). `world-view.ts` `AVATAR_URLS`(`new URL(…, import.meta.url)` → Vite 해시 에셋), 첫 표시 뒤 `render.loadAvatar({glb, texture})` → `avatarSettled` |
 | src/credits.ts | 화면 오른쪽 아래 상시 출처 표기(`© OpenStreetMap contributors` · PLATEAU · 国土地理院 — ODbL Produced Work, M05-T02). M08 크레딧 화면이 대체 |
 | src/wiring/camera.ts | phase 65: `render.setCamera(traversal.camera)` + `render.setAvatar(traversal.avatar)`(M04-T05) |
@@ -47,7 +49,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/wiring/streaming-render.ts | phase 45 `streaming.setInterest(traversal.interest)`, phase 55 적용(2 ms + 업로드 4 MiB/프레임, 첫 셀 보장): `addCell → ack('render') → 부모 HLOD 자식 숨김`, 해제 = `부모 보임 → removeCell`(M02-T05, ADR-0025). sim/audio/interactables 분배는 해당 태스크 |
 | src/wiring/streaming-physics.ts | 물리 반경 필터, `requestSections` → physics.addCell/removeCell, `physics.setFocus(플레이어)`(앵커 재설정, M04-T06) |
 | src/wiring/ground-loading.ts | phase 66: `traversal.hud.groundLoading`이 0.2 s 넘으면 화면 아래 "지면 불러오는 중…"(M04-T06, M08 HUD 전 최소 표시) |
-| src/wiring/streaming-sim.ts | nav/lanes/meta 전달 |
+| src/wiring/streaming-sim.ts | phase 57: live L0 셀 중 플레이어 256 m 안 → `requestSections(['nav.bin'])` → `sim.addCell`, 320 m 밖·해제 → `sim.removeCell`(M06-T03, ADR-0063). lanes·meta는 T05~ |
 | src/wiring/sim-physics.ts | MessageChannel 생성·연결 |
 | src/wiring/env.ts | phase 66 `render.setEnvironment(sim.environment())`(M03-T03, audio는 M10), `defaultClock`(오늘 12:00 JST custom 1배속). world-view가 `createSim`(골든뷰·`?time=` = frozen) 생성, frameSource 시각 = sim 시계 |
 | src/wiring/ui-bridge.ts | UiBridge 구현(시그널) |

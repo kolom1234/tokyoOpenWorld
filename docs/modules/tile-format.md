@@ -12,7 +12,7 @@ CELLS_INDEX_MAGIC /*"TKCI"*/; JCOL_MAGIC; JCOL_VERSION = 1; LANES_MAGIC; LANES_V
 HEIGHTFIELD_SIZE = 257; HEIGHTFIELD_STEP_M = 0.01; HEIGHTFIELD_BASE_M = -100 /*모든 셀 공통 minH, ADR-0018*/; CELL_FLAG = { override: 1, rail: 2 };
 JCOL_MATERIAL = { concrete: 0, …, tile: 7 }; JCOL_FLAG = { rampProxy: 1, climbable: 2, escalator: 4 };   // bit2 = SENSOR 박스 에스컬레이터(로컬 +Z 진행, ADR-0044)
 SECTION_REGISTRY: Record<SectionType, { codec: SectionCodec; levels: CellLevel[] }>   // 05 §4 표와 1:1
-type SectionType = keyof typeof SECTION_REGISTRY;  type SectionCodec = 'glb'|'bin'|'bin+gzip'|'json+gzip';
+type SectionType = keyof typeof SECTION_REGISTRY;  type SectionCodec = 'glb'|'bin+gzip'|'json+gzip';   // 'bin' 제거(M06-T03 — nav.bin이 bin+gzip)
 // 오류: 리더는 throw 대신 Result<T, TkcError>. writer의 잘못된 입력만 throw(프로그래밍 오류).
 TkcErrorCode = { Truncated, Magic, Version, Flags, Header, Range, Align, Corrupt };  interface TkcError { code; message }
 // TKC
@@ -33,6 +33,10 @@ writeJcol(shapes): Uint8Array;  parseJcol(bytes): Result<JcolShape[], TkcError>
 // lanes.bin (gzip 해제 후) — SoA
 interface LaneGraphChunk { nodes{id,posLocal,portalKey}; lanes{id,fromNode,toNode,kind,speedKmh,signalGroup,ptOffset,ptCount,widthCm}; pointsLocal; groups{id,intersection,phaseIndex} }
 writeLanes(g): Uint8Array;  parseLanes(bytes): Result<LaneGraphChunk, TkcError>
+// nav.bin (gzip 해제 후, M06-T03 ADR-0063 — 타입은 api-nav.ts, api.ts가 재수출): Detour 타일(WF, 64 m) + 횡단보도 기록
+NAV_MAGIC /*"NAVT"*/; NAV_VERSION = 1; NAV_TILE_M = 64; NAV_NO_SIGNAL = 0xFFFFFFFF; NAV_AREA = { sidewalk: 1, street: 2, crossing: 3, open: 4 }; NAV_FLAG = { walk: 1, cross: 2 };
+interface NavCrossing { id; a: [x,y,z]; b; halfWidth; signal }  interface NavTile { tx; tz; data: Uint8Array }  interface NavCellData { tiles; crossings }
+writeNav(d: NavCellData): Uint8Array;  parseNav(bytes): Result<NavCellData, TkcError>   // 매직·버전·길이·비유한 검사, 타일 바이트는 Detour가 검사
 // terrain.height (gzip 해제 후)
 writeHeightfield(hf: HeightfieldData): Uint8Array;  parseHeightfield(bytes): Result<HeightfieldData, TkcError>
 quantizeHeightfield(heightsM: ArrayLike<number>, size, step = 0.01, minH = HEIGHTFIELD_BASE_M): HeightfieldData  // 범위 밖·비유한 throw
