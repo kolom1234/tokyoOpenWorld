@@ -2,19 +2,21 @@
 Updated: 2026-10-02 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브랜치 `claude/m06-life`, draft PR)
 
 ## Current Milestone: M06 — Life: Crowds & Traffic (사전 항목 1–5 → T01–T07)
-## Current Task: M06-T01 진행 중(군중 팩 굽기 완료·sim 워커 작성 중) — 사전 1–5 ✅ + MVP 재빌드·publish·staging 배포 ✅
+## Current Task: M06-T01 ✅(5b89e23) → 다음 = M06-T02 신호 제어기
 - Done in this session: 사전 1 Rocketbox(ADR-0057), 사전 2 PLATEAU frn 横断歩道·停止線 우선 + 스크램블 보정(ADR-0058), 사전 3 freecam 진입 방지(ADR-0059), 사전 4 첫 표시 겹치기(ADR-0060), 사전 5 백로그(아래 Backlog).
 - **MVP 재빌드 미완**: 사전 2(노면 표시)는 로컬 부분 빌드 `m06-mark-test`(스폰 3×3 + shared 복사)로만 확인. 전체 재빌드·publish·staging은 사전 3–4 뒤 묶어서.
   normalized/markings는 만들어 둠(`normalize --layer plateau --plateau-layer frn`, frn GML은 zip에서 수동 해제 — data/raw/plateau-{shibuya,shinjuku}/extracted/udx/frn).
 - 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright `@playwright/test` chromium + `channel: 'chrome'` headed, open/settled/shot/waitFor), `avatar-shot.mjs`.
   `lookat.mjs out.png x,y,z yawDeg pitchDeg`(freecam 요청 → settled → 캡처). dev 서버 = preview_start `game-dev`(vite 5173), 로컬 빌드 `?world=local&debug=1`.
 - 배포 상태(2026-10-04): staging = **459c0de**(사전 1–4) + dev 버킷 current **`20261004-f0ae5ab-8de63322`**(478파일 356.7 MB, PLATEAU 횡단보도 199·정지선 107 셀-그림, validate 0). staging 첫 표시 8.46–8.59 s·전송 36–40 MB. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- In progress (T01): 군중 팩 `apps/game/src/assets/characters/crowd.{json,bin,ktx2}`(구움, 미커밋) + `tools/pipeline/src/stages/characters/{crowd,crowd-encode}.ts`, sim `packages/sim/src/internal/{worker/{instance-buffer,sim.worker},crowd/dummy}.ts`(작성, 미배선).
-- Next step (정확히 한 걸음): render `packages/render/src/internal/crowd/{assets,material,field}.ts` 작성 → sim host(SAB·supervisor) 배선 → `?crowd=dummy` 1,000명 GPU 측정.
+- Next step (정확히 한 걸음): M06-T02 — `docs/roadmap/M06.md` T02 블록 + 10 §5.2·04 §4.3(신호) 읽고 `packages/sim/src/internal/signals/{controller,plans}.ts` + `content/sim/signal-plans.json` 설계.
 - 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창(앱 내 브라우저 패널이 게임 렌더 중 등)이 있으면 첫 표시가 3배(30 s) — preview 탭은 정적 페이지(`/third-party-notices.txt`)로 돌려 둘 것.
 - Blockers: 없음
 
 ## Recently Completed
+- M06-T01 Sim worker & instance outputs — sim.worker 30 Hz + SAB 이중 버퍼(stride 8: 위치·yaw·anim(클립+속력/10)·phase·variant·rate), 더미 1,000명 원형 걷기,
+  군중 팩(Rocketbox 12종 LOD 4·팔레트 half·KTX2 12층, 3.9 MB), render 뼈 팔레트 스키닝 풀 48(틱 사이 외삽·LOD0 그림자), 후처리 NaN 정리(블룸 전체 검정 근본 원인).
+  **수락 GPU(30 W, 1440p High)**: 군중 켬−끔 p50 0.33–2.34 ms(보이는 195–472명) ≤ 2.5 ✅, sim 틱 0.1–0.5 ms. 임포스터는 T04로(편차). e2e crowd 스모크(WebGL2) 추가. ADR-0061 (2026-10-04)
 - M06 사전 4 첫 표시 — 원인 측정(bootprobe·rAF 긴 프레임): 선컴파일 5 s 동안 스트리밍 미시작 + 셀 첫 프레임 동기 생성 1.45 s, 다른 GPU 작업 시 30 s(측정 민감도).
   선컴파일을 렌더 생성 직후 시작 + 스폰 셀 대기 그룹 compileAsync(선컴파일과 겹침) → 로컬 같은 빌드 9.7–10.1 → **7.6–8.4 s**(staging 유휴 기준 M05 빌드 9.8–10.0 s). e2e 10/10. ADR-0060 (2026-10-04)
 - M06 사전 3 freecam 진입 방지 — 구 캐스트 쓸기(접촉 앞 멈춤·접선 미끄러짐) + 진입 때 6방향 레이 뒷면 ≥ 3 → 가장 가까운 뒷면 너머. 실제 GPU: 건물 안 → 벽 밖, 3.6 m 상판 안 → 위.
@@ -50,12 +52,6 @@ Updated: 2026-10-02 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브�
   LOD 30/60 m·임포스터 2 km, 바람, 07 §8 계절, 잎·임포스터 Lambert + 하늘 간접광 보조 AtmosphereLight). **수락**: 오모테산도 느티나무길 골든뷰(11/15 단풍, 시점을 가로수길로 수정) ✅,
   **나무 GPU 0.77 ms ≤ 2 ✅**(실제 GPU 수직 동기 해제, 켬 − `?trees=0`). ⚠️ 숲: 상공 2.96·숲 안 6.07 ms. 걷기 봇 5분 × 2 낙하 0·끼임 0. MVP 나무 28,577(셀 ≤ 1,129), L0 185.8 MB.
   **첫 로드(staging) 20.4–23.7 MB·첫 표시 11.3–12.1 s**. 골든뷰 docs/screenshots/M05/T04. ADR-0052 (2026-10-01)
-- M05-T03 Street props — `content/props/catalog.json` + `derive/props/*`: 신호(교차로 건너편 왼쪽·보행 양끝), 전신주(생활도로 30–40 m, 선 id 시드 정거장)·전선 5가닥(`decals.mesh` `power_wire`),
-  OSM 점(가로등·우체통·자판기·거치대·벤치·전화·휴지통·버스·볼라드·止まれ 표지), 자판기(**가상 브랜드**, 길가 벽에 붙임·모서리 1.5 m), 가드 파이프(간선)·맨홀 → `props.inst` + JCOL 프리미티브.
-  render: 코드 절차 모델 15종 × LOD 3, **LOD당 풀 1개**(합친 기하 + 인스턴스 종류 — three가 InstancedMesh마다 노드 빌드 ≈ 140 ms), 64 m 블록 거리 LOD. physics: 프리미티브 64 m 블록 합성 셰이프.
-  **수락(MVP `20260930-e6a76e9-9c667fa9`)**: 셀당 소품 최대 **594 ≤ 5k**(총 40,120, 절단 0), 소품 드로우콜 **≤ 3**(≤ 종류 × 3 = 45). 걷기 봇 5분 × 2: **낙하 0·끼임 0**.
-  예산: L0 합 184.6 MB(T01 176.4), validate 오류 0·road gaps 50/50 < 2 cm 유지. **첫 로드(staging) 19.5–20.9 MB·첫 표시 12.1–12.7 s** ⚠️(T01 8.7 s, 선컴파일 5.3 → 6.5 s).
-  골든뷰 docs/screenshots/M05/T03. ⚠️ PLATEAU frn·무전주화 지구 미사용(MVP 원천 없음). ADR-0051 (2026-10-01)
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
 - [bridges] **PLATEAU 상판 없는 OSM 단독 육교**(M05-T08 ⚠️): `highway=footway + bridge=yes`(+ 계단 두 끝) 중 PLATEAU brid가 없는 것 — OSM 선 + 폭 태그(없으면 2.5 m)로 절차 상판·난간·계단 메시 + JCOL 램프. 공원 비탈 계단(두 끝 지형)도 같은 경로.
