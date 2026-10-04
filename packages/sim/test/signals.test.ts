@@ -7,14 +7,14 @@ import { decodeSignal, offsetOf, signalState } from '../src/internal/signals/con
 import { compilePlans } from '../src/internal/signals/plans.ts';
 
 const plans = compilePlans(plansFile as unknown as SignalPlansFile);
-const code = (id: number, plan: number, group: number) => id * 16 + plan * 4 + group;
+const code = (id: number, plan: number, group: number, slot = 0) => (id * 64 + slot) * 16 + plan * 4 + group;
 
 describe('signal controller', () => {
   it('decodes codes like the pipeline packs them (24-bit, f32-exact)', () => {
-    const c = code(0xfffff, 1, 3);
+    const c = code(0x3fff, 1, 3, 59);
     expect(c).toBeLessThan(2 ** 24);
     expect(Math.fround(c)).toBe(c);
-    expect(decodeSignal(c)).toEqual({ id: 0xfffff, plan: 1, group: 3 });
+    expect(decodeSignal(c)).toEqual({ id: 0x3fff, slot: 59, plan: 1, group: 3 });
   });
 
   it('runs the scramble plan within 1 s of the plan table at every phase boundary', () => {
@@ -52,9 +52,12 @@ describe('signal controller', () => {
     );
   });
 
-  it('offsets standard intersections by id but keeps site plans in phase', () => {
-    expect(offsetOf(1, 120)).not.toBe(offsetOf(2, 120));
-    expect(signalState(plans, code(1, 1, 0), 5000).phase).toBe(signalState(plans, code(999, 1, 0), 5000).phase);
+  it('offsets standard intersections by the progression slot but keeps site plans in phase', () => {
+    expect(offsetOf(10, 120)).toBe(20);
+    expect(signalState(plans, code(1, 0, 0, 0), 5000).phase).not.toBe(
+      signalState(plans, code(1, 0, 0, 30), 5000).phase,
+    );
+    expect(signalState(plans, code(1, 1, 0, 0), 5000).phase).toBe(signalState(plans, code(999, 1, 0, 17), 5000).phase);
   });
 
   it('never gives conflicting greens in the standard plan', () => {

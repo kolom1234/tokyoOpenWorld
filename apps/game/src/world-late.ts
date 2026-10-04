@@ -3,10 +3,11 @@
 import type { GameSystem, GroundQuery, Logger, WorkerSupervisor } from '@sanpo/core';
 import type { PhysicsService } from '@sanpo/physics';
 import type { AvatarAssetUrls, CrowdAssetUrls, RenderService, SignageAssetUrls, TreeAssetUrls } from '@sanpo/render';
-import type { CrowdParams, SimService } from '@sanpo/sim';
+import type { CrowdParams, SimService, TrafficParams } from '@sanpo/sim';
 import type { StreamingService } from '@sanpo/streaming';
 import CROWD_PARAMS from '../../../content/sim/crowd.json';
 import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
+import TRAFFIC_PARAMS from '../../../content/sim/traffic.json';
 import type { BootStage } from './boot-progress.ts';
 import type { StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
@@ -100,7 +101,13 @@ export function startCrowdLater(
   const supervisor = v.late.supervisor;
   const crowd = CROWD_PARAMS as unknown as CrowdParams;
   const buf = supervisor
-    ? v.sim.startWorker({ supervisor, crowd, centerWF, mode: mode === 'dummy' ? 'dummy' : 'agents' })
+    ? v.sim.startWorker({
+        supervisor,
+        crowd,
+        centerWF,
+        mode: mode === 'dummy' ? 'dummy' : 'agents',
+        traffic: TRAFFIC_PARAMS as unknown as TrafficParams,
+      })
     : undefined;
   if (!buf) return;
   v.render.pedestrians.bindShared(buf);

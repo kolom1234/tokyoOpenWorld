@@ -7,7 +7,13 @@ import { bilinear } from '../derive/grid.ts';
 import { type CrossBand, crosswalkWidth, isMarkedCrossing } from '../derive/markings/crosswalk.ts';
 import { isVehicleRoad } from '../derive/markings/stopline.ts';
 import { buildNavCell, type NavCellStats } from '../derive/navmesh.ts';
-import { junctionsOf, type SignalPlanSite, signalCode, siteFinder } from '../derive/props/signal-sites.ts';
+import {
+  junctionsOf,
+  type SignalPlanSite,
+  signalCode,
+  siteFinder,
+  weightedRoadLines,
+} from '../derive/props/signal-sites.ts';
 import { TOP_OFFSET_M } from '../derive/sidewalks.ts';
 import type { ShapedGround } from '../derive/terrain-shape.ts';
 import type { OsmRecord } from '../normalize-osm.ts';
@@ -77,11 +83,12 @@ export type NavCellOutput = { bytes: Uint8Array | null; stats: NavCellStats };
 
 export function navCell(i: NavCellBuildInput): Promise<NavCellOutput> {
   const g = i.shaped.grid;
-  const vehicleLines = (i.vehicleRoadsAround ?? i.osm.filter(isVehicleRoad)).map((r) => r.rings[0] ?? []);
+  const w = weightedRoadLines(i.vehicleRoadsAround ?? i.osm.filter(isVehicleRoad));
   const site = siteFinder(
     junctionsOf(i.roads.filter((r) => r.functionCode === 'TrafficArea:1020')),
     [...(i.signalSites ?? [])],
-    vehicleLines,
+    w.lines,
+    w.weights,
   );
   // 소품 보행 신호기(props/signals.ts)와 같은 식: 띠 중점·보행 방향 w, 대체 축 = w의 수직.
   const signalOf = (b: CrossBand): number => {

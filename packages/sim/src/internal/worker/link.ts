@@ -8,7 +8,7 @@ import type {
   Vec3d,
   WorkerSupervisor,
 } from '@sanpo/core';
-import type { CrowdParams, SimDeps, SimWorkerStats, WorldClock } from '../../api.ts';
+import type { CrowdParams, SimDeps, SimWorkerStats, TrafficParams, WorldClock } from '../../api.ts';
 import type { ClockSync } from './crowd-runtime.ts';
 import { type SimWorkerHost, startSimWorker } from './host.ts';
 
@@ -21,8 +21,10 @@ export interface WorkerLink {
     crowd: CrowdParams;
     centerWF: Vec3d;
     mode?: 'dummy' | 'agents';
+    traffic?: TrafficParams;
   }): SharedInstanceBuffer | undefined;
-  addCell(key: CellKey, nav?: ArrayBuffer): void;
+  outputs(): { pedestrians?: SharedInstanceBuffer; traffic?: SharedInstanceBuffer };
+  addCell(key: CellKey, nav?: ArrayBuffer, lanes?: ArrayBuffer): void;
   removeCell(key: CellKey): void;
   scenario(c: Vec3d, r: number, n: number): void;
   /** 매 프레임(sim 시계 시스템): 플레이어·카메라 전방(스폰 시야 판정)·시계·밀도 배율 동기. */
@@ -43,7 +45,7 @@ export function forwardOf(q: Readonly<{ x: number; y: number; z: number; w: numb
 
 export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
   let worker: SimWorkerHost | undefined;
-  const early = new Map<CellKey, ArrayBuffer>();
+  const early = new Map<CellKey, { nav?: ArrayBuffer | undefined; lanes?: ArrayBuffer | undefined }>();
   let lastPlayer = Number.NEGATIVE_INFINITY;
   let lastDensity = 1;
   let synced: ClockSync | undefined;
@@ -59,16 +61,21 @@ export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
         mode: o.mode ?? 'agents',
         ...(deps.signalPlans ? { plans: deps.signalPlans } : {}),
         clock: synced,
+        ...(o.traffic ? { traffic: o.traffic } : {}),
         log: deps.log.child('sim'),
       });
-      if (worker) for (const [k, b] of early) worker.addCell(k, b);
+      if (worker) for (const [k, b] of early) worker.addCell(k, b.nav, b.lanes);
       early.clear();
       return worker?.pedestrians;
     },
-    addCell(key, nav) {
-      if (!nav) return;
-      if (worker) worker.addCell(key, nav);
-      else early.set(key, nav);
+    outputs: () => ({
+      ...(worker ? { pedestrians: worker.pedestrians } : {}),
+      ...(worker?.traffic ? { traffic: worker.traffic } : {}),
+    }),
+    addCell(key, nav, lanes) {
+      if (!nav && !lanes) return;
+      if (worker) worker.addCell(key, nav, lanes);
+      else early.set(key, { nav, lanes });
     },
     removeCell(key) {
       early.delete(key);

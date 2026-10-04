@@ -4,6 +4,7 @@ import type { MarkingStats } from '../derive/markings/index.ts';
 import type { NavCellStats } from '../derive/navmesh.ts';
 import type { PropStats } from '../derive/props/index.ts';
 import type { TreeStats } from '../derive/trees/index.ts';
+import type { LanesCellStats } from './lanes-cell.ts';
 import type { DetailStats } from './overrides/rooftops.ts';
 
 export interface CellBuildStats {
@@ -37,6 +38,8 @@ export interface CellBuildStats {
   } | null;
   /** 내비메시(M06-T03). */
   nav: NavCellStats | null;
+  /** 차선(M06-T05). */
+  lanes: LanesCellStats | null;
 }
 
 /** 통계에 쓰는 셀 조립 결과(assemble.ts CellParts의 부분 구조 — 순환 import 회피). */
@@ -53,6 +56,7 @@ export interface StatsParts {
     walk: { bridges: number; stairs: number; risers: number; carved: number };
   } | null;
   nav: { stats: NavCellStats } | null;
+  lanes: { stats: LanesCellStats } | null;
 }
 
 export function cellStats(
@@ -82,5 +86,6 @@ export function cellStats(
     trees: p.props?.treeStats ?? null,
     overrides: p.ov ? { landmarks: p.ov.landmarks, tris: p.ov.tris, details: p.ov.details, walk: p.ov.walk } : null,
     nav: p.nav?.stats ?? null,
+    lanes: p.lanes?.stats ?? null,
   };
 }

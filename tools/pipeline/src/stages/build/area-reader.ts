@@ -14,6 +14,16 @@ export function readLayer<T>(normalizedDir: string, layer: string, key: CellKey)
   return existsSync(f) ? readNdjsonGz<T>(f) : [];
 }
 
+/** 셀 경계를 걸친 OSM 레코드(이웃 셀 파일에 같은 id로 또 있음) 중복 제거. */
+function dedupe(records: OsmRecord[]): OsmRecord[] {
+  const seen = new Set<string>();
+  return records.filter((r) => {
+    if (seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  });
+}
+
 /** 이웃 셀 파일 캐시(도로 조각·건물 발자국) — 셀마다 8-이웃을 다시 읽지 않게. 행 순서 처리라 최근 3행 남짓이면 충분. */
 const AROUND_CACHE = 64;
 
@@ -24,6 +34,7 @@ export function aroundReader(normalizedDir: string) {
   const steps = new Map<CellKey, OsmRecord[]>();
   const marks = new Map<CellKey, MarkingRecord[]>();
   const vroads = new Map<CellKey, OsmRecord[]>();
+  const sigs = new Map<CellKey, OsmRecord[]>();
   const get = <T>(m: Map<CellKey, T>, k: CellKey, load: () => T): T => {
     let v = m.get(k);
     if (v === undefined) {
@@ -49,21 +60,22 @@ export function aroundReader(normalizedDir: string) {
   const marksOf = (k: CellKey) => get(marks, k, () => readLayer<MarkingRecord>(normalizedDir, 'markings', k));
   const vroadsOf = (k: CellKey) =>
     get(vroads, k, () => readLayer<OsmRecord>(normalizedDir, 'osm', k).filter(isVehicleRoad));
+  const sigsOf = (k: CellKey) =>
+    get(sigs, k, () =>
+      readLayer<OsmRecord>(normalizedDir, 'osm', k).filter(
+        (r) => r.tags.highway === 'traffic_signals' || r.tags.crossing === 'traffic_signals',
+      ),
+    );
   return {
     bridgesOf,
+    /** 셀 + 8-이웃 신호 점·신호 횡단 선(id 중복 제거) — 교차점 신호 판정(M06-T05). */
+    signalsAround: (k: CellKey) => dedupe(around(k, sigsOf)),
     /** 셀 + 8-이웃 PLATEAU 道路標示(M06 사전 2 — 셀 경계를 걸친 横断歩道). */
     markingsAround: (k: CellKey) => around(k, marksOf),
     /** 이웃 포함 OSM 계단 선(교량 계단 통로 — M05-T08). 셀 경계를 걸친 선은 중복될 수 있다. */
     stepsAround: (k: CellKey) => around(k, stepsOf),
     /** 셀 + 8-이웃 OSM 차도 선(id 중복 제거) — 교차로 도로 방향(신호 그룹, M06-T02)이 셀마다 같게. */
-    vehicleRoadsAround: (k: CellKey) => {
-      const seen = new Set<string>();
-      return around(k, vroadsOf).filter((r) => {
-        if (seen.has(r.id)) return false;
-        seen.add(r.id);
-        return true;
-      });
-    },
+    vehicleRoadsAround: (k: CellKey) => dedupe(around(k, vroadsOf)),
     bridgesAround: (k: CellKey) => around(k, bridgesOf),
     roadsOf,
     roadsAround: (k: CellKey) => around(k, roadsOf),

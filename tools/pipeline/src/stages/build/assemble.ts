@@ -44,6 +44,7 @@ import {
   readDemWindow,
 } from './dem-window.ts';
 import { encodeTerrainHeight } from './heightfield.ts';
+import { type LanesCellStats, lanesCell } from './lanes-cell.ts';
 import { type AreaDef, worldJson } from './manifest.ts';
 import { type NavCellOutput, navCell } from './nav-cell.ts';
 import { LANDMARK_MATERIAL, type OverrideCellOutput, type OverrideSet, overrideCell } from './overrides/index.ts';
@@ -70,6 +71,8 @@ export interface CellBuildInput {
   cellRoads?: readonly RoadRecord[];
   /** 이 셀 OSM 레코드(노면 표시, M05-T02). 없으면 decals.mesh 없음. */
   osm?: readonly OsmRecord[];
+  /** 셀 + 8-이웃 신호 점·신호 횡단 선(차선 정지선 신호 — M06-T05). 없으면 lanes.bin 없음. */
+  signalsAround?: readonly OsmRecord[];
   /** 셀 + 8-이웃 OSM 차도 선(신호 그룹 도로 방향 — M06-T02). 없으면 osm 중 차도. */
   vehicleRoadsAround?: readonly OsmRecord[];
   /** PLATEAU 道路標示(셀 + 8-이웃)·OSM 횡단 보정(M06 사전 2, ADR-0058). */
@@ -174,6 +177,7 @@ export interface CellParts {
   props: PropCellOutput | null;
   ov: OverrideCellOutput | null;
   nav: NavCellOutput | null;
+  lanes: { bytes: Uint8Array | null; stats: LanesCellStats } | null;
 }
 
 async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSectionInput[]> {
@@ -196,6 +200,7 @@ async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSec
   if (props?.inst) sections.push({ type: 'props.inst', sources: propSources, data: props.inst });
   if (props?.trees) sections.push({ type: 'trees.inst', sources: propSources, data: props.trees });
   if (p.nav?.bytes) sections.push({ type: 'nav.bin', sources: propSources, data: p.nav.bytes });
+  if (p.lanes?.bytes) sections.push({ type: 'lanes.bin', sources: [OSM_SOURCE, TERRAIN_SOURCE], data: p.lanes.bytes });
   if (col.data) {
     const colSources = [
       ...new Set([
@@ -253,7 +258,19 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   const ground = ov ? mergeStreams(roads.collider, ov.walkCollider) : roads.collider;
   const col = await buildCollision(bc.pos, bc.idx, ground, [...(props?.colliders ?? []), ...(ov?.walkShapes ?? [])]);
   const nav = input.osm ? await navOf(input, originWF, sc, props, marks?.bands ?? []) : null;
-  const parts: CellParts = { sc, terrain, bld, roads, own, decals, col, props, ov, nav };
+  const lanes =
+    input.vehicleRoadsAround && input.signalsAround
+      ? await lanesCell({
+          ox: originWF[0],
+          oz: originWF[2],
+          roads: input.roads,
+          vehicleRoadsAround: input.vehicleRoadsAround,
+          signalsAround: input.signalsAround,
+          shaped: sc.shaped,
+          ...(input.props?.signalSites ? { signalSites: input.props.signalSites } : {}),
+        })
+      : null;
+  const parts: CellParts = { sc, terrain, bld, roads, own, decals, col, props, ov, nav, lanes };
   const [y0, y1] = yRange(terrain.positions);
   const cellBox: Aabb = { min: [0, y0, 0], max: [CELL_SIZE_M, y1, CELL_SIZE_M] };
   const local = outward(union(union(cellBox, bld.aabbLocal), ov?.aabbLocal ?? null));
@@ -338,6 +355,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       cellRoads: files.roadsOf(key),
       osm: readLayer<OsmRecord>(input.normalizedDir, 'osm', key),
       vehicleRoadsAround: files.vehicleRoadsAround(key),
+      signalsAround: files.signalsAround(key),
       markings: { plateau: files.markingsAround(key), corrections: input.crossingCorrections ?? [] },
       ...(input.props ? { props: input.props } : {}),
       ...(input.overrides
@@ -359,7 +377,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     index.push({ level: 0, ix, iz, flags, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });
     stats.push(s);
     log.info(
-      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), decals ${s.decalTris} tris ${JSON.stringify(s.markings)}, props ${JSON.stringify(s.props)}, trees ${JSON.stringify(s.trees)}, overrides ${JSON.stringify(s.overrides)}, collider ${s.colliderTris} tris / ${s.colliderShapes}, nav ${JSON.stringify(s.nav)}`,
+      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), decals ${s.decalTris} tris ${JSON.stringify(s.markings)}, props ${JSON.stringify(s.props)}, trees ${JSON.stringify(s.trees)}, overrides ${JSON.stringify(s.overrides)}, collider ${s.colliderTris} tris / ${s.colliderShapes}, nav ${JSON.stringify(s.nav)}, lanes ${JSON.stringify(s.lanes)}`,
     );
   }
   writeFileSync(join(outDir, 'cells.idx'), writeCellsIndex(index));

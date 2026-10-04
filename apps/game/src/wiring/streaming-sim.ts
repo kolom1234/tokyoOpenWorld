@@ -1,4 +1,4 @@
-// 배선: streaming live L0 셀(버스 `cell/ready`) → sim 반경(256 m — tier A 80 m 스폰·목적지 + tier B 250 m) 안이면 nav.bin을 따로 요청(requestSections)해
+// 배선: streaming live L0 셀(버스 `cell/ready`) → sim 반경(448 m — 군중 tier B 250 m + 차량 스폰 400 m) 안이면 nav.bin·lanes.bin을 따로 요청(requestSections)해
 // sim.addCell, 반경 × 1.25 밖·해제면 sim.removeCell. streaming·sim은 서로 모른다(01 §4). see docs/10-simulation.md §4, docs/06-world-streaming.md §1
 import { type CellKey, type EventBus, type GameSystem, type Logger, unpackCellKey, type Vec3d } from '@sanpo/core';
 import type { SimService } from '@sanpo/sim';
@@ -7,7 +7,7 @@ import { cellDistance } from './streaming-physics.ts';
 
 /** 물리 배선(56) 뒤. */
 export const SIM_WIRING_PHASE = 57;
-export const SIM_NAV_RADIUS_M = 256;
+export const SIM_NAV_RADIUS_M = 448;
 const RELEASE_FACTOR = 1.25;
 const CELL_M = 256;
 const INTERVAL_MS = 250;
@@ -51,10 +51,10 @@ export function createStreamingSimWiring(d: StreamingSimDeps): StreamingSimWirin
     inFlight.add(key);
     requests++;
     d.streaming
-      .requestSections(key, ['nav.bin'])
+      .requestSections(key, ['nav.bin', 'lanes.bin'])
       .then((p) => {
-        if (!live.has(key) || !p.nav) return;
-        d.sim.addCell(key, p.nav);
+        if (!live.has(key) || (!p.nav && !p.lanes)) return;
+        d.sim.addCell(key, p.nav, p.lanes);
         added.add(key);
       })
       .catch((e: unknown) => d.log.warn('sim nav', key, e))

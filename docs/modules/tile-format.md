@@ -30,8 +30,8 @@ writeCellsIndex(entries): Uint8Array;  readCellsIndex(buf): Result<CellsIndex, T
 type JcolShape = JcolTriMesh{vertices,indices} | JcolConvexHull{vertices} | JcolBox{halfExtents} | JcolRound{kind:'capsule'|'cylinder'; halfHeight; radius}
   // 공통: layer, material, flags, posLocal: Vec3Tuple, quat: [x,y,z,w]
 writeJcol(shapes): Uint8Array;  parseJcol(bytes): Result<JcolShape[], TkcError>
-// lanes.bin (gzip 해제 후) — SoA
-interface LaneGraphChunk { nodes{id,posLocal,portalKey}; lanes{id,fromNode,toNode,kind,speedKmh,signalGroup,ptOffset,ptCount,widthCm}; pointsLocal; groups{id,intersection,phaseIndex} }
+// lanes.bin v2 (gzip 해제 후, M06-T05 ADR-0065) — SoA. LANES_VERSION = 2, LANE_NO_SIGNAL = 0xFFFFFFFF, LANE_KIND = {road 0, connector 1, bus 2}, LANE_TURN = {straight 0, left 1, right 2}
+interface LaneGraphChunk { nodes{key,posLocal}; lanes{id,fromNode,toNode,kind,turn,speedKmh,laneIdx,signal,ptOffset,ptCount,widthCm}; pointsLocal }
 writeLanes(g): Uint8Array;  parseLanes(bytes): Result<LaneGraphChunk, TkcError>
 // nav.bin (gzip 해제 후, M06-T03 ADR-0063 — 타입은 api-nav.ts, api.ts가 재수출): Detour 타일(WF, 64 m) + 횡단보도 기록
 NAV_MAGIC /*"NAVT"*/; NAV_VERSION = 1; NAV_TILE_M = 64; NAV_NO_SIGNAL = 0xFFFFFFFF; NAV_AREA = { sidewalk: 1, street: 2, crossing: 3, open: 4 }; NAV_FLAG = { walk: 1, cross: 2 };

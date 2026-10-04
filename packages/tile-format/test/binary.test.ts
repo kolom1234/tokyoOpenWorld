@@ -128,7 +128,7 @@ describe('lanes.bin', () => {
     const g = unwrap(parseLanes(bytes));
     expect(writeLanes(g)).toEqual(bytes);
     expect(g).toEqual(lanesChunk());
-    expect(bytes.byteLength).toBe(8 + 4 + 3 * 20 + 4 + 2 * 24 + 4 + 5 * 12 + 4 + 8);
+    expect(bytes.byteLength).toBe(8 + 4 + 3 * 16 + 4 + 2 * 28 + 4 + 5 * 12);
   });
 
   it('rejects damage and broken references', () => {
@@ -138,11 +138,14 @@ describe('lanes.bin', () => {
     magic[0] = 0;
     expect(code(parseLanes(magic))).toBe('magic');
     const node = bytes.slice(); // lane 0 fromNode = 3 (노드 3개)
-    new DataView(node.buffer).setUint32(8 + 4 + 60 + 4 + 4, 3, true);
+    new DataView(node.buffer).setUint32(8 + 4 + 48 + 4 + 4, 3, true);
     expect(code(parseLanes(node))).toBe('corrupt');
+    const ver = bytes.slice();
+    ver[4] = 1;
+    expect(code(parseLanes(ver))).toBe('version');
     const g: LaneGraphChunk = lanesChunk();
-    g.lanes.signalGroup[0] = 8;
-    expect(() => writeLanes(g)).toThrow(/signalGroup/);
+    g.lanes.toNode[0] = 9;
+    expect(() => writeLanes(g)).toThrow(/node index/);
     const p = lanesChunk();
     p.lanes.ptCount[1] = 4;
     expect(() => writeLanes(p)).toThrow(/points/);

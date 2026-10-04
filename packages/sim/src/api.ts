@@ -29,6 +29,16 @@ export interface CrowdParams {
   };
 }
 
+/** 교통 조정값(content/sim/traffic.json — M06-T05, 10 §5.1): 최대 대수·스폰/제거 반경·평소 스폰 최소 거리(시야 안)·틱당 스폰·JST 시간대 배율. */
+export interface TrafficParams {
+  maxVehicles: number;
+  spawnM: number;
+  despawnM: number;
+  farM: number;
+  spawnsPerTick: number;
+  diurnal: number[];
+}
+
 /** tier A(10 §4.2: 0–80 m, High 250) 조정값. 거리 m, 속력 m/s, 시간 s. */
 export interface CrowdAgentsParams {
   maxA: number;
@@ -97,6 +107,18 @@ export interface SimWorkerStats {
     cells: number;
     crossings: number;
   };
+  /** 교통(M06-T05): 대수·스폰·제거·적신호 통과·교착·차선·셀, distM/limitM = 평균 속도 비율 누적. */
+  traffic?: {
+    vehicles: number;
+    spawned: number;
+    despawned: number;
+    violations: number;
+    deadlocks: number;
+    distM: number;
+    limitM: number;
+    lanes: number;
+    cells: number;
+  };
 }
 
 export type DayType = 'weekday' | 'saturday' | 'holiday';
@@ -135,12 +157,16 @@ export interface SimService extends SystemProvider {
     centerWF: Vec3d;
     /** dummy = M06-T01 원형 걷기, agents = M06-T03 DetourCrowd(기본). */
     mode?: 'dummy' | 'agents';
+    /** 교통(M06-T05 — agents 모드에서만). 없으면 차량 없음. */
+    traffic?: TrafficParams;
   }): SharedInstanceBuffer | undefined;
+  /** 워커 출력 버퍼(10 §8 outputs): 보행자·차량(stride 8 — 차량 칸 = x,y,z·yaw·속력·바퀴 회전·variant·flags). 시작 전 빈 객체. */
+  outputs(): { pedestrians?: SharedInstanceBuffer; traffic?: SharedInstanceBuffer };
   /**
-   * 셀 내비(10 §8 addCell — nav.bin gzip 해제 바이트, streaming requestSections). 워커 시작 전이면 보관했다가 시작 때 보낸다.
-   * 같은 셀을 다시 넣으면 무시(먼저 removeCell). lanes·meta는 T05~.
+   * 셀 내비·차선(10 §8 addCell — nav.bin·lanes.bin gzip 해제 바이트, streaming requestSections). 워커 시작 전이면 보관했다가 시작 때 보낸다.
+   * 같은 셀을 다시 넣으면 무시(먼저 removeCell).
    */
-  addCell(key: CellKey, nav?: ArrayBuffer): void;
+  addCell(key: CellKey, nav?: ArrayBuffer, lanes?: ArrayBuffer): void;
   removeCell(key: CellKey): void;
   /** 디버그·시험: 중심 radius 안 신호 횡단 대기점에 count명(건너편 목적지 — M06-T03 수락 장면). */
   crowdScenario(centerWF: Vec3d, radius: number, count: number): void;

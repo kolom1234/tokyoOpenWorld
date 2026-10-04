@@ -19,11 +19,14 @@ export const CELLS_INDEX_MAGIC = 0x4943_4b54;
 /** JCOL 매직 "JCOL"(u32 LE)·버전. */
 export const JCOL_MAGIC = 0x4c4f_434a;
 export const JCOL_VERSION = 1;
-/** lanes.bin 매직 "LANE"(u32 LE)·버전. */
+/** lanes.bin 매직 "LANE"(u32 LE)·버전(v2 = M06-T05: 글로벌 노드 키·인라인 신호 코드, ADR-0065). */
 export const LANES_MAGIC = 0x454e_414c;
-export const LANES_VERSION = 1;
-/** `signalGroup` 값 "신호 없음". */
-export const LANE_NO_SIGNAL = 0xffff;
+export const LANES_VERSION = 2;
+/** `signal` 값 "신호 없음". */
+export const LANE_NO_SIGNAL = 0xffffffff;
+/** 차선 종류·회전(lanes.bin kind·turn). */
+export const LANE_KIND = { road: 0, connector: 1, bus: 2 } as const;
+export const LANE_TURN = { straight: 0, left: 1, right: 2 } as const;
 /** terrain.height 기본값: 257² 격자(1 m 간격, 셀 경계 공유), 양자화 단위 0.01 m. */
 export const HEIGHTFIELD_SIZE = 257;
 export const HEIGHTFIELD_STEP_M = 0.01;
@@ -204,27 +207,28 @@ export interface JcolRound extends JcolShapeBase {
 }
 export type JcolShape = JcolTriMesh | JcolConvexHull | JcolBox | JcolRound;
 
-// ── lanes.bin (05 §7). SoA — sim 워커 핫루프용 ──
+// ── lanes.bin (05 §7, v2 M06-T05). SoA — sim 워커 핫루프용 ──
 
 export interface LaneGraphChunk {
-  /** portalKey 0 = 셀 내부 노드, 그 외 = 이웃 셀과 병합할 글로벌 노드 해시. */
-  nodes: { id: Uint32Array; posLocal: Float32Array; portalKey: Uint32Array };
-  /** fromNode/toNode = 이 청크 `nodes` 배열 인덱스. signalGroup = groups.id 또는 LANE_NO_SIGNAL.
-   *  ptOffset/ptCount = pointsLocal 점(xyz) 단위 범위. kind: 0 road, 1 turn, 2 bus. */
+  /** key = 글로벌 노드 해시(셀 간 병합 — 교차로 안 노드·셀 경계 포털 모두), posLocal = 셀 로컬 xyz. */
+  nodes: { key: Uint32Array; posLocal: Float32Array };
+  /** fromNode/toNode = 이 청크 `nodes` 배열 인덱스. kind = LANE_KIND, turn = LANE_TURN(연결로), laneIdx = 0 연석 쪽(좌측통행 맨 왼쪽),
+   *  signal = 정지선 신호 코드(교차로 ID × 16 + 계획 × 4 + 차량 그룹, ADR-0062) 또는 LANE_NO_SIGNAL. ptOffset/ptCount = pointsLocal 점 단위. */
   lanes: {
     id: Uint32Array;
     fromNode: Uint32Array;
     toNode: Uint32Array;
     kind: Uint8Array;
+    turn: Uint8Array;
     speedKmh: Uint8Array;
-    signalGroup: Uint16Array;
+    laneIdx: Uint8Array;
+    signal: Uint32Array;
     ptOffset: Uint32Array;
     ptCount: Uint16Array;
     widthCm: Uint16Array;
   };
   /** 차선 중심선 점 xyz(셀 로컬). */
   pointsLocal: Float32Array;
-  groups: { id: Uint16Array; intersection: Uint16Array; phaseIndex: Uint8Array };
 }
 
 // ── 셀 데이터 모델 (디코드 결과. 이 블록이 정의 원본) ──

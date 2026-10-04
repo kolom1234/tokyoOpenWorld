@@ -25,6 +25,10 @@ export interface CrowdRuntime {
   /** dt 진행 → out(WF − anchor), 반환 = 쓴 수(준비 전 0). */
   step(dt: number, nowAbs: number, out: Float32Array, anchor: Readonly<Vec3d>): number;
   stats(): (CrowdSimStats & { tiles: number; cells: number; crossings: number }) | undefined;
+  /** 차량 램프(같은 계획·같은 게임 시각 — 교통이 쓴다). */
+  vehicleLamp(code: number): 'G' | 'Y' | 'R';
+  /** 마지막 step의 게임 시각(ms). */
+  gameMs(): number;
 }
 
 export function createCrowdRuntime(
@@ -77,6 +81,8 @@ export function createCrowdRuntime(
       if (sc && tier.scenario(sc.center, sc.radius, sc.count) > 0) pendingScenario = undefined;
       return tier.step(dt, nowGameS * 1000, out, anchor);
     },
+    vehicleLamp: (code) => signalState(plans, code, nowGameS).vehicle,
+    gameMs: () => nowGameS * 1000,
     stats() {
       if (!tier || !nav) return undefined;
       return { ...tier.stats(), ...nav.stats() };
