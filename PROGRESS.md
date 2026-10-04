@@ -2,18 +2,22 @@
 Updated: 2026-10-04 (session #19 — 큐 모드 M06 2차 T03→T07, 브랜치 `claude/m06-crowds-traffic`, draft PR #19)
 
 ## Current Milestone: M06 — Life: Crowds & Traffic (T01·T02 ✅ PR #18 병합 → 이번 PR #19: 사전 정리 + T03–T07 + MVP 재빌드·staging)
-## Current Task: M06-T04 ✅ → 다음 = M06-T05 교통(IDM·차선·양보)
-- Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063), M06-T04(ADR-0064).
+## Current Task: M06-T05 ✅ → 다음 = M06-T06 차량 외형·키네마틱 동기
+- Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063), M06-T04(ADR-0064), M06-T05(ADR-0065).
 - 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright chrome headed + `power()` = nvidia-smi 소비·상한 W), `bootblock.mjs`(long task·rAF 간격·첫 표시),
   `crowdview.mjs out base query pose shots`(freecam 포즈 → 3 s마다 캡처 + 워커 통계·전력), `navviz.ts`(빌드 nav.bin → 위에서 본 area 색 PNG), `copy-shared.mjs`(부분 빌드에 MVP shared 복사).
 - 로컬 부분 빌드 `m06-nav-test`(9셀 L0_-1..1, nav 포함, shared = `20261004-f0ae5ab-8de63322`에서 복사) = dev 서버 `?world=local` 최신. **MVP 전체 재빌드 미완**(신호·내비 포함 → T07 뒤 publish·staging).
 - 배포 상태(2026-10-04): staging = 459c0de(M06 사전 1–4) + dev 버킷 current `20261004-f0ae5ab-8de63322`. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): M06-T05 — `docs/roadmap/M06.md` T05 블록 + 10 §5.1·05 §7 → `tools/pipeline/src/stages/derive/lanes.ts`(간선 OSM 중심선 + lanes → 차선 중심선·교차로 연결·신호 그룹, 셀 포털) 설계.
-  `scratchpad/crowdperf.mjs`(군중 켬/끔 rAF p50 + 1 s 전력, 1440p High 수직 동기 해제), `popwalk.mjs`(지상 freecam 이동 4 fps 캡처 + 승격·강등 수).
+- Next step (정확히 한 걸음): M06-T06 — render `vehicles` 레이어(차종 7 절차 모델 LOD 3 + 바퀴 회전·등화 셰이더, `sim.outputs().traffic` SAB 바인딩) → physics 키네마틱 바디(플레이어 60 m 안 차량, sim → physics MessageChannel).
+  scratch: `crowdperf.mjs`(군중 켬/끔 GPU), `popwalk.mjs`(80 m 리뷰 캡처), `trafficprobe.mjs`(워커 교통 통계), `laneviz.ts`(lanes.bin 그림).
 - 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창이 있으면 첫 표시가 3배 — preview 탭은 정적 페이지(`/third-party-notices.txt`). 전력 상한이 측정 중 22 ↔ 34 W로 오르내림(행마다 기록).
 - Blockers: 없음
 
 ## Recently Completed
+- M06-T05 Traffic — 파이프라인 `derive/lanes*`·`build/lanes-cell.ts`: OSM 간선 → 좌측통행 차선·교차로 정지선·연결로(좌 = 연석·우 = 안쪽)·신호 코드·셀 포털 → `lanes.bin` v2.
+  신호 코드 배치 변경(연동 오프셋 칸 6비트·ID 14비트), 주축 A = 등급 가중(간선), 기본 계획 A 67 s·B 43 s. sim.worker `traffic/*`(그래프 병합·IDM·회전·양보·스폰) + 차량 SAB, game 448 m nav+lanes.
+  **수락**: world-mini 10분(40대) 교착 0 ✅·적신호 통과 0 ✅, 메이지도리 평균 속도 비율 **0.37 ⚠️**(목표 0.4–0.8, 신호 없으면 0.82 — 120 s 주기·회전·가장자리). 브라우저 9셀 정오 90대 + 보행자 950:
+  워커 p95 2.2–2.7 ms, 위반·교착 0. ADR-0065 (2026-10-04)
 - M06-T04 Crowd tier B/C & LOD — 공유 정체성(`appearance.ts`), tier B 꺾은선 흐름(`flow.ts` — 경로·횡단·신호는 A와 같은 함수, 가로 오프셋 저역 통과), 80 ± 5 m 승강격(`lod-manager.ts` —
   횡단 중 승격은 횡단 필터로), 오케스트레이터(`crowd-sim.ts` — 목표 1,000 × 시간대 × 날씨(비 ×0.6), 면적 균일 스폰·평소 멀리/시야 밖), render 원경 tier C 스프라이트(`crowd/far.ts` 보도 점 235–800 m,
   밀도 = sim 수 ÷ 1,000). **수락**: 총 950–1,000 유지 ✅, 승강격 100+회 위치 튐 < 0.25 m/틱 ✅(단위), 팝핑 리뷰 GIF docs/screenshots/M06/T04(승격 150·강등 97 — 육안 팝핑 없음),
