@@ -78,6 +78,8 @@ export interface StatusView {
   setRenderer(backend: string, depth: string): void;
   /** 렌더에 추가한 셀 수(e2e: `data-rendered-cells`). */
   setRendered(cells: number): void;
+  /** 첫 표시 전 준비 단계(선컴파일·스폰 셀 + 경과 s). '' = 행 없음. */
+  setProgress(text: string): void;
   showError(message: string): void;
 }
 
@@ -106,9 +108,11 @@ export function mountStatusView(root: HTMLElement): StatusView {
   let rows: StatusRow[] = [];
   let world: WorldStatus | undefined;
   let renderer: { backend: string; depth: string; cells?: number } | undefined;
+  let progress = '';
   const render = (): void => {
     const r0 = renderer ? [describeRenderer(renderer.backend, renderer.depth, renderer.cells)] : [];
-    list.replaceChildren(...[...rows, ...r0, describeWorld(world)].flatMap((r) => rowElements(doc, r)));
+    const p: StatusRow[] = progress ? [{ key: 'progress', label: '준비', value: progress, state: 'warn' }] : [];
+    list.replaceChildren(...[...rows, ...r0, describeWorld(world), ...p].flatMap((r) => rowElements(doc, r)));
   };
   render();
 
@@ -136,6 +140,11 @@ export function mountStatusView(root: HTMLElement): StatusView {
     setRendered: (n) => {
       if (renderer) renderer.cells = n;
       root.dataset.renderedCells = String(n);
+      render();
+    },
+    setProgress(text) {
+      if (text === progress) return;
+      progress = text;
       render();
     },
     showError(message) {

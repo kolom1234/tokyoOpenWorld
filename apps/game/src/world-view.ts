@@ -28,6 +28,7 @@ import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import CROWD_PARAMS from '../../../content/sim/crowd.json';
 import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
+import { type BootStage, bootProgressText, precompileText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
 import { createCameraWiring } from './wiring/camera.ts';
@@ -64,6 +65,8 @@ export interface WorldView {
   readonly signsSettled: boolean;
   /** streaming 시작 → 스폰 영역 live까지 대기 → 시작 시점으로 이동. 반환 = 스폰 영역 live L0 셀 수. */
   showWorld(world: LoadedWorld): Promise<number>;
+  /** 첫 표시 전 준비 단계 글(로딩 패널 — 선컴파일 진행·스폰 셀 수). 첫 표시 뒤 ''. */
+  bootProgress(): string;
 }
 
 export interface WorldViewDeps {
@@ -101,6 +104,8 @@ interface LateState {
   signsSettled: boolean;
   /** startStreaming이 만든 워커 감독자(sim.worker도 같이 — M06-T01). */
   supervisor?: WorkerSupervisor;
+  /** 부팅 준비 단계(bootProgress): 선컴파일 글·스폰 셀 목록·끝남. */
+  boot: BootStage;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -285,11 +290,14 @@ async function showWorldWith(
   render.stageCells(true);
   const pre = v.precompiled;
   const s = await startStreaming(deps, render, traversal, world, late);
+  late.boot.spawn = world.spawnCells;
   const centerWF = deps.start?.centerWF ?? world.spawnWF;
   // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
   await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true, holdExclusiveUntil: pre });
+  late.boot.precompile = '셀 셰이더…';
   await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
   render.commitStaged();
+  late.boot.done = true;
   if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
     traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
   else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
@@ -310,14 +318,32 @@ function simFor(deps: WorldViewDeps): SimService {
   return createSim({ bus: deps.bus, log: deps.log, now, initialClock: deps.clock ?? defaultClock(now()), signalPlans });
 }
 
+function initialLate(): LateState {
+  return {
+    materialsSettled: false,
+    avatarSettled: false,
+    treesSettled: false,
+    signsSettled: false,
+    boot: { precompile: '대기 LUT…', done: false },
+  };
+}
+
+/** 선컴파일은 월드와 무관 → 렌더 생성 직후 시작(world.json·cells.idx 조회와 겹침). 진행은 로딩 패널 준비 행으로. */
+function startPrecompile(render: RenderService, late: LateState, log: Logger): Promise<void> {
+  return render
+    .precompile((p) => {
+      late.boot.precompile = precompileText(p);
+    })
+    .catch((e: unknown) => log.child('world').warn('precompile', e));
+}
+
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
   const config = { ...deps.renderConfig, backend: deps.backend };
   const render = await createRender({ canvas, bus, log, config });
-  // 선컴파일은 월드와 무관 → 렌더 생성 직후 시작(world.json·cells.idx 조회와 겹침). showWorld가 기다린다.
-  const precompiled = render.precompile().catch((e: unknown) => log.child('world').warn('precompile', e));
+  const late = initialLate();
+  const precompiled = startPrecompile(render, late, log);
   const input = createInput({ target: canvas, bus, log });
-  const late: LateState = { materialsSettled: false, avatarSettled: false, treesSettled: false, signsSettled: false };
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
   const traversal = createTraversalFor(deps, input, ground, late);
   const sim = simFor(deps);
@@ -366,5 +392,6 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
       return late.signsSettled;
     },
     showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim }, world),
+    bootProgress: () => bootProgressText(late.boot, late.streaming),
   };
 }

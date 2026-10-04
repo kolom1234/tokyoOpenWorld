@@ -174,6 +174,13 @@ export interface InstanceLayer {
   bindShared(buf: SharedInstanceBuffer): void;
 }
 
+/** 선컴파일 진행(M06): 단계·완료 수·총 수. */
+export interface PrecompileProgress {
+  stage: 'atmosphere' | 'materials' | 'avatar';
+  done: number;
+  total: number;
+}
+
 export interface RenderService extends SystemProvider {
   readonly renderOriginWF: Readonly<Vec3d>;
   /** 품질 티어 변경(후처리 재구성 — 셰이더 재컴파일 끊김 1회) + `quality/changed`. 버스 이벤트로도 바뀐다. */
@@ -197,8 +204,11 @@ export interface RenderService extends SystemProvider {
   loadMaterials(manifestUrl: string): Promise<MaterialLibraryStats>;
   /** 환경(태양·달 방향 등, sim 계산값) — 대기·조명이 소비한다. 07 §6: render는 천문 계산을 하지 않는다. */
   setEnvironment(e: Readonly<EnvironmentState>): void;
-  /** 고정 머티리얼(+ HLOD 변형) 셰이더 선컴파일(06 §6) — 스트리밍 중 컴파일 끊김 방지. */
-  precompile(): Promise<void>;
+  /**
+   * 고정 머티리얼(+ HLOD 변형) 셰이더 선컴파일(06 §6) — 스트리밍 중 컴파일 끊김 방지. 대기 LUT → 머티리얼 ID 묶음마다 한 프레임 양보 → 아바타,
+   * 단계마다 onProgress(부팅 로딩 표시 — M06).
+   */
+  precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;
   /**
    * 부팅 첫 표시(M06 사전 4): on이면 이후 addCell의 셀 메시를 장면 밖 대기 그룹에 둔다(그리지 않음 → 첫 렌더 동기 컴파일 없음).
    * `compileStaged`로 선컴파일과 겹쳐 파이프라인을 만들고 `commitStaged`로 장면에 붙인다(대기 모드 끝). 소품·나무·간판 풀은 대상 아님.

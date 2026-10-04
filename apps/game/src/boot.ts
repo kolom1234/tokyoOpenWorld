@@ -13,6 +13,7 @@ import {
 } from '@sanpo/core';
 import type { PostEffects, QualityTier, RenderConfig } from '@sanpo/render';
 import type { ClockMode } from '@sanpo/sim';
+import { bootProgressSystem } from './boot-progress.ts';
 import { detectCaps } from './caps.ts';
 import { mountCredits } from './credits.ts';
 import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
@@ -241,6 +242,7 @@ async function setupWorldView(
         : {}),
     });
     for (const p of world.providers) scheduler.add(p);
+    scheduler.add({ systems: () => [bootProgressSystem(view, world)] });
     if (flags.sun)
       scheduler.add({
         systems: () => [createSunOverride(world.render, flags.sun as NonNullable<BootFlags['sun']>, weather)],

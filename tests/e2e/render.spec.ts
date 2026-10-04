@@ -43,6 +43,18 @@ function nonSkyRatio(png: Buffer, r: Region): PixelStats {
   return { nonSky: hit / n, sky };
 }
 
+/** 두 캡처의 RGB가 다른 픽셀 수(Node 디코드 — png.ts, 브라우저 디코드는 CI headless shell에서 1분+). */
+function changedPixels(a: Buffer, b: Buffer): number {
+  const pa = decodePng(a);
+  const pb = decodePng(b);
+  if (pa.width !== pb.width || pa.height !== pb.height) return pa.width * pa.height;
+  let changed = 0;
+  for (let i = 0; i < pa.data.length; i += 4) {
+    if (pa.data[i] !== pb.data[i] || pa.data[i + 1] !== pb.data[i + 1] || pa.data[i + 2] !== pb.data[i + 2]) changed++;
+  }
+  return changed;
+}
+
 test('start view renders Scramble Square and surrounding buildings (WebGL2 fallback)', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -106,27 +118,7 @@ test.describe('origin rebase', () => {
     const after = await captureCanvas(page);
     mkdirSync(SHOTS, { recursive: true });
     writeFileSync(join(SHOTS, 'after-rebase.png'), after);
-    const diff = await page.evaluate(
-      async ({ a, b }) => {
-        const load = async (s: string) => {
-          const img = new Image();
-          img.src = `data:image/png;base64,${s}`;
-          await img.decode();
-          const c = new OffscreenCanvas(img.width, img.height);
-          const ctx = c.getContext('2d');
-          if (ctx === null) throw new Error('2d context');
-          ctx.drawImage(img, 0, 0);
-          return ctx.getImageData(0, 0, img.width, img.height).data;
-        };
-        const [pa, pb] = [await load(a), await load(b)];
-        let changed = 0;
-        for (let i = 0; i < pa.length; i += 4) {
-          if (pa[i] !== pb[i] || pa[i + 1] !== pb[i + 1] || pa[i + 2] !== pb[i + 2]) changed++;
-        }
-        return changed;
-      },
-      { a: before.toString('base64'), b: after.toString('base64') },
-    );
+    const diff = changedPixels(before, after);
     // 떨림·누적 오차는 화면 전체를 움직인다. 허용 184 px(= 1280×720의 0.02 %)은 재설정 뒤 셀 그리기 순서가 바뀌어 겹친 면(PLATEAU 동일 평면 중복)의
     // z-파이팅 승자가 바뀌는 몇십 픽셀(M03-T04 이후, 1280×720 ≈ 70 px, 640×360 48–60 px — 면적이 아니라 경계선 길이에 비례해 해상도를 줄여도 거의 그대로).
     expect(diff).toBeLessThanOrEqual(Z_FIGHT_PX);
