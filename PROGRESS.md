@@ -2,14 +2,15 @@
 Updated: 2026-10-02 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브랜치 `claude/m06-life`, draft PR)
 
 ## Current Milestone: M06 — Life: Crowds & Traffic (사전 항목 1–5 → T01–T07)
-## Current Task: M06 사전 항목 1–5 ✅(e568a59·1ce2ed7·503fa63·baf706f + 백로그) → 다음 = MVP 재빌드·dev publish·staging 배포·실제 GPU 확인 → M06-T01
+## Current Task: M06-T01 진행 중(군중 팩 굽기 완료·sim 워커 작성 중) — 사전 1–5 ✅ + MVP 재빌드·publish·staging 배포 ✅
 - Done in this session: 사전 1 Rocketbox(ADR-0057), 사전 2 PLATEAU frn 横断歩道·停止線 우선 + 스크램블 보정(ADR-0058), 사전 3 freecam 진입 방지(ADR-0059), 사전 4 첫 표시 겹치기(ADR-0060), 사전 5 백로그(아래 Backlog).
 - **MVP 재빌드 미완**: 사전 2(노면 표시)는 로컬 부분 빌드 `m06-mark-test`(스폰 3×3 + shared 복사)로만 확인. 전체 재빌드·publish·staging은 사전 3–4 뒤 묶어서.
   normalized/markings는 만들어 둠(`normalize --layer plateau --plateau-layer frn`, frn GML은 zip에서 수동 해제 — data/raw/plateau-{shibuya,shinjuku}/extracted/udx/frn).
 - 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright `@playwright/test` chromium + `channel: 'chrome'` headed, open/settled/shot/waitFor), `avatar-shot.mjs`.
   `lookat.mjs out.png x,y,z yawDeg pitchDeg`(freecam 요청 → settled → 캡처). dev 서버 = preview_start `game-dev`(vite 5173), 로컬 빌드 `?world=local&debug=1`.
-- 배포 상태(2026-10-02): staging = **2993754**(M05) + dev 버킷 current `20261001-b779645-03883ce7`. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): MVP 전체 재빌드(`pipeline build` → hlod → validate) → dev 버킷 publish → staging 배포 → staging 첫 표시(GPU 사용률 0 % 확인 후 bootprobe) 측정.
+- 배포 상태(2026-10-04): staging = **459c0de**(사전 1–4) + dev 버킷 current **`20261004-f0ae5ab-8de63322`**(478파일 356.7 MB, PLATEAU 횡단보도 199·정지선 107 셀-그림, validate 0). staging 첫 표시 8.46–8.59 s·전송 36–40 MB. 옛 빌드 gc는 10/6 이후(7일 규칙).
+- In progress (T01): 군중 팩 `apps/game/src/assets/characters/crowd.{json,bin,ktx2}`(구움, 미커밋) + `tools/pipeline/src/stages/characters/{crowd,crowd-encode}.ts`, sim `packages/sim/src/internal/{worker/{instance-buffer,sim.worker},crowd/dummy}.ts`(작성, 미배선).
+- Next step (정확히 한 걸음): render `packages/render/src/internal/crowd/{assets,material,field}.ts` 작성 → sim host(SAB·supervisor) 배선 → `?crowd=dummy` 1,000명 GPU 측정.
 - 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창(앱 내 브라우저 패널이 게임 렌더 중 등)이 있으면 첫 표시가 3배(30 s) — preview 탭은 정적 페이지(`/third-party-notices.txt`)로 돌려 둘 것.
 - Blockers: 없음
 
