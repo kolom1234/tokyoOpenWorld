@@ -1,19 +1,24 @@
 # PROGRESS
-Updated: 2026-10-04 (session #19 — 큐 모드 M06 2차 T03→T07, 브랜치 `claude/m06-crowds-traffic`, draft PR #19)
+Updated: 2026-10-05 (session #19 — 큐 모드 M06 2차 T03→T07, 브랜치 `claude/m06-crowds-traffic`, draft PR #19)
 
 ## Current Milestone: M06 — Life: Crowds & Traffic (T01·T02 ✅ PR #18 병합 → 이번 PR #19: 사전 정리 + T03–T07 + MVP 재빌드·staging)
-## Current Task: M06-T05 ✅ → 다음 = M06-T06 차량 외형·키네마틱 동기
-- Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063), M06-T04(ADR-0064), M06-T05(ADR-0065).
+## Current Task: M06-T06 ✅ → 다음 = M06-T07 스크램블 쇼케이스
+- Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063), M06-T04(ADR-0064), M06-T05(ADR-0065), M06-T06(ADR-0066).
 - 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright chrome headed + `power()` = nvidia-smi 소비·상한 W), `bootblock.mjs`(long task·rAF 간격·첫 표시),
   `crowdview.mjs out base query pose shots`(freecam 포즈 → 3 s마다 캡처 + 워커 통계·전력), `navviz.ts`(빌드 nav.bin → 위에서 본 area 색 PNG), `copy-shared.mjs`(부분 빌드에 MVP shared 복사).
-- 로컬 부분 빌드 `m06-nav-test`(9셀 L0_-1..1, nav 포함, shared = `20261004-f0ae5ab-8de63322`에서 복사) = dev 서버 `?world=local` 최신. **MVP 전체 재빌드 미완**(신호·내비 포함 → T07 뒤 publish·staging).
+- 로컬 부분 빌드 `m06-t06-test`(9셀 L0_-1..1, nav + lanes(점 4 m), shared = `20261004-f0ae5ab-8de63322`에서 복사) = dev 서버 `?world=local` 최신. **MVP 전체 재빌드 미완**(신호·내비 포함 → T07 뒤 publish·staging).
 - 배포 상태(2026-10-04): staging = 459c0de(M06 사전 1–4) + dev 버킷 current `20261004-f0ae5ab-8de63322`. 옛 빌드 gc는 10/6 이후(7일 규칙).
-- Next step (정확히 한 걸음): M06-T06 — render `vehicles` 레이어(차종 7 절차 모델 LOD 3 + 바퀴 회전·등화 셰이더, `sim.outputs().traffic` SAB 바인딩) → physics 키네마틱 바디(플레이어 60 m 안 차량, sim → physics MessageChannel).
-  scratch: `crowdperf.mjs`(군중 켬/끔 GPU), `popwalk.mjs`(80 m 리뷰 캡처), `trafficprobe.mjs`(워커 교통 통계), `laneviz.ts`(lanes.bin 그림).
+- Next step (정확히 한 걸음): M06-T07 — 스크램블 핫스팟 밀도·대기 공간·보행 방향(대각 비율) 튜닝 + 골든뷰 `shibuya-scramble-noon` 갱신 + 실제 GPU 연속 캡처·리뷰 체크리스트(대기 군집·대각 비율·신호 전환 반응).
+  그 뒤 MVP 전체 재빌드(신호·nav·lanes 점 4 m) → dev publish → staging → 실제 GPU 확인.
+  scratch: `crowdperf.mjs`(군중 켬/끔 GPU), `vehperf.mjs`(교통 켬/`traffic=0` GPU), `walkbot.mjs min seed`(걷기 봇 — 차 관통·낙하·끼임), `carview.mjs out time`(차종별 근접 캡처), `attachstall.mjs`(늦은 적재 rAF 멈춤), `yprobe.mjs`(차 높이 − 지면), `laneviz.ts`.
 - 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창이 있으면 첫 표시가 3배 — preview 탭은 정적 페이지(`/third-party-notices.txt`). 전력 상한이 측정 중 22 ↔ 34 W로 오르내림(행마다 기록).
 - Blockers: 없음
 
 ## Recently Completed
+- M06-T06 Traffic visuals & kinematic sync — 가상 절차 차종 7종(render `vehicles/*`, LOD 35/110/520 m, 로고·번호판 없음, 클리어코트 도장·바퀴 회전·등화), core `VEHICLE_TYPES`·`KinematicFrame`,
+  physics `worker/kinematics.ts`(sim 직결 포트 → NPC_KINEMATIC 상자, 외삽 MoveKinematic). 실제 GPU에서 찾아 고침: TAA 모션 벡터(positionPrevious — 차량·군중), 횡단보도 위 정차(런타임 횡단 띠 앞 정지 —
+  world-mini 35 % → 0), 차 높이(차선 점 4 m — ±0.02 m), 차선 넘김 중심 튐. **수락**: 단위(실제 Jolt 최소 간격 0.136 m) + 걷기 봇 5분 × 2 관통 0·낙하 0·끼임 0 ✅.
+  물리 틱 ≤ 0.33 ms, sim p95 2.7–4.5 ms, GPU +1.3/−0.35 ms(거리)·+0.01 ms(상공). 나무·간판 TAA 모션 벡터는 별도 작업 칩. ADR-0066 (2026-10-05)
 - M06-T05 Traffic — 파이프라인 `derive/lanes*`·`build/lanes-cell.ts`: OSM 간선 → 좌측통행 차선·교차로 정지선·연결로(좌 = 연석·우 = 안쪽)·신호 코드·셀 포털 → `lanes.bin` v2.
   신호 코드 배치 변경(연동 오프셋 칸 6비트·ID 14비트), 주축 A = 등급 가중(간선), 기본 계획 A 67 s·B 43 s. sim.worker `traffic/*`(그래프 병합·IDM·회전·양보·스폰) + 차량 SAB, game 448 m nav+lanes.
   **수락**: world-mini 10분(40대) 교착 0 ✅·적신호 통과 0 ✅, 메이지도리 평균 속도 비율 **0.37 ⚠️**(목표 0.4–0.8, 신호 없으면 0.82 — 120 s 주기·회전·가장자리). 브라우저 9셀 정오 90대 + 보행자 950:
