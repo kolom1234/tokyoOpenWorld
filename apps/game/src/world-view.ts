@@ -244,7 +244,7 @@ async function showWorldWith(
   const s = await startStreaming(deps, render, traversal, world, late);
   const centerWF = deps.start?.centerWF ?? world.spawnWF;
   // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
-  await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true });
+  await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true, holdExclusiveUntil: pre });
   await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
   render.commitStaged();
   if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')

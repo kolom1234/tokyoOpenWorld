@@ -15,6 +15,11 @@ interface Waiter {
   resolve: () => void;
 }
 
+/** 대기자가 끝난 뒤에도 exclusive를 붙잡는 항목(holdExclusiveUntil). */
+interface Hold {
+  targets: CellKey[];
+}
+
 export interface Waiters {
   add(req: WhenReadyRequest): Promise<void>;
   /** 끝난 대기자 resolve. 대상 집합이 바뀌었으면 true(재계산 필요). */
@@ -41,22 +46,39 @@ export function targetsOf(index: CellIndex, req: WhenReadyRequest): CellKey[] {
 
 export function createWaiters(index: CellIndex): Waiters {
   let list: Waiter[] = [];
+  let holds: Hold[] = [];
+  let released = false;
   let pinned = new Set<CellKey>();
   let exclusive: Set<CellKey> | null = null;
   const rebuild = (): void => {
     pinned = new Set(list.flatMap((w) => w.targets));
-    const ex = list.filter((w) => w.exclusive);
+    const ex = [...list.filter((w) => w.exclusive), ...holds];
     exclusive = ex.length > 0 ? new Set(ex.flatMap((w) => w.targets)) : null;
   };
   return {
     add(req) {
       const targets = targetsOf(index, req);
+      if (req.exclusive && req.holdExclusiveUntil) {
+        const hold: Hold = { targets };
+        holds.push(hold);
+        const release = (): void => {
+          holds = holds.filter((h) => h !== hold);
+          released = true;
+          rebuild();
+        };
+        req.holdExclusiveUntil.then(release, release);
+      }
       return new Promise<void>((resolve) => {
         list.push({ targets, exclusive: req.exclusive === true, resolve });
         rebuild();
       });
     },
     settle(stateOf) {
+      if (released) {
+        released = false;
+        rebuild();
+        if (list.every((w) => !w.targets.every((k) => SETTLED.has(stateOf(k))))) return true;
+      }
       const before = list.length;
       list = list.filter((w) => {
         if (!w.targets.every((k) => SETTLED.has(stateOf(k)))) return true;
@@ -79,6 +101,7 @@ export function createWaiters(index: CellIndex): Waiters {
     flush() {
       for (const w of list) w.resolve();
       list = [];
+      holds = [];
       rebuild();
     },
   };

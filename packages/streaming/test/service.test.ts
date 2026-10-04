@@ -174,6 +174,36 @@ describe('createStreaming', () => {
     expect(r.delivered.length).toBeGreaterThan(deliveredAtDone.length + 4);
   });
 
+  it('holdExclusiveUntil keeps prefetch parked after the targets settle until the hold resolves', async () => {
+    const r = rig(FAST);
+    r.svc.setInterest([point('player', 10, 0, 10)]);
+    let release: () => void = () => undefined;
+    const hold = new Promise<void>((res) => {
+      release = res;
+    });
+    let done = false;
+    void r.svc
+      .whenReady({
+        centerWF: { x: 10, y: 0, z: 10 },
+        radius: 10,
+        levels: [0],
+        exclusive: true,
+        holdExclusiveUntil: hold,
+      })
+      .then(() => {
+        done = true;
+      });
+    while (!done) await r.run(1);
+    const fetchesAtDone = r.io.counters.fetches;
+    await r.run(120);
+    // 대상 4셀이 준비돼도 붙잡는 동안은 더 받지 않는다.
+    expect(r.io.counters.fetches).toBe(fetchesAtDone);
+    release();
+    await Promise.resolve();
+    await r.run(120);
+    expect(r.io.counters.fetches).toBeGreaterThan(fetchesAtDone + 4);
+  });
+
   it('cancels in-flight requests that leave the keep radius and never delivers them', async () => {
     const r = rig({ fetchMs: [400, 500], decodeMs: [5, 6] });
     r.svc.setInterest([point('player', 900, 0, 900)]);
