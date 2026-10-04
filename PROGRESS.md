@@ -1,5 +1,5 @@
 # PROGRESS
-Updated: 2026-10-04 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브랜치 `claude/m06-life`, draft PR)
+Updated: 2026-10-04 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브랜치 `claude/m06-life`, draft PR · 이어서 PR #18 CI 수정 records·e2e)
 
 ## Current Milestone: M06 — Life: Crowds & Traffic (사전 항목 1–5 → T01–T07)
 ## Current Task: M06-T02 ✅(da45783) → 다음 = M06-T03 군중 tier A(DetourCrowd)
@@ -12,6 +12,10 @@ Updated: 2026-10-04 (session #18 — 큐 모드 M06 Life: Crowds & Traffic, 브�
 - 로컬 부분 빌드 `m06-sig-test`(9셀 L0_-1..1 + shared 복사, 신호 코드 포함) = dev 서버 `?world=local` 최신. 신호 코드는 **MVP 재빌드 전엔 staging에 없음**(T03–T06 데이터 변경과 묶어 재빌드·publish).
 - Next step (정확히 한 걸음): M06-T03 — `docs/roadmap/M06.md` T03 블록 + Read 목록(10 §3 군중·내비메시) 읽고 recast-navigation 내비메시(파이프라인 `navmesh.bin`?) 범위·형식 결정.
 - 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창(앱 내 브라우저 패널이 게임 렌더 중 등)이 있으면 첫 표시가 3배(30 s) — preview 탭은 정적 페이지(`/third-party-notices.txt`)로 돌려 둘 것.
+- **PR #18 CI 수정(2026-10-04, 기능 변경 없음)**: records = `streaming/src/api.ts`(사전 4 `holdExclusiveUntil`)인데 `docs/modules/streaming.md` 미갱신 → 카드 갱신.
+  e2e = ① 선컴파일을 렌더 생성 직후로(사전 4) 옮겨 SwiftShader 2병렬에서 `data-world=loaded` 12.9 s, 스폰 셀 대기 그룹 붙인 뒤 첫 프레임 5–6 s → boot·render 스펙의 도달 대기를 기본 5 s → `STATE_TIMEOUT_MS`(단언 값 그대로).
+  ② render 스펙 픽셀 판정이 브라우저 decode·getImageData(CI headless shell에서 호출당 14–23 s, main에서도 첫 시도 180 s 초과 flaky) → Node PNG 디코드 `tests/e2e/png.ts`(zlib, Chromium 디코드와 SHA-256 일치).
+  군중 e2e는 커밋된 군중 팩(`apps/game/src/assets/characters`, ATTRIBUTION rocketbox)만 씀 — 로컬 산출물 의존 없음. 원점 재설정 스펙의 픽셀 차는 아직 브라우저 안(headless shell 1.2분, 한도 3분).
 - Blockers: 없음
 
 ## Recently Completed

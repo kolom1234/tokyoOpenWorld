@@ -1,5 +1,6 @@
 // 부트 스모크: `?world=mini`로 월드 픽스처를 로드해 부트 화면이 loaded 상태가 되는지, 격리·콘솔 오류 확인. see docs/14-testing-perf.md §1, docs/modules/game.md
 import { expect, test } from '@playwright/test';
+import { STATE_TIMEOUT_MS } from './game.ts';
 
 test('boots with world-mini (fixture) and loads the 4 cells around the Scramble spawn', async ({ page }) => {
   const errors: string[] = [];
@@ -9,7 +10,9 @@ test('boots with world-mini (fixture) and loads the 4 cells around the Scramble 
   });
   await page.goto('/?world=mini');
   const app = page.locator('#app');
-  await expect(app).toHaveAttribute('data-world', 'loaded');
+  // 상태 대기: world.json 조회 콜백은 렌더 생성 직후 시작한 선컴파일(대기 LUT·셰이더 — SwiftShader에선 메인 스레드 수 초, ADR-0060)과
+  // 같은 스레드라, 워커 2 병렬에서 'loaded'가 기본 5 s를 넘는다(로컬 2페이지 동시 12.9 s). 아래 단언은 loaded 뒤 같은 갱신에서 정해지는 값.
+  await expect(app).toHaveAttribute('data-world', 'loaded', { timeout: STATE_TIMEOUT_MS });
   await expect(app).toHaveAttribute('data-world-source', 'fixture');
   await expect(app).toHaveAttribute('data-world-cells', '4');
   await expect(app).toHaveAttribute('data-isolated', 'true');

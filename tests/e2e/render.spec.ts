@@ -3,8 +3,9 @@
 // 캡처는 안정(`data-settled` — 첫 품질 티어·스트리밍·HLOD 페이드) 뒤 게임 루프 직후 캔버스(game.ts). 스크린샷은 test-results/screenshots/. see docs/14-testing-perf.md §1
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
-import { captureCanvas, OVERLAY, waitSettled } from './game.ts';
+import { expect, test } from '@playwright/test';
+import { captureCanvas, OVERLAY, STATE_TIMEOUT_MS, waitSettled } from './game.ts';
+import { decodePng } from './png.ts';
 
 const SHOTS = join(import.meta.dirname, '../../test-results/screenshots');
 // SwiftShader 병렬(워커 2)에서 부트 → 안정까지 수십 초. 판정은 상태 대기, 이 값은 안전망.
@@ -22,33 +23,24 @@ interface PixelStats {
   sky: [number, number, number];
 }
 
-/** PNG를 브라우저에서 디코드해 영역(0–1 비율)의 하늘 아닌 픽셀 비율을 잰다(추가 의존성 없이). */
-async function nonSkyRatio(page: Page, png: Buffer, r: Region): Promise<PixelStats> {
-  return page.evaluate(
-    async ({ b64, r }) => {
-      const img = new Image();
-      img.src = `data:image/png;base64,${b64}`;
-      await img.decode();
-      const c = new OffscreenCanvas(img.width, img.height);
-      const ctx = c.getContext('2d');
-      if (ctx === null) throw new Error('2d context');
-      ctx.drawImage(img, 0, 0);
-      const { data } = ctx.getImageData(0, 0, img.width, img.height);
-      const sky: [number, number, number] = [data[0] ?? 0, data[1] ?? 0, data[2] ?? 0];
-      let hit = 0;
-      let n = 0;
-      for (let y = Math.floor(r.y0 * img.height); y < r.y1 * img.height; y++) {
-        for (let x = Math.floor(r.x0 * img.width); x < r.x1 * img.width; x++) {
-          const i = (y * img.width + x) * 4;
-          const d = Math.max(...[0, 1, 2].map((k) => Math.abs((data[i + k] ?? 0) - (sky[k] ?? 0))));
-          if (d > 24) hit++;
-          n++;
-        }
-      }
-      return { nonSky: hit / n, sky };
-    },
-    { b64: png.toString('base64'), r },
-  );
+/**
+ * 캡처 PNG를 Node에서 디코드해 영역(0–1 비율)의 하늘 아닌 픽셀 비율을 잰다(추가 의존성 없이 — png.ts).
+ * 브라우저 안 디코드·getImageData는 SwiftShader GPU 프로세스 큐 뒤에서 호출당 14–23 s라 CI에서 180 s를 넘겼다.
+ */
+function nonSkyRatio(png: Buffer, r: Region): PixelStats {
+  const { width, height, data } = decodePng(png);
+  const sky: [number, number, number] = [data[0] ?? 0, data[1] ?? 0, data[2] ?? 0];
+  let hit = 0;
+  let n = 0;
+  for (let y = Math.floor(r.y0 * height); y < r.y1 * height; y++) {
+    for (let x = Math.floor(r.x0 * width); x < r.x1 * width; x++) {
+      const i = (y * width + x) * 4;
+      const d = Math.max(...[0, 1, 2].map((k) => Math.abs((data[i + k] ?? 0) - (sky[k] ?? 0))));
+      if (d > 24) hit++;
+      n++;
+    }
+  }
+  return { nonSky: hit / n, sky };
 }
 
 test('start view renders Scramble Square and surrounding buildings (WebGL2 fallback)', async ({ page }) => {
@@ -63,20 +55,22 @@ test('start view renders Scramble Square and surrounding buildings (WebGL2 fallb
   await expect(app).toHaveAttribute('data-backend', 'webgl2', { timeout: 30_000 });
   await expect(app).toHaveAttribute('data-rendered-cells', '4', { timeout: 60_000 });
   const overlay = page.locator(OVERLAY);
-  await expect(overlay).toHaveAttribute('data-cells', '4');
+  // 오버레이는 게임 루프 안에서만(250 ms 간격) 갱신된다. 스폰 셀은 대기 그룹(그리지 않음 — 빠른 프레임)에서 적용된 뒤 붙여지고
+  // (M06 사전 4), 붙인 뒤 첫 프레임(SwiftShader 첫 그리기)이 수 초라 `data-rendered-cells`보다 늦게 따라온다 → 상태 대기.
+  await expect(overlay).toHaveAttribute('data-cells', '4', { timeout: STATE_TIMEOUT_MS });
   await expect(overlay).toHaveAttribute('data-depth', /^(reversed-z|logarithmic)$/);
   await waitSettled(page);
   test.info().annotations.push({ type: 'overlay', description: (await overlay.textContent()) ?? '' });
   const png = await captureCanvas(page);
   writeFileSync(join(SHOTS, 'start.png'), png);
   // 화면 중앙 세로 띠(타워가 서 있는 곳, 위 15–50%)는 대부분 건물이어야 한다.
-  const tower = await nonSkyRatio(page, png, { x0: 0.45, y0: 0.15, x1: 0.55, y1: 0.5 });
+  const tower = nonSkyRatio(png, { x0: 0.45, y0: 0.15, x1: 0.55, y1: 0.5 });
   expect(tower.nonSky).toBeGreaterThan(0.6);
   // 화면 아래 1/3은 대부분 건물·지면. world-mini는 512 m 사방뿐이라 수평선 근처에 월드 끝(하늘)이 일부 보인다.
-  const ground = await nonSkyRatio(page, png, { x0: 0, y0: 0.67, x1: 1, y1: 1 });
+  const ground = nonSkyRatio(png, { x0: 0, y0: 0.67, x1: 1, y1: 1 });
   expect(ground.nonSky).toBeGreaterThan(0.6);
   // 좌상단 모서리 띠는 하늘.
-  const sky = await nonSkyRatio(page, png, { x0: 0, y0: 0, x1: 0.2, y1: 0.1 });
+  const sky = nonSkyRatio(png, { x0: 0, y0: 0, x1: 0.2, y1: 0.1 });
   expect(sky.nonSky).toBeLessThan(0.05);
   expect(errors).toEqual([]);
 });
