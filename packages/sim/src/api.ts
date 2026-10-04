@@ -170,6 +170,11 @@ export interface SimService extends SystemProvider {
   removeCell(key: CellKey): void;
   /** 디버그·시험: 중심 radius 안 신호 횡단 대기점에 count명(건너편 목적지 — M06-T03 수락 장면). */
   crowdScenario(centerWF: Vec3d, radius: number, count: number): void;
+  /**
+   * sim → physics 키네마틱 직결(M06-T06, 08 §8 — ADR-0066): sim.worker (재)시작마다 MessageChannel을 열어 한쪽을 워커에, 반대쪽을 link에 준다
+   * (배선이 physics.connectKinematicSource로). 워커는 틱마다 플레이어 60 m 안 차량 KinematicFrame(core)을 보낸다. 시작 전이면 시작 때.
+   */
+  connectPhysics(link: (port: MessagePort) => void): void;
   /** 워커 틱 통계(시작 전 undefined). */
   workerStats(): SimWorkerStats | undefined;
   /** 신호 코드(props.inst 신호 기둥 — 교차로 ID × 16 + 계획 × 4 + 그룹)의 지금 상태(10 §5.2, M06-T02). 계획 없음 = 항상 적·보행 적. */

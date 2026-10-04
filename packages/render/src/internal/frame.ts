@@ -51,8 +51,9 @@ function syncProps(ctx: RenderContext, rebased: boolean): boolean {
   if (ctx.signalLamp) ctx.props.updateSignals(ctx.signalLamp);
   const signs = ctx.signs.update(scratchCam, o, rebased);
   const crowd = ctx.crowd.update(camera, o);
+  const vehicles = ctx.vehicles.update(camera, o);
   ctx.farCrowd.update(camera, o, performance.now() / 1000);
-  return ctx.trees.update(scratchCam, o, rebased) || props || signs || crowd;
+  return ctx.trees.update(scratchCam, o, rebased) || props || signs || crowd || vehicles;
 }
 
 export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw: GameSystem } {
@@ -96,6 +97,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
       ctx.trees.dispose();
       ctx.signs.dispose();
       ctx.crowd.dispose();
+      ctx.vehicles.dispose();
       ctx.avatar.dispose();
       ctx.quality.dispose();
       ctx.post.dispose();

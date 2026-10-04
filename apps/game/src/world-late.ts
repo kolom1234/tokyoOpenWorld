@@ -82,20 +82,23 @@ export const CROWD_URLS: CrowdAssetUrls = {
   texture: new URL('./assets/characters/crowd.ktx2', import.meta.url).href,
 };
 
-/** 군중(M06-T01 더미): 첫 표시 뒤 sim.worker 시작 → render.pedestrians 연결 → 군중 팩 적재(≈ 3.9 MB). 실패 = 군중 없이. */
 /** 군중 모드(`?crowd=`): agents(기본) | dummy | scramble(agents + 시험 장면) | off. */
 export type CrowdMode = 'agents' | 'dummy' | 'scramble' | 'off';
 
 /** 스크램블 시험 장면(M06-T03 수락): 신호 계획 첫 사이트(渋谷スクランブル) 반경 45 m 횡단 대기점에 250명. */
 const SCRAMBLE_SCENE = { radius: 45, count: 250 };
 
-/** 군중: 첫 표시 뒤 sim.worker 시작(agents = DetourCrowd tier A, dummy = 원형 걷기) → render.pedestrians 연결 → 군중 팩 적재(≈ 3.9 MB). 실패 = 군중 없이. */
+/**
+ * 군중: 첫 표시 뒤 sim.worker 시작(agents = DetourCrowd tier A, dummy = 원형 걷기) → render.pedestrians 연결 → 군중 팩 적재(≈ 3.9 MB). 실패 = 군중 없이.
+ * 교통(M06-T05·T06): 같은 워커 — 차량 SAB → render.vehicles, sim ↔ physics 직결 포트.
+ */
 export function startCrowdLater(
   v: { render: RenderService; sim: SimService; ground: GroundQuery; late: LateState },
   world: LoadedWorld,
-  mode: Exclude<CrowdMode, 'off'>,
+  o: { mode: Exclude<CrowdMode, 'off'>; traffic: boolean },
   log: Logger,
 ): void {
+  const mode = o.mode;
   const s = world.spawnWF;
   const centerWF = { x: s.x, y: v.ground.groundHeightAt(s.x, s.z) ?? s.y, z: s.z };
   const supervisor = v.late.supervisor;
@@ -106,11 +109,16 @@ export function startCrowdLater(
         crowd,
         centerWF,
         mode: mode === 'dummy' ? 'dummy' : 'agents',
-        traffic: TRAFFIC_PARAMS as unknown as TrafficParams,
+        ...(o.traffic ? { traffic: TRAFFIC_PARAMS as unknown as TrafficParams } : {}),
       })
     : undefined;
   if (!buf) return;
   v.render.pedestrians.bindShared(buf);
+  // 차량(M06-T06): 교통 SAB → render 차량 레이어, sim → physics 직결 포트(플레이어 60 m 안 키네마틱 바디).
+  const traffic = v.sim.outputs().traffic;
+  if (traffic) void v.render.vehicles.bindShared(traffic).catch((e: unknown) => log.warn('vehicles', e));
+  const physics = v.late.physics;
+  if (physics) v.sim.connectPhysics((port) => physics.connectKinematicSource(port));
   void v.render.loadCrowd(CROWD_URLS).catch((e: unknown) => log.warn('crowd', e));
   const c = SIGNAL_PLANS.sites[0]?.centerWF;
   if (mode === 'scramble' && c?.[0] !== undefined && c[1] !== undefined)

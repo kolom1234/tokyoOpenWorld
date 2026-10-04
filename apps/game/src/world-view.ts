@@ -93,6 +93,8 @@ export interface WorldViewDeps {
   trees?: boolean;
   /** 군중(M06-T03 기본 agents — DetourCrowd tier A, `?crowd=0` off, dummy = 더미 1,000명(M06-T01), scramble = agents + 스크램블 시험 250명). */
   crowd?: CrowdMode;
+  /** false = 차량 없음(`?traffic=0`, M06-T06 비용 비교). */
+  traffic?: boolean;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -213,7 +215,7 @@ async function showWorldWith(
   loadSignageLater(render, late, wlog);
   const crowd = deps.crowd ?? 'agents';
   if (crowd !== 'off') {
-    startCrowdLater(v, world, crowd, wlog);
+    startCrowdLater(v, world, { mode: crowd, traffic: deps.traffic !== false }, wlog);
     const far = crowdFarDensitySystem(v.sim, render);
     deps.scheduler.add({ systems: () => [far] });
   }

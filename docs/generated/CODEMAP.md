@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 399개.
+> 파일 404개.
 
 ## apps/game
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
@@ -50,7 +50,7 @@
 - `packages/audio/src/index.ts` — @sanpo/audio 공개 엔트리(L2): WebAudio 앰비언스·3D 사운드. api.ts 재수출 + create* 팩토리만. see docs/modules/audio.md | exports: * from './api.ts'
 
 ## packages/core
-- `packages/core/src/api.ts` — @sanpo/core 공개 계약(타입·인터페이스·상수). 구현은 internal/*, 재수출은 index.ts. see docs/modules/core.md | exports: EventMap, EventName, Vec3d, Vec3, Quat, Result, CellKey, CellLevel, CellId, Unsubscribe, EventBus, LogLevel, LogSink, Logger, LoggerOptions, CameraState, PlayerState, AvatarState, FrameContext, GameSystem, SystemProvider, FrameSource, Scheduler, SchedulerDeps, Rng, WORLD_SEED, DeepPartial, WorkerFactory, SupervisorOptions, WorkerErrorMessage, SupervisedWorkerState, SupervisedWorker, WorkerSupervisor, WorkerSupervisorDeps, ModeId, QualityTier, I18nKey, InterestPoint, WeatherParams, SeasonParams, EnvironmentState, SharedInstanceBuffer, GroundQuery, TrainInfo
+- `packages/core/src/api.ts` — @sanpo/core 공개 계약(타입·인터페이스·상수). 구현은 internal/*, 재수출은 index.ts. see docs/modules/core.md | exports: EventMap, EventName, Vec3d, Vec3, Quat, Result, CellKey, CellLevel, CellId, Unsubscribe, EventBus, LogLevel, LogSink, Logger, LoggerOptions, CameraState, PlayerState, AvatarState, FrameContext, GameSystem, SystemProvider, FrameSource, Scheduler, SchedulerDeps, Rng, WORLD_SEED, DeepPartial, WorkerFactory, SupervisorOptions, WorkerErrorMessage, SupervisedWorkerState, SupervisedWorker, WorkerSupervisor, WorkerSupervisorDeps, ModeId, QualityTier, I18nKey, InterestPoint, WeatherParams, SeasonParams, EnvironmentState, SharedInstanceBuffer, VehicleTypeInfo, VEHICLE_TYPES, KINEMATIC_STRIDE, KinematicFrame, GroundQuery, TrainInfo
 - `packages/core/src/events.ts` — 전역 이벤트 목록(EventMap) 단일 정의 파일. 이벤트 추가는 여기서만. see docs/01-architecture.md §6 | exports: EventMap, EventName
 - `packages/core/src/index.ts` — @sanpo/core 공개 엔트리(L0): 공통 타입·이벤트버스·로거·rng·설정. api.ts 재수출 + 팩토리/순수 함수. see docs/modules/core.md | exports: * from './api.ts', cellIdString, packCellKey, unpackCellKey, mergeConfig, createEventBus, hash32, createLogger, clamp, degToRad, lerp, quatCopy, quatFromAxisAngle, quatFromYaw, quatIdentity, quatMultiply, quatNormalize, quatSet, quatSlerp, radToDeg, vec3, vec3Add, vec3AddScaled, vec3ApplyQuat, vec3Copy, vec3Cross, vec3Distance, vec3DistanceSq, vec3Dot, vec3Length, vec3LengthSq, vec3Lerp, vec3Normalize, vec3Scale, vec3Set, vec3Sub, err, mapResult, ok, unwrapOr, createRng, createScheduler, MAX_DT_REAL_S, createWorkerSupervisor
 - `packages/core/src/internal/cell-key.ts` — 셀 키 pack/unpack/문자열화(53-bit 안전 정수). 레이아웃 변경 = 캐시·세이브 호환 파괴 → ADR 필요. see docs/01-architecture.md §8 | exports: packCellKey, unpackCellKey, cellIdString
@@ -101,6 +101,7 @@
 - `packages/physics/src/internal/worker/heightfield.ts` — 지형 높이장(08 §4, 05 §4 terrain.height): u16 257² → Jolt HeightFieldShape(1 m 간격, 블록 4). 샘플 [iz·size + ix] = 셀 로컬 (ix, h, iz), | exports: createHeightfieldShape, createMeshShape, warmUpShapes
 - `packages/physics/src/internal/worker/jolt-init.ts` — Jolt 초기화(08 §1, ADR-0041): single-thread wasm-compat 빌드(wasm 내장). multithread 빌드는 pthread 워커를 자기 파일로 띄우는데 | exports: Jolt, JoltBuildName, JoltLoaded, loadJolt
 - `packages/physics/src/internal/worker/jolt-mem.ts` — Jolt 메모리 규칙(08 §1): `new Jolt.X()` 설정 객체는 쓰고 나서 `Jolt.destroy()` 필수 → using()으로 강제. | exports: using, usingAll, Scratch, createScratch
+- `packages/physics/src/internal/worker/kinematics.ts` — 키네마틱 차량(08 §3·§8 직결, M06-T06 — ADR-0066): sim.worker 포트의 KinematicFrame(30 Hz, 플레이어 60 m 안 차량) → NPC_KINEMATIC 상자 바디. | exports: KIN_CLEARANCE_M, Kinematics, createKinematics
 - `packages/physics/src/internal/worker/layers.ts` — 오브젝트 레이어·브로드페이즈 레이어·충돌 행렬(08 §3). 표(COLLISION_PAIRS)는 순수 데이터 — Jolt 필터는 createLayerFilters가 만든다. | exports: OBJ, ObjectLayer, NUM_OBJECT_LAYERS, BP, NUM_BP_LAYERS, BROADPHASE_OF, COLLISION_PAIRS, collides, LayerFilters, createLayerFilters
 - `packages/physics/src/internal/worker/physics.worker.ts` — 물리 워커 엔트리(08 §1): 메시지 → 코어(순서 보장). 치명적 오류는 감독자 규약(`worker/error`, fatal) → 메인이 재시작.
 - `packages/physics/src/internal/worker/primitives.ts` — JCOL 프리미티브 셰이프(05 §6 kind 1–3: 박스·캡슐·원기둥) → Jolt 셰이프(참조 1개를 잡아 돌려줌 — 바디 생성 뒤 호출 측이 Release). | exports: PRIMITIVE_MS, createPrimitiveShape, createPrimitiveCompound
@@ -109,7 +110,7 @@
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, PrecompileProgress, RenderService, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, PrecompileProgress, RenderService, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, createRenderContext
@@ -178,6 +179,10 @@
 - `packages/render/src/internal/trees/materials.ts` — 나무 머티리얼(M05-T04, 07 §4 M_FOLIAGE·M_IMPOSTOR): 인스턴싱은 InstancedMesh 대신 InstancedBufferGeometry 속성 `_ipos`(x, y, z 렌더 좌표, yaw)· | exports: TreeUniforms, createTreeUniforms, createBarkMaterial, FoliageLighting, createLeafMaterial, ImpostorLayout, createImpostorMaterial
 - `packages/render/src/internal/trees/pools.ts` — 나무 풀(M05-T04): Mesh + InstancedBufferGeometry(InstancedMesh 아님 — three r186은 InstancedMesh마다 노드 빌드를 따로 해서, 같은 머티리얼·속성 배치의 | exports: TreePool, impostorQuad, makeTreePool, writeTreePool
 - `packages/render/src/internal/trees/season.ts` — 나무 계절 표(M05-T04, 07 §8): dayOfYear(JST) → 수종별 잎 색(선형 RGB)·잎 밀도(0 = 낙엽, 1 = 무성). | exports: SPECIES_SLOTS, BARK_COLORS, seasonTable
+- `packages/render/src/internal/vehicles/builder.ts` — 차량 절차 모델 조립기(M06-T06, 자체 제작 — ADR-0066): 육면체(사다리꼴 상자)·상자·바퀴(축 x 원기둥 + 휠 살) → BufferGeometry | exports: VPART, VPart, Corner, VehicleBuilder
+- `packages/render/src/internal/vehicles/field.ts` — 차량 필드(M06-T06, ADR-0066): sim 교통 SAB(stride 8: x,y,z·yaw·속력·바퀴 회전·variant·flags) → 프레임마다 외삽(30 Hz 틱 사이 — 속력·바퀴) → | exports: VEHICLE_POOL_CAPACITY, VehicleFieldStats, VehicleField, createVehicleField
+- `packages/render/src/internal/vehicles/material.ts` — 차량 머티리얼(07 §4 M_VEHICLE, M06-T06 — ADR-0066): 클리어코트 도장(인스턴스 색)·어두운 유리·고정 부품(정점색), 바퀴 = 축 둘레 회전(인스턴스 회전 수), | exports: VehicleUniforms, createVehicleUniforms, createVehicleMaterial, nightFromSun
+- `packages/render/src/internal/vehicles/models.ts` — 차량 절차 모델(M06-T06, 자체 제작 — 실존 차명·로고·엠블럼·번호판 없음, ADR-0066): core VEHICLE_TYPES 7종(치수 공유) × LOD 0–2. | exports: VehicleLod, VEHICLE_LOD_M, buildVehicleGeometry, vehicleColors
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06). | exports: EnvUniforms, createEnvUniforms, WetInput, WetOutput, applyWetness
 
 ## packages/sim
@@ -202,15 +207,15 @@
 - `packages/sim/src/internal/traffic/idm.ts` — IDM(Intelligent Driver Model, 10 §5.1, M06-T05): a = a·[1 − (v/v0)^δ − (s*/s)²], s* = s0 + vT + v·Δv / (2√(ab)). | exports: IdmParams, IDM_DEFAULT, idmAccel
 - `packages/sim/src/internal/traffic/lane-graph.ts` — 차선 그래프(10 §5.1, M06-T05 — ADR-0065): 셀 lanes.bin 청크 → 전역 차선(WF 점·누적 길이) + 노드(키로 셀 간 병합 — 교차로 안·셀 경계 포털). | exports: Lane, LanePoint, LaneGraph, createLaneGraph, isConnector
 - `packages/sim/src/internal/traffic/routing.ts` — 회전 선택(10 §5.1, M06-T05): 차선 끝에서 다음 차선 = 가중 무작위(직진 0.6·좌 0.25·우 0.15 — 있는 것끼리 정규화). 결정론 = 차량 난수. | exports: chooseNext
-- `packages/sim/src/internal/traffic/spawner.ts` — 차량 스폰(10 §5.1, M06-T05 — ADR-0065): 플레이어 spawnM(400 m) 안 도로 차선(연결로 아님)에서 — 처음엔 어디든 채우고, 평소엔 시야 밖 또는 farM(250 m) 밖, | exports: VEHICLE_TYPES, TrafficParams, NewVehicle, newVehicle, pickSpawn
+- `packages/sim/src/internal/traffic/spawner.ts` — 차량 스폰(10 §5.1, M06-T05 — ADR-0065): 플레이어 spawnM(400 m) 안 도로 차선(연결로 아님)에서 — 처음엔 어디든 채우고, 평소엔 시야 밖 또는 farM(250 m) 밖, | exports: TrafficParams, NewVehicle, newVehicle, pickSpawn
 - `packages/sim/src/internal/traffic/traffic-sim.ts` — 교통(10 §5.1, M06-T05 — ADR-0065): 차선 위 차량 = (차선, s, v). 틱마다 차선별 정렬 → 앞차 간격(다음 차선까지 이어 봄)·가상 정지(yielding) → IDM → 이동·차선 넘김 | exports: Vehicle, TrafficStats, TrafficSim, TrafficDeps, createTrafficSim
-- `packages/sim/src/internal/traffic/yielding.ts` — 양보·정지 규칙(10 §5.1·§5.2, M06-T05 — ADR-0065): 차 앞 "가상 정지 지점"까지 거리 — 적신호(황색은 편하게 설 수 있을 때만, 정지선 못 서게 가까우면 통과 약속), | exports: YieldVehicle, YieldCtx, virtualGap
+- `packages/sim/src/internal/traffic/yielding.ts` — 양보·정지 규칙(10 §5.1·§5.2, M06-T05 — ADR-0065): 차 앞 "가상 정지 지점"까지 거리 — 적신호(황색은 편하게 설 수 있을 때만, 정지선 못 서게 가까우면 통과 약속), | exports: CrossBand, YieldVehicle, YieldCtx, virtualGap
 - `packages/sim/src/internal/worker/crowd-runtime.ts` — sim.worker 군중 실행(M06-T03): Recast WASM 초기화 → 내비 월드(셀 nav.bin) + tier A 군중, 신호 램프 = 계획(게임 시각 순수 함수), 게임 시각 = 메인 동기값 + 경과 × 배속. | exports: ClockSync, CrowdRuntime, createCrowdRuntime
 - `packages/sim/src/internal/worker/host.ts` — sim.worker 호스트(10 §1, M06-T01·T03): 감독자로 워커를 띄우고 SAB 인스턴스 버퍼를 넘긴다. 재시작되면 같은 SAB·파라미터로 다시 init하고 | exports: PEDESTRIAN_CAPACITY, TRAFFIC_CAPACITY, CrowdWorkerStats, SimWorkerHost, startSimWorker
 - `packages/sim/src/internal/worker/instance-buffer.ts` — SAB 인스턴스 버퍼(10 §1, M06-T01): 머리 64 B(Int32 seq·count·front, Float64 anchor x·y·z·tick 절대 ms) + 이중 데이터 영역 × capacity × stride 8. | exports: STRIDE, instanceBytes, allocInstanceSab, InstanceReader, instanceReader, InstanceWriter, instanceWriter
 - `packages/sim/src/internal/worker/link.ts` — 메인 ↔ sim.worker 연결(M06-T03): 시작 전 셀 nav는 보관, 플레이어 상태는 30 Hz로, 시계는 배속·점프가 바뀌거나 예측과 50 ms 넘게 어긋날 때 동기. | exports: WorkerLink, forwardOf, createWorkerLink
 - `packages/sim/src/internal/worker/sim.worker.ts` — sim.worker(10 §1): 30 Hz 고정 틱 — 군중 → SAB 인스턴스 버퍼(instance-buffer.ts) 게시. 모드: dummy(M06-T01 원형 걷기) | agents(M06-T03 DetourCrowd tier A). | exports: TICK_HZ, SimWorkerMsg
-- `packages/sim/src/internal/worker/traffic-runtime.ts` — sim.worker 교통 실행(M06-T05): 셀 lanes.bin → 차선 그래프(셀 원점 = 키), 교통 시뮬, 보행자 근접 = 이번 틱 군중 출력(SAB 칸) 격자 + 도로 위 플레이어. | exports: TrafficRuntime, createTrafficRuntime
+- `packages/sim/src/internal/worker/traffic-runtime.ts` — sim.worker 교통 실행(M06-T05): 셀 lanes.bin → 차선 그래프(셀 원점 = 키), 교통 시뮬, 보행자 근접 = 이번 틱 군중 출력(SAB 칸) 격자 + 도로 위 플레이어. | exports: KINEMATIC_RADIUS_M, TrafficRuntime, kinematicRecords, createTrafficRuntime
 
 ## packages/streaming
 - `packages/streaming/src/api.ts` — @sanpo/streaming 공개 계약(타입·인터페이스). 설정(T01) + fetch·디코드 워커 풀(T02) + 서비스·수명주기(T03). | exports: InterestConfig, PriorityConfig, FetchConfig, DecodeConfig, LifecycleConfig, StreamingConfig, CellFetchErrorCode, CellFetchError, CellFetchResult, Fetcher, FetchLike, CacheStorageLike, CacheLike, CellFetcherDeps, DecodeRequest, DecodeErrorCode, DecodeError, DecodeResult, DecodePoolStats, DecodePool, DecodePoolDeps, CellState, ConsumerId, WhenReadyRequest, StreamingStats, StreamingService, StreamingDeps
@@ -364,7 +369,7 @@
 - `tools/pipeline/src/stages/derive/footprints.ts` — 건물 발자국 래스터(M05-T01 지형 성형 "건물 아래 평탄화", 04 §4.3): 지면(GroundSurface) 링 → 창 격자, 값 = 지면 링 최저점 | exports: FootprintSource, footprintSources, footprintGrid
 - `tools/pipeline/src/stages/derive/grid.ts` — derive 공용 1 m 격자 도구(M05-T01): 셀 로컬 정수 창, 반경 제한 최근접 탐색(정확 유클리드, 거리·(dz, dx) 순 — 결정론), | exports: LocalGrid, Offsets, discOffsets, nearestIn, distOf, maskedBoxMean, bilinear
 - `tools/pipeline/src/stages/derive/lanes.ts` — 차선 그래프 생성(M06-T05, 04 §4.3 "레인 그래프", ADR-0065): 영역(셀 + 8-이웃) OSM 간선 → 가장자리 방향별 차선 중심선(좌측통행 — 양방향 도로는 진행 방향 왼쪽 절반, | exports: LANE_W, LaneDraft, LaneSignals, buildLaneDrafts, cellLanes
-- `tools/pipeline/src/stages/derive/lanes/geometry.ts` — 차선 기하(M06-T05, ADR-0065): 꺾은선 왼쪽 오프셋(마이터, 길이 제한), 양 끝 자르기, 2차 베지어 연결로, 사각형 자르기(셀 포털). | exports: P2, len2, polyLength, offsetLeft, pointAt, trim, connector, clipRect
+- `tools/pipeline/src/stages/derive/lanes/geometry.ts` — 차선 기하(M06-T05, ADR-0065): 꺾은선 왼쪽 오프셋(마이터, 길이 제한), 양 끝 자르기, 2차 베지어 연결로, 사각형 자르기(셀 포털). | exports: P2, len2, polyLength, offsetLeft, densify, pointAt, trim, connector, clipRect
 - `tools/pipeline/src/stages/derive/lanes/graph.ts` — 차로 그래프(M06-T05, ADR-0065): OSM 간선 차도 선(trunk·primary·secondary·tertiary + _link — 고가·지하·고속도로 제외) → 공유 꼭짓점(1 cm 키)에서 나눈 가장자리 + 교차점. | exports: RoadProps, Edge, Junction, roadProps, buildGraph
 - `tools/pipeline/src/stages/derive/markings/common.ts` — 노면 표시 공용(M05-T02): 셀 로컬 2D 사각형·띠 → 지형 메시 위 데칼 삼각형(≤ 1 m 칸으로 잘라 지형을 따름, 높이 = 지형 + 2 cm). | exports: DECAL_LIFT_M, PAINT, DecalBuf, emptyDecals, TerrainAt, MarkCtx, V2, sub, add, mul, len, norm, leftOf, owns, stripe, triangle, polylineOf
 - `tools/pipeline/src/stages/derive/markings/corrections.ts` — OSM 횡단 선 보정(M06 사전 2): OSM 원본은 고치지 않고, content/markings/osm-crossing-corrections.json(출처 = GSI 항공사진 대조)의 | exports: CORRECTIONS_FILE, CrossingCorrection, CorrectionsFile, readCrossingCorrections, applyCrossingCorrections

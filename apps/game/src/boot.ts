@@ -84,6 +84,8 @@ export interface BootFlags {
   clockRun?: boolean;
   /** `?crowd=` agents(기본 — M06-T03 DetourCrowd) | dummy(M06-T01 원형 1,000명) | scramble(스크램블 시험 250명) | 0(끔). */
   crowd?: CrowdMode;
+  /** `?traffic=0` → 차량 없음(교통 sim·렌더·키네마틱 비용 비교, M06-T06). */
+  noTraffic?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -127,6 +129,7 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('mode') === 'freecam' ? { mode: 'freecam' as const } : {}),
     ...(q.get('trees') === '0' ? { noTrees: true } : {}),
     ...crowdFlag(q.get('crowd')),
+    ...(q.get('traffic') === '0' ? { noTraffic: true } : {}),
   };
 }
 
@@ -247,6 +250,7 @@ async function setupWorldView(
       ...(flags.mode ? { startMode: flags.mode } : {}),
       ...(flags.noTrees ? { trees: false } : {}),
       ...(flags.crowd ? { crowd: flags.crowd } : {}),
+      ...(flags.noTraffic ? { traffic: false } : {}),
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),

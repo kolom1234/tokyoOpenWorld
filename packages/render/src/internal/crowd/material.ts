@@ -1,6 +1,7 @@
 // 군중 머티리얼(07 §4 M_CHARACTER, M06-T01·ADR-0057): VAT 대신 **뼈 팔레트 텍스처 스키닝** — 정점 4영향 × (사원수 + 이동) 2텍셀 textureLoad,
 // 위치·법선 = Σ w·(q ⊗ v + t). 인스턴싱 = InstancedBufferGeometry 속성(나무와 같은 이유 — 노드 빌드 1번을 48풀이 공유):
-// `_ipos`(x, y, z 렌더 좌표, 모델 yaw), `_ianim`(행 시작, 프레임 수, 프레임 위치, 키 배율), `_ivar`(아틀라스 층, 밝기, 0, 0).
+// `_ipos`(x, y, z 렌더 좌표, 모델 yaw), `_ianim`(행 시작, 프레임 수, 프레임 위치, 키 배율), `_ivar`(아틀라스 층, 밝기, 지난 프레임 변위 x·z).
+// 모션 벡터(M06-T06): positionPrevious = 같은 자세를 변위만큼 되돌린 위치 — 없으면 three 속도 노드가 변환 전 정점을 써서 TAA 히스토리를 버린다(반짝임·계단).
 // 색 = 아틀라스 배열(몸·머리·머리털 사분면) × 밝기, 머리털 알파 테스트.
 import {
   attribute,
@@ -14,6 +15,7 @@ import {
   max,
   normalLocal,
   positionLocal,
+  positionPrevious,
   round,
   sin,
   texture,
@@ -66,7 +68,9 @@ export function createCrowdMaterial(a: CrowdAssets): MeshStandardNodeMaterial {
     const s = sin(ipos.w);
     const ps = sp.mul(ianim.w);
     normalLocal.assign(vec3(sn.x.mul(c).add(sn.z.mul(s)), sn.y, sn.z.mul(c).sub(sn.x.mul(s))));
-    return vec3(ps.x.mul(c).add(ps.z.mul(s)), ps.y, ps.z.mul(c).sub(ps.x.mul(s))).add(ipos.xyz);
+    const placed = vec3(ps.x.mul(c).add(ps.z.mul(s)), ps.y, ps.z.mul(c).sub(ps.x.mul(s))).add(ipos.xyz);
+    positionPrevious.assign(placed.sub(vec3(ivar.z, 0, ivar.w)));
+    return placed;
   })();
   const tex = texture(a.atlas, uv()).depth(int(ivar.x));
   material.colorNode = vec4(tex.rgb.mul(ivar.y), float(1));

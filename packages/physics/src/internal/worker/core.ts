@@ -1,6 +1,6 @@
 // 물리 워커 코어(08 §1·§9): init → Jolt 로드·월드·스냅샷 싱크, step → 명령 적용 + 고정 스텝(메인 시계 targetS까지, 최대 N, 초과 시간은 버림) → 스냅샷.
 // 워커 엔트리(physics.worker.ts)와 테스트(같은 스레드 전송)가 같이 쓴다.
-import type { Vec3d } from '@sanpo/core';
+import type { KinematicFrame, Vec3d } from '@sanpo/core';
 import type { FromWorker, ToWorker } from '../protocol.ts';
 import { type BodySlots, createBodySlots } from './bodies.ts';
 import { type CellColliders, createCellColliders } from './cell-colliders.ts';
@@ -8,6 +8,7 @@ import { type Characters, createCharacters } from './character.ts';
 import { createEscalators, type Escalators } from './escalators.ts';
 import { warmUpShapes } from './heightfield.ts';
 import { loadJolt } from './jolt-init.ts';
+import { createKinematics, type Kinematics } from './kinematics.ts';
 import { createQueries, type Queries } from './queries.ts';
 import { createPostSink, createSabSink, type SnapshotSink } from './snapshot-writer.ts';
 import { createWorld, type PhysicsWorld } from './world.ts';
@@ -24,6 +25,9 @@ interface State {
   escalators: Escalators;
   bodies: BodySlots;
   characters: Characters;
+  /** sim 직결 키네마틱 차량(M06-T06). */
+  kin: Kinematics;
+  kinPort: MessagePort | undefined;
   colliders: CellColliders;
   queries: Queries;
   cellBudgetMs: number;
@@ -51,6 +55,7 @@ function rebase(st: State, to: Readonly<Vec3d>): void {
   st.colliders.shift(dx, dy, dz);
   st.bodies.shift(dx, dy, dz);
   st.characters.shift(dx, dy, dz);
+  st.kin.shift(dx, dy, dz);
   st.escalators.shift(dx, dy, dz);
   Object.assign(st.anchor, to);
   st.world.system.OptimizeBroadPhase();
@@ -70,8 +75,10 @@ function step(st: State, targetS: number): void {
   const t0 = performance.now();
   pumpLoad(st);
   if (st.simT === null) st.simT = targetS - st.dt;
+  st.kin.sync();
   let n = 0;
   while (st.simT + st.dt <= targetS + 1e-9 && n < st.maxSteps) {
+    st.kin.beforeStep(st.dt);
     st.characters.update(st.dt);
     st.world.step(st.dt);
     st.simT += st.dt;
@@ -91,7 +98,18 @@ function step(st: State, targetS: number): void {
   frame[5] = st.colliders.cells;
   frame[6] = st.loadMs;
   frame[7] = st.loadOver;
+  frame[8] = st.kin.count;
+  frame[9] = st.kin.frames;
   st.sink.commit();
+}
+
+/** sim 직결 포트: 프레임은 받아 두기만(Jolt 변경은 step 안 — kinematics.sync). */
+function attachKinematicPort(st: State, port: MessagePort): void {
+  st.kinPort?.close();
+  st.kinPort = port;
+  const kin = st.kin;
+  port.onmessage = (e: MessageEvent) =>
+    kin.receive(e.data as KinematicFrame, performance.timeOrigin + performance.now());
 }
 
 async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<State> {
@@ -106,6 +124,8 @@ async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<
     anchor,
     escalators,
     characters,
+    kin: createKinematics(world, anchor),
+    kinPort: undefined,
     bodies: createBodySlots(world, anchor, characters),
     colliders: createCellColliders(
       world,
@@ -168,7 +188,10 @@ export function createPhysicsCore(send: Send): PhysicsCore {
       send({ t: 'rayHit', id: msg.id, hit: st.queries.raycast(msg.originWF, msg.dir, msg.maxDist) });
     else if (msg.t === 'sphere')
       send({ t: 'rayHit', id: msg.id, hit: st.queries.sphereCast(msg.originWF, msg.dir, msg.radius, msg.maxDist) });
+    else if (msg.t === 'kinematicPort') attachKinematicPort(st, msg.port);
     else if (msg.t === 'dispose') {
+      st.kinPort?.close();
+      st.kin.dispose();
       st.colliders.dispose();
       st.queries.dispose();
       st.bodies.dispose();

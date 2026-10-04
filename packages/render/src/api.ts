@@ -143,6 +143,16 @@ export interface RenderStats {
     /** 원경 스프라이트(M06-T04): 셀에서 뽑은 점 수·지금 그리는 수. */
     far: { points: number; drawn: number };
   };
+  /** 차량(M06-T06): sim 인스턴스 수·그린 수·쓰는 풀(드로우콜)·용량 초과·그림자 드리우는 수(LOD 0–1)·LOD별 수·준비. */
+  vehicles: {
+    instances: number;
+    visible: number;
+    pools: number;
+    dropped: number;
+    casters: number;
+    lods: number[];
+    ready: boolean;
+  };
 }
 
 /** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */
@@ -176,6 +186,14 @@ export interface InstanceLayer {
   bindShared(buf: SharedInstanceBuffer): void;
   /** 원경 스프라이트(tier C, 235–800 m — M06-T04) 밀도 0..1. 게임이 sim 군중 수 ÷ 목표로(시간대·날씨). 기본 0(안 보임). */
   setFarDensity(k: number): void;
+}
+
+/**
+ * 차량 레이어(M06-T06, ADR-0066): sim 교통 SAB(칸 = x,y,z·yaw·속력·바퀴 회전 수·variant(차종 3비트·색 5비트·씨앗 8비트)·flags(제동·좌·우 깜빡이)).
+ * 처음 bind 때 가상 차종 7종 절차 모델(LOD 3)·머티리얼을 만들어 선컴파일한 뒤 그리기 시작한다(완료 = resolve).
+ */
+export interface VehicleLayer {
+  bindShared(buf: SharedInstanceBuffer): Promise<void>;
 }
 
 /** 선컴파일 진행(M06): 단계·완료 수·총 수. */
@@ -245,6 +263,8 @@ export interface RenderService extends SystemProvider {
   setSignalLamps(lamp: ((code: number) => number) | null): void;
   /** 보행자 인스턴스 레이어(sim 출력). */
   readonly pedestrians: InstanceLayer;
+  /** 차량 인스턴스 레이어(sim 교통 출력, M06-T06). */
+  readonly vehicles: VehicleLayer;
   stats(): RenderStats;
   dispose(): void;
 }

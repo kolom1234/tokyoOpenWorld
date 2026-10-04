@@ -84,6 +84,9 @@ export interface PhysicsStats {
   rebases: number;
   /** 최근 틱(스텝 묶음) 워커 처리 시간 평균(ms). */
   tickMs: number;
+  /** sim 직결 키네마틱 차량 바디 수·받은 프레임 수(M06-T06). */
+  kinematicBodies: number;
+  kinematicFrames: number;
   anchorWF: Readonly<Vec3d>;
 }
 
@@ -125,6 +128,11 @@ export interface PhysicsService extends SystemProvider {
   setFocus(posWF: Vec3d): void;
   /** 보간 완료 포즈(아직 스냅샷이 없으면 undefined). */
   pose(h: BodyHandle): Readonly<Pose> | undefined;
+  /**
+   * sim 직결 키네마틱 원천(08 §8, M06-T06 — ADR-0066): sim이 연 MessagePort(KinematicFrame, core)를 워커로 넘긴다(소유권 이전).
+   * 워커가 플레이어 60 m 안 차량을 NPC_KINEMATIC 상자로 두고 스텝마다 외삽 목표로 MoveKinematic — 캐릭터가 관통하지 않고 밀린다. 다시 부르면 옛 포트를 닫는다.
+   */
+  connectKinematicSource(port: MessagePort): void;
   stats(): PhysicsStats;
   dispose(): void;
 }

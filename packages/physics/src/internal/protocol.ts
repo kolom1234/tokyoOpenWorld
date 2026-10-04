@@ -1,13 +1,13 @@
 // 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음.
-// 스냅샷 = 헤더 Int32[16] + 버퍼 2개 × (메타 f64[8] + 바디 f64[MAX_BODIES × 16]). 워커가 비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가(seqlock).
+// 스냅샷 = 헤더 Int32[16] + 버퍼 2개 × (메타 f64[10] + 바디 f64[MAX_BODIES × 16]). 워커가 비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가(seqlock).
 import type { CellKey, Vec3, Vec3d } from '@sanpo/core';
 import type { HeightfieldData } from '@sanpo/tile-format';
 
 export const MAX_BODIES = 128;
 /** posWF(3), quat(4), linVel(3), angVel(3), flags, groundMat, reserved. */
 export const BODY_STRIDE = 16;
-/** simTimeS, stepIndex, bodyCount(슬롯 상한), tickMs, 콜라이더 남은 작업, 콜라이더 셀 수, 적재 틱 최대 ms, 8 ms 초과 적재 틱 수. */
-export const META_STRIDE = 8;
+/** simTimeS, stepIndex, bodyCount(슬롯 상한), tickMs, 콜라이더 남은 작업, 콜라이더 셀 수, 적재 틱 최대 ms, 8 ms 초과 적재 틱 수, 키네마틱 바디 수, 받은 키네마틱 프레임 수. */
+export const META_STRIDE = 10;
 export const HEADER_INTS = 16;
 /** 헤더 인덱스. */
 export const H_WRITE_INDEX = 0;
@@ -77,6 +77,8 @@ export type ToWorker =
   | { t: 'sphere'; id: number; originWF: Vec3d; dir: Vec3; radius: number; maxDist: number }
   /** 메인 시계 targetS까지 고정 스텝(명령은 첫 스텝 전에 적용). */
   | { t: 'step'; targetS: number; cmds: Command[] }
+  /** sim 직결 포트(M06-T06): KinematicFrame(core) → 키네마틱 차량 바디. 새 포트면 옛 포트를 닫는다. */
+  | { t: 'kinematicPort'; port: MessagePort }
   | { t: 'dispose' };
 
 export type FromWorker =

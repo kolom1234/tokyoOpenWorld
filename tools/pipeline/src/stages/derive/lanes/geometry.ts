@@ -34,6 +34,21 @@ export function offsetLeft(pts: readonly P2[], off: number): P2[] {
   return out;
 }
 
+/** 선분이 maxSeg보다 길면 등분 점 추가(높이 표본 — 차가 지형 굴곡을 따르게, M06-T06). */
+export function densify(pts: readonly P2[], maxSeg: number): P2[] {
+  const out: P2[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i] as P2;
+    if (i > 0) {
+      const a = pts[i - 1] as P2;
+      const n = Math.ceil(len2(a, p) / maxSeg);
+      for (let k = 1; k < n; k++) out.push([a[0] + ((p[0] - a[0]) * k) / n, a[1] + ((p[1] - a[1]) * k) / n]);
+    }
+    out.push([p[0], p[1]]);
+  }
+  return out;
+}
+
 /** 꺾은선 거리 s의 점·접선. */
 export function pointAt(pts: readonly P2[], s: number): { p: P2; d: P2 } {
   let acc = 0;

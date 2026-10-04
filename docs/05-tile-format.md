@@ -126,7 +126,7 @@ u32 'LANE', u16 version=2, u16 pad
 u32 nodeCount; nodes: {u32 key, f32 x,y,z}                 // key = 글로벌 노드 해시(교차로 안 노드·셀 경계 포털 — 셀 간 같은 키 = 같은 노드)
 u32 laneCount; lanes: {u32 id, u32 fromNode, u32 toNode, u8 kind(0 road,1 connector,2 bus), u8 turn(0 straight,1 left,2 right),
                        u8 speedKmh, u8 laneIdx(0 = 연석 쪽), u32 signal(정지선 신호 코드 | 0xFFFFFFFF), u32 ptOffset, u16 ptCount, u16 widthCm}
-u32 pointCount; f32[pointCount*3]                           // 셀 로컬
+u32 pointCount; f32[pointCount*3]                           // 셀 로컬(M06-T06부터 점 간격 ≤ 4 m — y = 지면 표본)
 ```
 - 레코드 크기: node 16 B, lane 28 B. `fromNode/toNode` = 이 청크 **nodes 배열 인덱스**(ADR-0017). `ptOffset/ptCount` = 점(xyz 3 float) 단위 범위.
 - 신호 코드 = `((교차로 ID 14비트 × 64 + 연동 오프셋 칸) × 16) + 계획 × 4 + 그룹`(ADR-0065 — props.inst 신호 기둥·nav.bin 횡단과 같은 코드).

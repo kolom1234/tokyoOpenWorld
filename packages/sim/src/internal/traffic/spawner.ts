@@ -1,21 +1,10 @@
 // 차량 스폰(10 §5.1, M06-T05 — ADR-0065): 플레이어 spawnM(400 m) 안 도로 차선(연결로 아님)에서 — 처음엔 어디든 채우고, 평소엔 시야 밖 또는 farM(250 m) 밖,
-// 같은 차선 앞뒤 12 m 비었을 때. 차종(가상 디자인 7종 — 길이·비율)·색·원하는 속력 비율은 순번 난수. 목표 수 = maxVehicles × 시간대 곡선.
-import { createRng, hash32, type Rng, WORLD_SEED } from '@sanpo/core';
+// 같은 차선 앞뒤 12 m 비었을 때. 차종(가상 디자인 7종 — 치수·비율 = core VEHICLE_TYPES, M06-T06)·색·원하는 속력 비율은 순번 난수. 목표 수 = maxVehicles × 시간대 곡선.
+import { createRng, hash32, type Rng, VEHICLE_TYPES, type VehicleTypeInfo, WORLD_SEED } from '@sanpo/core';
 import { LANE_KIND } from '@sanpo/tile-format';
 import type { Lane, LaneGraph } from './lane-graph.ts';
 
 const KIND_CAR = 0x63617273; // 'cars'
-
-/** 차종(T06 렌더 모델 순서와 같음 — 추가만): 길이 m, 비율(누적 아님). */
-export const VEHICLE_TYPES = [
-  { name: 'sedan', len: 4.6, share: 0.26 },
-  { name: 'taxi', len: 4.7, share: 0.24 },
-  { name: 'kei', len: 3.4, share: 0.16 },
-  { name: 'keiTruck', len: 3.4, share: 0.08 },
-  { name: 'minivan', len: 4.7, share: 0.14 },
-  { name: 'deliveryTruck', len: 6.6, share: 0.08 },
-  { name: 'bus', len: 10.5, share: 0.04 },
-] as const;
 
 export type { TrafficParams } from '../../api.ts';
 
@@ -35,7 +24,7 @@ export function newVehicle(seq: number): NewVehicle {
   let r = rng.next();
   let type = 0;
   for (; type < VEHICLE_TYPES.length - 1; type++) {
-    r -= (VEHICLE_TYPES[type] as (typeof VEHICLE_TYPES)[number]).share;
+    r -= (VEHICLE_TYPES[type] as VehicleTypeInfo).share;
     if (r <= 0) break;
   }
   const color = Math.floor(rng.next() * 32);
@@ -44,7 +33,7 @@ export function newVehicle(seq: number): NewVehicle {
     seq,
     rng,
     type,
-    len: (VEHICLE_TYPES[type] as (typeof VEHICLE_TYPES)[number]).len,
+    len: (VEHICLE_TYPES[type] as VehicleTypeInfo).lengthM,
     variant: type | (color << 3) | (seed << 8),
     v0f: 0.85 + rng.next() * 0.25,
   };

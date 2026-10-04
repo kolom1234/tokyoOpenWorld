@@ -4,10 +4,12 @@
 import { hash32 } from '@sanpo/core';
 import { LANE_KIND, LANE_NO_SIGNAL, LANE_TURN, type LaneGraphChunk } from '@sanpo/tile-format';
 import type { OsmRecord } from '../normalize-osm.ts';
-import { clipRect, connector, offsetLeft, type P2, polyLength, trim } from './lanes/geometry.ts';
+import { clipRect, connector, densify, offsetLeft, type P2, polyLength, trim } from './lanes/geometry.ts';
 import { buildGraph, type Edge, type Junction } from './lanes/graph.ts';
 
 export const LANE_W = 3.0;
+/** 차선 점 최대 간격(m) — 높이 = 점마다 지면 표본(M06-T06: 30 m 직선 구간에서 차가 ±0.4–0.7 m 뜨고 묻혔다). */
+const HEIGHT_STEP_M = 4;
 const STRAIGHT_RAD = (35 * Math.PI) / 180;
 /** 이 길이보다 짧은 가장자리(분리 차로 사이 중앙 등)의 끝엔 신호를 두지 않는다 — 앞 교차점에서 이미 같은 신호를 지났다. */
 const MEDIAN_M = 8;
@@ -223,7 +225,7 @@ export function cellLanes(
   } as LaneCols;
   const points: number[] = [];
   for (const d of drafts)
-    for (const piece of clipRect(d.pts, ox, oz, ox + 256, oz + 256)) {
+    for (const piece of clipRect(densify(d.pts, HEIGHT_STEP_M), ox, oz, ox + 256, oz + 256)) {
       const a = piece.pts[0] as P2;
       const b = piece.pts[piece.pts.length - 1] as P2;
       L.id.push(hash32(d.id, Math.round(a[0] * 100), Math.round(a[1] * 100)));

@@ -246,6 +246,34 @@ export interface SharedInstanceBuffer {
   count(): number;
   seq(): number;
 }
+/** 가상 차종(M06-T06, ADR-0066 — 실존 차명·로고·번호판 없음): sim 스폰·render 모델·physics 상자가 공유. 순서 = 차량 variant 하위 3비트(추가만). */
+export interface VehicleTypeInfo {
+  name: string;
+  lengthM: number;
+  widthM: number;
+  heightM: number;
+  /** 스폰 비율(합 1). */
+  share: number;
+}
+export const VEHICLE_TYPES: readonly VehicleTypeInfo[] = [
+  { name: 'sedan', lengthM: 4.6, widthM: 1.76, heightM: 1.45, share: 0.26 },
+  { name: 'taxi', lengthM: 4.7, widthM: 1.7, heightM: 1.55, share: 0.24 },
+  { name: 'kei', lengthM: 3.4, widthM: 1.48, heightM: 1.66, share: 0.16 },
+  { name: 'keiTruck', lengthM: 3.4, widthM: 1.48, heightM: 1.78, share: 0.08 },
+  { name: 'minivan', lengthM: 4.7, widthM: 1.7, heightM: 1.86, share: 0.14 },
+  { name: 'deliveryTruck', lengthM: 6.6, widthM: 2.1, heightM: 3.0, share: 0.08 },
+  { name: 'bus', lengthM: 10.5, widthM: 2.5, heightM: 3.1, share: 0.04 },
+];
+/**
+ * sim → physics 키네마틱 프레임(M06-T06, 08 §8 직결 MessagePort, 30 Hz): 플레이어 60 m 안 차량. data = 레코드 KINEMATIC_STRIDE f64 —
+ * id, x, y, z(WF 차체 바닥 중심), yaw(전방 = (−sin, −cos)), 속력(m/s, 전방), 길이, 폭, 높이. atMs = 틱 절대 시각(timeOrigin + now).
+ */
+export const KINEMATIC_STRIDE = 9;
+export interface KinematicFrame {
+  t: 'kin';
+  atMs: number;
+  data: Float64Array;
+}
 export interface GroundQuery {
   /** WF x,z(m) → 지면 높이 y(m). 미적재 셀이면 undefined. */
   groundHeightAt(x: number, z: number): number | undefined;

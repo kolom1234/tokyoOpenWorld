@@ -1,5 +1,5 @@
 // createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3
-import type { CellKey } from '@sanpo/core';
+import type { CellKey, SharedInstanceBuffer } from '@sanpo/core';
 import { Group, type Object3D } from 'three/webgpu';
 import type { PrecompileProgress, RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
@@ -10,6 +10,7 @@ import { precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
 import { loadTreesInto, setTreeWind } from './trees/load.ts';
+import { createVehicleMaterial, nightFromSun } from './vehicles/material.ts';
 
 export { RENDER_PHASE, RENDER_PREP_PHASE } from './frame.ts';
 
@@ -36,6 +37,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     trees: ctx.trees.stats(),
     signs: ctx.signs.stats(),
     crowd: { ...ctx.crowd.stats(), far: ctx.farCrowd.stats() },
+    vehicles: ctx.vehicles.stats(),
   };
 }
 
@@ -107,6 +109,24 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
   );
 }
 
+/** 차량 레이어(M06-T06): 처음 bind 때 머티리얼·풀 → 선컴파일(보이지 않는 인스턴스) → 그리기 시작. */
+async function bindVehicles(ctx: RenderContext, buf: SharedInstanceBuffer): Promise<void> {
+  if (!ctx.vehicles.stats().ready) {
+    const t0 = performance.now();
+    const material = createVehicleMaterial(ctx.vehicleUniforms);
+    ctx.vehicleMaterials.push(material);
+    ctx.vehicles.attach(material);
+    const restore = ctx.vehicles.primeForCompile();
+    try {
+      await ctx.renderer.compileAsync(ctx.vehicles.root, ctx.view.camera, ctx.graph.scene);
+    } finally {
+      restore();
+    }
+    ctx.log.info(`vehicles attached ${Math.round(performance.now() - t0)} ms`);
+  }
+  ctx.vehicles.bind(buf);
+}
+
 function loaders(
   ctx: RenderContext,
 ): Pick<RenderService, 'precompile' | 'loadAvatar' | 'loadTrees' | 'loadSignage' | 'loadCrowd'> {
@@ -162,6 +182,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     depth: ctx.depth,
     ...staged.api,
     pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf), setFarDensity: (k) => ctx.farCrowd.setDensity(k) },
+    vehicles: { bindShared: (buf) => bindVehicles(ctx, buf) },
     setSignalLamps: (lamp) => {
       ctx.signalLamp = lamp;
     },
@@ -194,6 +215,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF);
       ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);
       ctx.treeUniforms?.setSeason(e.season.dayOfYear);
+      ctx.vehicleUniforms.night.value = nightFromSun(e.sunDirWF.y);
       setTreeWind(ctx, e.weather.windMs, e.weather.windDirDeg);
     },
     stats: () => statsOf(ctx),

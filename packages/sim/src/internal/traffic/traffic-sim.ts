@@ -9,7 +9,7 @@ import { IDM_DEFAULT, idmAccel } from './idm.ts';
 import type { Lane, LaneGraph, LanePoint } from './lane-graph.ts';
 import { chooseNext } from './routing.ts';
 import { newVehicle, pickSpawn, type TrafficParams } from './spawner.ts';
-import { virtualGap, type YieldCtx, type YieldVehicle } from './yielding.ts';
+import { type CrossBand, virtualGap, type YieldCtx, type YieldVehicle } from './yielding.ts';
 
 const KIND_SPAWN = 0x73706e76; // 'spnv'
 const WHEEL_R = 0.33;
@@ -28,6 +28,12 @@ export interface Vehicle extends YieldVehicle {
   wheel: number;
   /** 차선 위 위치에서 계산한 yaw(출력). */
   yaw: number;
+  /** 지나온 차선(최근 먼저, ≤ 4) — 차체 중심이 아직 거기 있을 수 있다(짧은 포털 조각·연결로 — 출력 연속, M06-T06). */
+  trail: Lane[];
+  /** 마지막 출력 차체 중심(WF, 바닥) — 물리 키네마틱 프레임(M06-T06). 아직 출력 전 = NaN. */
+  px: number;
+  py: number;
+  pz: number;
 }
 
 export interface TrafficStats {
@@ -56,6 +62,8 @@ export interface TrafficDeps {
   params: TrafficParams;
   lamp(code: number): 'G' | 'Y' | 'R';
   pedNear(x: number, z: number, r: number): boolean;
+  /** 횡단보도 띠(군중 내비 월드, M06-T06) — 횡단보도 위 정차 금지. 없으면 규칙 없음. */
+  crossingsNear?(x: number, z: number, r: number): readonly CrossBand[];
   /** 평균 속도 비율 집계 대상 차선(없으면 전부). */
   measure?: (l: Lane) => boolean;
   /** 시험·디버그: 적신호 통과 순간. */
@@ -116,6 +124,8 @@ function advance(c: Ctx, v: Vehicle): boolean {
     const n = v.next;
     if (!n) return false;
     v.s -= l.length;
+    v.trail.unshift(l);
+    if (v.trail.length > 4) v.trail.pop();
     v.lane = n;
     v.next = v.next2;
     v.next2 = v.next ? choose(c, v, v.next) : undefined;
@@ -178,6 +188,10 @@ function spawn(c: Ctx, target: number): void {
       stillS: 0,
       wheel: 0,
       yaw: 0,
+      trail: [],
+      px: Number.NaN,
+      py: Number.NaN,
+      pz: Number.NaN,
     };
     v.next = choose(c, v, cand.lane);
     v.next2 = v.next ? choose(c, v, v.next) : undefined;
@@ -194,6 +208,7 @@ function yieldCtx(c: Omit<Ctx, 'yc'>): YieldCtx {
     graph: c.graph,
     lamp: c.lamp,
     pedNear: c.pedNear,
+    ...(c.crossingsNear ? { crossingsNear: c.crossingsNear } : {}),
     occupiedNearStart: (lane, len) => {
       const first = (c.byLane.get(lane.idx) ?? [])[0];
       return first !== undefined && first.s - first.len < len;
@@ -216,16 +231,31 @@ function yieldCtx(c: Omit<Ctx, 'yc'>): YieldCtx {
   };
 }
 
+/** 차체 중심 = 앞 − 길이/2 — 새 차선 앞부분이면 지나온 차선을 거슬러(차선 넘김 때 중심이 앞으로 튀지 않게, M06-T06). */
+function centerOf(c: Ctx, v: Vehicle): LanePoint {
+  let back = v.s - v.len / 2;
+  if (back >= 0) return c.graph.pointAt(v.lane, back, scratch);
+  for (const l of v.trail) {
+    back += l.length;
+    if (back >= 0) return c.graph.pointAt(l, back, scratch);
+  }
+  const first = v.trail[v.trail.length - 1];
+  return first ? c.graph.pointAt(first, 0, scratch) : c.graph.pointAt(v.lane, 0, scratch);
+}
+
 function writeOut(c: Ctx, out: Float32Array, anchor: { x: number; y: number; z: number }): number {
   let n = 0;
   for (const v of c.list) {
     if ((n + 1) * STRIDE > out.length) break;
-    const p = c.graph.pointAt(v.lane, Math.max(0, v.s - v.len / 2), scratch);
+    const p = centerOf(c, v);
     v.yaw = Math.atan2(-p.dx, -p.dz);
     const turnSoon = v.lane.kind === 1 ? v.lane.turn : v.lane.length - v.s < 30 ? (v.next?.turn ?? 0) : 0;
     const flags =
       (v.a < -0.5 || v.v < 0.1 ? 1 : 0) | (turnSoon === LANE_TURN.left ? 2 : turnSoon === LANE_TURN.right ? 4 : 0);
     const o = n * STRIDE;
+    v.px = p.x;
+    v.py = p.y;
+    v.pz = p.z;
     out[o] = p.x - anchor.x;
     out[o + 1] = p.y - anchor.y;
     out[o + 2] = p.z - anchor.z;

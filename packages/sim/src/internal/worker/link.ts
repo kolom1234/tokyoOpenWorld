@@ -27,6 +27,8 @@ export interface WorkerLink {
   addCell(key: CellKey, nav?: ArrayBuffer, lanes?: ArrayBuffer): void;
   removeCell(key: CellKey): void;
   scenario(c: Vec3d, r: number, n: number): void;
+  /** 물리 직결(M06-T06): 워커 시작 전이면 기억했다가 시작 때. */
+  connectPhysics(link: (port: MessagePort) => void): void;
   /** 매 프레임(sim 시계 시스템): 플레이어·카메라 전방(스폰 시야 판정)·시계·밀도 배율 동기. */
   frame(player: Readonly<PlayerState>, camera: Readonly<CameraState>, densityScale: number): void;
   stats(): SimWorkerStats | undefined;
@@ -43,29 +45,35 @@ export function forwardOf(q: Readonly<{ x: number; y: number; z: number; w: numb
   };
 }
 
+function startHost(o: Parameters<WorkerLink['start']>[0], deps: SimDeps, clock: ClockSync): SimWorkerHost | undefined {
+  return startSimWorker({
+    supervisor: o.supervisor,
+    params: o.crowd,
+    centerWF: o.centerWF,
+    mode: o.mode ?? 'agents',
+    ...(deps.signalPlans ? { plans: deps.signalPlans } : {}),
+    clock,
+    ...(o.traffic ? { traffic: o.traffic } : {}),
+    log: deps.log.child('sim'),
+  });
+}
+
 export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
   let worker: SimWorkerHost | undefined;
   const early = new Map<CellKey, { nav?: ArrayBuffer | undefined; lanes?: ArrayBuffer | undefined }>();
   let lastPlayer = Number.NEGATIVE_INFINITY;
   let lastDensity = 1;
   let synced: ClockSync | undefined;
+  let physicsLink: ((port: MessagePort) => void) | undefined;
   const sync = (): ClockSync => ({ gameMs: clock.gameTimeMs, atAbs: absNow(), scale: clock.timeScale });
   return {
     start(o) {
       if (worker) return worker.pedestrians;
       synced = sync();
-      worker = startSimWorker({
-        supervisor: o.supervisor,
-        params: o.crowd,
-        centerWF: o.centerWF,
-        mode: o.mode ?? 'agents',
-        ...(deps.signalPlans ? { plans: deps.signalPlans } : {}),
-        clock: synced,
-        ...(o.traffic ? { traffic: o.traffic } : {}),
-        log: deps.log.child('sim'),
-      });
+      worker = startHost(o, deps, synced);
       if (worker) for (const [k, b] of early) worker.addCell(k, b.nav, b.lanes);
       early.clear();
+      if (worker && physicsLink) worker.connectPhysics(physicsLink);
       return worker?.pedestrians;
     },
     outputs: () => ({
@@ -82,6 +90,10 @@ export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
       worker?.removeCell(key);
     },
     scenario: (c, r, n) => worker?.scenario(c, r, n),
+    connectPhysics(link) {
+      physicsLink = link;
+      worker?.connectPhysics(link);
+    },
     frame(player, camera, densityScale) {
       if (!worker) return;
       const now = absNow();

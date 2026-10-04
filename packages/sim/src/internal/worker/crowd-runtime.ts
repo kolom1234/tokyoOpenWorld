@@ -1,7 +1,9 @@
 // sim.worker 군중 실행(M06-T03): Recast WASM 초기화 → 내비 월드(셀 nav.bin) + tier A 군중, 신호 램프 = 계획(게임 시각 순수 함수), 게임 시각 = 메인 동기값 + 경과 × 배속.
 // 초기화 전에 온 셀은 보류했다가 넣는다. 더미 모드(T01)는 sim.worker가 그대로.
+
 import { init } from '@recast-navigation/core';
 import type { Vec3, Vec3d } from '@sanpo/core';
+import type { NavCrossing } from '@sanpo/tile-format';
 import type { CrowdParams, SignalPlansFile } from '../../api.ts';
 import { type CrowdSim, type CrowdSimStats, createCrowdSim } from '../crowd/crowd-sim.ts';
 import { createNavWorld, type NavWorld } from '../crowd/nav-world.ts';
@@ -29,6 +31,8 @@ export interface CrowdRuntime {
   vehicleLamp(code: number): 'G' | 'Y' | 'R';
   /** 마지막 step의 게임 시각(ms). */
   gameMs(): number;
+  /** 반경 r 안 횡단보도(내비 월드 — 교통 횡단보도 정차 금지, M06-T06). 준비 전 빈 배열. */
+  crossingsNear(x: number, z: number, r: number): readonly NavCrossing[];
 }
 
 export function createCrowdRuntime(
@@ -83,6 +87,7 @@ export function createCrowdRuntime(
     },
     vehicleLamp: (code) => signalState(plans, code, nowGameS).vehicle,
     gameMs: () => nowGameS * 1000,
+    crossingsNear: (x, z, r) => nav?.crossingsNear(x, z, r) ?? [],
     stats() {
       if (!tier || !nav) return undefined;
       return { ...tier.stats(), ...nav.stats() };
