@@ -15,6 +15,7 @@ import { type DetailStats, emitFireEscape, emitRooftop, emptyDetailStats } from 
 import { type Bounds, emitShell, emptyBounds, growBounds, plateauExtent } from './shell.ts';
 import type { OverrideSet } from './spec.ts';
 
+export { LStream } from './geom.ts';
 export { type LandmarkSpec, LMAT, type OverrideSet, overrideSetOf, readOverrides } from './spec.ts';
 
 export const LANDMARK_MATERIAL = 'landmark';
@@ -62,16 +63,21 @@ function boundsDelta(a: Bounds, b: Bounds): { dxz: number; dy: number } {
   return { dxz, dy: Math.abs(a.max[1] - b.max[1]) };
 }
 
-/** 셀 1개의 랜드마크 메시·충돌·검사. groundAt = 지형(셀 로컬). */
-export async function overrideCell(
+export interface LandmarkEmit {
+  renderSkip: Set<string>;
+  landmarks: Set<string>;
+  checks: OverrideCheck[];
+}
+
+/** 셀 랜드마크(대체 셸 + 부품)만 out·collider에 — L0 overrides.mesh와 L1 HLOD(같은 모양, M07 사전 ⓪)가 함께 쓴다. groundAt = 지형(셀 로컬). */
+export function emitLandmarks(
   set: OverrideSet,
   records: readonly BuildingRecord[],
   originWF: Vec3Tuple,
   groundAt: (x: number, z: number) => number | undefined,
-  walk: WalkwayInput = {},
-): Promise<OverrideCellOutput> {
-  const out = new LStream();
-  const collider = new LStream();
+  out: LStream,
+  collider: LStream,
+): LandmarkEmit {
   const byGml = new Map(records.map((b) => [b.gmlId, b]));
   const ctx: PartCtx = { originWF, groundAt, building: (g) => byGml.get(g), out, collider };
   const renderSkip = new Set<string>();
@@ -101,6 +107,20 @@ export async function overrideCell(
       if (host) checks.push(attachedCheck(lm.id, host, out.pos, from, originWF, true));
     }
   }
+  return { renderSkip, landmarks, checks };
+}
+
+/** 셀 1개의 랜드마크 메시·충돌·검사. groundAt = 지형(셀 로컬). */
+export async function overrideCell(
+  set: OverrideSet,
+  records: readonly BuildingRecord[],
+  originWF: Vec3Tuple,
+  groundAt: (x: number, z: number) => number | undefined,
+  walk: WalkwayInput = {},
+): Promise<OverrideCellOutput> {
+  const out = new LStream();
+  const collider = new LStream();
+  const { renderSkip, landmarks, checks } = emitLandmarks(set, records, originWF, groundAt, out, collider);
   const details = emitDetails(out, records, renderSkip, originWF);
   const walkway = emitWalkways(out, walk, originWF);
   const bad = checks.filter((c) => c.dxz > POSITION_TOL_M || c.dy > HEIGHT_TOL_M);

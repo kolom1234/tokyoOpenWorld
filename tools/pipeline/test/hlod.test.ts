@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { convexHull, minAreaRect, polygonArea } from '../src/lib/geom2d.ts';
 import { decodeGlb } from '../src/lib/gltf.ts';
 import { decodePng } from '../src/lib/png.ts';
+import { overrideSetOf } from '../src/stages/build/overrides/index.ts';
 import { accumulateMasses, addFarBox, addMass } from '../src/stages/hlod/boxes.ts';
 import { CHILDREN, childKeys, emptyChildren, encodeHlod, MeshStream } from '../src/stages/hlod/child-split.ts';
 import { demPngHeight, type FarDem, farDemHeight } from '../src/stages/hlod/dem-far.ts';
@@ -247,6 +248,56 @@ describe('child split & levels', () => {
     expect(got.terrainChildren.size).toBe(16);
     const outChild = r.children[10]; // (ix 2, iz 2) → 700 m
     expect(outChild?.buildings.tris).toBe(10);
+  });
+
+  it('L1: landmarks use the L0 override shape instead of the replaced PLATEAU prism (M07 pre ⓪)', async () => {
+    // 체육관 상자(높이 17 m, measuredHeight 30) → 텐트(처마 6 m·능선 29·기둥 30.4). L1이 상자를 그리면 가까이 가서(L0) 모양이 바뀐다.
+    const L1 = packCellKey(1, 0, 0);
+    const gym = { ...boxBuilding('bldg_gym', 20, 30, 120, 60, 10, 17), lod: 1 as const, measuredHeightM: 30 };
+    const overrides = overrideSetOf([
+      {
+        id: 'gym',
+        order: 1,
+        name: { ja: 'g', en: 'g' },
+        replace: ['bldg_gym'],
+        shell: [{ gml: 'bldg_gym', skip: true, rules: [] }],
+        parts: [
+          {
+            type: 'tent',
+            gml: 'bldg_gym',
+            spine: [40, 60, 120, 60],
+            eave: 6,
+            ridge: 29,
+            sag: 4,
+            mast: 30.4,
+            mastD: 3,
+            mat: 'steel_dark',
+          },
+        ],
+        reference: [],
+      },
+    ]);
+    const base = {
+      l0Buildings: (k: CellKey) => (k === packCellKey(0, 0, 0) ? [gym] : []),
+      dem1m: { x0: -4, z0: -4, width: 1033, height: 1033, values: new Float32Array(1033 * 1033).fill(10) },
+      farDem: dem,
+      far: [],
+    };
+    const roofAt = (r: Awaited<ReturnType<typeof buildL1>>, x: number, z: number): number => {
+      const b = r.children[0]?.buildings;
+      let top = -Infinity;
+      for (let i = 0; b && i < b.pos.length; i += 3)
+        if (Math.abs((b.pos[i] as number) - x) < 6 && Math.abs((b.pos[i + 2] as number) - z) < 6)
+          top = Math.max(top, b.pos[i + 1] as number);
+      return top;
+    };
+    const plain = await buildL1(L1, base);
+    const withLm = await buildL1(L1, { ...base, overrides });
+    // 처마 근처(발자국 모서리 안쪽): 상자 = 지면 + 17 m, 텐트 = 처마 6 m 언저리.
+    expect(roofAt(plain, 24, 34)).toBeCloseTo(27, 0);
+    expect(roofAt(withLm, 24, 34)).toBeLessThan(10 + 12);
+    // 기둥 끝은 남는다(멀리서 실루엣 높이 그대로).
+    expect(Math.max(...(withLm.children[0]?.buildings.pos.filter((_, i) => i % 3 === 1) ?? []))).toBeCloseTo(40.4, 0);
   });
 
   it('simplify reduces a detailed roof mesh to ≈ 25% of its triangles', () => {

@@ -111,6 +111,8 @@ data/build/<buildId>/                        (build/hlod/validate)
 - 경계 이음새: 이웃 셀 지형 가장자리 높이 차 = 0 (정확 일치).
 - 정확도 샘플: 랜드마크 20곳 높이(measuredHeight vs 메시 bbox) 오차 ≤ max(2 m, 5%).
 - 라이선스: 모든 섹션의 `sources[]`가 lock에 존재.
+- 도로 간극(`road gaps`, M05-T01): 교차로 50곳 보도 가장자리·연석 vs 지형 < 2 cm.
+- 소품 차도(`props on road`, ADR-0068): L0 지상 소품이 PLATEAU 차도 폴리곤 위(보도 없는 길가 ≤ 1 m 예외)·보도 위 길가 기둥이 연석 < 0.3 m = 오류. MVP 전체 0건 유지.
 - 보고서: `data/build/<buildId>/report.html` (셀별 크기 히트맵, 경고 목록).
 
 ### 4.7 publish

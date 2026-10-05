@@ -41,6 +41,7 @@ src/lib/{zip,mesh-lookup}.ts      최소 ZIP 읽기(저장·deflate) / 삼각형
 src/stages/derive/{grid,roads,terrain-shape,edge-burn,curbs,sidewalks,footprints}.ts   M05-T01(ADR-0049): 1 m 창 도구(원반 오프셋 최근접·마스크 평균·쌍선형) / 도로 래스터(차도·보행·없음)·벡터 색인 / 지형 성형(차도 경사·보행 띠·비도로 섞기·건물 평탄화·RTIN 허용 오차) / 바깥 가장자리 새기기 / 연석·치마 변 분류(0.15·0.5·1.0 m 탐침) / 보도 윗면(earcut + 4 m 조각) / 건물 지면 발자국
 src/stages/build/roads-mesh.ts   roads.mesh(보도 윗면 + 연석 + 치마, u16 위치) + 보도 윗면 콜라이더, 바깥 가장자리 지형 맞춤
 src/stages/validate-roads.ts     `validate`의 `road gaps`(교차로 50곳 < 2 cm, 연석 아래 틈) — CLI가 오류로 올린다
+src/stages/validate-props.ts     `validate`의 `props on road`(ADR-0068): L0 지상 소품이 PLATEAU 차도 폴리곤 위(건물 발자국 제외, 보도 없는 길가 ≤ 1 m 허용)·보도 위 길가 기둥이 연석 < 0.3 m면 오류 — `derive/props/curb.ts`(settleSite·behindCurb)와 같은 판정
 src/stages/normalize-osm.ts      `normalize --layer osm`(M05-T02, ADR-0050): lock osm-kanto(sha256 스트림) → osmium extract·tags-filter·export GeoJSONSeq → WF → data/normalized/osm/<cell>.ndjson.gz(OsmRecord {id, geom, rings(xz), tags, source})
 src/stages/derive/markings/{common,crosswalk,lanes,stopline,text,index}.ts   노면 표시: 1 m 칸 데칼 띠(지형 + 2 cm, 셀 소유) / 일본식 횡단보도 / 차선(좌측통행·폭 행진) / 정지선(신호·stop) / 「止まれ」 획 폰트 / 조립·통계
 src/stages/build/decals-mesh.ts  decals.mesh(road_marking, u16 위치, `_PAINT`)
@@ -111,8 +112,9 @@ validateBuild(dir, schemasDir, lockIds): Promise<ValidateReport>;  writeReport(d
 ## HLOD (M02-T04, ADR-0024)
 ```ts
 extractTokyo23({ zipPath, sourceId, extent, derivedDir, log, workers? });  fetchDemTiles(rawDir, extent, log) → manifestSha;  resampleFarDem(rawDir, extent) → FarDem
-runHlod({ area, buildId, normalizedDir, derivedDir, outDir, levels, log }) → HlodCellStats[]   // L1(영역 부모)·L2/L3(hlodExtentWF) TKC + cells.idx 병합
-buildL1(key, { l0Buildings, dem1m, farDem, far }, ratio);  buildFarLevel(key, far, dem, params)  // → ChildGeometry[16] → encodeHlod
+runHlod({ area, buildId, normalizedDir, derivedDir, outDir, levels, log, overrides? }) → HlodCellStats[]   // L1(영역 부모)·L2/L3(hlodExtentWF) TKC + cells.idx 병합
+buildL1(key, { l0Buildings, dem1m, farDem, far, overrides? }, ratio);   // overrides = 랜드마크를 L0와 같은 셸·부품으로(대체 건물 대신, ADR-0068)
+  buildFarLevel(key, far, dem, params)  // → ChildGeometry[16] → encodeHlod
 ```
 - 실행: `docker/run.sh node tools/pipeline/src/cli.ts hlod-prep [--step buildings|dem] [--workers 14]` → `build` → `hlod --build-id <id>` → `validate`.
 - 예산: L1 3e6 B, L2/L3 2e6 B(10진). 초과 시 L1 비율 × 0.6ⁿ, L2/L3 박스 × 0.6ⁿ·매스 격자 × 2(≤ 4회).

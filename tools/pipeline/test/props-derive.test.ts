@@ -1,10 +1,11 @@
 // M05-T03 소품 배치: 전주(생활도로 한쪽 끝·선 id 시드로 셀 무관 정거장·전선 3가닥), 신호(보행·차량 좌측), 가드 파이프(횡단 틈),
-// 자판기(길가 변·바깥 정면), 맨홀(차도), 예산 절단, 결정론, props.inst 왕복.
+// 자판기(길가 변·바깥 정면), 맨홀(차도), 예산 절단, 결정론, props.inst 왕복, 차도 위 점 정착(M07 사전 ⓪ — 넓은 간선 한가운데·보도 없는 길·연석 뒤).
 import { fileURLToPath } from 'node:url';
 import { PROP_TYPE, parseProps, writeProps } from '@sanpo/tile-format';
 import { describe, expect, it } from 'vitest';
 import type { BuildingRecord, RoadRecord } from '../src/readers/plateau/types.ts';
 import { type PropCatalog, readCatalog } from '../src/stages/derive/props/context.ts';
+import { CURB_BACK_M, nearestSide, ROADSIDE_IN_M, siteTest, WALK_BACK_M } from '../src/stages/derive/props/curb.ts';
 import { buildProps, type PropInput } from '../src/stages/derive/props/index.ts';
 import { poleStations } from '../src/stages/derive/props/poles.ts';
 import { roadIndex } from '../src/stages/derive/roads.ts';
@@ -287,5 +288,56 @@ describe('signs (M05-T06)', () => {
     expect(r).toHaveLength(1);
     expect(r[0]?.[1]).toBeCloseTo(34, 5);
     expect(r[0]?.[4]).toBeCloseTo(1.4, 5);
+  });
+});
+
+describe('carriageway settling (M07 pre ⓪)', () => {
+  // 36 m 간선(z 100–136) + 양쪽 보도 4 m(z 96–100·136–140), 북쪽 보도 밖은 공지. 공중전화가 한가운데(보도까지 18 m — 옛 6 m 탐색 밖).
+  const roads = [
+    road('c', 'carriageway', -100, 100, 400, 136),
+    road('sN', 'sidewalk', -100, 96, 400, 100),
+    road('sS', 'sidewalk', -100, 136, 400, 140),
+  ];
+  const t = siteTest({ roads: roadIndex(roads), inBuilding: () => false });
+
+  it('moves points in the middle of a wide arterial onto the nearer sidewalk, behind the curb', () => {
+    const out = buildProps(input({ roads, osm: [osm('n1', 'point', [50, 117], { amenity: 'telephone' })] }));
+    const [p] = instancesOf(out, 'phoneBooth');
+    expect(p).toBeDefined();
+    expect(t.side(p?.[0] as number, p?.[2] as number)).toBe('walk');
+    expect(p?.[2] as number).toBeCloseTo(100 - WALK_BACK_M, 1);
+  });
+
+  it('moves points on a road without sidewalks to just inside the nearer edge', () => {
+    const lane = [road('n', 'carriageway', -100, 100, 400, 106)];
+    const out = buildProps(input({ roads: lane, osm: [osm('n2', 'point', [50, 102], { highway: 'stop' })] }));
+    const [p] = instancesOf(out, 'signStop');
+    expect(p?.[2] as number).toBeCloseTo(100 + ROADSIDE_IN_M, 1);
+  });
+
+  it('pushes kerb-side poles on the sidewalk back to ≥ CURB_BACK_M', () => {
+    const out = buildProps(input({ roads, osm: [osm('n3', 'point', [50, 99.95], { highway: 'street_lamp' })] }));
+    const [p] = instancesOf(out, 'streetLamp');
+    expect(nearestSide(t, [p?.[0] as number, p?.[2] as number], (s) => s === 'road', CURB_BACK_M, 0.05).d).toBe(-1);
+  });
+
+  it('leaves no ground prop of the arterial fixture on the carriageway', () => {
+    const line = osm('w', 'line', [-80, 118, 380, 118], { highway: 'primary', lanes: '6' });
+    const xing = osm('x', 'line', [100, 97, 100, 139], {
+      highway: 'footway',
+      footway: 'crossing',
+      crossing: 'traffic_signals',
+    });
+    const pts = [10, 60, 160, 260].map((x, i) =>
+      osm(`p${i}`, 'point', [x, 104 + i * 9], {
+        amenity: ['telephone', 'post_box', 'bench', 'waste_basket'][i] as string,
+      }),
+    );
+    const out = buildProps(input({ roads, osm: [line, xing, ...pts] }));
+    for (const b of out.batches) {
+      if (b.typeId === PROP_TYPE.manhole) continue;
+      for (let i = 0; i < b.transforms.length; i += 5)
+        expect(t.side(b.transforms[i] as number, b.transforms[i + 2] as number), `type ${b.typeId}`).not.toBe('road');
+    }
   });
 });

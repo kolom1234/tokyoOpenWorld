@@ -1,5 +1,6 @@
 // L1 HLOD(1024 m = L0 4×4): 영역 안 자식 = L0 정규화 건물(LOD2/3 면) 병합 → meshopt simplify 25% + dem_1m 4 m 지형,
-// 영역 밖 자식 = 23구 원경 박스 + 원경 DEM. 소품 없음, 나무 임포스터는 나무 레이어(M04) 이후. see docs/04-data-pipeline.md §4.5
+// 영역 밖 자식 = 23구 원경 박스 + 원경 DEM. 소품 없음, 나무 임포스터는 나무 레이어(M04) 이후. 랜드마크는 L0와 같은 셸·부품(대체 건물 대신).
+// see docs/04-data-pipeline.md §4.5
 import { type CellKey, unpackCellKey } from '@sanpo/core';
 import { cellBoundsWF } from '@sanpo/geo';
 import { MeshoptSimplifier } from 'meshoptimizer';
@@ -7,6 +8,7 @@ import { triangulateRings } from '../../lib/triangulate.ts';
 import type { BuildingRecord, SurfaceKind } from '../../readers/plateau/types.ts';
 import type { DemWindow } from '../build/dem-window.ts';
 import { facadeParams } from '../build/facade-params.ts';
+import { emitLandmarks, LStream, type OverrideSet } from '../build/overrides/index.ts';
 import { addFarBox } from './boxes.ts';
 import {
   addTerrainPatch,
@@ -35,6 +37,8 @@ export interface L1Sources {
   farDem: FarDem;
   /** L1 셀과 겹치는 원경 건물(영역 밖 자식용). */
   far: readonly FarBuilding[];
+  /** 랜드마크 — 대체 건물 대신 L0와 같은 셸·부품(멀리서 상자 → 가까이서 텐트로 바뀌던 것, M07 사전 ⓪). */
+  overrides?: OverrideSet;
 }
 
 function demHeight(d: DemWindow): HeightFn {
@@ -138,6 +142,30 @@ export function addSimplifiedBuildings(
   return [w.idx.length / 3, out.length / 3];
 }
 
+/** 자식 L0 셀의 랜드마크(셸 + 부품, 셀 로컬) — L0 overrides.mesh와 같은 함수. */
+function landmarksOf(set: OverrideSet, recs: readonly BuildingRecord[], child: CellKey, dem: DemWindow) {
+  const { ix, iz } = unpackCellKey(child);
+  const [cox, coz] = [ix * 256, iz * 256];
+  const h = demHeight(dem);
+  const stream = new LStream();
+  const { renderSkip } = emitLandmarks(set, recs, [cox, 0, coz], (x, z) => h(x + cox, z + coz), stream, new LStream());
+  return { stream, skip: renderSkip, ox: cox, oz: coz };
+}
+
+/** 랜드마크 삼각형 → HLOD 건물 스트림(평면 법선, 공공 건물 파사드 — 원경 단색). 반환 = 삼각형 수. */
+function addLandmarkTris(s: MeshStream, lm: LStream, dx: number, dz: number): number {
+  const f = facadeParams({ id: 'landmark', usage: '421', heightM: 20, floors: 0 });
+  const facade = [f[0], 0, f[2], 0];
+  const at = (v: number): [number, number, number] => [
+    (lm.pos[v * 3] as number) + dx,
+    lm.pos[v * 3 + 1] as number,
+    (lm.pos[v * 3 + 2] as number) + dz,
+  ];
+  for (let i = 0; i < lm.idx.length; i += 3)
+    flatTri(s, [at(lm.idx[i] as number), at(lm.idx[i + 1] as number), at(lm.idx[i + 2] as number)], facade);
+  return lm.idx.length / 3;
+}
+
 /** 원경 건물 중 셀(중심점) 안의 것. */
 export function farIn(far: readonly FarBuilding[], key: CellKey): FarBuilding[] {
   const b = cellBoundsWF(key);
@@ -166,7 +194,10 @@ export async function buildL1(key: CellKey, src: L1Sources, ratio: number = L1_P
     const h = inside && src.dem1m ? demHeight(src.dem1m) : farH;
     addTerrainPatch(g.terrain, h, patchOf(key, child, L1_PARAMS.terrainError, L1_PARAMS.skirt));
     if (inside && recs) {
-      const [a, b] = addSimplifiedBuildings(g.buildings, recs, ox, oz, ratio, L1_PARAMS.errorM);
+      const lm = src.overrides && src.dem1m ? landmarksOf(src.overrides, recs, child, src.dem1m) : undefined;
+      const kept = lm ? recs.filter((r) => !lm.skip.has(r.gmlId)) : recs;
+      const [a, b] = addSimplifiedBuildings(g.buildings, kept, ox, oz, ratio, L1_PARAMS.errorM);
+      if (lm) res.tris += addLandmarkTris(g.buildings, lm.stream, lm.ox - ox, lm.oz - oz);
       res.srcTris += a;
       res.tris += b;
       res.inside++;

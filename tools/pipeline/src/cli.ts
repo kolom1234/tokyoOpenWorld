@@ -15,6 +15,7 @@ import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
 import { readOverrides } from './stages/build/overrides/index.ts';
 import { readCrossingCorrections } from './stages/derive/markings/corrections.ts';
 import { readCatalog } from './stages/derive/props/context.ts';
+import { CURB_BACK_M } from './stages/derive/props/curb.ts';
 import { buildPlateauMini, buildWorldMini, type LockSource } from './stages/fixture.ts';
 import { fetchDemTiles, resampleFarDem, writeFarDem } from './stages/hlod/dem-far.ts';
 import { runHlod } from './stages/hlod/run.ts';
@@ -25,6 +26,7 @@ import { hasDemSources, normalizeTerrain, writeTerrainMeta } from './stages/norm
 import { buildFiles, gcBuilds, publishBuild, verifyViaWorker } from './stages/publish/publish.ts';
 import { createClients, type PublishEnv, readTargets } from './stages/publish/targets.ts';
 import { reportMarkdown, validateBuild, writeReport } from './stages/validate.ts';
+import { checkPropsOnRoad } from './stages/validate-props.ts';
 import { checkRoadGaps, GAP_LIMIT_M } from './stages/validate-roads.ts';
 
 const run = promisify(execFile);
@@ -174,6 +176,13 @@ async function validate(args: string[]): Promise<void> {
     report.errors.push(
       `roads: ${gaps.over} edge samples ≥ ${GAP_LIMIT_M} m, ${gaps.curbUncovered} curb samples uncovered`,
     );
+  // M07 사전 ⓪: 지상 소품이 차도 폴리곤 위(보도 없는 길가 제외)·보도 위 길가 기둥이 연석에 붙음 = 오류.
+  const { samples, ...props } = await checkPropsOnRoad(dir, join(REPO_ROOT, 'data/normalized'));
+  log.info(`props on road ${JSON.stringify(props)}`);
+  if (props.onRoad > 0 || props.curbTight > 0)
+    report.errors.push(
+      `props: ${props.onRoad} on carriageway, ${props.curbTight} curb poles < ${CURB_BACK_M} m — ${JSON.stringify(samples.slice(0, 5))}`,
+    );
   writeReport(dir, report);
   process.stdout.write(reportMarkdown(report));
   if (report.errors.length > 0) {
@@ -245,6 +254,7 @@ async function hlod(args: string[]): Promise<void> {
     outDir: join(REPO_ROOT, 'data/build', buildId),
     levels,
     log: log.child('hlod'),
+    overrides: readOverrides(REPO_ROOT),
   });
   for (const lv of [1, 2, 3]) {
     const s = stats.filter((c) => c.id.startsWith(`L${lv}_`));
