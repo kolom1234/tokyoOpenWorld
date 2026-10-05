@@ -28,6 +28,7 @@ import { SHAPE_PAD, type ShapedGround, shapeGround } from '../derive/terrain-sha
 import { paintVegetation } from '../derive/vegetation.ts';
 import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
 import { aroundReader, readLayer } from './area-reader.ts';
+import { crop, mergeStreams, outward, union, withOverrideCollider, yRange } from './assemble-util.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
 import { type CellBuildStats, cellStats } from './cell-stats.ts';
 import { buildCollision } from './collision.ts';
@@ -43,7 +44,9 @@ import {
   readDemWindow,
 } from './dem-window.ts';
 import { encodeTerrainHeight } from './heightfield.ts';
+import { type LanesCellStats, lanesCell } from './lanes-cell.ts';
 import { type AreaDef, worldJson } from './manifest.ts';
+import { type NavCellOutput, navCell } from './nav-cell.ts';
 import { LANDMARK_MATERIAL, type OverrideCellOutput, type OverrideSet, overrideCell } from './overrides/index.ts';
 import { type PropCellOutput, propsCell } from './props-cell.ts';
 import { buildRoads } from './roads-mesh.ts';
@@ -68,6 +71,8 @@ export interface CellBuildInput {
   cellRoads?: readonly RoadRecord[];
   /** 이 셀 OSM 레코드(노면 표시, M05-T02). 없으면 decals.mesh 없음. */
   osm?: readonly OsmRecord[];
+  /** 셀 + 8-이웃 신호 점·신호 횡단 선(차선 정지선 신호 — M06-T05). 없으면 lanes.bin 없음. */
+  signalsAround?: readonly OsmRecord[];
   /** 셀 + 8-이웃 OSM 차도 선(신호 그룹 도로 방향 — M06-T02). 없으면 osm 중 차도. */
   vehicleRoadsAround?: readonly OsmRecord[];
   /** PLATEAU 道路標示(셀 + 8-이웃)·OSM 횡단 보정(M06 사전 2, ADR-0058). */
@@ -87,54 +92,6 @@ export interface CellBuildInput {
   groundAround?: (x: number, z: number) => number | undefined;
 }
 
-function mergeStreams(
-  a: { pos: ArrayLike<number>; idx: ArrayLike<number> },
-  b: { pos: readonly number[]; idx: readonly number[] },
-): { pos: Float32Array; idx: Uint32Array } {
-  const base = a.pos.length / 3;
-  return {
-    pos: Float32Array.from([...Array.from(a.pos), ...b.pos]),
-    idx: Uint32Array.from([...Array.from(a.idx), ...b.idx.map((k) => k + base)]),
-  };
-}
-
-/** 랜드마크 부품 충돌 삼각형을 건물 충돌 스트림 뒤에 붙인다(같이 단순화·청크). */
-function withOverrideCollider(
-  c: { pos: Float32Array; idx: Uint32Array },
-  ov: OverrideCellOutput | null,
-): { pos: Float32Array; idx: Uint32Array } {
-  if (!ov || ov.collider.idx.length === 0) return c;
-  const base = c.pos.length / 3;
-  return {
-    pos: Float32Array.from([...c.pos, ...ov.collider.pos]),
-    idx: Uint32Array.from([...c.idx, ...ov.collider.idx.map((k) => k + base)]),
-  };
-}
-
-/** mm 단위로 바깥쪽 반올림(헤더 JSON 숫자 안정화). */
-function outward(b: Aabb): Aabb {
-  const lo = (v: number): number => Math.floor(v * 1000) / 1000;
-  const hi = (v: number): number => Math.ceil(v * 1000) / 1000;
-  return { min: b.min.map(lo) as Vec3Tuple, max: b.max.map(hi) as Vec3Tuple };
-}
-
-function union(a: Aabb, b: Aabb | null): Aabb {
-  if (!b) return a;
-  const pick = (f: (x: number, y: number) => number, x: Vec3Tuple, y: Vec3Tuple): Vec3Tuple =>
-    [0, 1, 2].map((k) => f(x[k] as number, y[k] as number)) as Vec3Tuple;
-  return { min: pick(Math.min, a.min, b.min), max: pick(Math.max, a.max, b.max) };
-}
-
-function yRange(positions: Float32Array): [number, number] {
-  let lo = Number.POSITIVE_INFINITY;
-  let hi = Number.NEGATIVE_INFINITY;
-  for (let i = 1; i < positions.length; i += 3) {
-    lo = Math.min(lo, positions[i] as number);
-    hi = Math.max(hi, positions[i] as number);
-  }
-  return [lo, hi];
-}
-
 async function encodeMeta(meta: CellMeta): Promise<Uint8Array> {
   const ordered: CellMeta = {
     buildings: meta.buildings,
@@ -144,16 +101,6 @@ async function encodeMeta(meta: CellMeta): Promise<Uint8Array> {
     interactables: meta.interactables,
   };
   return gzip(new TextEncoder().encode(JSON.stringify(ordered)));
-}
-
-/** 넓은 창 배열 → 여유 margin 창(257 + 2·margin)². */
-function crop<T extends Uint8Array | Float32Array>(w: CellWindow, arr: T, margin: number): T {
-  const stride = w.size + 2 * margin;
-  const off = w.margin - margin;
-  const out = new (arr.constructor as new (n: number) => T)(stride * stride);
-  for (let r = 0; r < stride; r++)
-    out.set(arr.subarray((r + off) * w.stride + off, (r + off) * w.stride + off + stride), r * stride);
-  return out;
 }
 
 /** 성형(M05-T01): 넓은 창 → 성형 높이(여유 1 창)·`_SURF`·RTIN 허용 오차(257²). */
@@ -229,6 +176,8 @@ export interface CellParts {
   col: Awaited<ReturnType<typeof buildCollision>>;
   props: PropCellOutput | null;
   ov: OverrideCellOutput | null;
+  nav: NavCellOutput | null;
+  lanes: { bytes: Uint8Array | null; stats: LanesCellStats } | null;
 }
 
 async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSectionInput[]> {
@@ -250,6 +199,8 @@ async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSec
   const propSources = [...new Set([OSM_SOURCE, TERRAIN_SOURCE, ...roadSources(own), ...bld.sources])].sort();
   if (props?.inst) sections.push({ type: 'props.inst', sources: propSources, data: props.inst });
   if (props?.trees) sections.push({ type: 'trees.inst', sources: propSources, data: props.trees });
+  if (p.nav?.bytes) sections.push({ type: 'nav.bin', sources: propSources, data: p.nav.bytes });
+  if (p.lanes?.bytes) sections.push({ type: 'lanes.bin', sources: [OSM_SOURCE, TERRAIN_SOURCE], data: p.lanes.bytes });
   if (col.data) {
     const colSources = [
       ...new Set([
@@ -261,6 +212,31 @@ async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSec
     sections.push({ type: 'collision.bin', sources: colSources, data: col.data });
   }
   return sections;
+}
+
+/** 내비(M06-T03): OSM이 있는 셀만(픽스처 스냅샷 등은 없음). */
+function navOf(
+  input: CellBuildInput,
+  originWF: Vec3Tuple,
+  sc: ReturnType<typeof shapeCell>,
+  props: PropCellOutput | null,
+  bands: Parameters<typeof navCell>[0]['bands'],
+): Promise<NavCellOutput> {
+  const { ix, iz } = unpackCellKey(input.key);
+  return navCell({
+    ix,
+    iz,
+    ox: originWF[0],
+    oz: originWF[2],
+    roads: input.roads,
+    footprints: input.footprintsAround ?? footprintSources(input.buildings),
+    osm: input.osm ?? [],
+    ...(input.vehicleRoadsAround ? { vehicleRoadsAround: input.vehicleRoadsAround } : {}),
+    shaped: sc.shaped,
+    bands,
+    colliders: props?.colliders ?? [],
+    ...(input.props?.signalSites ? { signalSites: input.props.signalSites } : {}),
+  });
 }
 
 /** 셀 1개 → TKC 바이트 + 통계. 같은 입력 → 같은 바이트. */
@@ -281,7 +257,20 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   const bc = withOverrideCollider(bld.collision, ov);
   const ground = ov ? mergeStreams(roads.collider, ov.walkCollider) : roads.collider;
   const col = await buildCollision(bc.pos, bc.idx, ground, [...(props?.colliders ?? []), ...(ov?.walkShapes ?? [])]);
-  const parts: CellParts = { sc, terrain, bld, roads, own, decals, col, props, ov };
+  const nav = input.osm ? await navOf(input, originWF, sc, props, marks?.bands ?? []) : null;
+  const lanes =
+    input.vehicleRoadsAround && input.signalsAround
+      ? await lanesCell({
+          ox: originWF[0],
+          oz: originWF[2],
+          roads: input.roads,
+          vehicleRoadsAround: input.vehicleRoadsAround,
+          signalsAround: input.signalsAround,
+          shaped: sc.shaped,
+          ...(input.props?.signalSites ? { signalSites: input.props.signalSites } : {}),
+        })
+      : null;
+  const parts: CellParts = { sc, terrain, bld, roads, own, decals, col, props, ov, nav, lanes };
   const [y0, y1] = yRange(terrain.positions);
   const cellBox: Aabb = { min: [0, y0, 0], max: [CELL_SIZE_M, y1, CELL_SIZE_M] };
   const local = outward(union(union(cellBox, bld.aabbLocal), ov?.aabbLocal ?? null));
@@ -366,6 +355,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       cellRoads: files.roadsOf(key),
       osm: readLayer<OsmRecord>(input.normalizedDir, 'osm', key),
       vehicleRoadsAround: files.vehicleRoadsAround(key),
+      signalsAround: files.signalsAround(key),
       markings: { plateau: files.markingsAround(key), corrections: input.crossingCorrections ?? [] },
       ...(input.props ? { props: input.props } : {}),
       ...(input.overrides
@@ -387,7 +377,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     index.push({ level: 0, ix, iz, flags, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });
     stats.push(s);
     log.info(
-      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), decals ${s.decalTris} tris ${JSON.stringify(s.markings)}, props ${JSON.stringify(s.props)}, trees ${JSON.stringify(s.trees)}, overrides ${JSON.stringify(s.overrides)}, collider ${s.colliderTris} tris / ${s.colliderShapes}`,
+      `${s.id}: ${s.bytes} B, terrain ${s.terrainVertices} v, buildings ${s.buildings} (${s.buildingVertices} v), roads ${s.roadsTris} tris (curb ${s.curbM} m, edge ${s.walkEdgeM} m), decals ${s.decalTris} tris ${JSON.stringify(s.markings)}, props ${JSON.stringify(s.props)}, trees ${JSON.stringify(s.trees)}, overrides ${JSON.stringify(s.overrides)}, collider ${s.colliderTris} tris / ${s.colliderShapes}, nav ${JSON.stringify(s.nav)}, lanes ${JSON.stringify(s.lanes)}`,
     );
   }
   writeFileSync(join(outDir, 'cells.idx'), writeCellsIndex(index));

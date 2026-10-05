@@ -1,31 +1,57 @@
-// sim.worker(10 §1, M06-T01): 30 Hz 고정 틱 — 군중(지금은 더미 원형 걷기) → SAB 인스턴스 버퍼(instance-buffer.ts) 게시.
-// 메시지: init {sab, capacity, params, center} · center {x,y,z} · stop. 이후 태스크(T02–T05)가 신호·내비메시·교통을 여기에 붙인다.
-import type { Vec3d } from '@sanpo/core';
+// sim.worker(10 §1): 30 Hz 고정 틱 — 군중 → SAB 인스턴스 버퍼(instance-buffer.ts) 게시. 모드: dummy(M06-T01 원형 걷기) | agents(M06-T03 DetourCrowd tier A).
+// 메시지: init {sab, capacity, params, center, mode, plans?, clock, traffic?} · center · player {pos, vel, fwd?} · clock · density {scale} · cell-add {key, nav?, lanes?} · cell-remove {key} · scenario · stop.
+// 교통(M06-T05): 군중 다음 같은 틱 — 군중 출력 칸을 보행자 격자로 넘겨 차량 양보, 출력 = 두 번째 SAB.
+// physics-port(M06-T06): 물리 워커 직결 포트 — 틱마다 플레이어 60 m 안 차량 KinematicFrame(빈 프레임은 직전이 비지 않았을 때만 — 바디 정리).
+import type { KinematicFrame, Vec3, Vec3d } from '@sanpo/core';
+import type { SignalPlansFile, TrafficParams } from '../../api.ts';
 import { type CrowdParams, createDummyAgents, type DummyAgent, stepDummy } from '../crowd/dummy.ts';
+import { type ClockSync, type CrowdRuntime, createCrowdRuntime } from './crowd-runtime.ts';
 import { type InstanceWriter, instanceWriter } from './instance-buffer.ts';
+import { createTrafficRuntime, type TrafficRuntime } from './traffic-runtime.ts';
 
 export const TICK_HZ = 30;
 
-type Msg =
-  | { t: 'init'; sab: SharedArrayBuffer; capacity: number; params: CrowdParams; center: Vec3d }
+export type SimWorkerMsg =
+  | {
+      t: 'init';
+      sab: SharedArrayBuffer;
+      capacity: number;
+      params: CrowdParams;
+      center: Vec3d;
+      mode: 'dummy' | 'agents';
+      plans?: SignalPlansFile;
+      clock: ClockSync;
+      /** 교통 출력 SAB(M06-T05). 없으면 교통 없음. */
+      traffic?: { sab: SharedArrayBuffer; capacity: number; params: TrafficParams };
+    }
   | { t: 'center'; center: Vec3d }
+  | { t: 'player'; pos: Vec3d; vel: Vec3; fwd?: Vec3 }
+  | { t: 'density'; scale: number }
+  | { t: 'clock'; clock: ClockSync }
+  | { t: 'cell-add'; key: number; nav?: ArrayBuffer; lanes?: ArrayBuffer }
+  | { t: 'cell-remove'; key: number }
+  | { t: 'scenario'; center: Vec3d; radius: number; count: number }
+  | { t: 'physics-port'; port: MessagePort }
   | { t: 'stop' };
 
 interface State {
   writer: InstanceWriter;
   params: CrowdParams;
-  agents: DummyAgent[];
+  dummy: DummyAgent[] | undefined;
+  crowd: CrowdRuntime | undefined;
+  traffic: { rt: TrafficRuntime; writer: InstanceWriter } | undefined;
   center: Vec3d;
   anchor: Vec3d;
   last: number;
   timer: ReturnType<typeof setInterval> | undefined;
   tickMs: number;
+  physics: { port: MessagePort; sent: number } | undefined;
 }
 
 /** 워커 전역(tsconfig lib = DOM — WebWorker 타입 없음, physics.worker와 같은 방식). */
 interface WorkerScope {
   postMessage(msg: unknown): void;
-  onmessage: ((e: MessageEvent<Msg>) => void) | null;
+  onmessage: ((e: MessageEvent<SimWorkerMsg>) => void) | null;
 }
 const scope = self as unknown as WorkerScope;
 
@@ -44,32 +70,92 @@ function tick(): void {
   const now = nowAbs();
   const dt = Math.min(Math.max((now - st.last) / 1000, 0), 0.1);
   st.last = now;
-  const n = stepDummy(st.agents, st.params, dt, st.center, st.anchor, st.writer.back());
+  const back = st.writer.back();
+  const n = st.crowd
+    ? st.crowd.step(dt, now, back, st.anchor)
+    : stepDummy(st.dummy ?? [], st.params, dt, st.center, st.anchor, back);
   st.writer.publish(n, st.anchor, now);
+  const tr = st.traffic;
+  if (tr && st.crowd) {
+    tr.rt.setPedestrians(back, n, st.anchor);
+    const m = tr.rt.step(dt, st.crowd.gameMs(), tr.writer.back(), st.anchor);
+    tr.writer.publish(m, st.anchor, now);
+    sendKinematics(st, tr.rt, now);
+  }
   st.tickMs = performance.now() - t0;
-  scope.postMessage({ t: 'tick', ms: st.tickMs, count: n });
+  scope.postMessage({ t: 'tick', ms: st.tickMs, count: n, crowd: st.crowd?.stats(), traffic: tr?.rt.stats() });
+}
+
+/** 물리 직결 포트로 차량 키네마틱 프레임(버퍼 이전). */
+function sendKinematics(s: State, rt: TrafficRuntime, now: number): void {
+  const ph = s.physics;
+  if (!ph) return;
+  const data = rt.kinematics();
+  if (data.length === 0 && ph.sent === 0) return;
+  ph.sent = data.length;
+  const frame: KinematicFrame = { t: 'kin', atMs: now, data };
+  ph.port.postMessage(frame, [data.buffer]);
+}
+
+function start(m: Extract<SimWorkerMsg, { t: 'init' }>): void {
+  if (st?.timer) clearInterval(st.timer);
+  const agents = m.mode === 'agents';
+  const crowd = agents ? createCrowdRuntime(m.params, m.plans, m.clock) : undefined;
+  const t = m.traffic;
+  st = {
+    writer: instanceWriter(m.sab, m.capacity),
+    params: m.params,
+    dummy: agents ? undefined : createDummyAgents(m.params),
+    crowd,
+    traffic:
+      crowd && t
+        ? {
+            rt: createTrafficRuntime(
+              t.params,
+              (code) => crowd.vehicleLamp(code),
+              (x, z, r) => crowd.crossingsNear(x, z, r),
+            ),
+            writer: instanceWriter(t.sab, t.capacity),
+          }
+        : undefined,
+    center: { ...m.center },
+    anchor: anchorOf(m.center),
+    last: nowAbs(),
+    timer: undefined,
+    tickMs: 0,
+    physics: st?.physics,
+  };
+  st.timer = setInterval(tick, 1000 / TICK_HZ);
 }
 
 scope.onmessage = (e) => {
   const m = e.data;
-  if (m.t === 'init') {
-    if (st?.timer) clearInterval(st.timer);
-    st = {
-      writer: instanceWriter(m.sab, m.capacity),
-      params: m.params,
-      agents: createDummyAgents(m.params),
-      center: { ...m.center },
-      anchor: anchorOf(m.center),
-      last: nowAbs(),
-      timer: undefined,
-      tickMs: 0,
-    };
-    st.timer = setInterval(tick, 1000 / TICK_HZ);
-  } else if (m.t === 'center' && st) {
-    st.center = { ...m.center };
-    st.anchor = anchorOf(m.center);
-  } else if (m.t === 'stop' && st) {
+  if (m.t === 'init') return start(m);
+  if (m.t === 'physics-port') {
+    st?.physics?.port.close();
+    if (st) st.physics = { port: m.port, sent: 1 };
+    return;
+  }
+  if (!st) return;
+  if (m.t === 'center' || m.t === 'player') {
+    st.center = { ...(m.t === 'center' ? m.center : m.pos) };
+    st.anchor = anchorOf(st.center);
+    if (m.t === 'player') {
+      st.crowd?.setPlayer(m.pos, m.vel, m.fwd);
+      st.traffic?.rt.setPlayer(m.pos, m.fwd);
+    }
+  } else if (m.t === 'clock') st.crowd?.setClock(m.clock);
+  else if (m.t === 'density') st.crowd?.setDensityScale(m.scale);
+  else if (m.t === 'cell-add') {
+    if (m.nav) st.crowd?.addCell(m.key, m.nav);
+    if (m.lanes) st.traffic?.rt.addCell(m.key, m.lanes);
+  } else if (m.t === 'cell-remove') {
+    st.crowd?.removeCell(m.key);
+    st.traffic?.rt.removeCell(m.key);
+  } else if (m.t === 'scenario') st.crowd?.scenario(m.center, m.radius, m.count);
+  else if (m.t === 'stop') {
     if (st.timer) clearInterval(st.timer);
+    st.physics?.port.close();
     st = undefined;
   }
 };

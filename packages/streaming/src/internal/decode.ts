@@ -77,10 +77,6 @@ async function decodeSection(tkc: TkcReader, type: SectionType, out: CellPayload
     out.meshes[slot] = m.value;
     return ok(undefined);
   }
-  if (type === 'nav.bin') {
-    out.nav = ownBuffer(bytes);
-    return ok(undefined);
-  }
   const raw = await gunzipped(bytes, type);
   if (!raw.ok) return raw;
   if (type === 'terrain.height') {
@@ -89,6 +85,8 @@ async function decodeSection(tkc: TkcReader, type: SectionType, out: CellPayload
     out.heightfield = hf.value;
   } else if (type === 'collision.bin') out.collision = ownBuffer(raw.value);
   else if (type === 'lanes.bin') out.lanes = ownBuffer(raw.value);
+  // nav.bin(M06-T03): gzip 해제 바이트 그대로(Detour 타일은 sim 워커가 파싱·addTile).
+  else if (type === 'nav.bin') out.nav = ownBuffer(raw.value);
   else if (type === 'props.inst') {
     const props = parseProps(raw.value);
     if (!props.ok) return fail(props.error.code, `${type}: ${props.error.message}`);

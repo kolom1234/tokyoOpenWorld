@@ -4,6 +4,7 @@ import { type Logger, mergeConfig, type QualityTier } from '@sanpo/core';
 import type { Material, WebGPURenderer } from 'three/webgpu';
 import type { DepthMode, PostEffects, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
+import { createFarCrowd, type FarCrowd } from './crowd/far.ts';
 import { type CrowdField, createCrowdField } from './crowd/field.ts';
 import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
 import { attachEnvProbe, type EnvProbe } from './lighting/env-probe.ts';
@@ -27,6 +28,8 @@ import { createSceneGraph, type SceneGraph } from './scene/scene-graph.ts';
 import { createSignField, type SignField } from './signs/field.ts';
 import { createTreeField, type TreeField } from './trees/field.ts';
 import type { TreeUniforms } from './trees/materials.ts';
+import { createVehicleField, type VehicleField } from './vehicles/field.ts';
+import { createVehicleUniforms, type VehicleUniforms } from './vehicles/material.ts';
 import { createEnvUniforms, type EnvUniforms } from './weather/wetness.ts';
 
 export interface RenderContext {
@@ -49,8 +52,14 @@ export interface RenderContext {
   /** 나무(vegetation 루트, M05-T04) — 에셋은 loadTrees 뒤. 머티리얼은 적재 때 채운다(그림자 티어 재컴파일 대상). */
   readonly trees: TreeField;
   readonly crowd: CrowdField;
+  /** 원경 군중 스프라이트(tier C, M06-T04). */
+  readonly farCrowd: FarCrowd;
   /** 군중 머티리얼(적재 뒤 — 그림자 티어 재컴파일 대상). */
   readonly crowdMaterials: Material[];
+  /** 차량(M06-T06): 풀·밤 유니폼·머티리얼(bind 때 — 그림자 티어 재컴파일 대상). */
+  readonly vehicles: VehicleField;
+  readonly vehicleUniforms: VehicleUniforms;
+  readonly vehicleMaterials: Material[];
   readonly treeMaterials: Material[];
   treeUniforms?: TreeUniforms;
   /** 가상 간판(prop 루트, M05-T06) — 에셋은 loadSignage 뒤. */
@@ -121,6 +130,9 @@ function attachActors(graph: SceneGraph): {
   trees: TreeField;
   signs: SignField;
   crowd: CrowdField;
+  farCrowd: FarCrowd;
+  vehicles: VehicleField;
+  vehicleUniforms: VehicleUniforms;
 } {
   const avatar = createAvatar();
   graph.roots.dynamic.add(avatar.group);
@@ -132,7 +144,11 @@ function attachActors(graph: SceneGraph): {
   graph.roots.prop.add(signs.root);
   const crowd = createCrowdField();
   graph.roots.dynamic.add(crowd.root);
-  return { avatar, props, trees, signs, crowd };
+  const farCrowd = createFarCrowd();
+  graph.roots.dynamic.add(farCrowd.root);
+  const vehicles = createVehicleField();
+  graph.roots.dynamic.add(vehicles.root);
+  return { avatar, props, trees, signs, crowd, farCrowd, vehicles, vehicleUniforms: createVehicleUniforms() };
 }
 
 /** 적재 뒤 붙는 머티리얼(그림자 티어 재컴파일 대상). */
@@ -140,6 +156,7 @@ interface LateMaterials {
   treeMaterials: Material[];
   signMaterials: Material[];
   crowdMaterials: Material[];
+  vehicleMaterials: Material[];
 }
 
 function casterMaterials(
@@ -154,6 +171,7 @@ function casterMaterials(
     ...late.treeMaterials,
     ...late.signMaterials,
     ...late.crowdMaterials,
+    ...late.vehicleMaterials,
   ];
 }
 
@@ -175,7 +193,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   if (backend === 'webgl2') glassRoughness.value = WEBGL2_GLASS_ROUGHNESS;
   const postFor = postEffectsFor(cfg, backend);
   const actors = attachActors(graph);
-  const late: LateMaterials = { treeMaterials: [], signMaterials: [], crowdMaterials: [] };
+  const late: LateMaterials = { treeMaterials: [], signMaterials: [], crowdMaterials: [], vehicleMaterials: [] };
   const casters = () => casterMaterials(materials, actors, late);
   const makePost = (tier: QualityTier): PostPipeline =>
     post

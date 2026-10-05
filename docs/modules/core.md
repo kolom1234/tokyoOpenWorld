@@ -50,6 +50,10 @@ export interface TrainInfo { tripId: string; lineId: string; cars: number; carLe
   stoppedAtStationId: string | null; doorsOpen: boolean; nextStationId: string | null;
   seats: ReadonlyArray<{ id: string; car: number; posLocal: [number, number, number] }> }   // sim 제공, traversal·ui 소비
 export const WORLD_SEED = 0x53414e50;              // "SANP" — 결정론 시드 루트
+export interface VehicleTypeInfo { name; lengthM; widthM; heightM; share }   // M06-T06(ADR-0066): 가상 차종 7종 — sim 스폰·render 모델·physics 상자 공유
+export const VEHICLE_TYPES: readonly VehicleTypeInfo[]   // sedan·taxi·kei·keiTruck·minivan·deliveryTruck·bus(순서 = 차량 variant 하위 3비트, 추가만)
+export const KINEMATIC_STRIDE = 9;
+export interface KinematicFrame { t: 'kin'; atMs: number /* 틱 절대 시각 */; data: Float64Array /* id, x,y,z(WF 바닥 중심), yaw, 속력, 길이, 폭, 높이 */ }   // sim → physics 직결 포트(08 §8)
 
 // ── 함수 (index.ts ← internal/*) ──
 packCellKey(level, ix, iz): CellKey; unpackCellKey(k); cellIdString(k): CellId      // 범위 밖 → RangeError

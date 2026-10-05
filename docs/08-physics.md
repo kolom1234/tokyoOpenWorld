@@ -68,6 +68,8 @@ Jolt `WheeledVehicleController`. 일반 소형 세단(가상 모델) 기본값 �
 | 운전석 | **우핸들**, 좌측통행 |
 - **비폭력·NPC 보호 규칙**: 보행자와 차량은 물리 충돌하지 않는다(레이어 행렬). 대신 전방 레이캐스트 기반 **자동 긴급제동(AEB)**: 보행자/자전거가 진행 경로 TTC < 1.5 s면 최대 제동. 보행자 AI는 차량을 회피(10-simulation.md).
 - 교통 차량(NPC_KINEMATIC)과의 접촉: 플레이어 차량은 밀려나고, 교통 AI는 정지·양보. 손상 없음.
+- **구현(M06-T06, ADR-0066)**: 열차와 같은 직결 — sim.worker가 틱마다 플레이어 60 m 안 차량 `KinematicFrame`(core: id·WF 바닥 중심·yaw·속력·치수)을 MessagePort로, 물리 워커 `worker/kinematics.ts`가 NPC_KINEMATIC 상자(바닥 틈 0.15 m)를 두고
+  스텝마다 받은 포즈 + 속력 × 경과(≤ 0.25 s) 외삽 목표로 `MoveKinematic` → 도보 캐릭터(CharacterVirtual)는 접촉 속도로 밀린다(관통 없음, 단위 테스트 최소 간격 0.136 m). 열차(§8)의 보간 대신 외삽(차량은 등속 근사로 충분).
 
 ## 7. 자전거 (생활형 자전거)
 - `MotorcycleController`(2륜, 기울기 제어). 차체 18 kg + 라이더 65 kg, 휠 반경 0.33 m.

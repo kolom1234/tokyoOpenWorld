@@ -99,12 +99,7 @@
             "minimum": 0
           },
           "codec": {
-            "enum": [
-              "glb",
-              "bin",
-              "bin+gzip",
-              "json+gzip"
-            ]
+            "enum": ["glb", "bin+gzip", "json+gzip"]
           },
           "sources": {
             "type": "array",

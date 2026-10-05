@@ -10,7 +10,7 @@ import { batchesOf, type PlaceCtx, type PropCatalog } from './context.ts';
 import { placeGuardRails, placeManholes } from './linear.ts';
 import { placePoints } from './points.ts';
 import { placePoles } from './poles.ts';
-import { junctionsOf, siteFinder } from './signal-sites.ts';
+import { junctionsOf, siteFinder, weightedRoadLines } from './signal-sites.ts';
 import { placeSignals } from './signals.ts';
 import { placeSigns } from './signs.ts';
 import { placeVending } from './vending.ts';
@@ -57,6 +57,11 @@ export interface PropOutput {
   stats: PropStats;
 }
 
+function signalSiteOf(i: PropInput) {
+  const w = weightedRoadLines(i.vehicleRoadsAround ?? i.osm.filter(isVehicleRoad));
+  return siteFinder(junctionsOf(i.junctions ?? []), i.catalog.signalSites ?? [], w.lines, w.weights);
+}
+
 export function buildProps(i: PropInput): PropOutput {
   const c: PlaceCtx = {
     catalog: i.catalog,
@@ -67,11 +72,7 @@ export function buildProps(i: PropInput): PropOutput {
     surfaceAt: i.surfaceAt,
     inIntersection: i.inIntersection,
     inBuilding: i.inBuilding,
-    signalSite: siteFinder(
-      junctionsOf(i.junctions ?? []),
-      i.catalog.signalSites ?? [],
-      (i.vehicleRoadsAround ?? i.osm.filter(isVehicleRoad)).map((r) => r.rings[0] ?? []),
-    ),
+    signalSite: signalSiteOf(i),
     out: new Map(),
     colliders: [],
     left: i.catalog.budget.maxInstancesPerCell,

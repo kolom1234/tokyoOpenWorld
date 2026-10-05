@@ -38,24 +38,40 @@ function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
   return g;
 }
 
+/** 다음 프레임까지 양보(브라우저 = rAF — GPU 프로세스가 프레임을 내보낼 틈, 그 밖 = 매크로태스크). */
+export function yieldFrame(): Promise<void> {
+  return new Promise((r) => {
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => r());
+    else setTimeout(r, 0);
+  });
+}
+
+/**
+ * 머티리얼 ID마다 묶음(기본 + HLOD 불투명·페이드 + 파사드 프리패스)으로 `compileAsync` → 진행 보고 → 한 프레임 양보.
+ * 한 번에 전부 컴파일하면 GPU 프로세스가 파이프라인을 만드는 1.4–1.9 s 동안 프레임이 하나도 안 나와 로딩 화면이 멈춰 보였다(M06 실측).
+ * 마지막에 장면 전체(소품 풀 priming 등)를 한 번 더 — 이미 만든 파이프라인은 캐시.
+ */
 export async function precompileMaterials(
   renderer: WebGPURenderer,
   scene: Scene,
   camera: Camera,
   materials: MaterialRegistry,
   log: Logger,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<void> {
   const t0 = performance.now();
-  const holder = new Group();
-  holder.name = 'precompile';
   const geos: BufferGeometry[] = [];
-  const add = (g: BufferGeometry, material: Material, hlod: boolean): void => {
-    const m = new Mesh(g, material);
-    if (hlod) m.userData.hlodFade = createHlodFades();
-    m.frustumCulled = false;
-    holder.add(m);
-  };
-  for (const id of PRECOMPILE_IDS) {
+  let meshes = 0;
+  const total = PRECOMPILE_IDS.length + 1;
+  for (const [i, id] of PRECOMPILE_IDS.entries()) {
+    const holder = new Group();
+    holder.name = 'precompile';
+    const add = (g: BufferGeometry, material: Material, hlod: boolean): void => {
+      const m = new Mesh(g, material);
+      if (hlod) m.userData.hlodFade = createHlodFades();
+      m.frustumCulled = false;
+      holder.add(m);
+    };
     const base = dummyGeometry(id, false);
     geos.push(base);
     add(base, materials.get(id), false);
@@ -68,13 +84,21 @@ export async function precompileMaterials(
     }
     // 건물 파사드 깊이 프리패스(같은 속성 형식).
     if (id === 'facade_default') add(base, materials.prepass(), false);
+    meshes += holder.children.length;
+    scene.add(holder);
+    try {
+      await renderer.compileAsync(holder, camera, scene);
+    } finally {
+      holder.removeFromParent();
+    }
+    onProgress?.(i + 1, total);
+    await yieldFrame();
   }
-  scene.add(holder);
   try {
     await renderer.compileAsync(scene, camera);
   } finally {
-    holder.removeFromParent();
     for (const g of geos) g.dispose();
   }
-  log.info(`precompile ${holder.children.length} materials ${Math.round(performance.now() - t0)} ms`);
+  onProgress?.(total, total);
+  log.info(`precompile ${meshes} materials ${Math.round(performance.now() - t0)} ms`);
 }

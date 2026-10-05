@@ -7,6 +7,8 @@
     "@dgreenheck/ez-tree": "1.1.0",
     "@gltf-transform/core": "4.5.0",
     "@gltf-transform/extensions": "4.5.0",
+    "@recast-navigation/core": "0.43.1",
+    "@recast-navigation/generators": "0.43.1",
     "@sanpo/core": "workspace:*",
     "@sanpo/geo": "workspace:*",
     "@sanpo/tile-format": "workspace:*",

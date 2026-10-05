@@ -87,7 +87,7 @@ tokyo-sanpo/
 **공유 계약 타입의 위치(레이어 위반 방지)**:
 | 타입 | 소속 | 이유 |
 |---|---|---|
-| `Vec3d, Quat, CellKey, CellId, Unsubscribe, FrameContext, CameraState, PlayerState, InterestPoint, ModeId, QualityTier, WeatherParams, SeasonParams, EnvironmentState, SharedInstanceBuffer, GroundQuery, I18nKey, TrainInfo` | `@sanpo/core` | 여러 레이어가 공유하는 어휘 |
+| `Vec3d, Quat, CellKey, CellId, Unsubscribe, FrameContext, CameraState, PlayerState, InterestPoint, ModeId, QualityTier, WeatherParams, SeasonParams, EnvironmentState, SharedInstanceBuffer, GroundQuery, I18nKey, TrainInfo, VehicleTypeInfo/VEHICLE_TYPES, KinematicFrame` | `@sanpo/core` | 여러 레이어가 공유하는 어휘 |
 | `CellPayload, DecodedMesh, HeightfieldData, PropBatch, TreeBatch, LightRecord, AudioZones, CellMeta, CellHeader, InteractableRecord` | `@sanpo/tile-format` | 셀 데이터 모델(디코드 결과 포함) |
 | 서비스 인터페이스(`RenderService` 등) | 각 패키지 `api.ts` | 구현 소유자 |
 - sim은 render의 `InstanceLayer`를 받지 않는다: sim은 `SharedInstanceBuffer`를 노출하고, wiring이 부트 시 1회 `render.layers.*.bindShared(buf)`로 연결한다.

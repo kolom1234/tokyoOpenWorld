@@ -10,7 +10,7 @@
 | 대기/하늘 | `@takram/three-atmosphere` (`/webgpu` export) | 0.19.1 (+ `patches/` three r186 호환, ADR-0028) | MIT | Bruneton 정밀 대기 산란, 하늘·태양·공중원근·조도. WebGPU 엔트리 제공 |
 | 지리 유틸 | `@takram/three-geospatial` (`/webgpu`) | 0.9.1 (+ `patches/`) | MIT | 대기 모듈 의존 |
 | 물리 | **Jolt Physics** `jolt-physics` (wasm, multithread 빌드) | 1.1.0 | MIT | 차량(WheeledVehicle/Motorcycle 컨트롤러: 엔진·변속기·차동·타이어 마찰곡선), CharacterVirtual(계단·경사·이동발판), 대규모 정적 메시 성능. AAA 채택 실적 |
-| 내비/군중 | `recast-navigation` (+ `@recast-navigation/three`) | 0.43.1 | MIT | Recast 내비메시 + DetourCrowd |
+| 내비/군중 | `@recast-navigation/core` (sim 워커 WASM) | 0.43.1 | MIT | Detour 타일 NavMesh + DetourCrowd(ADR-0063 — three 연동 패키지는 안 씀) |
 | 메시 가속 | `three-mesh-bvh` | 0.9.15 | MIT | 레이캐스트(카메라 충돌, 픽킹) |
 | 압축 디코드 | `meshoptimizer` (디코더) / three `KTX2Loader` (Basis) | 1.3.0 / three 내장 | MIT / Apache-2.0 | glTF `EXT_meshopt_compression`, `KHR_texture_basisu` |
 | 태양·달 위치 | `suncalc` | 2.0.2 | BSD-2 | 검증된 천문 계산 |
@@ -52,7 +52,7 @@
 | `ajv` 8.20.0 | validate 단계 JSON Schema 검사 | MIT |
 | KTX-Software `toktx` 4.4.2 (+ ImageMagick 7, 채널 패킹) | KTX2(ETC1S/UASTC) 인코딩 — 파이프라인 이미지(ADR-0027) | Apache-2.0 / ImageMagick |
 | `proj4` 2.22.0 (JS) / pyproj (검증용) | 좌표 변환 (EPSG 정의 고정 문자열 사용) | MIT |
-| `recast-navigation` (Node) | 셀별 내비메시 타일 굽기 | MIT |
+| `@recast-navigation/core` + `generators` (Node) | 셀별 내비메시 타일 굽기(저수준 Recast 함수, ADR-0063) | MIT |
 | `@aws-sdk/client-s3` 3.x | R2(S3 호환 API) 업로드 | Apache-2.0 |
 | Blender 4.x (수작업) | 랜드마크 오버라이드 모델링 | GPL (도구만) |
 

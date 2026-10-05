@@ -47,7 +47,7 @@ scene
 | `M_FOLIAGE` | 잎 | alpha-to-coverage/해시 알파, 투과광, 바람 흔들림, 계절 틴트. **구현(M05-T04, ADR-0052)** `trees/materials.ts` `tree_leaf`: 자체 잎 아틀라스 알파 테스트, Lambert + 태양 + 하늘 간접광(보조 AtmosphereLight) + 투과 22 %, 높이² 흔들림·떨림, 수종 계절 표. 인스턴싱 = InstancedBufferGeometry 속성(`_ipos`·`_iext`) |
 | `M_IMPOSTOR` | 원거리 나무/소품 | 옥타헤드럴 임포스터. **구현(M05-T04)** `tree_impostor`: 반팔면체 8 × 8 틀(CPU 굽기), 나무 로컬 방향으로 틀 선택, 구면 법선, 수종 타일 3 × 2 |
 | `M_CHARACTER` | 보행자 | ~~VAT~~ → **뼈 팔레트 텍스처 스키닝**(ADR-0057·0061: Rocketbox 리그 23뼈, 4영향 × 사원수+이동 RGBA16F, `crowd/material.ts`) + 아틀라스 배열 층·밝기·키 변형, 소지품은 T04 |
-| `M_VEHICLE` | 차량 | 클리어코트 도장, 유리, 라이트 발광 |
+| `M_VEHICLE` | 차량 | 클리어코트 도장, 유리, 라이트 발광. **구현(M06-T06, ADR-0066)** `vehicles/{builder,models,material,field}.ts` `vehicle`: 가상 차종 7종 절차 모델(LOD 35/110/520 m, 로고·번호판 없음) × 풀 21, MeshPhysicalNodeMaterial — 도장 = 인스턴스 sRGB 24비트(클리어코트), 유리 어둡게 + 클리어코트, 바퀴 = 축 둘레 회전(sim 회전 수), 등화 = 전조등(밤 = 태양 고도 + 낮 주간등)·후미등(밤 + 제동 flag)·좌우 깜빡이 1.5 Hz·택시 지붕등. `positionPrevious` = 지난 프레임 변위(`_imove`) — TAA 모션 벡터(군중도 같은 수정) |
 | `M_WATER` | 강·연못 | 법선 스크롤 + SSR + 빗방울 파문 |
 | `M_SIGN` | 간판/전광판 | **가상 브랜드** 텍스트 아틀라스 발광, 밤 점등. **구현(M05-T06, ADR-0054)** `signs/{atlas,material,field,models}.ts` `sign`: 색까지 구운 sRGB 아틀라스(가로 4:1·세로 1:4 타일) 표본 1회, 돌출 상자·입간판·옥상 광고탑 풀(InstancedBufferGeometry `_ipos`·`_isig`, 브랜드 = WF 위치 해시). 발광·점등은 M09 |
 - 텍스처: `shared/materials`의 KTX2 배열 3장 — albedo 1024² ETC1S(sRGB), normal·ORM 512² UASTC(ADR-0027). 매니페스트(`schemas/materials.schema.json`)가 레이어별 그룹·`tileM`·평균색, 그룹 → 레이어 인덱스를 준다. 셰이더는 그룹(`MATERIAL_GROUPS` 13종) + 해시로 레이어를 고른다. 첫 표시 뒤 지연 적재(그 전엔 평균색), 유리는 절차(텍스처 없음).

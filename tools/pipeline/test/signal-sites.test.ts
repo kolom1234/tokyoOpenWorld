@@ -46,6 +46,10 @@ describe('signal sites', () => {
     expect([vA.group, vB.group, pA.group, pB.group]).toEqual([0, 1, 2, 3]);
     expect(vA.plan).toBe(1);
     expect(signalCode(s, 'pedestrian', 0, 1)).toBeLessThan(2 ** 24);
+    // 연동 칸: 기본 계획은 주축 위치 ÷ 12 m/s(2 s 칸), 사이트 계획은 0.
+    expect(vA.slot).toBe(0);
+    const std = siteFinder([{ cx: 240, cz: 0, axis: 0 }], [])([240, 0], { center: [0, 0], axis: 0 });
+    expect(decodeSignal(signalCode(std, 'vehicle', 1, 0)).slot).toBe(((120 - 20) % 120) / 2);
   });
 
   it('splits a skewed junction by the two nearest road directions (not a single ±45° axis)', () => {

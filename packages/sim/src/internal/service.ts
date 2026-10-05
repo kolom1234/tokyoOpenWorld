@@ -6,9 +6,10 @@ import { wfToLonLat } from '@sanpo/geo';
 import type { SimDeps, SimService } from '../api.ts';
 import { clearSkyIlluminanceLux, moonPosition, sunPosition } from './clock/astronomy.ts';
 import { createWorldClock } from './clock/world-clock.ts';
+import { weatherScale } from './crowd/density.ts';
 import { signalState } from './signals/controller.ts';
 import { compilePlans } from './signals/plans.ts';
-import { type SimWorkerHost, startSimWorker } from './worker/host.ts';
+import { createWorkerLink } from './worker/link.ts';
 
 /** 01-architecture §5: sim 시계 = phase 10. */
 export const SIM_CLOCK_PHASE = 10;
@@ -50,6 +51,17 @@ export function createSim(deps: SimDeps): SimService {
   const clock = createWorldClock(deps.now ?? Date.now, deps.initialClock);
   const observer: Vec3d = { x: 0, y: 0, z: 0 };
   let cache: { ms: number; x: number; z: number; env: EnvironmentState } | undefined;
+  const link = createWorkerLink(clock, deps);
+  const env = (): EnvironmentState => {
+    const ms = clock.gameTimeMs;
+    const x = Math.round(observer.x / OBSERVER_GRID_M) * OBSERVER_GRID_M;
+    const z = Math.round(observer.z / OBSERVER_GRID_M) * OBSERVER_GRID_M;
+    const c = cache;
+    if (c && c.ms === ms && c.x === x && c.z === z) return c.env;
+    const e = computeEnvironment(ms, { x, y: 0, z });
+    cache = { ms, x, z, env: e };
+    return e;
+  };
   const system: GameSystem = {
     id: 'sim/clock',
     phase: SIM_CLOCK_PHASE,
@@ -58,34 +70,22 @@ export function createSim(deps: SimDeps): SimService {
       observer.x = f.camera.posWF.x;
       observer.y = f.camera.posWF.y;
       observer.z = f.camera.posWF.z;
+      link.frame(f.player, f.camera, weatherScale(env().weather.rainMmH));
     },
     dispose() {},
   };
-  let worker: SimWorkerHost | undefined;
   const plans = deps.signalPlans ? compilePlans(deps.signalPlans) : [];
   return {
     signalStateAt: (code) => signalState(plans, code, clock.gameTimeMs / 1000),
     clock,
-    startWorker(o) {
-      worker ??= startSimWorker({
-        supervisor: o.supervisor,
-        params: o.crowd,
-        centerWF: o.centerWF,
-        log: deps.log.child('sim'),
-      });
-      return worker?.pedestrians;
-    },
-    workerStats: () => worker?.stats(),
-    environment() {
-      const ms = clock.gameTimeMs;
-      const x = Math.round(observer.x / OBSERVER_GRID_M) * OBSERVER_GRID_M;
-      const z = Math.round(observer.z / OBSERVER_GRID_M) * OBSERVER_GRID_M;
-      const c = cache;
-      if (c && c.ms === ms && c.x === x && c.z === z) return c.env;
-      const env = computeEnvironment(ms, { x, y: 0, z });
-      cache = { ms, x, z, env };
-      return env;
-    },
+    startWorker: (o) => link.start(o),
+    addCell: (key, nav, lanes) => link.addCell(key, nav, lanes),
+    outputs: () => link.outputs(),
+    removeCell: (key) => link.removeCell(key),
+    crowdScenario: (c, r, n) => link.scenario(c, r, n),
+    connectPhysics: (l) => link.connectPhysics(l),
+    workerStats: () => link.stats(),
+    environment: env,
     systems: () => [system],
   };
 }

@@ -5,7 +5,7 @@
 - 북마크: `views.json` — `eyeWF`/`lookWF`(WF 절대, TP m), 선택 `eyeAglM`/`lookAglM`(지면 기준, 부팅 대기 뒤 L0 높이장),
   `fovDeg`, `time`(JST ISO), `weather`, `seed`. `core: true` 4장 = M03 태스크마다 before/after.
 - 게임: `?view=<id>`(+ `world=local`) → 해당 시점에서 부팅 대기(384 m L0) → 포즈 고정 →
-  스트리밍 큐·HLOD 페이드·추가 조건이 1.5 s 조용하면 `#app[data-golden=ready]`. 핸들 `globalThis.__SANPO_GOLDEN__`.
+  스트리밍 큐·HLOD 페이드·추가 조건(머티리얼·나무·간판·군중 팩 + 처음 채우기 — M06-T07)이 1.5 s 조용하면 `#app[data-golden=ready]`. 핸들 `globalThis.__SANPO_GOLDEN__`.
   시각·날씨는 sim 시계(M03-T03)가 생기면 적용한다(그 전에는 고정 태양).
 - 캡처: 실제 GPU Chrome(`channel: 'chrome'`, headed), 2560×1440, DPR 1. CI에서는 돌리지 않는다(GPU 없음).
 

@@ -7,6 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@recast-navigation/core": "0.43.1",
     "@sanpo/core": "workspace:*",
     "@sanpo/geo": "workspace:*",
     "@sanpo/tile-format": "workspace:*",

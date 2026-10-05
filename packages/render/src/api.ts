@@ -140,6 +140,18 @@ export interface RenderStats {
     casters: number;
     lods: number[];
     ready: boolean;
+    /** 원경 스프라이트(M06-T04): 셀에서 뽑은 점 수·지금 그리는 수. */
+    far: { points: number; drawn: number };
+  };
+  /** 차량(M06-T06): sim 인스턴스 수·그린 수·쓰는 풀(드로우콜)·용량 초과·그림자 드리우는 수(LOD 0–1)·LOD별 수·준비. */
+  vehicles: {
+    instances: number;
+    visible: number;
+    pools: number;
+    dropped: number;
+    casters: number;
+    lods: number[];
+    ready: boolean;
   };
 }
 
@@ -172,6 +184,23 @@ export interface CrowdAssetUrls {
 /** 10 §1: sim SAB 인스턴스 버퍼를 render가 읽는다(wiring이 1회 bindShared). */
 export interface InstanceLayer {
   bindShared(buf: SharedInstanceBuffer): void;
+  /** 원경 스프라이트(tier C, 235–800 m — M06-T04) 밀도 0..1. 게임이 sim 군중 수 ÷ 목표로(시간대·날씨). 기본 0(안 보임). */
+  setFarDensity(k: number): void;
+}
+
+/**
+ * 차량 레이어(M06-T06, ADR-0066): sim 교통 SAB(칸 = x,y,z·yaw·속력·바퀴 회전 수·variant(차종 3비트·색 5비트·씨앗 8비트)·flags(제동·좌·우 깜빡이)).
+ * 처음 bind 때 가상 차종 7종 절차 모델(LOD 3)·머티리얼을 만들어 선컴파일한 뒤 그리기 시작한다(완료 = resolve).
+ */
+export interface VehicleLayer {
+  bindShared(buf: SharedInstanceBuffer): Promise<void>;
+}
+
+/** 선컴파일 진행(M06): 단계·완료 수·총 수. */
+export interface PrecompileProgress {
+  stage: 'atmosphere' | 'materials' | 'avatar';
+  done: number;
+  total: number;
 }
 
 export interface RenderService extends SystemProvider {
@@ -197,8 +226,11 @@ export interface RenderService extends SystemProvider {
   loadMaterials(manifestUrl: string): Promise<MaterialLibraryStats>;
   /** 환경(태양·달 방향 등, sim 계산값) — 대기·조명이 소비한다. 07 §6: render는 천문 계산을 하지 않는다. */
   setEnvironment(e: Readonly<EnvironmentState>): void;
-  /** 고정 머티리얼(+ HLOD 변형) 셰이더 선컴파일(06 §6) — 스트리밍 중 컴파일 끊김 방지. */
-  precompile(): Promise<void>;
+  /**
+   * 고정 머티리얼(+ HLOD 변형) 셰이더 선컴파일(06 §6) — 스트리밍 중 컴파일 끊김 방지. 대기 LUT → 머티리얼 ID 묶음마다 한 프레임 양보 → 아바타,
+   * 단계마다 onProgress(부팅 로딩 표시 — M06).
+   */
+  precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;
   /**
    * 부팅 첫 표시(M06 사전 4): on이면 이후 addCell의 셀 메시를 장면 밖 대기 그룹에 둔다(그리지 않음 → 첫 렌더 동기 컴파일 없음).
    * `compileStaged`로 선컴파일과 겹쳐 파이프라인을 만들고 `commitStaged`로 장면에 붙인다(대기 모드 끝). 소품·나무·간판 풀은 대상 아님.
@@ -231,6 +263,8 @@ export interface RenderService extends SystemProvider {
   setSignalLamps(lamp: ((code: number) => number) | null): void;
   /** 보행자 인스턴스 레이어(sim 출력). */
   readonly pedestrians: InstanceLayer;
+  /** 차량 인스턴스 레이어(sim 교통 출력, M06-T06). */
+  readonly vehicles: VehicleLayer;
   stats(): RenderStats;
   dispose(): void;
 }

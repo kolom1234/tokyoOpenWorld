@@ -180,6 +180,9 @@ importers:
 
   packages/sim:
     dependencies:
+      '@recast-navigation/core':
+        specifier: 0.43.1
+        version: 0.43.1
       '@sanpo/core':
         specifier: workspace:*
         version: link:../core
@@ -256,6 +259,12 @@ importers:
       '@gltf-transform/extensions':
         specifier: 4.5.0
         version: 4.5.0
+      '@recast-navigation/core':
+        specifier: 0.43.1
+        version: 0.43.1
+      '@recast-navigation/generators':
+        specifier: 0.43.1
+        version: 0.43.1
       '@sanpo/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -796,6 +805,15 @@ packages:
         optional: true
       react-native:
         optional: true
+
+  '@recast-navigation/core@0.43.1':
+    resolution: {integrity: sha512-4igfPgnoV90O92sDSIA0xHa6tanh3z/udlgGmD0SqGQ6PKV4JS2l9jWO8YnxfZuXP/NV52H4c5FU6pSdZc9WDA==}
+
+  '@recast-navigation/generators@0.43.1':
+    resolution: {integrity: sha512-w7r6k/A93wWxuSN+Lg+PmlsUVXq06r5bqXmBglolxqDt2O/Y776BIhYtb6P2P6pbYqDWORu9NCZZJzfY4FNpaA==}
+
+  '@recast-navigation/wasm@0.43.1':
+    resolution: {integrity: sha512-XFL6PhO8JodwXUHBSAkfaLUdUEweIkJsdP3HTmtJvMs5fkqEWxWJmBskZlACHJepv55NAriqWxOtuLlG3t7+Hg==}
 
   '@rolldown/binding-android-arm-eabi@1.2.11':
     resolution: {integrity: sha512-A5kXfGKvKWWZE0TtPrfsvT+q4Y5d1QG8gGUzpYjGydM+fARM9MuX90PrXYXe0XbsDVgyxxNzHo6giCj90bsFNw==}
@@ -1985,6 +2003,17 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
       - immer
+
+  '@recast-navigation/core@0.43.1':
+    dependencies:
+      '@recast-navigation/wasm': 0.43.1
+
+  '@recast-navigation/generators@0.43.1':
+    dependencies:
+      '@recast-navigation/core': 0.43.1
+      '@recast-navigation/wasm': 0.43.1
+
+  '@recast-navigation/wasm@0.43.1': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.11':
     optional: true

@@ -127,6 +127,8 @@ interface FillCtx {
   pick: (v: number) => number;
   st: CrowdFieldStats;
   fwd: Vector3;
+  /** 지난 채우기 시각(ms) — 프레임 변위(모션 벡터). */
+  lastMs: number;
 }
 
 /** SAB 인스턴스 → 외삽 → LOD·시야 → 풀. */
@@ -142,6 +144,9 @@ function fillPools(c: FillCtx, src: SharedInstanceBuffer, camera: PerspectiveCam
   camera.getWorldDirection(fwd);
   const halfDiag = Math.atan(Math.tan(((camera.fov * Math.PI) / 180) * 0.5) * Math.hypot(1, camera.aspect));
   Object.assign(st, { instances: n, visible: 0, dropped: 0, casters: 0, lods: [0, 0, 0, 0] });
+  const now = performance.now();
+  const dt = Math.min(Math.max((now - c.lastMs) / 1000, 0), 0.1);
+  c.lastMs = now;
   for (let i = 0; i < n; i++) {
     const k = i * STRIDE;
     const yaw = data[k + 3] as number;
@@ -176,7 +181,7 @@ function fillPools(c: FillCtx, src: SharedInstanceBuffer, camera: PerspectiveCam
       z,
       yaw,
       [base.row0 + cl.start, cl.frames, phase * cl.frames, scale],
-      [b, 0.92 + 0.16 * (((v >> 4) & 15) / 15), 0, 0],
+      [b, 0.92 + 0.16 * (((v >> 4) & 15) / 15), -Math.sin(yaw) * speed * dt, -Math.cos(yaw) * speed * dt],
     );
     st.visible++;
     st.lods[lod] = (st.lods[lod] ?? 0) + 1;
@@ -204,7 +209,7 @@ export function createCrowdField(): CrowdField {
     attach(a, material) {
       const ps = a.bases.map((b, i) => b.lods.map((_, l) => createPool(b, l, material, i)));
       for (const row of ps) for (const p of row) root.add(p.mesh);
-      fill = { assets: a, pools: ps, pick: basePicker(a.bases), st, fwd: new Vector3() };
+      fill = { assets: a, pools: ps, pick: basePicker(a.bases), st, fwd: new Vector3(), lastMs: performance.now() };
       st.ready = true;
     },
     bind(s) {

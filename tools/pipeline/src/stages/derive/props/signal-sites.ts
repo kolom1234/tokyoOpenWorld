@@ -109,16 +109,35 @@ export function roadAxes(segs: readonly (readonly [number, number])[]): [number,
 }
 
 /** OSM 차도 선(WF xz 꺾은선)의 중심 AXIS_REACH_M 안 선분 → (각도, 길이). 신호기 방향이 이 선 기준이라 축도 같은 출처로(ADR-0062). */
-export function osmSegmentsNear(lines: readonly (readonly number[])[], cx: number, cz: number): [number, number][] {
+/** 도로 등급 가중(M06-T05 — ADR-0065): 축 히스토그램이 간선 쪽으로 기울게(주축 A = 간선 → 기본 계획의 긴 녹색). */
+const CLASS_WEIGHT: Readonly<Record<string, number>> = { trunk: 4, primary: 4, secondary: 3, tertiary: 2 };
+
+/** OSM 차도 선 → (꺾은선, 등급 가중) — siteFinder 입력. */
+export function weightedRoadLines(records: readonly { rings: number[][]; tags: Record<string, string> }[]): {
+  lines: number[][];
+  weights: number[];
+} {
+  return {
+    lines: records.map((r) => r.rings[0] ?? []),
+    weights: records.map((r) => CLASS_WEIGHT[(r.tags.highway ?? '').replace(/_link$/, '')] ?? 1),
+  };
+}
+
+export function osmSegmentsNear(
+  lines: readonly (readonly number[])[],
+  cx: number,
+  cz: number,
+  weights?: readonly number[],
+): [number, number][] {
   const out: [number, number][] = [];
-  for (const xz of lines)
+  for (const [li, xz] of lines.entries())
     for (let i = 0; i + 3 < xz.length; i += 2) {
       const ax = xz[i] as number;
       const az = xz[i + 1] as number;
       const bx = xz[i + 2] as number;
       const bz = xz[i + 3] as number;
       if (Math.hypot((ax + bx) / 2 - cx, (az + bz) / 2 - cz) > AXIS_REACH_M) continue;
-      out.push([Math.atan2(bz - az, bx - ax), Math.hypot(bx - ax, bz - az)]);
+      out.push([Math.atan2(bz - az, bx - ax), Math.hypot(bx - ax, bz - az) * (weights?.[li] ?? 1)]);
     }
   return out;
 }
@@ -168,13 +187,15 @@ export function siteFinder(
   junctions: readonly { cx: number; cz: number; axis: number }[],
   plans: readonly SignalPlanSite[],
   osmLines: readonly (readonly number[])[] = [],
+  /** osmLines별 등급 가중(없으면 1). */
+  weights?: readonly number[],
 ) {
   const axisCache = new Map<number, [number, number]>();
   const axesOf = (cx: number, cz: number, fallback: number): [number, number] => {
     const key = Math.round(cx) * 100003 + Math.round(cz);
     let a = axisCache.get(key);
     if (a === undefined) {
-      a = roadAxes(osmSegmentsNear(osmLines, cx, cz)) ?? [fallback, (fallback + Math.PI / 2) % Math.PI];
+      a = roadAxes(osmSegmentsNear(osmLines, cx, cz, weights)) ?? [fallback, (fallback + Math.PI / 2) % Math.PI];
       axisCache.set(key, a);
     }
     return a;
@@ -204,18 +225,30 @@ export function nearerA(site: Pick<SignalSite, 'axis' | 'axisB'>, dx: number, dz
   return axisGap(a, site.axis) <= axisGap(a, site.axisB);
 }
 
+/** 연동(系統) 오프셋 칸(2 s): 주축 A 방향 위치 ÷ 진행 속도(12 m/s ≈ 43 km/h)만큼 늦춰 같은 간선의 교차로가 녹색 물결(M06-T05, ADR-0065). 사이트 계획(≥ 1) = 0. */
+export const PROGRESSION_MS = 12;
+const CYCLE_S = 120;
+export function offsetSlot(site: Pick<SignalSite, 'cx' | 'cz' | 'axis' | 'plan'>): number {
+  if (site.plan !== 0) return 0;
+  const p = site.cx * Math.cos(site.axis) + site.cz * Math.sin(site.axis);
+  const off = ((((-p / PROGRESSION_MS) % CYCLE_S) + CYCLE_S) % CYCLE_S) / 2;
+  return Math.floor(off) % 60;
+}
+
 /**
  * 그룹: 차량 = 진행 방향(d — 정면은 −d로 다가오는 차를 봄)이 가까운 도로, 보행 = 건너는 도로(보행 방향의 수직)가 B면 A(차량 A와 같이 녹색).
  * T05 차선 그래프의 접근로 그룹도 같은 규칙(nearerA)으로 나눠 교통·보행 신호가 일치한다.
+ * 코드(24비트, f32 정확) = ((ID 14비트 × 64 + 오프셋 칸 6비트) × 16) + 계획 × 4 + 그룹 — M06-T05에서 ID 20 → 14비트 + 오프셋 칸(ADR-0065).
  */
 export function signalCode(site: SignalSite, kind: 'vehicle' | 'pedestrian', dx: number, dz: number): number {
   const group = kind === 'vehicle' ? (nearerA(site, dx, dz) ? 0 : 1) : nearerA(site, -dz, dx) ? 3 : 2;
-  return site.id * 16 + (site.plan & 3) * 4 + group;
+  return ((site.id & 0x3fff) * 64 + offsetSlot(site)) * 16 + (site.plan & 3) * 4 + group;
 }
 
 /** 코드 해석(테스트·런타임 공용 규약 — sim signals/controller.ts와 같은 비트 배치). */
 export const decodeSignal = (code: number) => ({
-  id: Math.floor(code / 16),
+  id: Math.floor(code / 1024),
+  slot: Math.floor(code / 16) % 64,
   plan: Math.floor(code / 4) % 4,
   group: code % 4,
 });

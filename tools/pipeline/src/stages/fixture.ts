@@ -8,6 +8,7 @@ import { createPlateauReader } from '../readers/plateau/index.ts';
 import { buildArea } from './build/assemble.ts';
 import { DEM_MARGIN, readDemWindow, readDemWindowFiles, writeDemWindowFiles } from './build/dem-window.ts';
 import type { AreaDef } from './build/manifest.ts';
+import { readCrossingCorrections } from './derive/markings/corrections.ts';
 import { readCatalog } from './derive/props/context.ts';
 import { extractPlateauMini } from './fixture-plateau.ts';
 import { normalizePlateau } from './normalize-plateau.ts';
@@ -94,6 +95,8 @@ export async function buildWorldMini(input: FixtureInput): Promise<string> {
     plateauSources: [PLATEAU_MINI_SOURCE],
     log: log.child('world-mini'),
     props: readCatalog(repoRoot),
+    // MVP 빌드와 같은 OSM 횡단 보정(M06 사전 2) — 내비 횡단 띠·대기점이 실제 빌드와 같게(M06-T03).
+    crossingCorrections: readCrossingCorrections(repoRoot),
   });
   const report = await validateBuild(buildDir, join(repoRoot, 'schemas'), new Set(input.lock.map((l) => l.id)));
   writeReport(buildDir, report);

@@ -78,10 +78,10 @@ credits.json                  출처 표기
 | `roads.mesh` | glb | 보도·교통섬 윗면(성형 윗면 + 8 mm, 4 m 조각) + 연석 세로 면 + 바깥 가장자리 치마(M05-T01, ADR-0049). 머티리얼 `terrain_ground`, 속성: POSITION(u16 양자화 + 노드 이동·균일 스케일), NORMAL(i8), `_SURF`(1 보도·7 연석 콘크리트). 차도·광장은 terrain.mesh | render | L0 |
 | `decals.mesh` | glb | 노면 표시 (별도 폴리곤 오프셋) | render | L0 |
 | `overrides.mesh` | glb | 랜드마크(M05-T05, ADR-0053) + 옥상 설비·외부 비상계단(M05-T07, ADR-0055 — UV 0) + 교량 면·높이 계단(M05-T08, ADR-0056 — UV 0): 프리미티브 1개(머티리얼 `landmark`) — POSITION u16(노드 양자화)·NORMAL i8·TEXCOORD_0 f32(미터: 벽 = 수평 거리·건물 바닥부터 높이, 수평면 = x·z, 화면 = 시드×1000 + m)·`_LMAT` u8(랜드마크 머티리얼 16종 — 15 = FRP, render `materials/landmark.ts`). 텍스처 없음 | render | L0 |
-| `props.inst` | bin+gzip | 반복 `{u16 typeId, u16 pad, u32 count, f32[count*5] (x,y,z,yawRad,scale)}` — typeId = `PROP_TYPE`(1–15 소품, 16–18 가상 간판 돌출·입간판·옥상 — M05-T06: y = 벽면·지붕 높이, 옥상 scale = 폭 / 10 m, 추가만), **신호 3·4의 5번째 칸 = 현시 코드**(교차로 ID × 16 + 계획 × 4 + 그룹 — M06-T02, ADR-0062, 배율 1 고정), 셀 로컬, yaw = 로컬 +Z(정면)를 `atan2(fx, fz)`로 | render (충돌 있는 소품은 파이프라인이 `collision.bin`에 프리미티브로 굽는다, ADR-0051) | L0 |
+| `props.inst` | bin+gzip | 반복 `{u16 typeId, u16 pad, u32 count, f32[count*5] (x,y,z,yawRad,scale)}` — typeId = `PROP_TYPE`(1–15 소품, 16–18 가상 간판 돌출·입간판·옥상 — M05-T06: y = 벽면·지붕 높이, 옥상 scale = 폭 / 10 m, 추가만), **신호 3·4의 5번째 칸 = 현시 코드**(M06-T05부터 `((교차로 ID 14비트 × 64 + 연동 오프셋 칸) × 16) + 계획 × 4 + 그룹` — ADR-0062·0065, 배율 1 고정), 셀 로컬, yaw = 로컬 +Z(정면)를 `atan2(fx, fz)`로 | render (충돌 있는 소품은 파이프라인이 `collision.bin`에 프리미티브로 굽는다, ADR-0051) | L0 |
 | `trees.inst` | bin+gzip | `{u32 count}` + 레코드 `{u8 species, u8 seed, u16 pad, f32 x,y,z, f32 height, f32 crownR}` — species = `TREE_SPECIES`(1–6, 0 금지), seed → yaw·색 변형 | render (줄기 충돌은 `collision.bin`의 원기둥, ADR-0052) | L0–L1(L1은 미구현) |
 | `collision.bin` | bin+gzip | §6 JCOL 포맷 | physics | L0 |
-| `nav.bin` | bin | Detour NavMesh 타일 16개 연결 바이트열 (`{u32 count, (u32 len, u8[len])*}`) | sim | L0 |
+| `nav.bin` | bin+gzip | M06-T03(ADR-0063): `u32 'NAVT', u16 version=1, u16 tileCount` + 반복 `{i16 tx, i16 tz, u32 len, u8[len] Detour 타일(dtCreateNavMeshData, **WF 좌표**, 타일 = floor(WF/64)), 0 채움 4바이트 정렬}` + `u32 crossCount` + 반복 `{u32 id, f32 a[3], f32 b[3], f32 halfWidth, u32 보행 신호 코드 \| 0xFFFFFFFF}`(36 B, WF). 폴리곤 area 1 보도·2 생활도로·3 횡단·4 보행로, flags bit0 걷기·bit1 횡단 | sim | L0 |
 | `lanes.bin` | bin+gzip | 차선 그래프 §7 | sim | L0 |
 | `lights.bin` | bin+gzip | `{u32 count}` + `{u8 kind, u8 schedule, u16 kelvin, f32 x,y,z, i8x2 dirOct, u16 lumen, f32 range}` | render | L0 (L1은 발광 마스크) |
 | `audio.json` | json+gzip | `{zones:[{kind, polygonLocal:[[x,z]…], y0, y1}], emitters:[{kind, pos}]}` | audio | L0 |
@@ -120,15 +120,17 @@ repeat shapeCount:
 - 셰이프 헤더 32 B(모든 배열 4바이트 정렬). reader 거부: 미지 kind·kind 4의 iCount ≠ 0·iCount %3 ≠ 0·인덱스 ≥ vCount·비유한 실수(`corrupt`), 길이 부족(`truncated`, 배열 할당 전 검사). 끝 여분 바이트 무시.
 
 ## 7. lanes.bin
+v2(M06-T05, ADR-0065 — v1은 생산자 없이 폐기):
 ```
-u32 'LANE', u16 version=1, u16 pad
-u32 nodeCount; nodes: {u32 id, f32 x,y,z, u32 portalKey(0=내부)}      // portalKey = hash(글로벌 노드)
-u32 laneCount; lanes: {u32 id, u32 fromNode, u32 toNode, u8 kind(0 road,1 turn,2 bus), u8 speedKmh, u16 signalGroup(0xFFFF=없음), u32 ptOffset, u16 ptCount, u16 widthCm}
-u32 pointCount; f32[pointCount*3]
-u32 groupCount; groups: {u16 id, u16 intersection, u8 phaseIndex, u8 pad[3]}
+u32 'LANE', u16 version=2, u16 pad
+u32 nodeCount; nodes: {u32 key, f32 x,y,z}                 // key = 글로벌 노드 해시(교차로 안 노드·셀 경계 포털 — 셀 간 같은 키 = 같은 노드)
+u32 laneCount; lanes: {u32 id, u32 fromNode, u32 toNode, u8 kind(0 road,1 connector,2 bus), u8 turn(0 straight,1 left,2 right),
+                       u8 speedKmh, u8 laneIdx(0 = 연석 쪽), u32 signal(정지선 신호 코드 | 0xFFFFFFFF), u32 ptOffset, u16 ptCount, u16 widthCm}
+u32 pointCount; f32[pointCount*3]                           // 셀 로컬(M06-T06부터 점 간격 ≤ 4 m — y = 지면 표본)
 ```
-- 레코드 크기: node 20 B, lane 24 B, group 8 B. `fromNode/toNode` = 이 청크 **nodes 배열 인덱스**(id 아님, ADR-0017). `ptOffset/ptCount` = 점(xyz 3 float) 단위 범위. `signalGroup` = `groups[].id` 또는 0xFFFF.
-- reader 거부: 노드 인덱스 ≥ nodeCount, 점 범위 초과, 없는 signalGroup, 비유한 좌표(`corrupt`), 길이 부족(`truncated`).
+- 레코드 크기: node 16 B, lane 28 B. `fromNode/toNode` = 이 청크 **nodes 배열 인덱스**(ADR-0017). `ptOffset/ptCount` = 점(xyz 3 float) 단위 범위.
+- 신호 코드 = `((교차로 ID 14비트 × 64 + 연동 오프셋 칸) × 16) + 계획 × 4 + 그룹`(ADR-0065 — props.inst 신호 기둥·nav.bin 횡단과 같은 코드).
+- reader 거부: 노드 인덱스 ≥ nodeCount, 점 범위 초과, 비유한 좌표(`corrupt`), 길이 부족(`truncated`), 버전 ≠ 2(`version`).
 
 ## 8. 버전 정책
 - 포맷 비호환 변경 → `formatVersion` 증가 + ADR + 런타임은 단일 버전만 지원(구 빌드 즉시 폐기).

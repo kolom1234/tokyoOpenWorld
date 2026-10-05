@@ -85,23 +85,23 @@ export const SHAPES: JcolShape[] = [
 export function lanesChunk(): LaneGraphChunk {
   return {
     nodes: {
-      id: new Uint32Array([101, 102, 103]),
+      key: new Uint32Array([101, 0xdeadbeef, 103]),
       posLocal: new Float32Array([0, 0, 0, 50, 0, 0, 50, 0, 50]),
-      portalKey: new Uint32Array([0, 0xdeadbeef, 0]),
     },
     lanes: {
       id: new Uint32Array([1, 2]),
       fromNode: new Uint32Array([0, 1]),
       toNode: new Uint32Array([1, 2]),
       kind: new Uint8Array([0, 1]),
+      turn: new Uint8Array([0, 2]),
       speedKmh: new Uint8Array([40, 20]),
-      signalGroup: new Uint16Array([7, 0xffff]),
+      laneIdx: new Uint8Array([0, 1]),
+      signal: new Uint32Array([1234567, 0xffffffff]),
       ptOffset: new Uint32Array([0, 2]),
       ptCount: new Uint16Array([2, 3]),
       widthCm: new Uint16Array([325, 300]),
     },
     pointsLocal: new Float32Array([0, 0, 0, 50, 0, 0, 50, 0, 0, 50, 0, 25, 50, 0, 50]),
-    groups: { id: new Uint16Array([7]), intersection: new Uint16Array([12]), phaseIndex: new Uint8Array([1]) },
   };
 }
 
