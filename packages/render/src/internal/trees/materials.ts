@@ -9,6 +9,7 @@ import {
   clamp,
   cos,
   cross,
+  deltaTime,
   dot,
   Fn,
   float,
@@ -21,6 +22,7 @@ import {
   normalLocal,
   positionGeometry,
   positionLocal,
+  positionPrevious,
   select,
   sin,
   sqrt,
@@ -91,29 +93,37 @@ const barkTable = uniformArray<'vec3'>(
 );
 const barkOf = () => vec3(barkTable.element(int(iext.z)));
 
-/** 로컬(정규화 높이 1) → 렌더 좌표 + yaw 회전(법선도) + 바람. */
+/** 로컬(정규화 높이 1) → 렌더 좌표 + yaw 회전 + 바람(시각 t). */
+function placeAt(u: TreeUniforms, flutter: boolean, t: TslNode<'float'>) {
+  const h = iext.x;
+  const c = cos(ipos.w);
+  const s = sin(ipos.w);
+  const p = positionLocal.mul(h);
+  const rot = vec3(p.x.mul(c).add(p.z.mul(s)), p.y, p.z.mul(c).sub(p.x.mul(s)));
+  const k = positionLocal.y.mul(positionLocal.y);
+  const phase = iext.y.mul(6.283);
+  const sway = sin(t.mul(1.1).add(phase)).mul(u.wind.z).mul(k).mul(h).mul(0.01);
+  let off = vec3(u.wind.x, 0, u.wind.y).mul(sway);
+  if (flutter) {
+    const f = vec3(
+      sin(t.mul(6).add(p.x.mul(3)).add(phase)),
+      sin(t.mul(7.3).add(p.z.mul(3))),
+      cos(t.mul(5.1).add(p.y.mul(3))),
+    );
+    off = off.add(f.mul(u.wind.z).mul(k).mul(0.02));
+  }
+  return rot.add(off).add(ipos.xyz);
+}
+
+/** 로컬 → 렌더 좌표 + yaw 회전(법선도) + 바람. 모션 벡터(TAA, ADR-0066 후속) = 지난 프레임 시각의 같은 배치(없으면 계단·반짝임). */
 function placeNode(u: TreeUniforms, flutter: boolean) {
   return Fn(() => {
-    const h = iext.x;
     const c = cos(ipos.w);
     const s = sin(ipos.w);
-    const p = positionLocal.mul(h);
-    const rot = vec3(p.x.mul(c).add(p.z.mul(s)), p.y, p.z.mul(c).sub(p.x.mul(s)));
     const n = normalLocal;
     normalLocal.assign(vec3(n.x.mul(c).add(n.z.mul(s)), n.y, n.z.mul(c).sub(n.x.mul(s))));
-    const k = positionLocal.y.mul(positionLocal.y);
-    const phase = iext.y.mul(6.283);
-    const sway = sin(time.mul(1.1).add(phase)).mul(u.wind.z).mul(k).mul(h).mul(0.01);
-    let off = vec3(u.wind.x, 0, u.wind.y).mul(sway);
-    if (flutter) {
-      const f = vec3(
-        sin(time.mul(6).add(p.x.mul(3)).add(phase)),
-        sin(time.mul(7.3).add(p.z.mul(3))),
-        cos(time.mul(5.1).add(p.y.mul(3))),
-      );
-      off = off.add(f.mul(u.wind.z).mul(k).mul(0.02));
-    }
-    return rot.add(off).add(ipos.xyz);
+    positionPrevious.assign(placeAt(u, flutter, time.sub(deltaTime)));
+    return placeAt(u, flutter, time);
   })();
 }
 
@@ -180,6 +190,45 @@ export interface ImpostorLayout {
   rows: number;
 }
 
+interface ImpostorVaryings {
+  vR: TslNode<'vec3'>;
+  vU: TslNode<'vec3'>;
+  vD: TslNode<'vec3'>;
+  vFrame: TslNode<'vec2'>;
+}
+
+/** 카메라 방향 → 반구 8면체 프레임 → 그 프레임 축으로 세운 카드(렌더 좌표). 축·프레임은 varying으로. */
+function impostorPosition(u: TreeUniforms, N: TslNode<'float'>, v: ImpostorVaryings) {
+  return Fn(() => {
+    const h = iext.x;
+    const c = cos(ipos.w);
+    const s = sin(ipos.w);
+    const center = ipos.xyz.add(vec3(0, h.mul(0.5), 0));
+    const toCam = normalize(cameraPosition.sub(center));
+    const dl = vec3(toCam.x.mul(c).sub(toCam.z.mul(s)), toCam.y, toCam.x.mul(s).add(toCam.z.mul(c)));
+    const yy = max(dl.y, 0);
+    const sum = abs(dl.x).add(yy).add(abs(dl.z));
+    const ouv = vec2(dl.x.add(dl.z), dl.x.sub(dl.z)).div(sum).mul(0.5).add(0.5);
+    const frame = clamp(floor(ouv.mul(N)), 0, N.sub(1));
+    v.vFrame.assign(frame);
+    const df = hemiOctDecode(frame.add(0.5).div(N));
+    const up = select(abs(df.y).greaterThan(0.999), vec3(0, 0, -1), vec3(0, 1, 0));
+    const rl = normalize(cross(up, df));
+    const ul = cross(df, rl);
+    const toWorld = (w: TslNode<'vec3'>) => vec3(w.x.mul(c).add(w.z.mul(s)), w.y, w.z.mul(c).sub(w.x.mul(s)));
+    const r = toWorld(rl);
+    const uu = toWorld(ul);
+    v.vR.assign(r);
+    v.vU.assign(uu);
+    v.vD.assign(toWorld(df));
+    const R = float(u.radius.element(int(iext.z))).mul(h);
+    const placed = center.add(r.mul(positionGeometry.x).add(uu.mul(positionGeometry.y)).mul(R));
+    // 모션 벡터: 카드는 지금 카메라 기준 그대로(정지 물체 — 프레임 사이 카드 회전은 무시).
+    positionPrevious.assign(placed);
+    return placed;
+  })();
+}
+
 export function createImpostorMaterial(
   u: TreeUniforms,
   atlas: Texture,
@@ -194,31 +243,7 @@ export function createImpostorMaterial(
   const vD = varyingProperty('vec3', 'v_impD');
   const vFrame = varyingProperty('vec2', 'v_impFrame');
   const N = float(L.frames);
-  m.positionNode = Fn(() => {
-    const h = iext.x;
-    const c = cos(ipos.w);
-    const s = sin(ipos.w);
-    const center = ipos.xyz.add(vec3(0, h.mul(0.5), 0));
-    const toCam = normalize(cameraPosition.sub(center));
-    const dl = vec3(toCam.x.mul(c).sub(toCam.z.mul(s)), toCam.y, toCam.x.mul(s).add(toCam.z.mul(c)));
-    const yy = max(dl.y, 0);
-    const sum = abs(dl.x).add(yy).add(abs(dl.z));
-    const ouv = vec2(dl.x.add(dl.z), dl.x.sub(dl.z)).div(sum).mul(0.5).add(0.5);
-    const frame = clamp(floor(ouv.mul(N)), 0, N.sub(1));
-    vFrame.assign(frame);
-    const df = hemiOctDecode(frame.add(0.5).div(N));
-    const up = select(abs(df.y).greaterThan(0.999), vec3(0, 0, -1), vec3(0, 1, 0));
-    const rl = normalize(cross(up, df));
-    const ul = cross(df, rl);
-    const toWorld = (v: TslNode<'vec3'>) => vec3(v.x.mul(c).add(v.z.mul(s)), v.y, v.z.mul(c).sub(v.x.mul(s)));
-    const r = toWorld(rl);
-    const uu = toWorld(ul);
-    vR.assign(r);
-    vU.assign(uu);
-    vD.assign(toWorld(df));
-    const R = float(u.radius.element(int(iext.z))).mul(h);
-    return center.add(r.mul(positionGeometry.x).add(uu.mul(positionGeometry.y)).mul(R));
-  })();
+  m.positionNode = impostorPosition(u, N, { vR, vU, vD, vFrame });
   const local = uv();
   const tile = iext.z.sub(1);
   const tx = tile.sub(floor(tile.div(L.cols)).mul(L.cols));

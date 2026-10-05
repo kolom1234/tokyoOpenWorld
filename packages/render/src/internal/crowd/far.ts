@@ -12,6 +12,7 @@ import {
   fract,
   mix,
   positionLocal,
+  positionPrevious,
   screenCoordinate,
   sin,
   smoothstep,
@@ -29,6 +30,7 @@ import {
   Mesh,
   MeshStandardNodeMaterial,
   type PerspectiveCamera,
+  type Node as TslNode,
   Vector3,
 } from 'three/webgpu';
 
@@ -100,17 +102,27 @@ function createFarMaterial() {
   const right = uniform(new Vector3(1, 0, 0));
   const cam = uniform(new Vector3());
   const time = uniform(0);
+  /** 지난 프레임 time(모션 벡터). */
+  const prevTime = uniform(0);
   // 0 = 안 보임: 군중이 시작돼 게임이 setFarDensity를 부를 때까지(`?crowd=0`·픽셀 e2e엔 원경 사람 없음).
   const density = uniform(0);
   const ip = attribute('_ifar', 'vec4');
   const m = new MeshStandardNodeMaterial({ roughness: 0.9, metalness: 0 });
-  // 제자리 왕복(씨앗 방향·±2.5 m, ≈ 1.2 m/s) + 걸음 흔들림.
+  // 제자리 왕복(씨앗 방향·±2.5 m, ≈ 1.2 m/s) + 걸음 흔들림(시각 t). 모션 벡터(TAA) = 지난 프레임 시각의 같은 배치.
   const ang = ip.w.mul(6.2832);
-  const walk = sin(time.mul(0.48).add(ip.w.mul(40))).mul(2.5);
-  const base = ip.xyz.add(vec3(cos(ang).mul(walk), 0, sin(ang).mul(walk)));
-  m.positionNode = Fn(() => {
-    const bob = abs(sin(time.mul(5.8).add(ip.w.mul(17)))).mul(0.04);
+  const baseAt = (t: TslNode<'float'>) => {
+    const walk = sin(t.mul(0.48).add(ip.w.mul(40))).mul(2.5);
+    return ip.xyz.add(vec3(cos(ang).mul(walk), 0, sin(ang).mul(walk)));
+  };
+  const base = baseAt(time);
+  const at = (t: TslNode<'float'>) => {
+    const base = baseAt(t);
+    const bob = abs(sin(t.mul(5.8).add(ip.w.mul(17)))).mul(0.04);
     return base.add(right.mul(positionLocal.x.mul(0.55))).add(vec3(0, positionLocal.y.mul(1.7).add(bob), 0));
+  };
+  m.positionNode = Fn(() => {
+    positionPrevious.assign(at(prevTime));
+    return at(time);
   })();
   const shirt = vec3(fract(ip.w.mul(13.7)), fract(ip.w.mul(7.3)), fract(ip.w.mul(3.1)));
   // 도쿄 거리 옷: 어두운 남·검·회·베이지 위주(채도 낮게).
@@ -130,7 +142,7 @@ function createFarMaterial() {
     Discard(r.greaterThanEqual(fade));
     return vec4(mix(cloth, skin, step(0.86, y)), 1);
   })();
-  return { material: m, right, cam, time, density };
+  return { material: m, right, cam, time, prevTime, density };
 }
 
 function farGeometry(): { geo: InstancedBufferGeometry; inst: InstancedBufferAttribute } {
@@ -175,7 +187,7 @@ export function createFarCrowd(): FarCrowd {
   const root = new Group();
   root.name = 'far-crowd';
   const { geo, inst } = farGeometry();
-  const { material, right, cam, time, density } = createFarMaterial();
+  const { material, right, cam, time, prevTime, density } = createFarMaterial();
   const mesh = new Mesh(geo, material);
   mesh.frustumCulled = false;
   mesh.castShadow = false;
@@ -215,6 +227,7 @@ export function createFarCrowd(): FarCrowd {
       const e = camera.matrixWorld.elements;
       right.value.set(e[0] as number, 0, e[2] as number).normalize();
       cam.value.copy(camera.position);
+      prevTime.value = time.value;
       time.value = timeS;
     },
     stats: () => ({ points: [...cells.values()].reduce((s, p) => s + p.length / 4, 0), drawn: geo.instanceCount }),
