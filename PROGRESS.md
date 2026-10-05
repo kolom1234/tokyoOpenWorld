@@ -2,10 +2,10 @@
 Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 → ② M07 T01–T05, 브랜치 `claude/m07-trains`, draft PR #20)
 
 ## Current Milestone: M07 — Trains (PR #19 병합 뒤 시작 — 이번 PR #20: 사전 ⓪·① + T01–T05)
-## Current Task: 사전 ⓪·① ✅ → M07-T01 ✅ → T02 ✅ → T03 ✅ → **M07-T04 Train physics, doors, platform doors**
+## Current Task: 사전 ⓪·① ✅ → M07-T01 ✅ → T02 ✅ → T03 ✅ → T04 ✅ → **M07-T05 Train mode**
 - Done in this session: ⓪-1 소품 차도 정착 + validate `props on road`(ADR-0068), ⓪-2 소품 풀 `_itype` 범위 합치기(LOD 전환 때 소품 소멸) + L1 랜드마크 = L0 모양 +
   e2e `lod-continuity`·`render.debugLayerVisible`, ①-1 나무·간판·원경 군중 TAA 모션 벡터(실제 GPU 전후 docs/screenshots/M07/pre), ①-2 minor 신호 계획 100 s(ADR-0069, 메이지도리 0.36 → 0.41),
-  ①-3 늦은 레이어 compileDetached(e0b0adb). M07-T01(aa9e502, ADR-0070) 선로·rail.bin·셀 선로 메시. M07-T02(a51fc4a, ADR-0071) 시간표 컴파일러. M07-T03(01d29bc, ADR-0072) 열차 운동(메인 스레드 순수 함수)·절차 전동차.
+  ①-3 늦은 레이어 compileDetached(e0b0adb). M07-T01(aa9e502, ADR-0070) 선로·rail.bin·셀 선로 메시. M07-T02(a51fc4a, ADR-0071) 시간표 컴파일러. M07-T03(01d29bc, ADR-0072) 열차 운동(메인 스레드 순수 함수)·절차 전동차. M07-T04(962ed6c, ADR-0073) 칸 물리·문·승강장·홈도어·선로 위 건물 충돌 제외.
 - MVP 재빌드 이력: `20261005-b8fecc9`(차도 위 8·연석 2 남음) → `20261005-05b288c`(전주 4) → **`20261005-d1ea5ac`(validate 0 — 차도 위 0·연석 0, 신호 minor 계획 포함, 선로 없음)**.
 - 배포(2026-10-05 17:30): dev 버킷 publish(478파일 376.8 MB, current 설정) + staging Worker 배포(edcdc98, 버전 a5baeb95) + 스모크 ✅. production 배포·버킷 쓰기 없음.
 - 실제 GPU 스크립트(scratchpad, 커밋 안 함): `vis.mjs`·`ba.mjs`·`taa.mjs`·`stall.mjs`, `pl/*.mjs`(propsroad·hlodcover·tracks·stopdbg 등 — data/build·normalized를 node로 읽는 점검).
@@ -15,9 +15,12 @@ Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 �
 - M07-T02: core `computeRunProfile/profileAt/timeAtS/tripLegs`(컴파일러·sim 공용 곡선), `stages/timetables/*` → `global/timetables/{yamanote,yamanote-freight}.json` + index.
   `m07-rail-test` 위 야마노테 1,132 트립(최소 간격 150 s)·화물선 626(120 s), 위반 0. sim `rail/timetable.ts`(운행일 초·운행 중 트립). 역간 소요 = 곡선(시부야 → 하라주쿠 91 s, 실제 ≈ 2분 — 근사).
 - M07-T03: sim `rail/{network,motion-profile,trains}.ts`(시계 시스템이 프레임마다), render `trains/*`(가상 통근형 20 m 4문·16 m 3문 × 종류 4 × LOD 45/300/1600 m, LOD0 창 구멍 + 차내), game `world-rail.ts`(`?trains=0`).
-  실데이터 1,758 트립: 역간 소요 차 ≤ 0.05 s, 점프 vs 연속 0 m ✅. 긴자선 제3궤조(`thirdRail` — 가선 없음). 재빌드 `20261005-01d29bc-aefbe9ff`(선로·시간표 포함) 진행 중 → dev publish·staging.
+  실데이터 1,758 트립: 역간 소요 차 ≤ 0.05 s, 점프 vs 연속 0 m ✅. 긴자선 제3궤조(`thirdRail` — 가선 없음).
+- M07-T04: 실제 Jolt 수락 — 가속·곡선 12 s 선 승객 미끄러짐 1.75 cm, 닫힌 문 간격 0.020 m(관통 0), 열린 문 승차 ✅·닫힌 문 차단 ✅. 승강장 11개(rail.bin `platforms`), 홈도어 야마노테 8정차 × 44문.
+  실제 GPU(로컬 `20261005-01d29bc-aefbe9ff`): 하라주쿠–요요기 숲 구간 은색 차체·노선색 띠·차내 보임 ✅. ⚠️ 역은 PLATEAU 역사·선로 위 빌딩 껍질 안(16동) — 충돌 제외 + ≤ 12 m 상옥 렌더 제외만(ADR-0073 대안).
+  재빌드 `20261005-962ed6c-aefbe9ff`(승강장·선로 위 건물 처리 포함) 진행 중 → dev publish·staging.
 - **키 대기**: ODPT_CONSUMER_KEY 없음 → 긴자선 GTFS 'waiting-key'(컴파일러는 가상 픽스처 `tests/fixtures/gtfs-mini`로 검증). 키가 생기면 `ODPT_CONSUMER_KEY=… pnpm pipeline fetch --source odpt-tokyometro --update-lock` → `timetables --build-id <id>`(키 값 기록 금지). gc: 오늘 10/5 → 10/6 이후.
-- Next step (정확히 한 걸음): M07-T04 — 열차 칸 키네마틱 바디(바닥·벽·문)를 physics에(메인 sim 열차 → 30 Hz 목표, 물리 보간), 홈도어 모델(rail.bin 정차·승강장 쪽)·연동, 차내 보행 미끄러짐·관통 0 확인.
+- Next step (정확히 한 걸음): M07-T05 `packages/traversal/src/internal/modes/train.ts` + `camera/attached-rig.ts` — 서기(차내 보행)/좌석/전면전망, 다음 역까지 빨리감기, 차내 LCD 안내(다국어, 자체 문구), MVP 경계역(시부야·신주쿠) 자동 하차.
 - Blockers: 없음
 
 ## Recently Completed
