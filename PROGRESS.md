@@ -2,15 +2,16 @@
 Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 → ② M07 T01–T05, 브랜치 `claude/m07-trains`, draft PR #20)
 
 ## Current Milestone: M07 — Trains (PR #19 병합 뒤 시작 — 이번 PR #20: 사전 ⓪·① + T01–T05)
-## Current Task: 사전 ⓪(✅ 코드·MVP 재빌드 진행 중 → dev publish·staging) → ①-3(늦은 적재 멈춤 측정) → M07-T01
+## Current Task: 사전 ⓪ ✅(staging 반영) · ①-1·①-2 ✅ → ①-3(늦은 적재 멈춤 재측정) → M07-T01(fetch·OSM 철도 정규화 시작)
 - Done in this session: ⓪-1 소품 차도 정착 + validate `props on road`(ADR-0068), ⓪-2 소품 풀 `_itype` 범위 합치기(LOD 전환 때 소품 소멸) + L1 랜드마크 = L0 모양 +
   e2e `lod-continuity`·`render.debugLayerVisible`, ①-1 나무·간판·원경 군중 TAA 모션 벡터(실제 GPU 전후 docs/screenshots/M07/pre), ①-2 minor 신호 계획 100 s(ADR-0069, 메이지도리 0.36 → 0.41).
-- MVP 재빌드 이력: `20261005-b8fecc9`(차도 위 8·연석 2 남음 — 도로 조각 실틈·1 m 래스터·모퉁이) → `20261005-05b288c`(전주 4 — toRoadEdge 실틈) → `20261005-d1ea5ac`(진행 중).
+- MVP 재빌드 이력: `20261005-b8fecc9`(차도 위 8·연석 2 남음 — 도로 조각 실틈·1 m 래스터·모퉁이) → `20261005-05b288c`(전주 4 — toRoadEdge 실틈) → **`20261005-d1ea5ac`(validate 0 — 차도 위 0·연석 0, 신호 minor 계획 포함)**.
+- 배포(2026-10-05 17:30): dev 버킷 publish(478파일 376.8 MB, current 설정) + staging Worker 배포(edcdc98, 버전 a5baeb95) + 스모크 ✅. 실제 GPU staging: 공중전화 200→10 m 연속 표시(docs/screenshots/M07/pre). production 배포·버킷 쓰기 없음.
 - 실제 GPU 스크립트(scratchpad, 커밋 안 함): `vis.mjs`(대상 소품 거리 스윕 + 레이어 보임/숨김 픽셀 차), `ba.mjs`(사용자 포즈·공중전화 접근 전후 캡처), `taa.mjs`(옆 이동 캡처),
   `stall.mjs`(첫 표시 뒤 rAF 멈춤 + 로그·long task 귀속), `pl/propsroad.mjs <buildId>`(validate props 검사 단독), `pl/hlodcover.mjs`(레벨별 건물 덮임 비교).
 - ①-3 중간 측정(Docker 빌드와 겹쳐 CPU 부하 — 다시 잴 것): 첫 표시 +4.6 s 머티리얼 라이브러리 교체 1.8 s 멈춤(KTX2 4장 71 MB 한 프레임),
   +4.0/+6.4 s 0.45–0.58 s(늦은 적재 attach), +17 s 품질 자동 하향(High → Medium) 뒤 1.2 s + 7.0 s 멈춤(전체 재컴파일 추정).
-- Next step (정확히 한 걸음): 재빌드 `20261005-d1ea5ac` validate 0 확인 → `pnpm pipeline publish --build-id … --env dev --set-current` → `pnpm build` → staging `wrangler deploy --env staging` → 전후 캡처.
+- Next step (정확히 한 걸음): ①-3 Docker 빌드 없는 상태로 `stall.mjs` 재측정(머티리얼 교체·품질 하향 멈춤) → 쉬우면 고침 → M07-T01 `stages/rail/*` 파생(N02 = data/raw/ksj-n02 받음, OSM 철도 = data/normalized/rail/osm-rail.ndjson.gz 4,019 레코드).
 - 키 대기: ODPT_CONSUMER_KEY 없음(긴자선 GTFS — M07-T02는 픽스처로). gc: 오늘 10/5 → 10/6 이후.
 - Blockers: 없음
 
