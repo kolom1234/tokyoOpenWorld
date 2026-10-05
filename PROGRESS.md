@@ -1,18 +1,17 @@
 # PROGRESS
-Updated: 2026-10-05 (session #19 — 큐 모드 M06 2차 T03→T07, 브랜치 `claude/m06-crowds-traffic`, draft PR #19)
+Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 → ② M07 T01–T05, 브랜치 `claude/m07-trains`, draft PR #20)
 
-## Current Milestone: M06 — Life: Crowds & Traffic (T01·T02 ✅ PR #18 병합 → 이번 PR #19: 사전 정리 + T03–T07 + MVP 재빌드·staging)
-## Current Task: M06 큐 2차 완료(T03–T07 ✅ + MVP 재빌드·staging ✅) → 다음 = PR #19 리뷰·병합 뒤 M07
-- Done in this session: 사전 정리(원점 재설정 e2e Node 디코드, 선컴파일 묶음 양보·로딩 준비 행 — ADR-0060 보충), M06-T03(ADR-0063), M06-T04(ADR-0064), M06-T05(ADR-0065), M06-T06(ADR-0066), M06-T07(ADR-0067).
-- 실제 GPU 확인 스크립트(이번 세션 scratchpad, 커밋 안 함): `gpu.mjs`(Playwright chrome headed + `power()` = nvidia-smi 소비·상한 W), `bootblock.mjs`(long task·rAF 간격·첫 표시),
-  `crowdview.mjs out base query pose shots`(freecam 포즈 → 3 s마다 캡처 + 워커 통계·전력), `navviz.ts`(빌드 nav.bin → 위에서 본 area 색 PNG), `copy-shared.mjs`(부분 빌드에 MVP shared 복사).
-- 로컬 부분 빌드 `m06-t07-test`(9셀 L0_-1..1, nav(끝 조각 병합) + lanes(점 4 m), shared = `20261004-f0ae5ab-8de63322`에서 복사) = dev 서버 `?world=local` 최신. **MVP 전체 재빌드 미완**(신호·내비 포함 → T07 뒤 publish·staging).
-- 배포 상태(2026-10-05): staging = ed3d33c(Worker 버전 a942c765) + dev 버킷 current `20261004-ed3d33c-8de63322`(MVP 294 + HLOD 177, nav·lanes·신호 v2, 376.4 MB, validate 0). 실제 GPU 첫 표시 7.15–7.94 s·첫 로드 23.3–24.5 MB.
-  **옛 dev 빌드 gc는 2026-10-06 이후**(`pnpm pipeline gc --env dev` → 확인 뒤 `--apply`, prod는 건드리지 않음).
-- Next step (정확히 한 걸음): PR #19 사용자 리뷰(👀 docs/screenshots/M06/T04·T06·T07 GIF·JPG) → 병합 → M07 시작(`docs/roadmap/M07.md` 첫 태스크). 10/6 이후 dev 옛 빌드 gc.
-  남은 ⚠️: 메이지도리 속도 비율 0.36(T05), 소지품(T04), 나무·간판 TAA 모션 벡터(별도 작업 칩), 스크램블 대기 무리 크기(tier A 상한), 늦은 적재 프레임 멈춤 0.5–1 s(군중·간판·나무).
-  scratch: `crowdperf.mjs`(군중 켬/끔 GPU), `vehperf.mjs`(교통 켬/`traffic=0` GPU), `walkbot.mjs min seed`(걷기 봇 — 차 관통·낙하·끼임), `carview.mjs out time`(차종별 근접 캡처), `attachstall.mjs`(늦은 적재 rAF 멈춤), `yprobe.mjs`(차 높이 − 지면), `laneviz.ts`.
-- 측정 주의(ADR-0060): 같은 PC에서 GPU를 쓰는 다른 창이 있으면 첫 표시가 3배 — preview 탭은 정적 페이지(`/third-party-notices.txt`). 전력 상한이 측정 중 22 ↔ 34 W로 오르내림(행마다 기록).
+## Current Milestone: M07 — Trains (PR #19 병합 뒤 시작 — 이번 PR #20: 사전 ⓪·① + T01–T05)
+## Current Task: 사전 ⓪(✅ 코드·MVP 재빌드 진행 중 → dev publish·staging) → ①-3(늦은 적재 멈춤 측정) → M07-T01
+- Done in this session: ⓪-1 소품 차도 정착 + validate `props on road`(ADR-0068), ⓪-2 소품 풀 `_itype` 범위 합치기(LOD 전환 때 소품 소멸) + L1 랜드마크 = L0 모양 +
+  e2e `lod-continuity`·`render.debugLayerVisible`, ①-1 나무·간판·원경 군중 TAA 모션 벡터(실제 GPU 전후 docs/screenshots/M07/pre), ①-2 minor 신호 계획 100 s(ADR-0069, 메이지도리 0.36 → 0.41).
+- MVP 재빌드 이력: `20261005-b8fecc9`(차도 위 8·연석 2 남음 — 도로 조각 실틈·1 m 래스터·모퉁이) → `20261005-05b288c`(전주 4 — toRoadEdge 실틈) → `20261005-d1ea5ac`(진행 중).
+- 실제 GPU 스크립트(scratchpad, 커밋 안 함): `vis.mjs`(대상 소품 거리 스윕 + 레이어 보임/숨김 픽셀 차), `ba.mjs`(사용자 포즈·공중전화 접근 전후 캡처), `taa.mjs`(옆 이동 캡처),
+  `stall.mjs`(첫 표시 뒤 rAF 멈춤 + 로그·long task 귀속), `pl/propsroad.mjs <buildId>`(validate props 검사 단독), `pl/hlodcover.mjs`(레벨별 건물 덮임 비교).
+- ①-3 중간 측정(Docker 빌드와 겹쳐 CPU 부하 — 다시 잴 것): 첫 표시 +4.6 s 머티리얼 라이브러리 교체 1.8 s 멈춤(KTX2 4장 71 MB 한 프레임),
+  +4.0/+6.4 s 0.45–0.58 s(늦은 적재 attach), +17 s 품질 자동 하향(High → Medium) 뒤 1.2 s + 7.0 s 멈춤(전체 재컴파일 추정).
+- Next step (정확히 한 걸음): 재빌드 `20261005-d1ea5ac` validate 0 확인 → `pnpm pipeline publish --build-id … --env dev --set-current` → `pnpm build` → staging `wrangler deploy --env staging` → 전후 캡처.
+- 키 대기: ODPT_CONSUMER_KEY 없음(긴자선 GTFS — M07-T02는 픽스처로). gc: 오늘 10/5 → 10/6 이후.
 - Blockers: 없음
 
 ## Recently Completed
