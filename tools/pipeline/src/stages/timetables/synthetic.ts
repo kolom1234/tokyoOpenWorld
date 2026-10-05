@@ -18,7 +18,7 @@ interface Band {
 }
 interface SynthService {
   id: string;
-  label: { ja: string; en: string };
+  label: { ja: string; en: string; ko?: string };
   color: string;
   /** 선로 id → 위상(s). */
   tracks: Record<string, number>;

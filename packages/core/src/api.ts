@@ -360,3 +360,30 @@ export const TRAIN_CAR_TYPES: readonly TrainCarTypeInfo[] = [
  * 문(−1 왼쪽 … +1 오른쪽 열림 비율), 예약.
  */
 export const TRAIN_BODY_STRIDE = 10;
+/** 열차 칸 자세(M07-T05 — sim 제공, traversal 탑승 카메라): posWF = 칸 중심 레일 윗면(WF), 전방 = (−sin yaw, 0, −cos yaw), 앞이 높으면 pitch +. */
+export interface TrainCarPose {
+  posWF: Vec3d;
+  yawRad: number;
+  pitchRad: number;
+  /** TRAIN_CAR_TYPES 번호·칸 종류(0 중간·1 팬터그래프·2 앞 운전실·3 뒤 운전실)·문(−1 왼쪽 … +1 오른쪽 열림). */
+  carType: number;
+  kind: number;
+  doors: number;
+  speedMs: number;
+}
+/** 탑승 중 열차(M07-T05): 다음 역·도착 예정(게임 시각 ms)·지금 정차의 출발·문 쪽(진행 방향 왼쪽 −1·오른쪽 +1)·이 트립의 마지막 정차. */
+export interface TrainRideInfo {
+  tripId: string;
+  lineId: string;
+  routeId: string;
+  /** 진행 방향 이름(선로 heading — 야마노테 outer = 外回り). */
+  heading: string;
+  cars: number;
+  speedMs: number;
+  stoppedAtStationId: string | null;
+  nextStationId: string | null;
+  nextArrivalMs: number | null;
+  departureMs: number | null;
+  doorSide: -1 | 0 | 1;
+  lastStop: boolean;
+}

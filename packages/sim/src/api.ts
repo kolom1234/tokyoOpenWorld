@@ -8,7 +8,9 @@ import type {
   Logger,
   SharedInstanceBuffer,
   SystemProvider,
+  TrainCarPose,
   TrainInfo,
+  TrainRideInfo,
   Vec3d,
   WorkerSupervisor,
 } from '@sanpo/core';
@@ -178,6 +180,10 @@ export interface SimService extends SystemProvider {
   trainsNear(posWF: Vec3d, r: number): ReadonlyArray<TrainInfo>;
   /** 열차 통계(철도 없음 = undefined): 시간표 트립 수·운행 중 열차·그린 칸·터널 안 칸. */
   trainStats(): { trips: number; trains: number; cars: number; hiddenCars: number } | undefined;
+  /** 운행 중 트립 칸 k의 자세(M07-T05 — 탑승 카메라·하차 위치). 운행 끝·철도 없음 = undefined. */
+  trainCar(tripId: string, car: number): TrainCarPose | undefined;
+  /** 탑승 중 트립 정보(다음 역·도착 예정·문 쪽·마지막 정차, M07-T05). */
+  trainRide(tripId: string): TrainRideInfo | undefined;
   /** 위치 r(m) 안 칸의 물리 레코드(M07-T04 — core TRAIN_BODY_STRIDE, 이번 프레임 포즈·문). 철도 없음 = 빈 배열. */
   trainBodies(posWF: Vec3d, r: number): Float64Array;
   /** 승강장·홈도어 정적 배치(M07-T04, setRail 뒤 — 없으면 undefined). */

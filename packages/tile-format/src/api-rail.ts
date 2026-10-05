@@ -8,7 +8,8 @@ export const RAIL_FLAG = { tunnel: 1, bridge: 2, platform: 4 } as const;
 
 export interface RailLineMeta {
   id: string;
-  name: { ja: string; en: string };
+  /** 이름(ko = 한국어 — 차내 안내 화면, M07-T05). */
+  name: { ja: string; en: string; ko?: string };
   /** 노선색 #rrggbb(차체 띠만). */
   color: string;
   kind: 'jr' | 'metro' | 'private';
@@ -54,7 +55,8 @@ export interface RailTrackMeta {
 
 export interface RailStationMeta {
   id: string;
-  name: { ja: string; en: string };
+  /** 이름(ko = 한국어 — 차내 안내 화면, M07-T05). */
+  name: { ja: string; en: string; ko?: string };
   /** WF 대표 위치(정차 위치 평균). */
   posWF: [number, number, number];
   /** MVP 경계역(자동 하차). */
@@ -110,7 +112,8 @@ export interface TimetableTrip {
 
 export interface TimetableRoute {
   id: string;
-  name: { ja: string; en: string };
+  /** 이름(ko = 한국어 — 차내 안내 화면, M07-T05). */
+  name: { ja: string; en: string; ko?: string };
   color: string;
 }
 

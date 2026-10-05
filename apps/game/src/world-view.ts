@@ -21,6 +21,7 @@ import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
 import { bootProgressText, precompileText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
+import { trainLcdSystem } from './train-lcd.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
 import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
@@ -162,10 +163,12 @@ function createTraversalFor(
   input: InputService,
   ground: GroundQuery,
   late: LateState,
+  sim: SimService,
 ): TraversalService {
   const startPose = deps.start?.pose ?? startFreecamPose;
   const fov = deps.start?.fovDeg;
-  return createTraversal(
+  const player = { posWF: { x: 0, y: 0, z: 0 } };
+  const t = createTraversal(
     {
       input,
       bus: deps.bus,
@@ -174,9 +177,16 @@ function createTraversalFor(
       get physics() {
         return late.physics;
       },
+      // 열차(M07-T05): 근처 열차·칸 자세·탑승 정보·시계 점프(빨리감기).
+      trains: () => sim.trainsNear(player.posWF, 300),
+      trainCar: (id, k) => sim.trainCar(id, k),
+      trainRide: (id) => sim.trainRide(id),
+      jumpClock: (ms) => sim.clock.jumpTo(ms),
     },
     { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
   );
+  player.posWF = t.player.posWF;
+  return t;
 }
 
 /**
@@ -229,9 +239,17 @@ async function showWorldWith(
   render.setSignalLamps(signalLampsOf(v.sim));
   if (deps.trains === false) late.trainsSettled = true;
   else
-    startTrainsLater(v, world, wlog, () => {
-      late.trainsSettled = true;
-    });
+    startTrainsLater(
+      v,
+      world,
+      wlog,
+      () => {
+        late.trainsSettled = true;
+      },
+      (rail) => {
+        late.rail = rail;
+      },
+    );
   // 열차·승강장·홈도어 물리(M07-T04): 철도·물리 준비 뒤부터 프레임마다.
   if (deps.trains !== false) {
     const rail = trainPhysicsSystem(v.sim, () => late.physics);
@@ -286,13 +304,14 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const precompiled = startPrecompile(render, late, log);
   const input = createInput({ target: canvas, bus, log });
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
-  const traversal = createTraversalFor(deps, input, ground, late);
   const sim = simFor(deps);
+  const traversal = createTraversalFor(deps, input, ground, late, sim);
   const frameSource = frameSourceOf(traversal, sim);
   const wiringSystems = [
     createCameraWiring(traversal, render),
     createEnvWiring(sim, render, deps.weather),
     createGroundLoadingIndicator(canvas.ownerDocument, traversal),
+    trainLcdSystem(canvas.ownerDocument, traversal, () => late.rail),
   ];
 
   return {

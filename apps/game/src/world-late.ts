@@ -9,6 +9,7 @@ import CROWD_PARAMS from '../../../content/sim/crowd.json';
 import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
 import TRAFFIC_PARAMS from '../../../content/sim/traffic.json';
 import type { BootStage } from './boot-progress.ts';
+import type { TrainLcdData } from './train-lcd.ts';
 import type { StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
 import type { StreamingSimWiring } from './wiring/streaming-sim.ts';
@@ -28,6 +29,8 @@ export interface LateState {
   crowdSettled: boolean;
   /** 철도 적재·열차 선컴파일 끝(성공·실패·없음 — M07-T03). */
   trainsSettled: boolean;
+  /** 적재된 철도(M07-T05 차내 안내 화면 — 역·노선 이름). */
+  rail?: TrainLcdData;
   /** streaming → sim nav(M06-T03). 군중 off면 없음. */
   simWiring?: StreamingSimWiring;
   /** startStreaming이 만든 워커 감독자(sim.worker도 같이 — M06-T01). */

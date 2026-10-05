@@ -14,6 +14,7 @@ import {
 import type { ModeOutput, TraversalContext, TraversalOptions, TraversalService } from '../api.ts';
 import { createModeFsm, type ModeFsm } from './fsm.ts';
 import { createFreecamMode } from './modes/freecam.ts';
+import { boardingTarget, createTrainMode } from './modes/train.ts';
 import { createWalkMode } from './modes/walk.ts';
 import { DEFAULT_TRAVERSAL_SETTINGS } from './settings.ts';
 
@@ -43,6 +44,13 @@ function handleFreecamToggle(fsm: ModeFsm, ctx: TraversalContext, camera: Readon
   const params = { posWF: { ...camera.posWF }, yawRad: yawOfQuat(camera.quat), pitchRad: pitchOfQuat(camera.quat) };
   if (fsm.current?.id !== 'freecam') fsm.request('freecam', params);
   else fsm.request(fsm.previous ?? 'walk', params);
+}
+
+/** walk 중 F + 발이 열차 칸 안이면 train(서기)로(09 §1 — 칸 안 센서 대신 칸 자세 판정, M07-T05). */
+function handleBoarding(fsm: ModeFsm, ctx: TraversalContext, player: Readonly<PlayerState>): void {
+  if (fsm.current?.id !== 'walk' || !ctx.trainCar || !ctx.input.state.justPressed('interact')) return;
+  const t = boardingTarget(ctx, player.posWF);
+  if (t) fsm.request('train', { tripId: t.tripId, car: t.car, view: 'standing' });
 }
 
 interface OutputState {
@@ -120,6 +128,7 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
   fsm.register(createFreecamMode(settings));
   const walk = createWalkMode(settings);
   fsm.register(walk);
+  fsm.register(createTrainMode(settings));
   const initial = opts.initial ?? { mode: 'freecam' };
   if (!fsm.request(initial.mode, initial.params))
     throw new Error(`traversal: initial mode '${initial.mode}' unavailable`);
@@ -131,8 +140,13 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
     phase: TRAVERSAL_PHASE,
     update(frame) {
       handleFreecamToggle(fsm, ctx, out.camera);
+      handleBoarding(fsm, ctx, out.player);
       const mode = fsm.current;
-      if (mode !== undefined) out.apply(mode.update(frame, ctx), mode.id);
+      if (mode === undefined) return;
+      const o = mode.update(frame, ctx);
+      out.apply(o, mode.id);
+      // 모드가 스스로 다른 모드로(열차 하차 → walk, M07-T05).
+      if (o.next) fsm.request(o.next.mode, o.next.params);
     },
     dispose() {},
   };

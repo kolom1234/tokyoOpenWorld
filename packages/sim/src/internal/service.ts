@@ -97,6 +97,8 @@ export function createSim(deps: SimDeps): SimService {
       stations.update(trains.trains());
     },
     trainBodies: (p, r) => trains?.bodiesNear(p, r) ?? new Float64Array(0),
+    trainCar: (id, k) => trains?.car(id, k),
+    trainRide: (id) => trains?.ride(id),
     railStatic: () => stations?.layout,
     psdGateOpen: () => stations?.gateOpen ?? new Float32Array(0),
     trainsNear: (p, r) => trains?.trainsNear(p, r) ?? [],

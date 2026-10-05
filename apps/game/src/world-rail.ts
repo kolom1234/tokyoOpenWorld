@@ -58,11 +58,13 @@ export function startTrainsLater(
   world: LoadedWorld,
   log: Logger,
   done: () => void,
+  onRail?: (r: RailData) => void,
   fetchFn: FetchLike = (u) => fetch(u),
 ): void {
   void loadRail(world.baseUrl, fetchFn, log)
     .then(async (rail) => {
       if (!rail) return;
+      onRail?.(rail);
       const t0 = performance.now();
       v.sim.setRail(rail.network, rail.timetables);
       log.info(`sim.setRail ${(performance.now() - t0).toFixed(1)} ms`);

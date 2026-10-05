@@ -34,7 +34,7 @@ writeJcol(shapes): Uint8Array;  parseJcol(bytes): Result<JcolShape[], TkcError>
 interface LaneGraphChunk { nodes{key,posLocal}; lanes{id,fromNode,toNode,kind,turn,speedKmh,laneIdx,signal,ptOffset,ptCount,widthCm}; pointsLocal }
 writeLanes(g): Uint8Array;  parseLanes(bytes): Result<LaneGraphChunk, TkcError>
 // global/rail.bin v1(M07-T01, ADR-0070 — 05 §9, 타입 = src/api-rail.ts — api.ts가 재수출, 400줄 제한): RAIL_MAGIC·RAIL_VERSION·RAIL_FLAG{tunnel 1, bridge 2, platform 4}
-interface RailNetwork { lines: RailLineMeta[] /* thirdRail?: 제3궤조(가선 없음, M07-T03) */; tracks: RailTrackMeta[] /* ptOffset·ptCount·lengthM·stepM·stops[{station,s,side,platformLengthM}] */; stations: RailStationMeta[]; points: Float32Array /* WF xyz */; speed: Float32Array; flags: Uint8Array }
+interface RailNetwork { lines: RailLineMeta[] /* thirdRail?: 제3궤조(가선 없음, M07-T03); name.ko?(M07-T05 — 역도 같다) */; tracks: RailTrackMeta[] /* ptOffset·ptCount·lengthM·stepM·stops[{station,s,side,platformLengthM}] */; stations: RailStationMeta[]; points: Float32Array /* WF xyz */; speed: Float32Array; flags: Uint8Array }
 writeRail(n): Uint8Array;  parseRail(bytes): Result<RailNetwork, TkcError>
 // global/timetables/<lineId>.json·index.json(M07-T02, ADR-0071 — 05 §9.1, schemas/timetable.schema.json, api-rail.ts): TIMETABLE_SCHEMA = 1, SERVICE_DAY_START_S = 14400, TimetableDay = 'weekday'|'saturday'|'holiday'
 interface TimetableFile { schema; line; source 'synthetic'|'gtfs'; approximate; routes: TimetableRoute[]; calendars: TimetableCalendar[] /* {id, days, trips: TimetableTrip[]} */ }; TimetableIndexFile

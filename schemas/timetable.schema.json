@@ -24,7 +24,7 @@
             "type": "object",
             "required": ["ja", "en"],
             "additionalProperties": false,
-            "properties": { "ja": { "type": "string" }, "en": { "type": "string" } }
+            "properties": { "ja": { "type": "string" }, "en": { "type": "string" }, "ko": { "type": "string" } }
           },
           "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
         }

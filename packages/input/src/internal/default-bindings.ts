@@ -61,6 +61,7 @@ export const DEFAULT_BINDINGS: BindingMap = {
     lights: [key('KeyL')],
     interact: [key('KeyF'), pad(PAD.X)],
     toggleView: [key('KeyV'), pad(PAD.R3)],
+    skip: [key('KeyT')],
   },
   fly: {
     ...COMMON,

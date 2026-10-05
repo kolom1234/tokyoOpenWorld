@@ -2,7 +2,7 @@
 // 위치가 시각의 순수 함수라 외삽 없이 정확: 탑승 카메라(M07-T05)·물리(T04)가 같은 값을 본다). 터널 안 칸은 쓰지 않는다.
 // 칸 버퍼(stride 8): x, y, z(레일 윗면, WF − anchor), yaw, pitch, 속력 m/s, 노선색 24비트 sRGB(정수 — float32 정확),
 // 코드 = 칸 종류(정수: 차형 × 4 + 종류) + 문(소수: (문 + 1) / 2 × 0.999 — 문 = −1 왼쪽 … +1 오른쪽 열림).
-import type { SharedInstanceBuffer, TrainInfo, Vec3d } from '@sanpo/core';
+import type { SharedInstanceBuffer, TrainCarPose, TrainInfo, TrainRideInfo, Vec3d } from '@sanpo/core';
 import type { RailLineMeta, TimetableFile } from '@sanpo/tile-format';
 import { type MotionState, motionAt, type TripMotion, tripMotion } from './motion-profile.ts';
 import { type CarPose, carPose, inTunnel, type RailRt } from './network.ts';
@@ -35,6 +35,8 @@ export interface TrainState {
   /** 차형(CAR_TYPE)·가공 전차선(팬터그래프 칸). */
   type: number;
   overhead: boolean;
+  /** 트립 운행일 0시(게임 ms) — 시간표 초 → 게임 시각. */
+  dayZeroMs: number;
 }
 
 export interface TrainStats {
@@ -52,6 +54,9 @@ export interface TrainSim {
   trainsNear(posWF: Readonly<Vec3d>, r: number): TrainInfo[];
   /** 위치 r 안 칸 물리 레코드(core TRAIN_BODY_STRIDE — M07-T04). */
   bodiesNear(posWF: Readonly<Vec3d>, r: number): Float64Array;
+  /** 운행 중 트립의 칸 자세·탑승 정보(M07-T05 — 탑승 카메라). 운행 끝 = undefined. */
+  car(tripId: string, k: number): TrainCarPose | undefined;
+  ride(tripId: string): TrainRideInfo | undefined;
   stats(): TrainStats;
 }
 
@@ -81,6 +86,8 @@ interface Ctx {
   st: TrainStats;
   /** 트립 → 편성 일련(처음 본 순서 — 같은 세션 안에서 고정). */
   serials: Map<string, number>;
+  /** 지금 갱신의 게임 시각(ms). */
+  nowMs: number;
 }
 
 const pose: CarPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
@@ -92,6 +99,50 @@ function serialOf(c: Ctx, id: string): number {
     c.serials.set(id, n);
   }
   return n;
+}
+
+/** 트립 칸 k 자세(운행 중일 때). */
+function carOf(c: Ctx, id: string, k: number): TrainCarPose | undefined {
+  const t = c.list.find((q) => q.tripId === id);
+  const tr = t && c.rt.tracks.get(t.track);
+  if (!t || !tr || k < 0 || k >= t.cars) return undefined;
+  const half = (t.cars * t.carLengthM) / 2;
+  carPose(c.rt, tr.meta, t.motion.s + half - (k + 0.5) * t.carLengthM, t.carLengthM * BOGIE_RATIO, pose);
+  return {
+    posWF: { x: pose.x, y: pose.y, z: pose.z },
+    yawRad: pose.yaw,
+    pitchRad: pose.pitch,
+    carType: t.type,
+    kind: carKind(k, t.cars, t.overhead),
+    doors: t.motion.doors,
+    speedMs: t.motion.v,
+  };
+}
+
+/** 탑승 정보: 다음 역 도착(곡선) 게임 시각·지금 정차 출발·문 쪽·마지막 정차. */
+function rideOf(c: Ctx, id: string): TrainRideInfo | undefined {
+  const t = c.list.find((q) => q.tripId === id);
+  const mo = c.motions.get(id);
+  if (!t || !mo) return undefined;
+  const m = t.motion;
+  const stops = mo.trip.stops;
+  const at = m.stop >= 0 ? (stops[m.stop] ?? null) : null;
+  const next = m.next >= 0 && m.stop < 0 ? m.next : m.stop >= 0 && m.stop + 1 < stops.length ? m.stop + 1 : -1;
+  const sideIdx = m.stop >= 0 ? m.stop : m.next;
+  return {
+    tripId: id,
+    lineId: t.line,
+    routeId: t.route,
+    heading: mo.trip.dir,
+    cars: t.cars,
+    speedMs: m.v,
+    stoppedAtStationId: at?.station ?? null,
+    nextStationId: next >= 0 ? (stops[next]?.station ?? null) : null,
+    nextArrivalMs: next >= 0 ? t.dayZeroMs + (mo.arrive[next] as number) * 1000 : null,
+    departureMs: at ? t.dayZeroMs + at.depS * 1000 : null,
+    doorSide: sideIdx >= 0 ? ((mo.side[sideIdx] ?? 0) as -1 | 0 | 1) : 0,
+    lastStop: m.stop >= 0 && m.stop === stops.length - 1,
+  };
 }
 
 /** 위치 r(m) 안 칸의 물리 레코드(core TRAIN_BODY_STRIDE, WF float64 — 터널 칸 포함). */
@@ -177,11 +228,13 @@ function stateOf(c: Ctx, a: ActiveTrip, m: MotionState, line: RailLineMeta | und
     serial: serialOf(c, a.trip.id),
     type: carType(line),
     overhead: line?.thirdRail !== true,
+    dayZeroMs: c.nowMs - a.t * 1000,
   };
 }
 
 /** 한 프레임: 운행 중 트립 → 운동(캐시) → 칸 버퍼·열차 상태. 끝난 트립 캐시는 버린다. */
 function step(c: Ctx, active: ActiveTrip[], m: MotionState, gameMs: number, obs: Readonly<Vec3d>, trips: number): void {
+  c.nowMs = gameMs;
   c.anchor = { x: Math.round(obs.x / 256) * 256, y: 0, z: Math.round(obs.z / 256) * 256 };
   c.count = 0;
   c.list = [];
@@ -219,6 +272,7 @@ export function createTrainSim(rt: RailRt, tables: readonly TimetableFile[]): Tr
     list: [],
     st: { trips: 0, trains: 0, cars: 0, hiddenCars: 0 },
     serials: new Map(),
+    nowMs: 0,
   };
   const totalTrips = tables.reduce((n, f) => n + f.calendars.reduce((k, cal) => k + cal.trips.length, 0), 0);
   const active: ActiveTrip[] = [];
@@ -237,6 +291,8 @@ export function createTrainSim(rt: RailRt, tables: readonly TimetableFile[]): Tr
     },
     trains: () => c.list,
     bodiesNear: (p, r) => bodiesNear(c, p, r),
+    car: (id, k) => carOf(c, id, k),
+    ride: (id) => rideOf(c, id),
     trainsNear(p, r) {
       return c.list
         .filter((t) => Math.hypot(t.head.x - p.x, t.head.z - p.z) <= r + t.cars * t.carLengthM)

@@ -3,7 +3,7 @@
   "lines": [
     {
       "id": "yamanote",
-      "name": { "ja": "山手線", "en": "Yamanote Line" },
+      "name": { "ja": "山手線", "en": "Yamanote Line", "ko": "야마노테선" },
       "osmNames": ["山手線"],
       "n02": { "line": "山手線", "operator": "東日本旅客鉄道" },
       "color": "#9acd32",
@@ -17,7 +17,7 @@
     },
     {
       "id": "yamanote-freight",
-      "name": { "ja": "山手貨物線", "en": "Yamanote Freight Line" },
+      "name": { "ja": "山手貨物線", "en": "Yamanote Freight Line", "ko": "야마노테 화물선" },
       "osmNames": ["山手貨物線", "湘南新宿ライン"],
       "n02": { "line": "山手線", "operator": "東日本旅客鉄道" },
       "color": "#00ac9a",
@@ -31,7 +31,7 @@
     },
     {
       "id": "ginza",
-      "name": { "ja": "銀座線", "en": "Ginza Line" },
+      "name": { "ja": "銀座線", "en": "Ginza Line", "ko": "긴자선" },
       "osmNames": ["東京メトロ銀座線"],
       "n02": { "line": "3号線銀座線", "operator": "東京地下鉄" },
       "color": "#ff9500",
@@ -53,9 +53,9 @@
     }
   ],
   "stations": [
-    { "id": "shibuya", "name": { "ja": "渋谷", "en": "Shibuya" }, "osmNames": ["渋谷"], "mvpEdge": true },
-    { "id": "harajuku", "name": { "ja": "原宿", "en": "Harajuku" }, "osmNames": ["原宿"] },
-    { "id": "yoyogi", "name": { "ja": "代々木", "en": "Yoyogi" }, "osmNames": ["代々木"] },
-    { "id": "shinjuku", "name": { "ja": "新宿", "en": "Shinjuku" }, "osmNames": ["新宿"], "mvpEdge": true }
+    { "id": "shibuya", "name": { "ja": "渋谷", "en": "Shibuya", "ko": "시부야" }, "osmNames": ["渋谷"], "mvpEdge": true },
+    { "id": "harajuku", "name": { "ja": "原宿", "en": "Harajuku", "ko": "하라주쿠" }, "osmNames": ["原宿"] },
+    { "id": "yoyogi", "name": { "ja": "代々木", "en": "Yoyogi", "ko": "요요기" }, "osmNames": ["代々木"] },
+    { "id": "shinjuku", "name": { "ja": "新宿", "en": "Shinjuku", "ko": "신주쿠" }, "osmNames": ["新宿"], "mvpEdge": true }
   ]
 }

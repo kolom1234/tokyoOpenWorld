@@ -6,7 +6,7 @@
       "services": [
         {
           "id": "yamanote",
-          "label": { "ja": "山手線", "en": "Yamanote Line" },
+          "label": { "ja": "山手線", "en": "Yamanote Line", "ko": "야마노테선" },
           "color": "#9acd32",
           "tracks": { "yamanote-outer": 0, "yamanote-inner": 75 },
           "bands": [
@@ -27,7 +27,7 @@
       "services": [
         {
           "id": "saikyo",
-          "label": { "ja": "埼京線", "en": "Saikyō Line" },
+          "label": { "ja": "埼京線", "en": "Saikyō Line", "ko": "사이쿄선" },
           "color": "#00ac9a",
           "tracks": { "yamanote-freight-north": 0, "yamanote-freight-south": 200 },
           "bands": [
@@ -40,7 +40,7 @@
         },
         {
           "id": "shonan-shinjuku",
-          "label": { "ja": "湘南新宿ライン", "en": "Shōnan–Shinjuku Line" },
+          "label": { "ja": "湘南新宿ライン", "en": "Shōnan–Shinjuku Line", "ko": "쇼난신주쿠 라인" },
           "color": "#f68b1e",
           "tracks": { "yamanote-freight-north": 330, "yamanote-freight-south": 530 },
           "bands": [
