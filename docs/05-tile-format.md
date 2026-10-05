@@ -132,6 +132,16 @@ u32 pointCount; f32[pointCount*3]                           // 셀 로컬(M06-T0
 - 신호 코드 = `((교차로 ID 14비트 × 64 + 연동 오프셋 칸) × 16) + 계획 × 4 + 그룹`(ADR-0065 — props.inst 신호 기둥·nav.bin 횡단과 같은 코드).
 - reader 거부: 노드 인덱스 ≥ nodeCount, 점 범위 초과, 비유한 좌표(`corrupt`), 길이 부족(`truncated`), 버전 ≠ 2(`version`).
 
+## 9. global/rail.bin
+v1(M07-T01, ADR-0070) — 셀이 아니라 빌드 전역 파일(`world.json files.rail`), gzip:
+```
+u32 'RAIL', u16 version=1, u16 pad, u32 jsonBytes, 메타 JSON(UTF-8, 공백으로 4바이트 정렬)
+u32 pointCount; f32[pointCount*3] 표본 WF xyz(레일 윗면 중심선); f32[pointCount] 제한속도 m/s; u8[pointCount] 플래그(1 터널·2 교량·4 승강장 옆)
+```
+- 메타 = `{ lines: [{id, name{ja,en}, color, kind, rideable, maxSpeedKmh, gaugeM, formation{cars, carLengthM}}], tracks: [{id, line, heading, ptOffset, ptCount, lengthM, stepM, stops: [{station, s, side 'L'|'R', platformLengthM}]}], stations: [{id, name, posWF, mvpEdge}] }`.
+- 선로 표본 k의 s = k × stepM(0.5 m, 마지막 = lengthM). 점 순서 = 진행 방향(좌측통행 — 같은 노선 두 선로 중 북행 = 서쪽). 정차 s = 편성 중심이 오는 승강장 가운데, side = 문 쪽(진행 방향 기준).
+- reader 거부: 매직·버전, 잘림, 메타 JSON 오류(`header`), 선로 표본 범위·정차 s ∉ [0, 길이]·미지 노선/역·비유한 값(`corrupt`).
+
 ## 8. 버전 정책
 - 포맷 비호환 변경 → `formatVersion` 증가 + ADR + 런타임은 단일 버전만 지원(구 빌드 즉시 폐기).
 - 섹션 추가는 호환 변경 (formatVersion 유지).

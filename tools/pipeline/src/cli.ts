@@ -9,6 +9,7 @@ import { parseArgs, promisify } from 'node:util';
 import { type CellKey, createLogger, packCellKey } from '@sanpo/core';
 import { FORMAT_VERSION } from '@sanpo/tile-format';
 import * as assetStages from './cli-assets.ts';
+import * as railStages from './cli-rail.ts';
 import { createPlateauReader } from './readers/plateau/index.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
@@ -25,6 +26,7 @@ import { normalizePlateau, type PlateauLayer } from './stages/normalize-plateau.
 import { hasDemSources, normalizeTerrain, writeTerrainMeta } from './stages/normalize-terrain.ts';
 import { buildFiles, gcBuilds, publishBuild, verifyViaWorker } from './stages/publish/publish.ts';
 import { createClients, type PublishEnv, readTargets } from './stages/publish/targets.ts';
+import { normalizeRail } from './stages/rail/normalize.ts';
 import { reportMarkdown, validateBuild, writeReport } from './stages/validate.ts';
 import { checkPropsOnRoad } from './stages/validate-props.ts';
 import { checkRoadGaps, GAP_LIMIT_M } from './stages/validate-roads.ts';
@@ -127,6 +129,7 @@ async function normalize(args: string[]): Promise<void> {
   if (layer === 'all' || layer === 'plateau') await normalizePlateauLayer(cells, values.source, values.reader, only);
   if (layer === 'all' || layer === 'terrain') await normalizeTerrainLayer(cells);
   if (layer === 'all' || layer === 'osm') await normalizeOsmLayer(cells);
+  if (layer === 'all' || layer === 'rail') await normalizeRail(REPO_ROOT, lockSources(), cells, log.child('rail'));
 }
 
 /** OSM 간토 PBF → data/normalized/osm(컨테이너 전용, osmium). */
@@ -159,6 +162,7 @@ async function build(args: string[]): Promise<void> {
     props: readCatalog(REPO_ROOT),
     overrides: readOverrides(REPO_ROOT),
     crossingCorrections: readCrossingCorrections(REPO_ROOT),
+    rail: { repoRoot: REPO_ROOT, derivedDir: join(REPO_ROOT, 'data/derived') },
   });
   const bytes = stats.reduce((a, s) => a + s.bytes, 0);
   log.info(`build ${buildId}: ${stats.length} cells, ${bytes} B in ${((performance.now() - t0) / 1000).toFixed(1)} s`);
@@ -349,8 +353,12 @@ async function fixture(args: string[]): Promise<void> {
 
 /** 에셋 단계 공용 문맥(cli-assets.ts). */
 const assets = { repoRoot: REPO_ROOT, log, lockSources };
+/** 철도 단계 문맥(cli-rail.ts, M07). */
+const rail = { repoRoot: REPO_ROOT, log };
 
 const STAGES: Record<string, (args: string[]) => Promise<void>> = {
+  fetch: (args) => railStages.fetchSources(rail, args),
+  rail: (args) => railStages.rail(rail, args, () => makeBuildId(REPO_ROOT)),
   normalize,
   build,
   'hlod-prep': hlodPrep,

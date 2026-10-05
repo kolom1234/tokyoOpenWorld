@@ -8,6 +8,7 @@ import {
   type CellMeta,
   type CellsIndexEntry,
   gzip,
+  type RailNetwork,
   type TkcSectionInput,
   tkcHash32,
   type Vec3Tuple,
@@ -27,8 +28,8 @@ import { walkwaysOf } from '../derive/stairs.ts';
 import { SHAPE_PAD, type ShapedGround, shapeGround } from '../derive/terrain-shape.ts';
 import { paintVegetation } from '../derive/vegetation.ts';
 import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
-import { aroundReader, readLayer } from './area-reader.ts';
-import { crop, mergeStreams, outward, union, withOverrideCollider, yRange } from './assemble-util.ts';
+import { aroundReader, railNetworkFor, readLayer } from './area-reader.ts';
+import { crop, mergeStreams, outward, union, unionBounds, withOverrideCollider, yRange } from './assemble-util.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
 import { type CellBuildStats, cellStats } from './cell-stats.ts';
 import { buildCollision } from './collision.ts';
@@ -90,6 +91,8 @@ export interface CellBuildInput {
   stepsAround?: readonly OsmRecord[];
   /** 셀 밖까지 WF 지면 높이(영역 DEM) — 이웃 셀 계단 통로. 없으면 셀 지형만. */
   groundAround?: (x: number, z: number) => number | undefined;
+  /** 철도 망(M07-T01) — overrides.mesh 선로 메시. */
+  rail?: RailNetwork;
 }
 
 async function encodeMeta(meta: CellMeta): Promise<Uint8Array> {
@@ -249,7 +252,10 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   const terrain = await buildTerrainGeometry(sc.window, sc.surf, sc.tol);
   const terrainAt = terrainLookup({ pos: terrain.positions, idx: terrain.indices });
   const ov = input.overrides
-    ? await overrideCell(input.overrides, input.buildings, originWF, terrainAt, walkwaysOf(input, originWF, terrainAt))
+    ? await overrideCell(input.overrides, input.buildings, originWF, terrainAt, {
+        ...walkwaysOf(input, originWF, terrainAt),
+        ...(input.rail ? { rail: input.rail } : {}),
+      })
     : null;
   const bld = await buildBuildings(input.buildings, originWF, ov?.renderSkip);
   const own = input.cellRoads ?? [];
@@ -317,21 +323,13 @@ export interface AreaBuildInput {
   overrides?: OverrideSet;
   /** OSM 횡단 선 보정(M06 사전 2, content/markings). */
   crossingCorrections?: MarkingInput['corrections'];
-}
-
-/** 셀 목록의 합집합(양끝 포함) WF 경계. */
-export function unionBounds(cells: readonly CellKey[]): CellBoundsWF {
-  const bs = cells.map(cellBoundsWF);
-  const pick = (f: (...v: number[]) => number, k: keyof CellBoundsWF): number => f(...bs.map((b) => b[k]));
-  return {
-    minX: pick(Math.min, 'minX'),
-    minZ: pick(Math.min, 'minZ'),
-    maxX: pick(Math.max, 'maxX'),
-    maxZ: pick(Math.max, 'maxZ'),
-  };
+  /** 철도(M07-T01): 있으면 global/rail.bin을 먼저 만들고 셀 overrides.mesh에 선로 메시. */
+  rail?: { repoRoot: string; derivedDir: string };
 }
 
 /** 영역 빌드: 셀 TKC(행 = iz, 열 = ix 순) + cells.idx + world.json. */
+export { unionBounds };
+
 export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]> {
   const { log, outDir } = input;
   const cells = [...input.cells].sort((a, b) => a - b);
@@ -345,6 +343,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
     ));
   const files = aroundReader(input.normalizedDir);
   rmSync(outDir, { recursive: true, force: true });
+  const rail = await railNetworkFor(input, outDir);
   const index: CellsIndexEntry[] = [];
   const stats: CellBuildStats[] = [];
   for (const key of cells) {
@@ -369,6 +368,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
             bridgesAround: files.bridgesAround(key),
             stepsAround: files.stepsAround(key),
             groundAround: (x: number, z: number) => demHeightAt(dem, x, z),
+            ...(rail ? { rail } : {}),
           }
         : {}),
       metaFallbackSources: input.plateauSources,

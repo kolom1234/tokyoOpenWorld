@@ -7,6 +7,7 @@ export { parseJcol, writeJcol } from './internal/jcol.ts';
 export { parseLanes, writeLanes } from './internal/lanes.ts';
 export { parseNav, writeNav } from './internal/nav.ts';
 export { parseProps, writeProps } from './internal/props.ts';
+export { parseRail, writeRail } from './internal/rail.ts';
 export { isSectionType, sectionHash } from './internal/sections.ts';
 export { readTkc, verifyTkc } from './internal/tkc-reader.ts';
 export { writeTkc } from './internal/tkc-writer.ts';

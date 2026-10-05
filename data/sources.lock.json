@@ -96,13 +96,13 @@
     },
     {
       "id": "ksj-n02",
-      "url": "TBD (国土数値情報 N02 最新版)",
-      "resource": "GeoJSON/Shape",
-      "fiscalYear": null,
-      "sha256": "TBD",
-      "license": "KSJ-Terms (⚠ 확인)",
+      "url": "https://nlftp.mlit.go.jp/ksj/gml/data/N02/N02-25/N02-25_GML.zip",
+      "resource": "N02-25_GML.zip(2025년도판) → extracted/RailroadSection.geojson·Station.geojson(UTF-8)",
+      "fiscalYear": 2025,
+      "sha256": "aaf76af133b2e771e538fabc4646d2e443dc1d5a67b221382a28d744e706cc9f",
+      "license": "CC-BY-4.0",
       "attribution": "出典：国土数値情報（鉄道データ）（国土交通省）を加工して作成",
-      "retrievedAt": null
+      "retrievedAt": "2026-10-05"
     },
     {
       "id": "estat-small-area",

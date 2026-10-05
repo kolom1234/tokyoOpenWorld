@@ -683,6 +683,20 @@
         "tests/fixtures/world-mini/**"
       ],
       "modified": true
+    },
+    {
+      "id": "ksj-n02",
+      "kind": "data",
+      "title": "国土数値情報（鉄道データ）N02 2025年度版 — 노선 식별·역 위치 대조(M07-T01, global/rail.bin 생성 입력)",
+      "url": "https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2025.html",
+      "license": "CC-BY-4.0",
+      "attribution": {
+        "ja": "出典：国土数値情報（鉄道データ）（国土交通省）を加工して作成",
+        "en": "Source: National Land Numerical Information (Railway Data), MLIT, processed",
+        "ko": "출처: 국토수치정보(철도 데이터)(국토교통성)를 가공하여 작성"
+      },
+      "files": [],
+      "modified": true
     }
   ]
 }

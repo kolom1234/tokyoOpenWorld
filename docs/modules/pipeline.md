@@ -6,7 +6,8 @@ Layer: — | Depends: core, geo, tile-format, @gltf-transform/*, meshoptimizer, 
 상세: `docs/04-data-pipeline.md`, 포맷: `docs/05-tile-format.md`.
 
 ## CLI
-`pnpm pipeline <fetch|normalize|derive|build|hlod|materials|characters|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
+`pnpm pipeline <fetch|normalize|derive|build|hlod|rail|materials|characters|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
+철도(M07, ADR-0070 — `cli-rail.ts`): `fetch --source ksj-n02|odpt-tokyometro [--update-lock]`(N02 zip → sha256 → GeoJSON, ODPT 키 = 환경 변수 `ODPT_CONSUMER_KEY` — 값은 기록 안 함, 없으면 "키 대기" 경고), `normalize --layer rail`(osmium → data/normalized/rail/osm-rail.ndjson.gz), `build`가 global/rail.bin + 셀 선로 메시를 함께, `rail --build-id`(전역만 다시), 수락 `checks/rail-photo.ts <buildId> [yamanote]`(컨테이너).
 
 ## Files
 ```
