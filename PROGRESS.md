@@ -2,20 +2,20 @@
 Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 → ② M07 T01–T05, 브랜치 `claude/m07-trains`, draft PR #20)
 
 ## Current Milestone: M07 — Trains (PR #19 병합 뒤 시작 — 이번 PR #20: 사전 ⓪·① + T01–T05)
-## Current Task: 사전 ⓪·① ✅ → M07-T01 Rail network derive(fetch·OSM 철도 정규화 완료, 파생·rail.bin 진행)
+## Current Task: 사전 ⓪·① ✅ → M07-T01 ✅ → M07-T02 ✅ → **M07-T03 Motion profiles & train rendering**
 - Done in this session: ⓪-1 소품 차도 정착 + validate `props on road`(ADR-0068), ⓪-2 소품 풀 `_itype` 범위 합치기(LOD 전환 때 소품 소멸) + L1 랜드마크 = L0 모양 +
-  e2e `lod-continuity`·`render.debugLayerVisible`, ①-1 나무·간판·원경 군중 TAA 모션 벡터(실제 GPU 전후 docs/screenshots/M07/pre), ①-2 minor 신호 계획 100 s(ADR-0069, 메이지도리 0.36 → 0.41).
-- MVP 재빌드 이력: `20261005-b8fecc9`(차도 위 8·연석 2 남음 — 도로 조각 실틈·1 m 래스터·모퉁이) → `20261005-05b288c`(전주 4 — toRoadEdge 실틈) → **`20261005-d1ea5ac`(validate 0 — 차도 위 0·연석 0, 신호 minor 계획 포함)**.
-- 배포(2026-10-05 17:30): dev 버킷 publish(478파일 376.8 MB, current 설정) + staging Worker 배포(edcdc98, 버전 a5baeb95) + 스모크 ✅. 실제 GPU staging: 공중전화 200→10 m 연속 표시(docs/screenshots/M07/pre). production 배포·버킷 쓰기 없음.
-- 실제 GPU 스크립트(scratchpad, 커밋 안 함): `vis.mjs`(대상 소품 거리 스윕 + 레이어 보임/숨김 픽셀 차), `ba.mjs`(사용자 포즈·공중전화 접근 전후 캡처), `taa.mjs`(옆 이동 캡처),
-  `stall.mjs`(첫 표시 뒤 rAF 멈춤 + 로그·long task 귀속), `pl/propsroad.mjs <buildId>`(validate props 검사 단독), `pl/hlodcover.mjs`(레벨별 건물 덮임 비교).
-- ①-3 늦은 적재 멈춤(실제 GPU, 첫 표시 뒤 rAF 간격 + WebGPU createRenderPipeline/ShaderModule/writeTexture 계수 — scratch `stall.mjs`):
-  원인 ① 늦은 레이어(간판·나무·군중·차량) priming을 장면에 붙인 채 compileAsync → 다음 일반 프레임이 같은 파이프라인을 **동기** 생성(24 셰이더 + 12 파이프라인)
-  + 머티리얼 라이브러리 교체가 같은 무렵 → 1.8–2.5 s. **고침**(e0b0adb `compileDetached`): dev 2회 0.58 + 2.45 + 0.80 s → 최대 0.67–0.82 s.
-  남은 것(기록만): ② compileAsync가 캔버스 문맥으로 컴파일 — 실제 장면은 후처리 MRT 패스라 첫 그리기에서 다시 동기 생성(hlod:*, vehicle, sign, tree_*, ShadowMaterial) —
-  대안 = 후처리 장면 패스 렌더 타깃·MRT로 compileAsync. ③ KTX2 라이브러리 업로드 writeTexture 1,424회 ≈ 350 ms(메인). ④ 품질 자동 하향(캐스케이드 수 변경) → 그림자 받는 머티리얼 전부 재컴파일 1 + 5.6–7 s(가끔).
-- Next step (정확히 한 걸음): ①-3 Docker 빌드 없는 상태로 `stall.mjs` 재측정(머티리얼 교체·품질 하향 멈춤) → 쉬우면 고침 → M07-T01 `stages/rail/*` 파생(N02 = data/raw/ksj-n02 받음, OSM 철도 = data/normalized/rail/osm-rail.ndjson.gz 4,019 레코드).
-- 키 대기: ODPT_CONSUMER_KEY 없음(긴자선 GTFS — M07-T02는 픽스처로). gc: 오늘 10/5 → 10/6 이후.
+  e2e `lod-continuity`·`render.debugLayerVisible`, ①-1 나무·간판·원경 군중 TAA 모션 벡터(실제 GPU 전후 docs/screenshots/M07/pre), ①-2 minor 신호 계획 100 s(ADR-0069, 메이지도리 0.36 → 0.41),
+  ①-3 늦은 레이어 compileDetached(e0b0adb). M07-T01(aa9e502, ADR-0070) 선로·rail.bin·셀 선로 메시. M07-T02(a51fc4a, ADR-0071) 시간표 컴파일러.
+- MVP 재빌드 이력: `20261005-b8fecc9`(차도 위 8·연석 2 남음) → `20261005-05b288c`(전주 4) → **`20261005-d1ea5ac`(validate 0 — 차도 위 0·연석 0, 신호 minor 계획 포함, 선로 없음)**.
+- 배포(2026-10-05 17:30): dev 버킷 publish(478파일 376.8 MB, current 설정) + staging Worker 배포(edcdc98, 버전 a5baeb95) + 스모크 ✅. production 배포·버킷 쓰기 없음.
+- 실제 GPU 스크립트(scratchpad, 커밋 안 함): `vis.mjs`·`ba.mjs`·`taa.mjs`·`stall.mjs`, `pl/*.mjs`(propsroad·hlodcover·tracks·stopdbg 등 — data/build·normalized를 node로 읽는 점검).
+- ①-3 남은 멈춤(기록만): ② compileAsync가 캔버스 문맥으로 컴파일 — 실제 장면은 후처리 MRT 패스라 첫 그리기에서 다시 동기 생성 — 대안 = 후처리 장면 패스 렌더 타깃·MRT로 compileAsync.
+  ③ KTX2 라이브러리 업로드 writeTexture 1,424회 ≈ 350 ms(메인). ④ 품질 자동 하향(캐스케이드 수 변경) → 그림자 받는 머티리얼 재컴파일 1 + 5.6–7 s(가끔).
+- M07-T01: 선로 6개(야마노테 outer/inner 9.3 km, 화물선 north/south 9.2 km, 긴자선 2 × 3.9 km), 정차 = 승강장 중심 0.01–1.15 m ✅, 항공사진 중앙값 0.5 m·1 m 초과 15 % ⚠️(ADR-0070 대안). 로컬 빌드 `m07-rail-test`(rail.bin 점검용 — publish 안 함).
+- M07-T02: core `computeRunProfile/profileAt/timeAtS/tripLegs`(컴파일러·sim 공용 곡선), `stages/timetables/*` → `global/timetables/{yamanote,yamanote-freight}.json` + index.
+  `m07-rail-test` 위 야마노테 1,132 트립(최소 간격 150 s)·화물선 626(120 s), 위반 0. sim `rail/timetable.ts`(운행일 초·운행 중 트립). 역간 소요 = 곡선(시부야 → 하라주쿠 91 s, 실제 ≈ 2분 — 근사).
+- **키 대기**: ODPT_CONSUMER_KEY 없음 → 긴자선 GTFS 'waiting-key'(컴파일러는 가상 픽스처 `tests/fixtures/gtfs-mini`로 검증). 키가 생기면 `ODPT_CONSUMER_KEY=… pnpm pipeline fetch --source odpt-tokyometro --update-lock` → `timetables --build-id <id>`(키 값 기록 금지). gc: 오늘 10/5 → 10/6 이후.
+- Next step (정확히 한 걸음): M07-T03 `packages/sim/src/internal/rail/{motion-profile,trains}.ts` — 트립 + rail.bin → s(trip, t)(core tripLegs, 트립별 캐시) → 편성 칸 위치·yaw → 열차 SAB(sim.worker), render 가상 통근형 전동차(노선색 띠만, LOD 3 + 탑승 차량 내부).
 - Blockers: 없음
 
 ## Recently Completed
