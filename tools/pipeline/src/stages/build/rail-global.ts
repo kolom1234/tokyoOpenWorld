@@ -23,6 +23,7 @@ import { buildTracks, type RawTrack, type V2 } from '../derive/rail/tracks.ts';
 import { farDemHeight, readFarDem } from '../hlod/dem-far.ts';
 import type { OsmRecord } from '../normalize-osm.ts';
 import { RAIL_FILE } from '../rail/normalize.ts';
+import type { GtfsLineMap } from '../timetables/gtfs.ts';
 import { readDemWindow } from './dem-window.ts';
 
 interface LineDef extends RailLineMeta {
@@ -30,6 +31,8 @@ interface LineDef extends RailLineMeta {
   n02: { line: string; operator: string };
   headings: { north: string; south: string };
   stations: string[];
+  /** 시간표 원천이 GTFS인 노선(M07-T02 — timetables/gtfs.ts). */
+  gtfs?: GtfsLineMap;
 }
 interface StationDef {
   id: string;
@@ -240,7 +243,7 @@ export async function buildRailGlobal(i: RailBuildInput): Promise<{ network: Rai
     }
   }
   const network: RailNetwork = {
-    lines: cat.lines.map(({ osmNames: _o, n02: _n, headings: _h, stations: _s, ...m }) => m),
+    lines: cat.lines.map(({ osmNames: _o, n02: _n, headings: _h, stations: _s, gtfs: _g, ...m }) => m),
     tracks,
     stations: stationMetas(cat.stations, tracks, pts),
     points: Float32Array.from(pts),

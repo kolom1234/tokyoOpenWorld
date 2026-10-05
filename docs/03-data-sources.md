@@ -22,9 +22,10 @@
 ## 2. 교통·시간표
 | ID | 데이터 | 라이선스 | 사용 여부 |
 |---|---|---|---|
-| `odpt-tokyometro` | 도쿄메트로 GTFS/GTFS-JP (ODPT) | 공공교통 오픈데이터 기본 라이선스. ODPT 개발자 등록(키) 필요 | ✅ 긴자선 시간표(시각 운행). 후쿠토신선 등 지하 노선은 M12+ |
+| `odpt-tokyometro` | 도쿄메트로 GTFS/GTFS-JP (ODPT) | 공공교통 오픈데이터 기본 라이선스. ODPT 개발자 등록(키) 필요 | ✅ 긴자선 시간표(시각 운행). 후쿠토신선 등 지하 노선은 M12+. 키 = 환경 변수 `ODPT_CONSUMER_KEY`(로그·파일·커밋 금지) — **키 대기**(M07-T02 컴파일러는 픽스처로 검증, ATTRIBUTION 항목은 실제 데이터를 받을 때 추가) |
 | `odpt-toei` | 도에이 지하철/버스 (ODPT) | ⚠ 라이선스 명칭 확인 | 🔶 MVP 범위 밖(오에도선은 M12+) |
 | `odpt-jreast` | JR동일본 (ODPT) | "공공교통 오픈데이터 챌린지 한정 라이선스" → 상시 서비스 사용 불가 | ❌ 사용 금지. 야마노테선은 **합성 시간표**(`10-simulation.md §6.1`, ADR-0008) |
+| 자체 작성 `synthetic-timetables` | JR 야마노테·사이쿄·쇼난신주쿠 **근사 시간표**(M07-T02, `content/sim/synthetic-lines.json` 시간대 간격·정차 → ADR-0071) + GTFS 테스트 픽스처 `tests/fixtures/gtfs-mini`(가상 시각·가상 사업자) | 프로젝트 소유. 크레딧에 "근사 시간표(실제 시간표 아님)" 명시(`ATTRIBUTION.json` `synthetic-timetables`) | ✅ |
 
 ## 3. 부가 데이터
 | ID | 데이터 | 라이선스 | 비고 |

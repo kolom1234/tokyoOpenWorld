@@ -65,8 +65,9 @@
 ## 6. 열차
 ### 6.1 데이터
 - `global/rail.bin`: 노선 → 방향별 트랙 스플라인(0.5 m 샘플), 역·플랫폼 정차 위치, 구간 제한속도(곡률 기반: `v = min(lineMax, sqrt(0.8 m/s² × R))`), 터널 구간 플래그.
-- `global/timetables/<lineId>.json`: `trips[{id, dir, formation, stops[{stationId, arrS, depS}]}]` (운행일 04:00 기준 초).
-- 출처: 도쿄메트로 = ODPT GTFS 컴파일. JR 야마노테·사이쿄/쇼난신주쿠 = **합성 시간표** (`content/sim/synthetic-lines.yaml`: 시간대별 운행 간격, 역별 정차 시간). 실측이 아닌 근사임을 크레딧에 명시.
+- `global/timetables/<lineId>.json`: `calendars[{days, trips[{id, route, track, dir, cars, carLengthM, from, to, enterS, exitS, stops[{station, s, arrS, depS}]}]}]` (운행일 0시 기준 초, 04:00 경계 — 형식 05 §9.1, ADR-0071).
+- 출처: 도쿄메트로 = ODPT GTFS 컴파일(키 대기 — 픽스처로 검증). JR 야마노테·사이쿄/쇼난신주쿠 = **합성 시간표** (`content/sim/synthetic-lines.json`: 계통·선로 위상, 시간대별 운행 간격, 역별 정차 시간). 실측이 아닌 근사임을 크레딧에 명시(ATTRIBUTION `synthetic-timetables`).
+- 같은 선로 이웃 트립 간격 ≥ 90 s(컴파일·validate 검사). 역간 소요 = 아래 §6.2 곡선(core `tripLegs` — 컴파일러와 sim 공용).
 ### 6.2 운동
 - 위치는 **시간의 순수 함수** `s(trip, t)`: 역간 가속 0.83 m/s², 감속 0.97 m/s², 구간 제한속도 준수 프로파일을 사전 계산(트립별 캐시). → 빨리감기·시각 점프 즉시 대응, 네트워크 전체를 싸게 계산.
 - 편성: 야마노테 11량×20 m, 사이쿄 10량×20 m, 긴자선 6량×16 m. 차량 간 연결은 스플라인 위 s 오프셋.

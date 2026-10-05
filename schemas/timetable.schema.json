@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sanpo/timetable",
+  "title": "global/timetables/<lineId>.json — compiled timetable (M07-T02, ADR-0071, docs/05-tile-format.md §9)",
+  "description": "Times = seconds from the service day's midnight (service day boundary 04:00 = 14400; > 86400 allowed, like GTFS). s = track position (m) of the formation centre.",
+  "type": "object",
+  "required": ["schema", "line", "source", "approximate", "routes", "calendars"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": 1 },
+    "line": { "$ref": "#/$defs/id" },
+    "source": { "enum": ["synthetic", "gtfs"] },
+    "approximate": { "type": "boolean" },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "color"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "name": {
+            "type": "object",
+            "required": ["ja", "en"],
+            "additionalProperties": false,
+            "properties": { "ja": { "type": "string" }, "en": { "type": "string" } }
+          },
+          "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+        }
+      }
+    },
+    "calendars": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "days", "trips"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/id" },
+          "days": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "enum": ["weekday", "saturday", "holiday"] }
+          },
+          "trips": { "type": "array", "items": { "$ref": "#/$defs/trip" } }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[A-Za-z0-9_-]+$" },
+    "time": { "type": "number", "minimum": 0, "maximum": 172800 },
+    "trip": {
+      "type": "object",
+      "required": ["id", "route", "track", "dir", "cars", "carLengthM", "from", "to", "enterS", "exitS", "stops"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "route": { "$ref": "#/$defs/id" },
+        "track": { "$ref": "#/$defs/id" },
+        "dir": { "type": "string" },
+        "cars": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "carLengthM": { "type": "number", "exclusiveMinimum": 0 },
+        "from": { "type": "number", "minimum": 0 },
+        "to": { "type": "number", "minimum": 0 },
+        "enterS": { "$ref": "#/$defs/time" },
+        "exitS": { "$ref": "#/$defs/time" },
+        "stops": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["station", "s", "arrS", "depS"],
+            "additionalProperties": false,
+            "properties": {
+              "station": { "$ref": "#/$defs/id" },
+              "s": { "type": "number", "minimum": 0 },
+              "arrS": { "$ref": "#/$defs/time" },
+              "depS": { "$ref": "#/$defs/time" }
+            }
+          }
+        }
+      }
+    },
+    "index": {
+      "title": "global/timetables/index.json",
+      "type": "object",
+      "required": ["schema", "lines"],
+      "additionalProperties": false,
+      "properties": {
+        "schema": { "const": 1 },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["line", "file", "source", "approximate", "trips"],
+            "additionalProperties": false,
+            "properties": {
+              "line": { "$ref": "#/$defs/id" },
+              "file": { "type": "string", "pattern": "^global/timetables/[A-Za-z0-9_-]+\\.json$" },
+              "source": { "enum": ["synthetic", "gtfs"] },
+              "approximate": { "type": "boolean" },
+              "trips": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

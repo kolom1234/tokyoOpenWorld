@@ -697,6 +697,22 @@
       },
       "files": [],
       "modified": true
+    },
+    {
+      "id": "synthetic-timetables",
+      "kind": "data",
+      "title": "JR 야마노테·사이쿄·쇼난신주쿠 합성(근사) 시간표 — 자체 작성 시간대 간격·정차 시간(content/sim/synthetic-lines.json) + 선로 곡선 주행 시간(M07-T02, ADR-0008·0071). 실제 시간표 아님. GTFS 테스트 픽스처(가상 사업자·가상 시각)",
+      "license": "Project-owned",
+      "attribution": {
+        "ja": "JR線の運行は概略の合成時刻表です（実際の時刻表ではありません）",
+        "en": "JR lines run on an approximate synthetic timetable (not the real timetable)",
+        "ko": "JR 노선 운행은 근사 합성 시간표입니다(실제 시간표 아님)"
+      },
+      "files": [
+        "content/sim/synthetic-lines.json",
+        "tests/fixtures/gtfs-mini/**"
+      ],
+      "modified": false
     }
   ]
 }

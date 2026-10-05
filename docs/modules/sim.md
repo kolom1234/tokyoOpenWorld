@@ -37,6 +37,7 @@ IDM 단일 차로 수렴, 신호 사이클, 운동 프로파일(시간 점프 �
 
 ## Status
 M06-T07: `crowd/agent-fsm.ts` 늦은 출발 금지(`canMakeIt`)·대기 깊이 4.5 m, `crowd/crowd-sim.ts` 핫스팟 건너편 목적지(`acrossHotspot`)·`inspect()`(시험), `agents-detour` 분리 가중 1.5 — ADR-0067.
+M07-T02: `rail/timetable.ts`(내부 — ADR-0071) — global/timetables(tile-format `TimetableFile`) 색인·운행일 초(`serviceTimeOf`, 04:00 경계)·운행 중 트립(`activeTrips` — 오늘 + 전날 운행일, 요일 = 운행일 기준). 위치 곡선은 core `tripLegs`(T03 motion-profile).
 M06-T06: `worker/{host, link, sim.worker, traffic-runtime}.ts` 물리 직결(KinematicFrame), `traffic/yielding.ts` 횡단보도 정차 금지·경로 미리보기, `traffic-sim` 차체 중심 연속(trail) — ADR-0066.
 M06-T05: `traffic/{lane-graph, idm, routing, yielding, spawner, traffic-sim}.ts` + `worker/traffic-runtime.ts` — 신호 코드 배치 변경(연동 오프셋 칸, ADR-0065).
 M06-T04: `crowd/{appearance, flow, lod-manager, crowd-sim}.ts` — 공유 정체성, tier B 꺾은선 흐름, 80 ± 5 m 승강격, 면적 균일 스폰(평소 멀리·시야 밖), 날씨 밀도(ADR-0064).
@@ -50,4 +51,5 @@ M06-T06: 키네마틱 프레임 = 플레이어 60 m 안·공유 치수, 출력 �
 `test/crowd-lod.test.ts`(M06-T04 수락): 선 플레이어 총 950–1,000·틱 p95 ≤ 12 ms, 걷는 플레이어 승강격 100+회에 같은 사람 위치가 한 틱 0.25 m 넘게 안 튐.
 `test/crowd-agents.test.ts`(M06-T03 수락): world-mini 실데이터 스크램블 nav 64타일·신호 횡단, 횡단 띠로만 건너는 경로, 250명 적색 대기 → 녹색 동시 횡단 틱 p95 ≤ 12 ms·관통 0·내비 밖 0.
 `test/crowd-worker.test.ts`: SAB 이중 영역 게시·front 뒤집기, 더미 결정론·원 궤도·접선 yaw·anim/rate 인코딩.
+`test/rail-timetable.test.ts`(M07-T02): 04:00 경계(03:30 = 전날 운행일 27:30), 요일 묶음 선택, 자정 넘김 트립.
 `test/clock.test.ts`: 2026-06-21 시부야 남중 11:43 JST 77.78°±0.1°·방위 180°, 12:00 ≈ 77.2°, 수렴각 보정, 시계 3모드, 04:00 운행일 경계, 환경 캐시.

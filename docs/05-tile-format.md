@@ -142,6 +142,12 @@ u32 pointCount; f32[pointCount*3] 표본 WF xyz(레일 윗면 중심선); f32[po
 - 선로 표본 k의 s = k × stepM(0.5 m, 마지막 = lengthM). 점 순서 = 진행 방향(좌측통행 — 같은 노선 두 선로 중 북행 = 서쪽). 정차 s = 편성 중심이 오는 승강장 가운데, side = 문 쪽(진행 방향 기준).
 - reader 거부: 매직·버전, 잘림, 메타 JSON 오류(`header`), 선로 표본 범위·정차 s ∉ [0, 길이]·미지 노선/역·비유한 값(`corrupt`).
 
+### 9.1 global/timetables (M07-T02, ADR-0071)
+`<lineId>.json`(스키마 `schemas/timetable.schema.json`, 타입 tile-format `TimetableFile`) + `index.json`(`{schema 1, lines[{line, file, source, approximate, trips}]}`).
+- `{schema 1, line, source 'synthetic'|'gtfs', approximate, routes[{id, name{ja,en}, color}], calendars[{id, days['weekday'|'saturday'|'holiday'], trips[]}]}`.
+- trip = `{id, route, track, dir, cars, carLengthM, from, to, enterS, exitS, stops[{station, s, arrS, depS}]}` — s = 편성 중심 선로 위치(m), 시각 = 운행일 0시 기준 초(04:00 경계, 24:00 넘김).
+- 운동 = core `tripLegs(선로 제한속도, step, from, to, stops.s)` 곡선: 구간 0은 enterS, 구간 i는 정차 i−1 depS에서 출발(도착 뒤 depS까지 정차). from < 첫 정차 = 진입 속도로 들어옴, = 시발.
+
 ## 8. 버전 정책
 - 포맷 비호환 변경 → `formatVersion` 증가 + ADR + 런타임은 단일 버전만 지원(구 빌드 즉시 폐기).
 - 섹션 추가는 호환 변경 (formatVersion 유지).

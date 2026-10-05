@@ -10,6 +10,7 @@ import { type FootprintSource, footprintSources } from '../derive/footprints.ts'
 import { isVehicleRoad } from '../derive/markings/stopline.ts';
 import type { OsmRecord } from '../normalize-osm.ts';
 import { RAIL_FILE } from '../rail/normalize.ts';
+import { buildTimetables } from '../timetables/index.ts';
 import { buildRailGlobal } from './rail-global.ts';
 
 export function readLayer<T>(normalizedDir: string, layer: string, key: CellKey): T[] {
@@ -107,5 +108,7 @@ export async function railNetworkFor(
     `${JSON.stringify(report, null, 1)}
 `,
   );
+  // 시간표(M07-T02): 같은 rail.bin 위에서 합성·GTFS 컴파일 → global/timetables.
+  buildTimetables({ repoRoot: input.rail.repoRoot, buildDir: outDir, network, log: input.log.child('timetables') });
   return network;
 }

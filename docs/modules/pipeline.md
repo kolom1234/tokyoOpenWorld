@@ -7,7 +7,7 @@ Layer: — | Depends: core, geo, tile-format, @gltf-transform/*, meshoptimizer, 
 
 ## CLI
 `pnpm pipeline <fetch|normalize|derive|build|hlod|rail|materials|characters|validate|publish|gc|fixture|all> --area <id> [--cells …] [--jobs N] [--force] [--env dev|prod]`
-철도(M07, ADR-0070 — `cli-rail.ts`): `fetch --source ksj-n02|odpt-tokyometro [--update-lock]`(N02 zip → sha256 → GeoJSON, ODPT 키 = 환경 변수 `ODPT_CONSUMER_KEY` — 값은 기록 안 함, 없으면 "키 대기" 경고), `normalize --layer rail`(osmium → data/normalized/rail/osm-rail.ndjson.gz), `build`가 global/rail.bin + 셀 선로 메시를 함께, `rail --build-id`(전역만 다시), 수락 `checks/rail-photo.ts <buildId> [yamanote]`(컨테이너).
+철도(M07, ADR-0070 — `cli-rail.ts`): `fetch --source ksj-n02|odpt-tokyometro [--update-lock]`(N02 zip → sha256 → GeoJSON, ODPT 키 = 환경 변수 `ODPT_CONSUMER_KEY` — 값은 기록 안 함, 없으면 "키 대기" 경고), `normalize --layer rail`(osmium → data/normalized/rail/osm-rail.ndjson.gz), `build`가 global/rail.bin + 시간표 + 셀 선로 메시를 함께, `rail --build-id`(전역만 다시), `timetables --build-id <id> [--gtfs <line>=<dir|zip>]`(rail.bin으로 시간표만 — ADR-0071, 간격·운행일 위반 = 실패), 수락 `checks/rail-photo.ts <buildId> [yamanote]`(컨테이너).
 
 ## Files
 ```
@@ -30,7 +30,7 @@ src/stages/build/facade-params.ts  용도·높이·층 → `_FACADE`(class·tint
 src/stages/build/wall-planes.ts    벽 평면 군집(방향 1°·15 cm → u 원점·폭 공유)·벽과 동일 평면 부속물 판정
 src/stages/build/manifest.ts     buildId·world.json (M01-T05)
 src/stages/build/assemble.ts     셀 TKC 조립 + 영역 빌드(cells.idx·world.json) (M01-T05)
-src/stages/build/{roads-mesh,collision,instances,rail-global}.ts   (미구현)
+src/stages/timetables/{compile,synthetic,gtfs-read,gtfs,index}.ts  시간표(M07-T02, ADR-0071): core tripLegs 정차 시각·간격 ≥ 90 s 검사, 합성(JR)·GTFS(긴자선, 키 대기) → global/timetables (+ validate-timetables.ts)
 src/stages/hlod/far-buildings.ts  FarBuilding(중심점·OBB·y0·높이·면적·용도) + 줄 형식 + nightFlags (M02-T04, ADR-0024)
 src/stages/hlod/tokyo23-lod1{,.worker}.ts  23구 zip `unzip -p` 스트림 → 워커 스레드 → L2 버킷(data/derived/far-buildings)
 src/stages/hlod/dem-far.ts        標高タイル dem_png z14 받기(manifest) → WF 8 m 원경 격자, farDemHeight

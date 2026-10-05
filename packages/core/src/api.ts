@@ -292,3 +292,18 @@ export interface TrainInfo {
   nextStationId: string | null;
   seats: ReadonlyArray<{ id: string; car: number; posLocal: [number, number, number] }>;
 }
+
+/** 열차 가속·감속(m/s², 10 §6.2) — 주행 곡선(computeRunProfile) 기본값. */
+export const RAIL_ACCEL = 0.83;
+export const RAIL_DECEL = 0.97;
+
+/** 열차 주행 곡선(M07, ADR-0071): 구간 [s0, s1]의 점별 속도·누적 시간. 시간표 컴파일러와 sim이 같은 함수로 만든다. */
+export interface RunProfile {
+  s0: number;
+  s1: number;
+  /** 점 k의 s = s0 + k × step(마지막 = s1). */
+  step: number;
+  v: Float32Array;
+  t: Float64Array;
+  duration: number;
+}

@@ -61,3 +61,64 @@ export interface RailNetwork {
   /** 표본 RAIL_FLAG 비트. */
   flags: Uint8Array;
 }
+
+// ── global/timetables/<lineId>.json·index.json (M07-T02, ADR-0071 — 05 §9, schemas/timetable.schema.json) ──
+
+export const TIMETABLE_SCHEMA = 1;
+/** 운행일 경계(초, 0시 기준) — 시각 = 운행일 0시부터 초(04:00 = 14400, 24:00 넘김 허용 — GTFS와 같다). */
+export const SERVICE_DAY_START_S = 14_400;
+export type TimetableDay = 'weekday' | 'saturday' | 'holiday';
+
+export interface TimetableStop {
+  station: string;
+  /** 정차 위치(m, 선로 s — rail.bin 정차와 같다). */
+  s: number;
+  arrS: number;
+  depS: number;
+}
+
+export interface TimetableTrip {
+  id: string;
+  /** 운행 계통(routes[].id — 사이쿄·쇼난신주쿠 등). */
+  route: string;
+  track: string;
+  /** 진행 방향 이름(= 선로 heading). */
+  dir: string;
+  cars: number;
+  carLengthM: number;
+  /** 편성 중심 s 범위(m) — from = 첫 정차면 시발, to = 마지막 정차면 종착, 아니면 영역 밖과 이어진 통과. */
+  from: number;
+  to: number;
+  /** from에 있는 시각·to에 닿는 시각(운행일 초). */
+  enterS: number;
+  exitS: number;
+  stops: TimetableStop[];
+}
+
+export interface TimetableRoute {
+  id: string;
+  name: { ja: string; en: string };
+  color: string;
+}
+
+/** 요일 묶음(평일·토휴일 등) 하나의 트립(enterS 오름차순). */
+export interface TimetableCalendar {
+  id: string;
+  days: TimetableDay[];
+  trips: TimetableTrip[];
+}
+
+export interface TimetableFile {
+  schema: 1;
+  line: string;
+  /** synthetic = 근사 시간표(실측 아님 — 크레딧 명시, ADR-0008), gtfs = 사업자 GTFS 컴파일. */
+  source: 'synthetic' | 'gtfs';
+  approximate: boolean;
+  routes: TimetableRoute[];
+  calendars: TimetableCalendar[];
+}
+
+export interface TimetableIndexFile {
+  schema: 1;
+  lines: { line: string; file: string; source: 'synthetic' | 'gtfs'; approximate: boolean; trips: number }[];
+}

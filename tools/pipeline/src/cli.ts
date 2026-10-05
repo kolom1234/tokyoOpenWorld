@@ -359,6 +359,7 @@ const rail = { repoRoot: REPO_ROOT, log };
 const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   fetch: (args) => railStages.fetchSources(rail, args),
   rail: (args) => railStages.rail(rail, args, () => makeBuildId(REPO_ROOT)),
+  timetables: (args) => railStages.timetables(rail, args, () => makeBuildId(REPO_ROOT)),
   normalize,
   build,
   'hlod-prep': hlodPrep,

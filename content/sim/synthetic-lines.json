@@ -1,0 +1,56 @@
+{
+  "note": "JR 합성 시간표(M07-T02, ADR-0008·0071) — **근사 시간표**: 실측·공식 시간표가 아니다(JR동일본 ODPT 데이터 사용 금지). 시간대 = 운행일(04:00 경계) 시각 HH:MM(24:00 넘김 허용), headwayS = 그 시간대 운행 간격(평일·휴일), dwellS = 역 정차(초), phaseS = 같은 선로 다른 계통·반대 방향 위상(초). 역간 소요는 선로 제한속도·가감속(0.83·0.97 m/s²)으로 계산.",
+  "lines": [
+    {
+      "line": "yamanote",
+      "services": [
+        {
+          "id": "yamanote",
+          "label": { "ja": "山手線", "en": "Yamanote Line" },
+          "color": "#9acd32",
+          "tracks": { "yamanote-outer": 0, "yamanote-inner": 75 },
+          "bands": [
+            { "from": "04:30", "to": "06:30", "weekday": 420, "holiday": 480 },
+            { "from": "06:30", "to": "07:30", "weekday": 240, "holiday": 360 },
+            { "from": "07:30", "to": "09:30", "weekday": 150, "holiday": 300 },
+            { "from": "09:30", "to": "17:00", "weekday": 240, "holiday": 240 },
+            { "from": "17:00", "to": "20:00", "weekday": 180, "holiday": 240 },
+            { "from": "20:00", "to": "23:30", "weekday": 300, "holiday": 300 },
+            { "from": "23:30", "to": "25:00", "weekday": 480, "holiday": 480 }
+          ]
+        }
+      ],
+      "dwellS": { "shibuya": 50, "shinjuku": 50, "harajuku": 30, "yoyogi": 30 }
+    },
+    {
+      "line": "yamanote-freight",
+      "services": [
+        {
+          "id": "saikyo",
+          "label": { "ja": "埼京線", "en": "Saikyō Line" },
+          "color": "#00ac9a",
+          "tracks": { "yamanote-freight-north": 0, "yamanote-freight-south": 200 },
+          "bands": [
+            { "from": "04:45", "to": "07:00", "weekday": 900, "holiday": 1200 },
+            { "from": "07:00", "to": "09:30", "weekday": 420, "holiday": 600 },
+            { "from": "09:30", "to": "17:00", "weekday": 720, "holiday": 720 },
+            { "from": "17:00", "to": "20:00", "weekday": 600, "holiday": 720 },
+            { "from": "20:00", "to": "24:40", "weekday": 900, "holiday": 900 }
+          ]
+        },
+        {
+          "id": "shonan-shinjuku",
+          "label": { "ja": "湘南新宿ライン", "en": "Shōnan–Shinjuku Line" },
+          "color": "#f68b1e",
+          "tracks": { "yamanote-freight-north": 330, "yamanote-freight-south": 530 },
+          "bands": [
+            { "from": "05:00", "to": "07:00", "weekday": 1800, "holiday": 1800 },
+            { "from": "07:00", "to": "20:00", "weekday": 900, "holiday": 1200 },
+            { "from": "20:00", "to": "24:00", "weekday": 1800, "holiday": 1800 }
+          ]
+        }
+      ],
+      "dwellS": { "shibuya": 45, "shinjuku": 60 }
+    }
+  ]
+}
