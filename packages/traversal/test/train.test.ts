@@ -131,6 +131,11 @@ describe('train mode', () => {
     const m = createTrainMode(DEFAULT_TRAVERSAL_SETTINGS);
     m.enter(s.ctx, 'walk', { tripId: 't', car: 3 });
     Object.assign(s.ride, { stoppedAtStationId: 'b', speedMs: 0 });
+    // 승차에 쓴 F가 아직 눌린 첫 프레임은 하차로 읽지 않는다 — 뗀 뒤 다시 눌러야.
+    s.hits.add('interact');
+    expect(m.update(s.frame(), s.ctx).next).toBeUndefined();
+    s.hits.delete('interact');
+    m.update(s.frame(), s.ctx);
     s.hits.add('interact');
     const o = m.update(s.frame(), s.ctx);
     expect(o.next?.mode).toBe('walk');

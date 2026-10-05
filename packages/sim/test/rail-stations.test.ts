@@ -85,6 +85,30 @@ describe('platform geometry', () => {
   });
 });
 
+describe('platform edge strip', () => {
+  it('fills the gap between the car side and a platform outline drawn too far from the track', () => {
+    const n0 = net();
+    // OSM 윤곽 가장자리를 선로에서 3 m로(실제 1.6 m보다 멀리) — 띠가 1.55–3.2 m를 메운다.
+    n0.platforms[0] = { id: 'p', ringXZ: [-3, -380, -9, -380, -9, -620, -3, -620, -3, -380], topY: 11.1 };
+    const g = platformGeometry(n0);
+    const P = (i: number) => g.positions[i] as number;
+    const covered = (x: number, z: number) => {
+      for (let i = 0; i < g.topIndexCount; i += 3) {
+        const [a, b, c] = [g.indices[i], g.indices[i + 1], g.indices[i + 2]] as [number, number, number];
+        const d = (p: number, q: number) =>
+          (P(q * 3) - P(p * 3)) * (z - P(p * 3 + 2)) - (P(q * 3 + 2) - P(p * 3 + 2)) * (x - P(p * 3));
+        const [d1, d2, d3] = [d(a, b), d(b, c), d(c, a)];
+        if ((d1 >= 0 && d2 >= 0 && d3 >= 0) || (d1 <= 0 && d2 <= 0 && d3 <= 0)) return true;
+      }
+      return false;
+    };
+    expect(covered(-1.7, -500)).toBe(true);
+    expect(covered(-2.5, -450)).toBe(true);
+    expect(covered(-1.3, -500)).toBe(false); // 차체(1.475 m) 쪽은 비운다
+    expect(covered(1.7, -500)).toBe(false); // 반대쪽 없음
+  });
+});
+
 describe('platform screen doors', () => {
   it('puts a gate at every door of the stopped formation and panels between', () => {
     const [ps] = psdLayout(net());

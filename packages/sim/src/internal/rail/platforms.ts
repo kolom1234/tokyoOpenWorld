@@ -92,7 +92,78 @@ export function platformGeometry(net: RailNetwork): PlatformGeometry {
       side.push(base + i, low + i, low + j, base + i, low + j, base + j);
     }
   }
+  edgeStrips(net, pos, top, side);
   return { positions: Float64Array.from(pos), indices: Uint32Array.from([...top, ...side]), topIndexCount: top.length };
+}
+
+/** 승강장 가장자리 띠(선로 중심에서, m): OSM 윤곽은 실제보다 1 m 남짓 멀리 그려지기도 해 차체(1.475 m)와 틈이 생긴다 → 선로 기준으로 메운다. */
+export const EDGE_STRIP_M = [1.55, 3.2] as const;
+
+function trackXZ(net: RailNetwork, t: RailTrackMeta, s: number): [number, number, number] {
+  const x = Math.min(Math.max(s / t.stepM, 0), t.ptCount - 1);
+  const k = Math.min(t.ptCount - 2, Math.floor(x));
+  const f = x - k;
+  const P = net.points;
+  const a = (t.ptOffset + k) * 3;
+  return [
+    (P[a] as number) + ((P[a + 3] as number) - (P[a] as number)) * f,
+    (P[a + 1] as number) + ((P[a + 4] as number) - (P[a + 1] as number)) * f,
+    (P[a + 2] as number) + ((P[a + 5] as number) - (P[a + 2] as number)) * f,
+  ];
+}
+
+/** 삼각형을 원하는 법선 쪽으로 감아 넣는다. */
+function tri(
+  out: number[],
+  pos: readonly number[],
+  a: number,
+  b: number,
+  c: number,
+  want: readonly [number, number, number],
+): void {
+  const v = (i: number, k: number) => pos[i * 3 + k] as number;
+  const u = [v(b, 0) - v(a, 0), v(b, 1) - v(a, 1), v(b, 2) - v(a, 2)] as const;
+  const w = [v(c, 0) - v(a, 0), v(c, 1) - v(a, 1), v(c, 2) - v(a, 2)] as const;
+  const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+  if ((n[0] as number) * want[0] + (n[1] as number) * want[1] + (n[2] as number) * want[2] >= 0) out.push(a, b, c);
+  else out.push(a, c, b);
+}
+
+/** 승강장이 있는 정차마다 승강장 길이만큼 가장자리 띠(윗면 5 mm 아래 — OSM 윗면과 겹치면 그쪽이 보인다) + 선로 쪽 옆면. */
+function edgeStrips(net: RailNetwork, pos: number[], top: number[], side: number[]): void {
+  for (const t of net.tracks)
+    for (const st of t.stops) {
+      const p = st.platform === undefined ? undefined : net.platforms[st.platform];
+      if (!p) continue;
+      const sgn = st.side === 'L' ? 1 : -1;
+      const n = Math.max(2, Math.ceil(st.platformLengthM / 2) + 1);
+      const base = pos.length / 3;
+      for (let i = 0; i < n; i++) {
+        const s = st.s - st.platformLengthM / 2 + (i * st.platformLengthM) / (n - 1);
+        const a = trackXZ(net, t, s - 0.5);
+        const b = trackXZ(net, t, s + 0.5);
+        const L = Math.hypot(b[0] - a[0], b[2] - a[2]) || 1;
+        const [nx, nz] = [((b[2] - a[2]) / L) * sgn, (-(b[0] - a[0]) / L) * sgn];
+        const c = trackXZ(net, t, s);
+        const y = p.topY - 0.005;
+        pos.push(c[0] + nx * EDGE_STRIP_M[0], y, c[2] + nz * EDGE_STRIP_M[0]);
+        pos.push(c[0] + nx * EDGE_STRIP_M[1], y, c[2] + nz * EDGE_STRIP_M[1]);
+        pos.push(c[0] + nx * EDGE_STRIP_M[0], p.topY - 1.1, c[2] + nz * EDGE_STRIP_M[0]);
+        if (i === 0) continue;
+        const [i0, o0, l0, i1, o1, l1] = [
+          base + (i - 1) * 3,
+          base + (i - 1) * 3 + 1,
+          base + (i - 1) * 3 + 2,
+          base + i * 3,
+          base + i * 3 + 1,
+          base + i * 3 + 2,
+        ];
+        tri(top, pos, i0, o0, o1, [0, 1, 0]);
+        tri(top, pos, i0, o1, i1, [0, 1, 0]);
+        tri(side, pos, i0, l0, l1, [-nx, 0, -nz]);
+        tri(side, pos, i0, l1, i1, [-nx, 0, -nz]);
+      }
+    }
 }
 
 export interface PsdStop {

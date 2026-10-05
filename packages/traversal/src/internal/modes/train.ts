@@ -85,6 +85,8 @@ interface St {
   /** 빨리감기 단계: 0 없음, 1 페이드 아웃, 2 유지(점프 뒤), 3 페이드 인. */
   ff: { phase: 0 | 1 | 2 | 3; t: number; target: number };
   notice: number;
+  /** F를 한 번 뗀 뒤에만 하차(승차한 그 F가 같은 프레임에 하차로 읽히지 않게 — 실제 GPU에서 발견). */
+  armed: boolean;
   last: TrainCarPose | undefined;
   timeS: number;
 }
@@ -115,6 +117,7 @@ function createRt(settings: Readonly<TraversalSettings>): Rt {
     look: { yawRad: 0, pitchRad: 0 },
     ff: { phase: 0, t: 0, target: 0 },
     notice: 0,
+    armed: false,
     last: undefined,
     timeS: 0,
   };
@@ -185,6 +188,10 @@ function handleInput(rt: Rt, ctx: TraversalContext, frame: FrameContext, nextArr
     nextArrivalMs - SKIP_BEFORE_S * 1000 > frame.gameTimeMs
   )
     st.ff = { phase: 1, t: 0, target: nextArrivalMs - SKIP_BEFORE_S * 1000 };
+  if (!st.armed) {
+    st.armed = !s.pressed('interact');
+    return false;
+  }
   return s.justPressed('interact');
 }
 
@@ -284,6 +291,7 @@ export function createTrainMode(settings: Readonly<TraversalSettings>): Traversa
       setView(rt, params.view ?? 'standing');
       rt.st.ff = { phase: 0, t: 0, target: 0 };
       rt.st.notice = 0;
+      rt.st.armed = false;
       rt.output.hud.fade = 0;
     },
     update: (frame, ctx) => update(rt, frame, ctx),
