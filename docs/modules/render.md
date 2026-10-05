@@ -30,7 +30,8 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   loadMaterials(manifestUrl): Promise<MaterialLibraryStats>;  // M03-T01: manifest → 평균색 → KTX2 배열 3장 교체(재컴파일 없음), 첫 표시 뒤 호출
   precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;   // 대기 LUT → 머티리얼 ID 묶음마다 1프레임 양보 → 아바타 (M06, PrecompileProgress{stage,done,total})
   stageCells(on); compileStaged(): Promise<void>; commitStaged();
-  setSignalLamps(lamp: ((code) => number) | null): void;   // M06-T02(ADR-0062): props 신호 기둥 현시 코드 → 램프 값(차량 1–3 + 4 × 보행 1–2), 보이는 슬롯만·바뀐 범위만 업로드. 소품 풀 정점 버퍼 ≤ 8(_ptype·_itype = vec2)
+  setSignalLamps(lamp: ((code) => number) | null): void;   // M06-T02(ADR-0062): props 신호 기둥 현시 코드 → 램프 값(차량 1–3 + 4 × 보행 1–2), 보이는 슬롯만·바뀐 범위만 업로드. 소품 풀 정점 버퍼 ≤ 8(_ptype·_itype = vec2). 램프 범위는 같은 프레임 풀 재작성 범위와 **합친다**(지우면 다른 소품 `_itype`가 GPU에 안 가 사라짐 — ADR-0068)
+  debugLayerVisible(layer: RenderDebugLayer /* 'props'|'signs'|'trees'|'crowd'|'farCrowd'|'vehicles' */, visible): void;   // 디버그(ADR-0068): 인스턴스 레이어 숨김/보임 — e2e lod-continuity·실제 GPU 진단의 보임/숨김 픽셀 차
   readonly vehicles: VehicleLayer { bindShared(buf): Promise<void> };   // M06-T06(ADR-0066): sim 교통 SAB → 가상 차종 7 절차 모델 × LOD 3, 처음 bind 때 풀·머티리얼 → compileAsync 뒤 그림. stats.vehicles{instances, visible, pools, dropped, casters, lods[3], ready}
   loadCrowd(urls: CrowdAssetUrls { manifest, bin, texture }): Promise<void>; readonly pedestrians: InstanceLayer { bindShared(buf), setFarDensity(k) /* M06-T04 원경 스프라이트 밀도 0..1, 기본 0 */ };   // M06-T01(ADR-0061): crowd/{assets,material,field} — 뼈 팔레트 스키닝, (베이스 × LOD) 48풀, 틱 사이 외삽, stats.crowd   // M06 사전 4(ADR-0060): 부팅 스폰 셀을 장면 밖 대기 그룹 → compileAsync(선컴파일과 겹침) → 붙이기                     // 대기 LUT 계산(await) + 고정 머티리얼 × {기본, HLOD} compileAsync
   setCamera(c: CameraState): void;                 // WF float64 — 다음 renderPrep에서 반영

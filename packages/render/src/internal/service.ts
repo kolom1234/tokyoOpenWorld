@@ -1,7 +1,7 @@
 // createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3
 import type { CellKey, SharedInstanceBuffer } from '@sanpo/core';
 import { Group, type Object3D } from 'three/webgpu';
-import type { PrecompileProgress, RenderDeps, RenderService, RenderStats } from '../api.ts';
+import type { PrecompileProgress, RenderDebugLayer, RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
 import { loadCrowdAssets } from './crowd/assets.ts';
 import { createCrowdMaterial } from './crowd/material.ts';
@@ -75,6 +75,20 @@ function createStaging(ctx: RenderContext) {
       },
     } satisfies Pick<RenderService, 'stageCells' | 'compileStaged' | 'commitStaged'>,
   };
+}
+
+/** 디버그 레이어 숨김/보임(ADR-0068) — 그림자 캐시도 새로 그리게 장면 버전을 올린다. */
+function debugLayerVisible(ctx: RenderContext, layer: RenderDebugLayer, visible: boolean): void {
+  const roots = {
+    props: ctx.props.root,
+    signs: ctx.signs.root,
+    trees: ctx.trees.root,
+    crowd: ctx.crowd.root,
+    farCrowd: ctx.farCrowd.root,
+    vehicles: ctx.vehicles.root,
+  };
+  roots[layer].visible = visible;
+  ctx.counters.sceneVersion++;
 }
 
 /** 선컴파일(06 §6): 대기 LUT → 머티리얼 묶음(소품 풀 priming 포함) → 아바타, 단계마다 진행 보고·프레임 양보(ADR-0060 보충). */
@@ -186,6 +200,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     setSignalLamps: (lamp) => {
       ctx.signalLamp = lamp;
     },
+    debugLayerVisible: (layer, visible) => debugLayerVisible(ctx, layer, visible),
     addCell: (p) => {
       cells.add(p, view.renderOriginWF);
       staged.take(p.key);

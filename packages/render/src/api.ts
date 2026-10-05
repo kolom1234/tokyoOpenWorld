@@ -261,6 +261,11 @@ export interface RenderService extends SystemProvider {
    * 배선이 sim.signalStateAt로 만든다. 매 renderPrep에 보이는 기둥만 묻는다. null = 램프 끔.
    */
   setSignalLamps(lamp: ((code: number) => number) | null): void;
+  /**
+   * 디버그(M07 사전 ⓪): 인스턴스 레이어 하나를 숨기거나 다시 보인다 — 게임 동작 없음. e2e·실제 GPU 진단이 보임/숨김 픽셀 차로
+   * 같은 물체가 거리(LOD 띠)마다 끊김 없이 그려지는지 잰다.
+   */
+  debugLayerVisible(layer: RenderDebugLayer, visible: boolean): void;
   /** 보행자 인스턴스 레이어(sim 출력). */
   readonly pedestrians: InstanceLayer;
   /** 차량 인스턴스 레이어(sim 교통 출력, M06-T06). */
@@ -268,6 +273,9 @@ export interface RenderService extends SystemProvider {
   stats(): RenderStats;
   dispose(): void;
 }
+
+/** `debugLayerVisible` 대상(인스턴스 풀 레이어). */
+export type RenderDebugLayer = 'props' | 'signs' | 'trees' | 'crowd' | 'farCrowd' | 'vehicles';
 
 export interface RenderDeps {
   canvas: HTMLCanvasElement;
