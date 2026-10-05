@@ -1,29 +1,24 @@
 # PROGRESS
-Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 → ② M07 T01–T05, 브랜치 `claude/m07-trains`, draft PR #20)
+Updated: 2026-10-06 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 → ② M07 T01–T05 완료, 브랜치 `claude/m07-trains`, draft PR #20)
 
-## Current Milestone: M07 — Trains (PR #19 병합 뒤 시작 — 이번 PR #20: 사전 ⓪·① + T01–T05)
-## Current Task: 사전 ⓪·① ✅ → M07-T01 ✅ → T02 ✅ → T03 ✅ → T04 ✅ → **M07-T05 Train mode**
-- Done in this session: ⓪-1 소품 차도 정착 + validate `props on road`(ADR-0068), ⓪-2 소품 풀 `_itype` 범위 합치기(LOD 전환 때 소품 소멸) + L1 랜드마크 = L0 모양 +
-  e2e `lod-continuity`·`render.debugLayerVisible`, ①-1 나무·간판·원경 군중 TAA 모션 벡터(실제 GPU 전후 docs/screenshots/M07/pre), ①-2 minor 신호 계획 100 s(ADR-0069, 메이지도리 0.36 → 0.41),
-  ①-3 늦은 레이어 compileDetached(e0b0adb). M07-T01(aa9e502, ADR-0070) 선로·rail.bin·셀 선로 메시. M07-T02(a51fc4a, ADR-0071) 시간표 컴파일러. M07-T03(01d29bc, ADR-0072) 열차 운동(메인 스레드 순수 함수)·절차 전동차. M07-T04(962ed6c, ADR-0073) 칸 물리·문·승강장·홈도어·선로 위 건물 충돌 제외.
-- MVP 재빌드 이력: `20261005-b8fecc9`(차도 위 8·연석 2 남음) → `20261005-05b288c`(전주 4) → **`20261005-d1ea5ac`(validate 0 — 차도 위 0·연석 0, 신호 minor 계획 포함, 선로 없음)**.
-- 배포(2026-10-05 17:30): dev 버킷 publish(478파일 376.8 MB, current 설정) + staging Worker 배포(edcdc98, 버전 a5baeb95) + 스모크 ✅. production 배포·버킷 쓰기 없음.
-- 실제 GPU 스크립트(scratchpad, 커밋 안 함): `vis.mjs`·`ba.mjs`·`taa.mjs`·`stall.mjs`, `pl/*.mjs`(propsroad·hlodcover·tracks·stopdbg 등 — data/build·normalized를 node로 읽는 점검).
-- ①-3 남은 멈춤(기록만): ② compileAsync가 캔버스 문맥으로 컴파일 — 실제 장면은 후처리 MRT 패스라 첫 그리기에서 다시 동기 생성 — 대안 = 후처리 장면 패스 렌더 타깃·MRT로 compileAsync.
-  ③ KTX2 라이브러리 업로드 writeTexture 1,424회 ≈ 350 ms(메인). ④ 품질 자동 하향(캐스케이드 수 변경) → 그림자 받는 머티리얼 재컴파일 1 + 5.6–7 s(가끔).
-- M07-T01: 선로 6개(야마노테 outer/inner 9.3 km, 화물선 north/south 9.2 km, 긴자선 2 × 3.9 km), 정차 = 승강장 중심 0.01–1.15 m ✅, 항공사진 중앙값 0.5 m·1 m 초과 15 % ⚠️(ADR-0070 대안). 로컬 빌드 `m07-rail-test`(rail.bin 점검용 — publish 안 함).
-- M07-T02: core `computeRunProfile/profileAt/timeAtS/tripLegs`(컴파일러·sim 공용 곡선), `stages/timetables/*` → `global/timetables/{yamanote,yamanote-freight}.json` + index.
-  `m07-rail-test` 위 야마노테 1,132 트립(최소 간격 150 s)·화물선 626(120 s), 위반 0. sim `rail/timetable.ts`(운행일 초·운행 중 트립). 역간 소요 = 곡선(시부야 → 하라주쿠 91 s, 실제 ≈ 2분 — 근사).
-- M07-T03: sim `rail/{network,motion-profile,trains}.ts`(시계 시스템이 프레임마다), render `trains/*`(가상 통근형 20 m 4문·16 m 3문 × 종류 4 × LOD 45/300/1600 m, LOD0 창 구멍 + 차내), game `world-rail.ts`(`?trains=0`).
-  실데이터 1,758 트립: 역간 소요 차 ≤ 0.05 s, 점프 vs 연속 0 m ✅. 긴자선 제3궤조(`thirdRail` — 가선 없음).
-- M07-T04: 실제 Jolt 수락 — 가속·곡선 12 s 선 승객 미끄러짐 1.75 cm, 닫힌 문 간격 0.020 m(관통 0), 열린 문 승차 ✅·닫힌 문 차단 ✅. 승강장 11개(rail.bin `platforms`), 홈도어 야마노테 8정차 × 44문.
-  실제 GPU(로컬 `20261005-01d29bc-aefbe9ff`): 하라주쿠–요요기 숲 구간 은색 차체·노선색 띠·차내 보임 ✅. ⚠️ 역은 PLATEAU 역사·선로 위 빌딩 껍질 안(16동) — 충돌 제외 + ≤ 12 m 상옥 렌더 제외만(ADR-0073 대안).
-  재빌드 `20261005-962ed6c-aefbe9ff`(승강장·선로 위 건물 처리 포함) 진행 중 → dev publish·staging.
-- **키 대기**: ODPT_CONSUMER_KEY 없음 → 긴자선 GTFS 'waiting-key'(컴파일러는 가상 픽스처 `tests/fixtures/gtfs-mini`로 검증). 키가 생기면 `ODPT_CONSUMER_KEY=… pnpm pipeline fetch --source odpt-tokyometro --update-lock` → `timetables --build-id <id>`(키 값 기록 금지). gc: 오늘 10/5 → 10/6 이후.
-- Next step (정확히 한 걸음): M07-T05 `packages/traversal/src/internal/modes/train.ts` + `camera/attached-rig.ts` — 서기(차내 보행)/좌석/전면전망, 다음 역까지 빨리감기, 차내 LCD 안내(다국어, 자체 문구), MVP 경계역(시부야·신주쿠) 자동 하차.
-- Blockers: 없음
+## Current Milestone: M07 — Trains (T01–T05 ✅ · T06 보류 = M09-T04 오디오 코어 의존) → 다음 M08 Vehicles
+## Current Task: M07 T01–T05 ✅(PR #20 리뷰 대기) — 다음 = **M08-T01 Sedan physics & drive mode**
+- Done in this session: ⓪ 소품 차도 정착·validate `props on road`(ADR-0068)·소품 `_itype` 범위 합치기·L1 랜드마크 + e2e `lod-continuity`, ① TAA(나무·간판·원경 군중)·minor 신호 계획(ADR-0069)·늦은 레이어 compileDetached,
+  M07-T01 선로·rail.bin(aa9e502, ADR-0070) · T02 시간표 컴파일러(a51fc4a, ADR-0071) · T03 열차 운동·절차 전동차(01d29bc, ADR-0072) · T04 칸 물리·문·승강장·홈도어(962ed6c, ADR-0073) · T05 train 모드(e526b74, ADR-0074).
+- 배포(2026-10-06 03:13): MVP 빌드 **`20261005-962ed6c-aefbe9ff`**(L0 294 + HLOD 177 + 머티리얼 32층, validate 0 — 선로·시간표 1,758 트립·승강장 11·홈도어, 선로 위 건물 충돌 제외) → dev 버킷 publish(482파일 386.8 MB, current 설정, worker 검증)
+  + staging Worker 배포(e526b74, 버전 af60ab71 — sanpo-world-dev 바인딩) + 실제 GPU staging 탑승 확인. dev gc: 20260928 빌드 1개 삭제(7일 유지 규칙). production 배포·버킷·KV 쓰기 없음.
+- 수락 요약: T01 정차 = 승강장 중심 0.01–1.15 m ✅·항공사진 1 m 초과 15 % ⚠️ / T02 스키마·간격 ≥ 90 s(최소 120–150 s) ✅ / T03 역간 소요 차 ≤ 0.05 s·점프 vs 연속 0 m ✅ /
+  T04 미끄러짐 1.75 cm·관통 0·승차·닫힌 문 차단 ✅ / T05 시부야→신주쿠 전면 전망 1배속 6분 평균 59.9 fps·p99 16.91 ms·지면 공백 0 ✅(RTX 3050 Laptop 1600×900, 22.6 W).
+- 실제 GPU 스크립트(scratchpad, 커밋 안 함): `ride.mjs`(탑승 측정 — `WORLD=api`면 staging), `ff.mjs`(빨리감기), `trains.mjs`·`carpos.mjs`·`trdbg.mjs`(열차 표시 진단), `pl/{railpos,runcheck,findtrain,trackbldg}.mjs`(rail.bin·시간표 점검).
+  측정 주의: 15–25 s마다 스크린샷을 찍으면 그때마다 100–270 ms 끊김(인공물), 측정 중 `pnpm test`를 같이 돌리면 그 구간 30 fps — 깨끗한 회차만 기록.
+- **키 대기**: ODPT_CONSUMER_KEY 없음 → 긴자선 GTFS 'waiting-key'(컴파일러는 가상 픽스처 `tests/fixtures/gtfs-mini`로 검증). 키가 생기면 `ODPT_CONSUMER_KEY=… pnpm pipeline fetch --source odpt-tokyometro --update-lock`
+  → `pnpm pipeline timetables --build-id <id>`(또는 다음 build) → validate → publish(키 값은 로그·파일·커밋 금지 — fetch.ts가 URL·오류에 남기지 않음).
+- Next step (정확히 한 걸음): PR #20 리뷰·병합 뒤 M08-T01 — `docs/roadmap/M08.md` `### M08-T01` 블록 → `packages/physics/src/internal/worker/vehicle-sedan.ts`(WheeledVehicleController) + `content/vehicles/sedan.json`.
+- Blockers: 없음(M07-T06은 M09-T04 의존 — 보류)
 
 ## Recently Completed
+- M07 Trains T01–T05(session #20, 2026-10-05~06) — 선로(OSM 이름 + N02 대조, 좌측통행, 0.5 m 표본, 곡률 제한, 승강장 정차) → 시간표(JR 합성 근사 + 긴자선 GTFS 컴파일러·키 대기) → 열차(메인 스레드 순수 함수,
+  절차 가상 통근형 전동차 LOD 3 + 차내, 노선색 띠만) → 칸 물리(키네마틱 합성 바디·문·승강장·홈도어) → train 모드(서기·좌석·전면 전망·빨리감기·LCD 일영한·경계역 자동 하차). 수치는 위 수락 요약. ADR-0070–0074
 - M06 MVP 재빌드·staging(2026-10-05) — `20261004-ed3d33c-8de63322`: L0 294(243.5 s, 260.4 MB — nav 18.3 MB·횡단 1,500(신호 522), 차선 4,432 + 연결로 4,227(신호 1,101), 1.32 MB) + HLOD 177 + 머티리얼 32층, validate 0(도로 간극 최대 1.9 cm).
   dev 버킷 publish(478파일 376.4 MB, current 설정) + staging Worker 배포(ed3d33c) + 스모크. 실제 GPU staging: 첫 표시 7.15–7.94 s·첫 로드 23.3–24.5 MB ✅, 스크램블 대기 무리·횡단·차량 정지 확인,
   걷기 봇 3분 319 m 낙하·끼임 0(차 접촉 3프레임 5.8 cm — 측정 시간 기준 차 수준). production 배포·버킷 쓰기 없음.
@@ -56,9 +51,6 @@ Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 �
 - M06-T01 Sim worker & instance outputs — sim.worker 30 Hz + SAB 이중 버퍼(stride 8: 위치·yaw·anim(클립+속력/10)·phase·variant·rate), 더미 1,000명 원형 걷기,
   군중 팩(Rocketbox 12종 LOD 4·팔레트 half·KTX2 12층, 3.9 MB), render 뼈 팔레트 스키닝 풀 48(틱 사이 외삽·LOD0 그림자), 후처리 NaN 정리(블룸 전체 검정 근본 원인).
   **수락 GPU(30 W, 1440p High)**: 군중 켬−끔 p50 0.33–2.34 ms(보이는 195–472명) ≤ 2.5 ✅, sim 틱 0.1–0.5 ms. 임포스터는 T04로(편차). e2e crowd 스모크(WebGL2) 추가. ADR-0061 (2026-10-04)
-- M06 사전 4 첫 표시 — 원인 측정(bootprobe·rAF 긴 프레임): 선컴파일 5 s 동안 스트리밍 미시작 + 셀 첫 프레임 동기 생성 1.45 s, 다른 GPU 작업 시 30 s(측정 민감도).
-  선컴파일을 렌더 생성 직후 시작 + 스폰 셀 대기 그룹 compileAsync(선컴파일과 겹침) → 로컬 같은 빌드 9.7–10.1 → **7.6–8.4 s**(staging 유휴 기준 M05 빌드 9.8–10.0 s). e2e 10/10. ADR-0060 (2026-10-04)
-
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
 - [bridges] **PLATEAU 상판 없는 OSM 단독 육교**(M05-T08 ⚠️): `highway=footway + bridge=yes`(+ 계단 두 끝) 중 PLATEAU brid가 없는 것 — OSM 선 + 폭 태그(없으면 2.5 m)로 절차 상판·난간·계단 메시 + JCOL 램프. 공원 비탈 계단(두 끝 지형)도 같은 경로.
@@ -68,6 +60,11 @@ Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 �
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
+- [rail] **역 = PLATEAU 역사·선로 위 빌딩 껍질 안**(16동): 선로 표본 ≥ 6 m 덮는 건물은 충돌 제외, 431·461 ≤ 12 m 상옥만 렌더 제외 → 하라주쿠·요요기·신주쿠에서 열차·승강장·운전실 시야를 건물 면이 가린다(ADR-0073 대안: 선로 회랑에서 역사 면 잘라 내기·역 오버라이드).
+- [rail] 항공사진 대조 1 m 초과 15 %(T01 ⚠️ — 0.49 m/px 한계, 시부야 데크·고층 그늘), 역간 소요 = 곡선 그대로라 실제보다 짧다(시부야→하라주쿠 91 s vs ≈ 2분, 근사 — 노선별 여유 계수 후보).
+- [trains] LOD0 창 = 구멍(유리 반사 없음), 차내 벽 안쪽 = 스테인리스 색, 차내 안내 화면 면은 빈 발광(글자 = 화면 오버레이), 터널 입구에서 칸 통째 사라짐(긴자선 고가 끝), 차임·음성 없음(M09).
+- [trains] 긴자선 GTFS 키 대기(ODPT) — 시부야 고가에 긴자선 열차가 아직 없다. 종착 시부야는 도착·출발 열차가 서로 다른 선로 트립이라 승강장에서 바뀐다(block_id 미사용).
+- [tests] 이 PC에서 실제 GPU 측정·Docker와 동시에 `pnpm test`를 돌리면 `crowd-lod`(틱 p95 ≤ 12 ms)·`miniflare`(5 s) 가 가끔 실패 — 단독 재실행은 통과(2026-10-06 확인).
 - [physics] 역 에스컬레이터 **데이터 없음**(M07). 육교·계단 = M05-T08(ADR-0056, 램프 프록시 위 수평 속력 유지). 높이장 재질 = asphalt 고정(보도 triMesh만 tile) — 높이장 삼각형별 재질은 발소리(M09) 때.
 - [bridges] 교량·계단은 L0 overrides에만(HLOD 없음). OSM `footway bridge=yes` 단독 육교·공원 비탈 계단(두 끝 지형) 메시 없음. 계단 블록을 걷어낸 자리에 PLATEAU 옆벽이 일부 남을 수 있음. freecam이 상판 슬래브 안이면 검은 면(블룸 켜면 화면 전체 — NaN 의심, 별도 작업 칩).
 - [trees] L1 HLOD 나무 카드·HLOD 지면 녹지 색 미구현 → L0 반경(384–768 m) 밖 공원은 회색 지면(요요기 상공 골든뷰). PLATEAU veg 원천 없음. 규칙 가로수는 PLATEAU LOD1 도로 구역(보도 분류 없음)에선 안 생김.
@@ -129,12 +126,13 @@ Updated: 2026-10-05 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 �
 ## Decisions Pending
 - 라이선스 ⚠ 항목 → M11-T05 (단, 공개 배포 전 필수)
 - M06 사전 2 ⚠️: 스크램블 등 PLATEAU 밖 횡단의 ≤ 0.5 m 수치 검증 — 고해상도 정사영상(유료·별도 라이선스 가능) 도입 여부.
+- M07 ⚠️: 역사 껍질 처리 — (a) 선로 회랑의 PLATEAU 역사 벽 면 잘라 내기(지붕만), (b) 4개 역 오버라이드로 다시 짓기, (c) 지금처럼 둠. 역 동선(M07-T06) 전에 결정.
 
 ## Pre-flight (사람이 해야 할 일)
 - [x] GitHub 저장소 + Actions 시크릿(`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`)
 - [x] GitHub Environment `production` 생성 + Required reviewers 지정
 - [x] workers.dev 서브도메인 등록 — staging: https://tokyo-sanpo-staging.kolom1357.workers.dev (`/api/health` 정상)
 - [ ] Cloudflare: R2 버킷 2개(`sanpo-world-prod`, `sanpo-world-dev`), KV 1개 → 생성 후 `apps/worker/wrangler.jsonc` 주석대로 바인딩 추가(ADR-0015)
-- [ ] ODPT 개발자 등록(도쿄메트로 GTFS 키) — M07-T02 전까지
+- [ ] ODPT 개발자 등록(도쿄메트로 GTFS 키) — 컴파일러 완료(M07-T02), 키는 환경 변수 `ODPT_CONSUMER_KEY`로만(파일·로그 금지) → `pnpm pipeline fetch --source odpt-tokyometro --update-lock`
 - [x] 파이프라인 빌드 머신(16 GB+ RAM, Docker) — 로컬 Windows PC + Docker Desktop(16코어, 16 GB 할당)
 - [x] 국토지리원 기반지도정보 DEM 다운로드(533935·533945, DEM1A/5A 2025-08-22)
