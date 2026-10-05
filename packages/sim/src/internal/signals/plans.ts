@@ -7,6 +7,8 @@ export type PedLamp = SignalState['ped'];
 export interface CompiledPlan {
   name: string;
   cycleS: number;
+  /** 연동 오프셋(코드의 연동 칸 × 2 s, 주기로 접음) 적용 — 없으면 0번 계획만(ADR-0069). */
+  coordinated: boolean;
   /** 단계 시작(s, 주기 안). */
   starts: number[];
   phases: { durS: number; groups: [VehicleLamp, VehicleLamp, PedLamp, PedLamp] }[];
@@ -16,7 +18,7 @@ const VEH = new Set(['G', 'Y', 'R']);
 const PED = new Set(['W', 'F', 'D']);
 
 export function compilePlans(f: SignalPlansFile): CompiledPlan[] {
-  return f.plans.map((p) => {
+  return f.plans.map((p, i) => {
     let t = 0;
     const starts: number[] = [];
     const phases = p.phases.map((ph) => {
@@ -27,6 +29,6 @@ export function compilePlans(f: SignalPlansFile): CompiledPlan[] {
       t += ph.durS;
       return { durS: ph.durS, groups: ph.groups as CompiledPlan['phases'][number]['groups'] };
     });
-    return { name: p.name, cycleS: t, starts, phases };
+    return { name: p.name, cycleS: t, coordinated: p.coordinated ?? i === 0, starts, phases };
   });
 }

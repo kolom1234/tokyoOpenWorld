@@ -1,33 +1,258 @@
 {
-  "note": "신호 현시 계획(10 §5.2, M06-T02 — ADR-0062). 그룹 = [차량 A, 차량 B, 보행 A(∥ A), 보행 B]. 차량 G·Y·R, 보행 W(녹)·F(녹 점멸)·D(적). plans 순서 = props.inst 신호 코드의 계획 번호(0–3, 추가만). sites = 계획을 바꿀 교차로(WF 중심·반경 m). 기본 계획 = 주축 A(교차로 둘레 OSM 차도 길이가 가장 긴 방향 — 보통 간선) 녹 67 s · B 43 s(M06-T05), 주기 오프셋 = 파이프라인 연동 칸(주축 위치 ÷ 12 m/s, 사이트 계획 = 0 — ADR-0065).",
+  "note": "신호 현시 계획(10 §5.2, M06-T02 — ADR-0062). 그룹 = [차량 A, 차량 B, 보행 A(∥ A), 보행 B]. 차량 G·Y·R, 보행 W(녹)·F(녹 점멸)·D(적). plans 순서 = props.inst 신호 코드의 계획 번호(0–3, 추가만). sites = 계획을 바꿀 교차로(WF 중심·반경 m). 기본 계획 = 주축 A(교차로 둘레 OSM 차도 길이가 가장 긴 방향 — 보통 간선) 녹 67 s · B 43 s(M06-T05). minor = 간선(secondary 이상)이 tertiary 이하 길과 만나는 교차로 — 주기 100 s(A 62 · B 28, ADR-0069). coordinated = 연동(系統) 오프셋(파이프라인 연동 칸 = 주축 위치 ÷ 12 m/s, 그 계획 주기로 접음 — ADR-0065·0069), 사이트 계획은 오프셋 없음.",
   "plans": [
     {
       "name": "standard",
       "phases": [
-        { "durS": 62, "groups": ["G", "R", "W", "D"] },
-        { "durS": 5, "groups": ["G", "R", "F", "D"] },
-        { "durS": 3, "groups": ["Y", "R", "D", "D"] },
-        { "durS": 2, "groups": ["R", "R", "D", "D"] },
-        { "durS": 38, "groups": ["R", "G", "D", "W"] },
-        { "durS": 5, "groups": ["R", "G", "D", "F"] },
-        { "durS": 3, "groups": ["R", "Y", "D", "D"] },
-        { "durS": 2, "groups": ["R", "R", "D", "D"] }
-      ]
+        {
+          "durS": 62,
+          "groups": [
+            "G",
+            "R",
+            "W",
+            "D"
+          ]
+        },
+        {
+          "durS": 5,
+          "groups": [
+            "G",
+            "R",
+            "F",
+            "D"
+          ]
+        },
+        {
+          "durS": 3,
+          "groups": [
+            "Y",
+            "R",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 2,
+          "groups": [
+            "R",
+            "R",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 38,
+          "groups": [
+            "R",
+            "G",
+            "D",
+            "W"
+          ]
+        },
+        {
+          "durS": 5,
+          "groups": [
+            "R",
+            "G",
+            "D",
+            "F"
+          ]
+        },
+        {
+          "durS": 3,
+          "groups": [
+            "R",
+            "Y",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 2,
+          "groups": [
+            "R",
+            "R",
+            "D",
+            "D"
+          ]
+        }
+      ],
+      "coordinated": true
     },
     {
       "name": "scramble",
       "phases": [
-        { "durS": 38, "groups": ["G", "R", "D", "D"] },
-        { "durS": 3, "groups": ["Y", "R", "D", "D"] },
-        { "durS": 2, "groups": ["R", "R", "D", "D"] },
-        { "durS": 38, "groups": ["R", "G", "D", "D"] },
-        { "durS": 3, "groups": ["R", "Y", "D", "D"] },
-        { "durS": 2, "groups": ["R", "R", "D", "D"] },
-        { "durS": 26, "groups": ["R", "R", "W", "W"] },
-        { "durS": 6, "groups": ["R", "R", "F", "F"] },
-        { "durS": 2, "groups": ["R", "R", "D", "D"] }
+        {
+          "durS": 38,
+          "groups": [
+            "G",
+            "R",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 3,
+          "groups": [
+            "Y",
+            "R",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 2,
+          "groups": [
+            "R",
+            "R",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 38,
+          "groups": [
+            "R",
+            "G",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 3,
+          "groups": [
+            "R",
+            "Y",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 2,
+          "groups": [
+            "R",
+            "R",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 26,
+          "groups": [
+            "R",
+            "R",
+            "W",
+            "W"
+          ]
+        },
+        {
+          "durS": 6,
+          "groups": [
+            "R",
+            "R",
+            "F",
+            "F"
+          ]
+        },
+        {
+          "durS": 2,
+          "groups": [
+            "R",
+            "R",
+            "D",
+            "D"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "minor",
+      "coordinated": true,
+      "phases": [
+        {
+          "durS": 57,
+          "groups": [
+            "G",
+            "R",
+            "W",
+            "D"
+          ]
+        },
+        {
+          "durS": 5,
+          "groups": [
+            "G",
+            "R",
+            "F",
+            "D"
+          ]
+        },
+        {
+          "durS": 3,
+          "groups": [
+            "Y",
+            "R",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 2,
+          "groups": [
+            "R",
+            "R",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 23,
+          "groups": [
+            "R",
+            "G",
+            "D",
+            "W"
+          ]
+        },
+        {
+          "durS": 5,
+          "groups": [
+            "R",
+            "G",
+            "D",
+            "F"
+          ]
+        },
+        {
+          "durS": 3,
+          "groups": [
+            "R",
+            "Y",
+            "D",
+            "D"
+          ]
+        },
+        {
+          "durS": 2,
+          "groups": [
+            "R",
+            "R",
+            "D",
+            "D"
+          ]
+        }
       ]
     }
   ],
-  "sites": [{ "name": "渋谷スクランブル交差点", "centerWF": [-22.3, 8.6], "radiusM": 45, "plan": "scramble" }]
+  "sites": [
+    {
+      "name": "渋谷スクランブル交差点",
+      "centerWF": [
+        -22.3,
+        8.6
+      ],
+      "radiusM": 45,
+      "plan": "scramble"
+    }
+  ]
 }

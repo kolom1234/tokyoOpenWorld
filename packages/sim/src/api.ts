@@ -69,7 +69,8 @@ export interface CrowdAgentsParams {
 
 /** 신호 계획 파일(content/sim/signal-plans.json — game이 넘김). 그룹 = [차량 A, 차량 B, 보행 A, 보행 B]. */
 export interface SignalPlansFile {
-  plans: { name: string; phases: { durS: number; groups: string[] }[] }[];
+  /** coordinated = 연동 오프셋 적용(없으면 0번 계획만 — M06-T05 호환, ADR-0069). */
+  plans: { name: string; coordinated?: boolean; phases: { durS: number; groups: string[] }[] }[];
   sites: { name: string; centerWF: [number, number]; radiusM: number; plan: string }[];
 }
 

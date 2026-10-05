@@ -61,7 +61,13 @@ export interface PropOutput {
 
 function signalSiteOf(i: PropInput) {
   const w = weightedRoadLines(i.vehicleRoadsAround ?? i.osm.filter(isVehicleRoad));
-  return siteFinder(junctionsOf(i.junctions ?? []), i.catalog.signalSites ?? [], w.lines, w.weights);
+  return siteFinder(
+    junctionsOf(i.junctions ?? []),
+    i.catalog.signalSites ?? [],
+    w.lines,
+    w.weights,
+    i.catalog.signalRules,
+  );
 }
 
 export function buildProps(i: PropInput): PropOutput {

@@ -52,6 +52,50 @@ describe('signal sites', () => {
     expect(decodeSignal(signalCode(std, 'vehicle', 1, 0)).slot).toBe(((120 - 20) % 120) / 2);
   });
 
+  it('gives arterial × minor-road junctions the shorter coordinated minor plan (ADR-0069)', () => {
+    // 동서 간선(primary, 가중 4) × 남북 생활도로(1) → minor(2번, 100 s), 간선 × 간선 → 기본.
+    const rules = { cycles: [120, 120, 100], coordinated: [true, false, true], minorPlan: 2 };
+    const ew = [-40, 0, 40, 0];
+    const ns = [0, -40, 0, 40];
+    const minor = siteFinder(
+      [{ cx: 0, cz: 0, axis: 0 }],
+      [],
+      [ew, ns],
+      [4, 1],
+      rules,
+    )([0, 0], { center: [0, 0], axis: 0 });
+    expect([minor.plan, minor.cycleS, minor.coordinated]).toEqual([2, 100, true]);
+    const major = siteFinder(
+      [{ cx: 0, cz: 0, axis: 0 }],
+      [],
+      [ew, ns],
+      [4, 3],
+      rules,
+    )([0, 0], { center: [0, 0], axis: 0 });
+    expect(major.plan).toBe(0);
+    // 사이트 계획이 우선(스크램블), 규칙이 없으면 옛 동작(0번).
+    const site = siteFinder(
+      [{ cx: 0, cz: 0, axis: 0 }],
+      [{ centerWF: [0, 0], radiusM: 10, plan: 1 }],
+      [ew, ns],
+      [4, 1],
+      rules,
+    );
+    expect(site([0, 0], { center: [0, 0], axis: 0 }).plan).toBe(1);
+    expect(
+      siteFinder([{ cx: 0, cz: 0, axis: 0 }], [], [ew, ns], [4, 1])([0, 0], { center: [0, 0], axis: 0 }).plan,
+    ).toBe(0);
+    // minor 연동 칸 = 주축 위치 ÷ 12 m/s를 100 s로 접음.
+    const far = siteFinder(
+      [{ cx: 360, cz: 0, axis: 0 }],
+      [],
+      [ew.map((v, i) => (i % 2 === 0 ? v + 360 : v)), ns.map((v, i) => (i % 2 === 0 ? v + 360 : v))],
+      [4, 1],
+      rules,
+    )([360, 0], { center: [0, 0], axis: 0 });
+    expect(decodeSignal(signalCode(far, 'vehicle', 1, 0)).slot).toBe(((100 - 30) % 100) / 2);
+  });
+
   it('splits a skewed junction by the two nearest road directions (not a single ±45° axis)', () => {
     // 50°·−20° 두 길(70° 사이) — 단일 축이면 55°와 −21°가 한 그룹이 될 수 있었다.
     const line = (deg: number, len: number) => {

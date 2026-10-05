@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createRng, hash32, type Rng, WORLD_SEED } from '@sanpo/core';
 import { JCOL_MATERIAL, type JcolShape, PROP_TYPE, type PropBatch, type PropTypeName } from '@sanpo/tile-format';
 import type { RoadIndex } from '../roads.ts';
-import type { SignalPlanSite, SignalSite } from './signal-sites.ts';
+import type { SignalPlanRules, SignalPlanSite, SignalSite } from './signal-sites.ts';
 
 export type ColliderSpec =
   | { kind: 'cylinder'; halfHeight: number; radius: number; material: keyof typeof JCOL_MATERIAL }
@@ -21,10 +21,12 @@ export interface PropCatalog {
   budget: { maxInstancesPerCell: number };
   /** 신호 계획 사이트(content/sim/signal-plans.json sites — M06-T02). 없으면 전부 기본 계획. */
   signalSites?: SignalPlanSite[];
+  /** 계획 규칙(주기·연동·minor 계획 번호 — ADR-0069). 없으면 기본 120 s·0번만 연동. */
+  signalRules?: SignalPlanRules;
 }
 
 interface SignalPlansFile {
-  plans: { name: string }[];
+  plans: { name: string; coordinated?: boolean; phases: { durS: number }[] }[];
   sites: { name: string; centerWF: [number, number]; radiusM: number; plan: string }[];
 }
 
@@ -38,9 +40,15 @@ export function readCatalog(repoRoot: string): PropCatalog {
       0,
       sp.plans.findIndex((p) => p.name === name),
     );
+  const minor = sp.plans.findIndex((p) => p.name === 'minor');
   return {
     ...cat,
     signalSites: sp.sites.map((s) => ({ centerWF: s.centerWF, radiusM: s.radiusM, plan: index(s.plan) })),
+    signalRules: {
+      cycles: sp.plans.map((p) => p.phases.reduce((t, ph) => t + ph.durS, 0)),
+      coordinated: sp.plans.map((p, i) => p.coordinated ?? i === 0),
+      ...(minor > 0 ? { minorPlan: minor } : {}),
+    },
   };
 }
 

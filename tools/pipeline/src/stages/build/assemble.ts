@@ -237,6 +237,7 @@ function navOf(
     bands,
     colliders: props?.colliders ?? [],
     ...(input.props?.signalSites ? { signalSites: input.props.signalSites } : {}),
+    ...(input.props?.signalRules ? { signalRules: input.props.signalRules } : {}),
   });
 }
 
@@ -269,6 +270,8 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
           signalsAround: input.signalsAround,
           shaped: sc.shaped,
           ...(input.props?.signalSites ? { signalSites: input.props.signalSites } : {}),
+          ...(input.props?.signalRules ? { signalRules: input.props.signalRules } : {}),
+          ...(input.props?.signalRules ? { signalRules: input.props.signalRules } : {}),
         })
       : null;
   const parts: CellParts = { sc, terrain, bld, roads, own, decals, col, props, ov, nav, lanes };

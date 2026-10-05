@@ -41,7 +41,7 @@ M06-T06: `worker/{host, link, sim.worker, traffic-runtime}.ts` 물리 직결(Kin
 M06-T05: `traffic/{lane-graph, idm, routing, yielding, spawner, traffic-sim}.ts` + `worker/traffic-runtime.ts` — 신호 코드 배치 변경(연동 오프셋 칸, ADR-0065).
 M06-T04: `crowd/{appearance, flow, lod-manager, crowd-sim}.ts` — 공유 정체성, tier B 꺾은선 흐름, 80 ± 5 m 승강격, 면적 균일 스폰(평소 멀리·시야 밖), 날씨 밀도(ADR-0064).
 M06-T03: `crowd/{nav-world, route, agent-fsm, agents-detour, agent-output, density}.ts` + `worker/{crowd-runtime, link}.ts` — 타일 NavMesh(WF, 64 m)·횡단 기록 참조 계수, tier A 상태 기계(걷기 → 접근 → 대기(보행 W·반응) → 횡단 → 재계획, 좌측 보행 차로), Recast WASM은 sim.worker 안에서만(ADR-0063).
-M03-T03: 시계·천문·environment(ADR-0029). M06-T01: sim.worker + SAB + 더미 군중(ADR-0061). M06-T02: 신호 `signals/{plans,controller}.ts` — `SimDeps.signalPlans`(SignalPlansFile) → `signalStateAt(code)`: SignalState{vehicle G·Y·R, ped W·F·D, phase, remainingS, cycleS}, 게임 시각 순수 함수(ADR-0062). 내비메시·교통 = M06-T03~, 날씨·공휴일·열차 = M07·M09.
+M03-T03: 시계·천문·environment(ADR-0029). M06-T01: sim.worker + SAB + 더미 군중(ADR-0061). M06-T02: 신호 `signals/{plans,controller}.ts` — `SimDeps.signalPlans`(SignalPlansFile — plans[].coordinated? = 연동 오프셋, 없으면 0번만, ADR-0069) → `signalStateAt(code)`: SignalState{vehicle G·Y·R, ped W·F·D, phase, remainingS, cycleS}, 게임 시각 순수 함수(ADR-0062). 내비메시·교통 = M06-T03~, 날씨·공휴일·열차 = M07·M09.
 
 ## Tests (구현분)
 `test/traffic.test.ts`(M06-T05 수락): world-mini 차선 셀 병합(포털), IDM, 10분 교착 0·적신호 통과 0·메이지도리 평균 속도 비율 기록(⚠️ 0.36 < 0.4).

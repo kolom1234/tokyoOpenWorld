@@ -60,6 +60,21 @@ describe('signal controller', () => {
     expect(signalState(plans, code(1, 1, 0, 0), 5000).phase).toBe(signalState(plans, code(999, 1, 0, 17), 5000).phase);
   });
 
+  it('applies the progression offset to coordinated plans only (minor = 100 s, ADR-0069)', () => {
+    const minor = plans.findIndex((p) => p.name === 'minor');
+    expect(minor).toBe(2);
+    expect(plans[minor]?.cycleS).toBe(100);
+    expect(plans.map((p) => p.coordinated)).toEqual([true, false, true]);
+    // 연동 칸 20(= 40 s): 시각을 40 s 늦추면 같은 단계.
+    expect(signalState(plans, code(5, minor, 0, 20), 3000).phase).toBe(
+      signalState(plans, code(5, minor, 0, 0), 3040).phase,
+    );
+    for (let t = 0; t < 100; t += 0.5) {
+      const s = (g: number) => signalState(plans, code(9, minor, g), 2_000_000 + t);
+      expect(s(0).vehicle === 'G' && s(1).vehicle === 'G').toBe(false);
+    }
+  });
+
   it('never gives conflicting greens in the standard plan', () => {
     for (let t = 0; t < 120; t += 0.5) {
       const s = (g: number) => signalState(plans, code(77, 0, g), 1_000_000 + t);

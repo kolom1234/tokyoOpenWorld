@@ -236,8 +236,8 @@ describe('traffic (world-mini lanes)', () => {
     expect(st.deadlocks, info).toBe(0);
     expect(st.violations, info).toBe(0);
     expect(maxN, info).toBeGreaterThanOrEqual(38);
-    // ⚠️ 목표 40–80 %: world-mini(512 m) 실측 0.37(신호 없으면 0.82) — 120 s 주기 신호·회전·영역 가장자리 영향(ADR-0065). 회귀 하한만 건다.
-    expect(ratio, info).toBeGreaterThanOrEqual(0.3);
+    // 목표 40–80 %(ADR-0069): 120 s 주기만이면 0.36(신호 없으면 0.82 — 손실은 적신호 대기·대기열), 간선 × 작은 길 교차로 minor 계획(100 s)으로 0.41.
+    expect(ratio, info).toBeGreaterThanOrEqual(0.4);
     expect(ratio, info).toBeLessThanOrEqual(0.8);
   }, 120_000);
 });

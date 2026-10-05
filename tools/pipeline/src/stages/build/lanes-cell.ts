@@ -7,6 +7,7 @@ import { buildLaneDrafts, cellLanes, type LaneSignals } from '../derive/lanes.ts
 import { isVehicleRoad } from '../derive/markings/stopline.ts';
 import {
   junctionsOf,
+  type SignalPlanRules,
   type SignalPlanSite,
   signalCode,
   siteFinder,
@@ -26,6 +27,8 @@ export interface LanesCellInput {
   signalsAround: readonly OsmRecord[];
   shaped: ShapedGround;
   signalSites?: readonly SignalPlanSite[];
+  /** 계획 규칙(ADR-0069). */
+  signalRules?: SignalPlanRules;
 }
 
 export interface LanesCellStats {
@@ -47,6 +50,7 @@ function signalsOf(i: LanesCellInput): LaneSignals {
     [...(i.signalSites ?? [])],
     w.lines,
     w.weights,
+    i.signalRules,
   );
   return {
     signalized: (x, z) => pts.some((p) => Math.hypot(p[0] - x, p[1] - z) <= SIGNAL_REACH_M),
