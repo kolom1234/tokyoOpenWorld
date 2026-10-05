@@ -141,9 +141,19 @@ export function batchesOf(out: Map<number, number[]>): PropBatch[] {
     .map(([typeId, v]) => ({ typeId, transforms: Float32Array.from(v) }));
 }
 
-/** 점 p에서 방향 v로 차도가 끝나는 거리(m, 0.25 m 행진 + 이분 5회 ≈ 8 mm, ≤ max). */
+/** 도로 조각 사이 실틈 허용(m) — 이보다 얇은 무분류(none) 틈은 차도가 이어진다고 본다(curb.ts SOLID_M과 같은 값, ADR-0068). */
+const SLIVER_M = 0.75;
+
+/**
+ * 점 p에서 방향 v로 차도가 끝나는 거리(m, 0.25 m 행진 + 이분 5회 ≈ 8 mm, ≤ max). PLATEAU 차도 조각 사이 실틈(무분류, < SLIVER_M)은 건너뛴다
+ * — 전주가 실틈을 가장자리로 보고 차도 한가운데에 서던 것(M07 사전 ⓪). 교통섬·보도(walk)는 얇아도 가장자리.
+ */
 export function toRoadEdge(c: Pick<PlaceCtx, 'roads'>, p: V2, v: V2, max = 15): number {
-  const road = (s: number): boolean => c.roads.classify(p[0] + v[0] * s, p[1] + v[1] * s) === 'road';
+  const at = (s: number) => c.roads.classify(p[0] + v[0] * s, p[1] + v[1] * s);
+  const road = (s: number): boolean => {
+    const k = at(s);
+    return k === 'road' || (k === 'none' && at(s + SLIVER_M) === 'road');
+  };
   let s = 0;
   while (s < max && road(s + 0.25)) s += 0.25;
   if (s >= max) return max;

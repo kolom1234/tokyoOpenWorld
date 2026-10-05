@@ -89,6 +89,26 @@ describe('utility poles', () => {
     expect(a.colliders.filter((c) => c.kind === 'cylinder')).toHaveLength(poles.length);
   });
 
+  it('ignores a sliver between carriageway pieces when finding the pole side edge (M07 pre ⓪)', () => {
+    // 같은 생활도로가 두 조각(z 100–102.5, 102.55–108) — 5 cm 실틈을 가장자리로 보면 전주가 차도 가운데(≈ 102.2·102.9)에 섰다.
+    const pieces = [road('a', 'carriageway', -100, 100, 612, 102.5), road('b', 'carriageway', -100, 102.55, 612, 108)];
+    const poles = instancesOf(
+      buildProps(
+        input({
+          roads: pieces,
+          osm: ['w2', 'w3', 'w4', 'w5'].map((id, k) => {
+            const z = k % 2 === 0 ? 100.8 : 107;
+            return osm(id, 'line', [-80 + k * 7, z, 600, z], { highway: 'residential' });
+          }),
+        }),
+      ),
+      'utilityPole',
+    );
+    expect(poles.length).toBeGreaterThan(0);
+    for (const p of poles)
+      expect(Math.min(Math.abs((p[2] as number) - 100), Math.abs((p[2] as number) - 106))).toBeLessThan(0.5);
+  });
+
   it('stations do not depend on the cell, wires come from the start pole cell (5 per span)', () => {
     const left = buildProps(input({ roads, osm: [line] }));
     const right = buildProps(input({ roads, osm: [line], ox: 256 }));
