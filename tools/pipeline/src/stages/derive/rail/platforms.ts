@@ -24,6 +24,29 @@ export interface TrackStop {
   platformLengthM: number;
   /** 승강장 최소 면적 사각형 중심을 선로에 투영한 s(정차 위치 독립 검증 — ±2 m). */
   centroidS: number;
+  /** 승강장(OSM id·WF xz 닫힌 고리 — M07-T04 승강장 바닥·홈도어). */
+  platform: { id: string; ringXZ: number[] };
+}
+
+/** 선 승강장 두께(m) — 선로 반대쪽으로. */
+export const LINE_PLATFORM_WIDTH_M = 3;
+
+/** 승강장 고리: 면은 그대로(닫힘), 선은 선로에서 멀어지는 쪽으로 LINE_PLATFORM_WIDTH_M 띠. */
+export function platformRing(pts: readonly V2[], proj: ReturnType<typeof projector>): number[] {
+  const first = pts[0] as V2;
+  const last = pts.at(-1) as V2;
+  if (pts.length >= 4 && first[0] === last[0] && first[1] === last[1]) return pts.flat();
+  const out: V2[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[Math.max(0, i - 1)] as V2;
+    const b = pts[Math.min(pts.length - 1, i + 1)] as V2;
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    let n: V2 = [(b[1] - a[1]) / L, -(b[0] - a[0]) / L];
+    const p = pts[i] as V2;
+    if (Math.abs(proj([p[0] + n[0], p[1] + n[1]]).lateral) < Math.abs(proj(p).lateral)) n = [-n[0], -n[1]];
+    out.push([p[0] + n[0] * LINE_PLATFORM_WIDTH_M, p[1] + n[1] * LINE_PLATFORM_WIDTH_M]);
+  }
+  return [...pts, ...out.reverse(), first].flat();
 }
 
 /** 표본 xyz(등간격) 위 점 투영: s·횡거리(+ 왼쪽, WF −Z = 북 기준 진행 방향). 표본 탐색은 거친 → 세밀 2단. */
@@ -127,7 +150,8 @@ export function trackStops(
       }
     if (!station) continue;
     const side: 'L' | 'R' = (near[0]?.lateral ?? 0) > 0 ? 'L' : 'R';
-    cands.push({ station, s: (s0 + s1) / 2, side, platformLengthM: s1 - s0, centroidS: proj(c).s, edge });
+    const platform = { id: pf.id, ringXZ: platformRing(pf.pts, proj) };
+    cands.push({ station, s: (s0 + s1) / 2, side, platformLengthM: s1 - s0, centroidS: proj(c).s, edge, platform });
   }
   // 역마다 선로에 가장 붙은 승강장 하나.
   const best = new Map<string, TrackStop & { edge: number }>();

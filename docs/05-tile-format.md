@@ -141,6 +141,7 @@ u32 pointCount; f32[pointCount*3] 표본 WF xyz(레일 윗면 중심선); f32[po
 - 메타 = `{ lines: [{id, name{ja,en}, color, kind, rideable, maxSpeedKmh, gaugeM, formation{cars, carLengthM}}], tracks: [{id, line, heading, ptOffset, ptCount, lengthM, stepM, stops: [{station, s, side 'L'|'R', platformLengthM}]}], stations: [{id, name, posWF, mvpEdge}] }`.
 - 선로 표본 k의 s = k × stepM(0.5 m, 마지막 = lengthM). 점 순서 = 진행 방향(좌측통행 — 같은 노선 두 선로 중 북행 = 서쪽). 정차 s = 편성 중심이 오는 승강장 가운데, side = 문 쪽(진행 방향 기준).
 - reader 거부: 매직·버전, 잘림, 메타 JSON 오류(`header`), 선로 표본 범위·정차 s ∉ [0, 길이]·미지 노선/역·비유한 값(`corrupt`).
+- M07-T04(ADR-0073, 추가 필드 — v1 유지): 메타 `platforms: [{id(OSM), ringXZ(닫힌 고리 WF xz), topY(레일 윗면 + 1.1)}]`, 정차 `platform`(번호), 노선 `thirdRail?`. 옛 파일 = `platforms: []`.
 
 ### 9.1 global/timetables (M07-T02, ADR-0071)
 `<lineId>.json`(스키마 `schemas/timetable.schema.json`, 타입 tile-format `TimetableFile`) + `index.json`(`{schema 1, lines[{line, file, source, approximate, trips}]}`).

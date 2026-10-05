@@ -87,6 +87,9 @@ export interface PhysicsStats {
   /** sim 직결 키네마틱 차량 바디 수·받은 프레임 수(M06-T06). */
   kinematicBodies: number;
   kinematicFrames: number;
+  /** 열차 칸 바디 수·정적 묶음 수(M07-T04). */
+  trainBodies: number;
+  staticGroups: number;
   anchorWF: Readonly<Vec3d>;
 }
 
@@ -133,8 +136,22 @@ export interface PhysicsService extends SystemProvider {
    * 워커가 플레이어 60 m 안 차량을 NPC_KINEMATIC 상자로 두고 스텝마다 외삽 목표로 MoveKinematic — 캐릭터가 관통하지 않고 밀린다. 다시 부르면 옛 포트를 닫는다.
    */
   connectKinematicSource(port: MessagePort): void;
+  /**
+   * 열차 칸(M07-T04, 08 §8 — ADR-0073): 이번 프레임 포즈 레코드(core TRAIN_BODY_STRIDE — id, x,y,z 레일 윗면, yaw, pitch, 차형, 종류, 문).
+   * 다음 step에 실린다(같은 프레임 여러 번이면 마지막 것). 워커가 칸마다 TRAIN 키네마틱 합성 바디(바닥·벽(문 자리 비움)·끝벽·칸막이·천장·롱시트)
+   * + 닫힌 쪽 문 바디(열림 ≥ 0.9면 없음)를 두고, 물리 스텝마다 직전·이번 포즈를 보간해 MoveKinematic — 캐릭터는 바닥 속도를 받는다. 빈 배열 = 모두 제거.
+   */
+  setTrainCars(data: Float64Array): void;
+  /** 이름 붙인 정적 묶음(M07-T04 — 승강장 바닥 메시·홈도어 상자): 같은 이름 = 교체, null = 제거. */
+  setStaticGroup(name: string, group: StaticGroupDesc | null): void;
   stats(): PhysicsStats;
   dispose(): void;
+}
+
+/** 정적 묶음: boxes = f64 × 8(cx, cy, cz WF, 반변 hx, hy, hz, yaw, 재질), mesh = WF 정점·삼각형·재질(양면 충돌). */
+export interface StaticGroupDesc {
+  boxes?: Float64Array;
+  mesh?: { positions: Float64Array; indices: Uint32Array; material: number };
 }
 
 /** 워커 대신 쓸 전송(테스트·도구: `createInlineTransport()` = 같은 스레드의 워커 코어). 없으면 supervisor로 physics.worker를 띄운다. */

@@ -100,6 +100,21 @@ export class VehicleBuilder {
     this.idx.push(i, i + 1, i + 2, i, i + 2, i + 3);
   }
 
+  /** 삼각형 a → b → c(바깥에서 반시계) — 면 법선(평면, 비색인 정점 3개). 승강장 바닥(M07-T04). */
+  triangle(a: P3, b: P3, c: P3, hex: number, code: VPart): this {
+    this.c.setHex(hex);
+    const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]] as const;
+    const v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]] as const;
+    const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]] as const;
+    const l = Math.hypot(n[0], n[1], n[2]) || 1;
+    const nn: P3 = [n[0] / l, n[1] / l, n[2] / l];
+    const i = this.vert(a, nn, code, [0, 0]);
+    this.vert(b, nn, code, [0, 0]);
+    this.vert(c, nn, code, [0, 0]);
+    this.idx.push(i, i + 1, i + 2);
+    return this;
+  }
+
   /** 육면체(면 6개, 평면 법선). skipBottom = 바닥면 생략(보이지 않음). extra = `_vpart.yz`(바퀴 축·문짝 방향). */
   hexa(corner: Corner, hex: number, code: VPart, skipBottom = true, extra: readonly [number, number] = [0, 0]): this {
     this.c.setHex(hex);

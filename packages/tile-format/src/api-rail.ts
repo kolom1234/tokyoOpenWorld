@@ -28,6 +28,15 @@ export interface RailStopMeta {
   /** 문 쪽: 진행 방향 왼쪽 'L'·오른쪽 'R'. */
   side: 'L' | 'R';
   platformLengthM: number;
+  /** 승강장(RailNetwork.platforms 번호, M07-T04). 옛 파일은 없음. */
+  platform?: number;
+}
+
+/** 승강장(M07-T04): OSM 승강장 윤곽(WF xz 닫힌 고리 — 선 승강장은 선로 반대쪽으로 3 m 두께를 준 고리)·윗면 높이(레일 윗면 + 1.1 m). */
+export interface RailPlatformMeta {
+  id: string;
+  ringXZ: number[];
+  topY: number;
 }
 
 export interface RailTrackMeta {
@@ -56,6 +65,8 @@ export interface RailNetwork {
   lines: RailLineMeta[];
   tracks: RailTrackMeta[];
   stations: RailStationMeta[];
+  /** 승강장(M07-T04 — 정차 platform 번호가 가리킨다). 옛 파일 = 빈 배열. */
+  platforms: RailPlatformMeta[];
   /** 표본 WF xyz(레일 윗면 중심선) × 점 수. */
   points: Float32Array;
   /** 표본 제한속도(m/s, 곡률 — 노선 최고 이하). */

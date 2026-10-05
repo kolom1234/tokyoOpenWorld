@@ -30,6 +30,11 @@ export interface TrainState {
   headingRad: number;
   stationAt: string | null;
   nextStation: string | null;
+  /** 편성 일련 번호(물리 바디 id = 일련 × 32 + 칸, M07-T04). */
+  serial: number;
+  /** 차형(CAR_TYPE)·가공 전차선(팬터그래프 칸). */
+  type: number;
+  overhead: boolean;
 }
 
 export interface TrainStats {
@@ -45,6 +50,8 @@ export interface TrainSim {
   readonly buffer: SharedInstanceBuffer;
   trains(): readonly TrainState[];
   trainsNear(posWF: Readonly<Vec3d>, r: number): TrainInfo[];
+  /** 위치 r 안 칸 물리 레코드(core TRAIN_BODY_STRIDE — M07-T04). */
+  bodiesNear(posWF: Readonly<Vec3d>, r: number): Float64Array;
   stats(): TrainStats;
 }
 
@@ -72,9 +79,48 @@ interface Ctx {
   seq: number;
   list: TrainState[];
   st: TrainStats;
+  /** 트립 → 편성 일련(처음 본 순서 — 같은 세션 안에서 고정). */
+  serials: Map<string, number>;
 }
 
 const pose: CarPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
+
+function serialOf(c: Ctx, id: string): number {
+  let n = c.serials.get(id);
+  if (n === undefined) {
+    n = c.serials.size + 1;
+    c.serials.set(id, n);
+  }
+  return n;
+}
+
+/** 위치 r(m) 안 칸의 물리 레코드(core TRAIN_BODY_STRIDE, WF float64 — 터널 칸 포함). */
+function bodiesNear(c: Ctx, p: Readonly<Vec3d>, r: number): Float64Array {
+  const out: number[] = [];
+  for (const t of c.list) {
+    if (Math.hypot(t.head.x - p.x, t.head.z - p.z) > r + t.cars * t.carLengthM) continue;
+    const tr = c.rt.tracks.get(t.track);
+    if (!tr) continue;
+    const half = (t.cars * t.carLengthM) / 2;
+    for (let k = 0; k < t.cars; k++) {
+      carPose(c.rt, tr.meta, t.motion.s + half - (k + 0.5) * t.carLengthM, t.carLengthM * BOGIE_RATIO, pose);
+      if (Math.hypot(pose.x - p.x, pose.y - p.y, pose.z - p.z) > r) continue;
+      out.push(
+        t.serial * 32 + k,
+        pose.x,
+        pose.y,
+        pose.z,
+        pose.yaw,
+        pose.pitch,
+        t.type,
+        carKind(k, t.cars, t.overhead),
+        t.motion.doors,
+        0,
+      );
+    }
+  }
+  return Float64Array.from(out);
+}
 
 function writeCars(c: Ctx, a: ActiveTrip, m: MotionState, line: RailLineMeta | undefined): void {
   const tr = c.rt.tracks.get(a.trip.track);
@@ -108,7 +154,7 @@ function writeCars(c: Ctx, a: ActiveTrip, m: MotionState, line: RailLineMeta | u
   }
 }
 
-function stateOf(c: Ctx, a: ActiveTrip, m: MotionState): TrainState {
+function stateOf(c: Ctx, a: ActiveTrip, m: MotionState, line: RailLineMeta | undefined): TrainState {
   const tr = c.rt.tracks.get(a.trip.track);
   const head = { x: 0, y: 0, z: 0 };
   if (tr) {
@@ -128,6 +174,9 @@ function stateOf(c: Ctx, a: ActiveTrip, m: MotionState): TrainState {
     headingRad: pose.yaw,
     stationAt: m.stop >= 0 ? (stops[m.stop]?.station ?? null) : null,
     nextStation: m.next >= 0 ? (stops[m.next]?.station ?? null) : null,
+    serial: serialOf(c, a.trip.id),
+    type: carType(line),
+    overhead: line?.thirdRail !== true,
   };
 }
 
@@ -149,7 +198,7 @@ function step(c: Ctx, active: ActiveTrip[], m: MotionState, gameMs: number, obs:
     seen.add(a.trip.id);
     motionAt(mo, a.t, m);
     writeCars(c, a, m, c.meta.get(a.line));
-    c.list.push(stateOf(c, a, m));
+    c.list.push(stateOf(c, a, m, c.meta.get(a.line)));
   }
   for (const id of c.motions.keys()) if (!seen.has(id)) c.motions.delete(id);
   c.st.trains = c.list.length;
@@ -169,6 +218,7 @@ export function createTrainSim(rt: RailRt, tables: readonly TimetableFile[]): Tr
     seq: 0,
     list: [],
     st: { trips: 0, trains: 0, cars: 0, hiddenCars: 0 },
+    serials: new Map(),
   };
   const totalTrips = tables.reduce((n, f) => n + f.calendars.reduce((k, cal) => k + cal.trips.length, 0), 0);
   const active: ActiveTrip[] = [];
@@ -186,6 +236,7 @@ export function createTrainSim(rt: RailRt, tables: readonly TimetableFile[]): Tr
       step(c, active, m, gameMs, obs, totalTrips);
     },
     trains: () => c.list,
+    bodiesNear: (p, r) => bodiesNear(c, p, r),
     trainsNear(p, r) {
       return c.list
         .filter((t) => Math.hypot(t.head.x - p.x, t.head.z - p.z) <= r + t.cars * t.carLengthM)

@@ -17,6 +17,7 @@ Layer: L3 | Depends: core, geo, tile-format(lanes·nav 파서), @recast-navigati
 **M06-T05**(ADR-0065): `startWorker({…, traffic?: TrafficParams{maxVehicles, spawnM, despawnM, farM, spawnsPerTick, diurnal}})`, `addCell(key, nav?, lanes?)`, `outputs(): {pedestrians?, traffic?}`(차량 SAB 칸 = x,y,z·yaw·속력·바퀴 회전·variant·flags), `SimWorkerStats.traffic{vehicles, spawned, despawned, violations, deadlocks, distM, limitM, lanes, cells}`.
 **M06-T07**(ADR-0067): `SimWorkerStats.crowd.filled`(처음 채우기 끝 — 골든뷰 안정 조건), `CrowdParams.density.hotspots[].crossShare?`(원 안 목적지를 중심 건너편으로 고를 확률), 내부 `createCrowdSim(nav, params, ped, walkLeft?)`·`signals/controller.pedWalkLeftS`(보행 적까지 남은 s — 늦은 출발 금지).
 **M07-T03**(ADR-0072): `setRail(network: RailNetwork, timetables: TimetableFile[])` → 열차 = **메인 스레드**(시계 시스템 phase 10이 프레임마다 — 위치 = 게임 시각의 순수 함수, 외삽 없음), `outputs().trains`(stride 8: x,y,z 레일 윗면(WF − anchor)·yaw·pitch·속력·노선색 24비트·코드 = 차형 × 4 + 종류 + 문 소수), `trainsNear(pos, r)`(TrainInfo — seats는 T05), `trainStats(){trips, trains, cars, hiddenCars}`.
+**M07-T04**(ADR-0073): `trainBodies(pos, r)` → 칸 물리 레코드(core TRAIN_BODY_STRIDE), `railStatic(): RailStaticLayout{platforms{positions, indices, topIndexCount}, panels, gates(f64 × 5: x,y,z,yaw,길이), gateStops}`, `psdGateOpen()`(문 열림 — 제자리 갱신 배열).
 **M06-T06**(ADR-0066): `connectPhysics(link: (port) => void)` — 워커 (재)시작마다 MessageChannel, 워커가 틱마다 플레이어 60 m 안 차량 `KinematicFrame`(core)을 물리로. 차종 치수 = core `VEHICLE_TYPES`. 교통 출력 중심 = 지나온 차선(trail ≤ 4)까지 거슬러 연속. 횡단보도 위 정차 금지(정지 지점 앞 35 m 안 횡단 띠 = 군중 내비 월드 `crossingsNear` → 띠 앞 1 m, 황색에 이미 띠 안이면 통과)·경로 미리보기 = 다음·그다음 + 후속 하나뿐인 조각(포털·연결로) 80 m. environment = 카메라(phase 10에서 기록) 위치를 1 km 격자로 스냅해 태양·달·조도(맑은 하늘 근사)·계절 dayOfYear, 날씨는 맑음 고정(M06).
 
 ## Invariants
@@ -38,6 +39,7 @@ IDM 단일 차로 수렴, 신호 사이클, 운동 프로파일(시간 점프 �
 
 ## Status
 M06-T07: `crowd/agent-fsm.ts` 늦은 출발 금지(`canMakeIt`)·대기 깊이 4.5 m, `crowd/crowd-sim.ts` 핫스팟 건너편 목적지(`acrossHotspot`)·`inspect()`(시험), `agents-detour` 분리 가중 1.5 — ADR-0067.
+M07-T04: `rail/{platforms,stations}.ts`(ADR-0073) — 승강장 귀 자르기 삼각화(윗면 +Y·옆면 바깥), 홈도어 배치(편성 문 = 2 m 문·사이 판 ≤ 2 m, 선로 중심 2.05 m)·열림 = 그 정차 열차 문, trains `bodiesNear`(편성 일련 id).
 M07-T03: `rail/{network,motion-profile,trains}.ts`(ADR-0072) — 선로 표본 보간·칸 자세(앞·뒤 대차 가운데·yaw·pitch)·터널 칸 숨김, 트립 운동(core tripLegs 캐시·정차·문 도착 +3 s ~ 출발 −5 s·쪽), 편성 칸 종류(앞/뒤 운전실·팬터그래프 — 제3궤조 없음).
 M07-T02: `rail/timetable.ts`(내부 — ADR-0071) — global/timetables(tile-format `TimetableFile`) 색인·운행일 초(`serviceTimeOf`, 04:00 경계)·운행 중 트립(`activeTrips` — 오늘 + 전날 운행일, 요일 = 운행일 기준). 위치 곡선은 core `tripLegs`(T03 motion-profile).
 M06-T06: `worker/{host, link, sim.worker, traffic-runtime}.ts` 물리 직결(KinematicFrame), `traffic/yielding.ts` 횡단보도 정차 금지·경로 미리보기, `traffic-sim` 차체 중심 연속(trail) — ADR-0066.
@@ -53,6 +55,7 @@ M06-T06: 키네마틱 프레임 = 플레이어 60 m 안·공유 치수, 출력 �
 `test/crowd-lod.test.ts`(M06-T04 수락): 선 플레이어 총 950–1,000·틱 p95 ≤ 12 ms, 걷는 플레이어 승강격 100+회에 같은 사람 위치가 한 틱 0.25 m 넘게 안 튐.
 `test/crowd-agents.test.ts`(M06-T03 수락): world-mini 실데이터 스크램블 nav 64타일·신호 횡단, 횡단 띠로만 건너는 경로, 250명 적색 대기 → 녹색 동시 횡단 틱 p95 ≤ 12 ms·관통 0·내비 밖 0.
 `test/crowd-worker.test.ts`: SAB 이중 영역 게시·front 뒤집기, 더미 결정론·원 궤도·접선 yaw·anim/rate 인코딩.
+`test/rail-stations.test.ts`(M07-T04): 오목 다각형 삼각화 면적·법선, 홈도어 문 수·위치·판 겹침 없음, 문 열림 연동·칸 레코드(근처 3칸·안정 id·문 −1).
 `test/rail-trains.test.ts`(M07-T03 수락): 시각 점프 = 연속 진행(±0.1 m — 순수 함수라 0), 역간 소요 = 시간표 ±5 s(곡선 0.2 s 안), 문 시각·쪽, 칸 간격·종류·팬터그래프·터널 숨김. 실데이터 1,758 트립 = 도착 차 0.043 s·점프 차 0 m(ADR-0072).
 `test/rail-timetable.test.ts`(M07-T02): 04:00 경계(03:30 = 전날 운행일 27:30), 요일 묶음 선택, 자정 넘김 트립.
 `test/clock.test.ts`: 2026-06-21 시부야 남중 11:43 JST 77.78°±0.1°·방위 180°, 12:00 ≈ 77.2°, 수렴각 보정, 시계 3모드, 04:00 운행일 경계, 환경 캐시.

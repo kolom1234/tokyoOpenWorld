@@ -82,8 +82,9 @@ export function createTrainMaterial(u: VehicleUniforms): MeshPhysicalNodeMateria
   const steel = isPart(VPART.stainless).or(isPart(VPART.doorLeaf));
   const glass = isPart(VPART.glass);
   m.colorNode = select(paint, unpackColor(ivar.z as unknown as F), vertexColor().rgb);
-  m.roughnessNode = select(steel, float(0.32), select(glass, float(0.05), select(paint, float(0.4), float(0.6))));
-  m.metalnessNode = select(steel, float(0.7), select(paint, float(0.15), float(0)));
+  // 스테인리스: 금속도 0.7은 옆면이 지평선 아래 환경을 비춰 짙은 회색(실제 GPU — M07-T04) → 0.35·거칠기 0.4로 밝은 은색.
+  m.roughnessNode = select(steel, float(0.4), select(glass, float(0.05), select(paint, float(0.4), float(0.6))));
+  m.metalnessNode = select(steel, float(0.35), select(paint, float(0.15), float(0)));
   m.clearcoatNode = select(glass.or(paint), float(1), float(0));
   m.clearcoatRoughnessNode = float(0.06);
   m.emissiveNode = emissive(u.night as unknown as F);

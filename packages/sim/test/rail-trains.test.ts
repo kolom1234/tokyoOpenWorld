@@ -70,6 +70,7 @@ function network(kind: 'jr' | 'metro' = 'jr', tunnelFrom = Number.POSITIVE_INFIN
       },
     ],
     stations: [],
+    platforms: [],
     points: Float32Array.from(pts),
     speed: Float32Array.from(lim),
     flags,

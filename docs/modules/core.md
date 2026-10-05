@@ -56,6 +56,8 @@ export const KINEMATIC_STRIDE = 9;
 export interface KinematicFrame { t: 'kin'; atMs: number /* 틱 절대 시각 */; data: Float64Array /* id, x,y,z(WF 바닥 중심), yaw, 속력, 길이, 폭, 높이 */ }   // sim → physics 직결 포트(08 §8)
 export const RAIL_ACCEL = 0.83; RAIL_DECEL = 0.97;   // 열차 가감속 m/s²(10 §6.2)
 export interface RunProfile { s0; s1; step; v: Float32Array; t: Float64Array; duration }   // 열차 주행 곡선(M07-T02, ADR-0071) — 시간표 컴파일러·sim 공용
+export interface TrainCarTypeInfo { name; lengthM; widthM; doorsZ; doorWidthM; floorM; doorTopM; ceilingM; roofM; cabM }; TRAIN_CAR_TYPES   // M07-T04(ADR-0073): 20 m 통근형·16 m 지하철형 — sim·render·physics 공유
+export const TRAIN_BODY_STRIDE = 10;   // 칸 물리 레코드: id, x,y,z(WF 레일 윗면), yaw, pitch, 차형, 종류, 문, 예약 — sim → physics
 
 // ── 함수 (index.ts ← internal/*) ──
 packCellKey(level, ix, iz): CellKey; unpackCellKey(k); cellIdString(k): CellId      // 범위 밖 → RangeError

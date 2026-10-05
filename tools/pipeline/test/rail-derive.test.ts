@@ -4,7 +4,13 @@ import { RAIL_FLAG, type RailNetwork } from '@sanpo/tile-format';
 import { describe, expect, it } from 'vitest';
 import { LStream } from '../src/stages/build/overrides/geom.ts';
 import { emitRail } from '../src/stages/build/overrides/rail.ts';
-import { stationPoints, trackStops } from '../src/stages/derive/rail/platforms.ts';
+import {
+  LINE_PLATFORM_WIDTH_M,
+  platformRing,
+  projector,
+  stationPoints,
+  trackStops,
+} from '../src/stages/derive/rail/platforms.ts';
 import { LATERAL_ACCEL, speedLimits } from '../src/stages/derive/rail/speed-limits.ts';
 import { RAIL_TOP_M, railHeights, trackSamples } from '../src/stages/derive/rail/splines.ts';
 import { buildTracks, VERTEX_FLAG } from '../src/stages/derive/rail/tracks.ts';
@@ -109,6 +115,31 @@ describe('platform stops', () => {
     expect(stops[0]?.side).toBe('L');
     expect(stops[0]?.s as number).toBeCloseTo(360, 0);
     expect(Math.abs((stops[0]?.s as number) - (stops[0]?.centroidS as number))).toBeLessThan(2);
+    // 승강장 고리(M07-T04): 면 = 그대로 닫힘.
+    expect(stops[0]?.platform.id).toBe('p1');
+    expect(stops[0]?.platform.ringXZ).toHaveLength(10);
+  });
+
+  it('thickens a line platform away from the track', () => {
+    const smp = trackSamples(
+      [
+        [0, 0],
+        [0, -600],
+      ],
+      [0, 0],
+      () => 0,
+    );
+    const ring = platformRing(
+      [
+        [-1.7, -250],
+        [-1.7, -470],
+      ],
+      projector(smp.xyz, 0.5),
+    );
+    const xs = ring.filter((_, i) => i % 2 === 0);
+    expect(Math.min(...xs)).toBeCloseTo(-1.7 - LINE_PLATFORM_WIDTH_M, 3);
+    expect(Math.max(...xs)).toBeCloseTo(-1.7, 3);
+    expect(ring.slice(0, 2)).toEqual(ring.slice(-2));
   });
 });
 
@@ -134,6 +165,7 @@ describe('rail mesh', () => {
       ],
       tracks: [{ id: 't', line: 'l', heading: 'n', ptOffset: 0, ptCount: n, lengthM: 300, stepM: 0.5, stops: [] }],
       stations: [],
+      platforms: [],
       points,
       speed: new Float32Array(n).fill(20),
       flags,

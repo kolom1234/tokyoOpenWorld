@@ -10,6 +10,7 @@ import {
   RAIL_FLAG,
   type RailLineMeta,
   type RailNetwork,
+  type RailPlatformMeta,
   type RailStationMeta,
   type RailTrackMeta,
   writeRail,
@@ -193,7 +194,45 @@ function deriveTrack(c: TrackCtx, l: LineDef, t: RawTrack, id: string) {
     })),
     n02MeanM: dn > 0 ? Math.round((dsum / dn) * 10) / 10 : null,
   };
-  return { smp, flags: f, lim, stops: stops.map(({ centroidS: _, ...s }) => s), report };
+  return { smp, flags: f, lim, stops: stops.map(({ centroidS: _c, ...s }) => s), report };
+}
+
+/** 노선별 선로 → 표본·제한속도·플래그 이어 붙이기 + 선로 메타(정차 → 승강장 번호) + 보고. */
+function collectTracks(ctx: TrackCtx, raw: readonly { l: LineDef; tracks: RawTrack[] }[]) {
+  const pts: number[] = [];
+  const speed: number[] = [];
+  const flags: number[] = [];
+  const tracks: RailTrackMeta[] = [];
+  const report: RailTrackReport[] = [];
+  const platforms: RailPlatformMeta[] = [];
+  for (const { l, tracks: raws } of raw) {
+    const seen = new Map<string, number>();
+    for (const t of raws) {
+      const heading = l.headings[t.heading];
+      const k = (seen.get(heading) ?? 0) + 1;
+      seen.set(heading, k);
+      const id = k === 1 ? `${l.id}-${heading}` : `${l.id}-${heading}-${k}`;
+      const d = deriveTrack(ctx, l, t, id);
+      tracks.push({
+        id,
+        line: l.id,
+        heading,
+        ptOffset: pts.length / 3,
+        ptCount: d.smp.xyz.length / 3,
+        lengthM: d.smp.lengthM,
+        stepM: RAIL_STEP_M,
+        stops: d.stops.map(({ platform, ...s }) => ({
+          ...s,
+          platform: platformIndex(platforms, platform, railTopAt(d.smp.xyz, s.s) + PLATFORM_TOP_M),
+        })),
+      });
+      pts.push(...d.smp.xyz);
+      speed.push(...d.lim);
+      flags.push(...d.flags);
+      report.push(d.report);
+    }
+  }
+  return { pts, speed, flags, tracks, report, platforms };
 }
 
 /** global/rail.bin 쓰기 + 선로별 보고(정차·N02 대조). */
@@ -212,40 +251,12 @@ export async function buildRailGlobal(i: RailBuildInput): Promise<{ network: Rai
       join(i.derivedDir, 'rail', 'dem'),
     ),
   };
-  const pts: number[] = [];
-  const speed: number[] = [];
-  const flags: number[] = [];
-  const tracks: RailTrackMeta[] = [];
-  const report: RailTrackReport[] = [];
-  for (const { l, tracks: raws } of raw) {
-    const seen = new Map<string, number>();
-    for (const t of raws) {
-      const heading = l.headings[t.heading];
-      const k = (seen.get(heading) ?? 0) + 1;
-      seen.set(heading, k);
-      const id = k === 1 ? `${l.id}-${heading}` : `${l.id}-${heading}-${k}`;
-      const d = deriveTrack(ctx, l, t, id);
-      const n = d.smp.xyz.length / 3;
-      tracks.push({
-        id,
-        line: l.id,
-        heading,
-        ptOffset: pts.length / 3,
-        ptCount: n,
-        lengthM: d.smp.lengthM,
-        stepM: RAIL_STEP_M,
-        stops: d.stops,
-      });
-      pts.push(...d.smp.xyz);
-      speed.push(...d.lim);
-      flags.push(...d.flags);
-      report.push(d.report);
-    }
-  }
+  const { pts, speed, flags, tracks, report, platforms } = collectTracks(ctx, raw);
   const network: RailNetwork = {
     lines: cat.lines.map(({ osmNames: _o, n02: _n, headings: _h, stations: _s, gtfs: _g, ...m }) => m),
     tracks,
     stations: stationMetas(cat.stations, tracks, pts),
+    platforms,
     points: Float32Array.from(pts),
     speed: Float32Array.from(speed),
     flags: Uint8Array.from(flags),
@@ -255,6 +266,23 @@ export async function buildRailGlobal(i: RailBuildInput): Promise<{ network: Rai
   writeFileSync(join(dir, 'rail.bin'), await gzip(writeRail(network)));
   i.log.info(`rail: ${tracks.length} tracks, ${network.points.length / 3} samples → global/rail.bin`);
   return { network, report };
+}
+
+/** 승강장 윗면 = 레일 윗면 + 1.1 m(JR 통근형 승강장 높이 — 차 바닥 1.15 m와 한 단 차). */
+export const PLATFORM_TOP_M = 1.1;
+
+/** 표본 s의 레일 윗면 높이. */
+function railTopAt(xyz: Float32Array, s: number): number {
+  const k = Math.min(xyz.length / 3 - 1, Math.max(0, Math.round(s / RAIL_STEP_M)));
+  return xyz[k * 3 + 1] as number;
+}
+
+/** 같은 OSM 승강장(섬식 = 두 선로 공유)은 하나 — 번호. */
+function platformIndex(list: RailPlatformMeta[], p: { id: string; ringXZ: number[] }, topY: number): number {
+  const i = list.findIndex((q) => q.id === p.id);
+  if (i >= 0) return i;
+  list.push({ id: p.id, ringXZ: p.ringXZ.map((v) => Math.round(v * 100) / 100), topY: Math.round(topY * 100) / 100 });
+  return list.length - 1;
 }
 
 /** 역 대표 위치 = 그 역 정차 위치(선로 표본) 평균. 정차가 없는 역은 뺀다. */

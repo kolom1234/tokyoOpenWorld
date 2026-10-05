@@ -1,6 +1,7 @@
 // 열차 절차 모델 공용 부품(M07-T03, 자체 제작 — 실존 회사 로고·정확한 도색 없음, ADR-0072): 차형 치수, 지붕·냉방기, 대차·바퀴,
 // 운전실 앞면(등화 = 앞 운전실 전조등·뒤 운전실 미등), 싱글암 팬터그래프(전차선 5.2 m까지), 빗각 막대.
 // 칸 로컬: 원점 = 칸 중심 레일 윗면, −Z = 진행 방향(앞), +X = 오른쪽. 노선색 띠 = VPART.paint(셰이더가 인스턴스 색).
+import { TRAIN_CAR_TYPES } from '@sanpo/core';
 import { type VehicleBuilder as B, type Corner, VPART, type VPart } from '../vehicles/builder.ts';
 
 export type CarLod = 0 | 1 | 2;
@@ -27,39 +28,22 @@ export interface CarDims {
   cab: number;
 }
 
-/** 차형 0 = 20 m 통근형 4문(JR — sim CAR_TYPE.commuter20), 1 = 16 m 지하철형 3문(긴자선). */
-export const CAR_DIMS: readonly CarDims[] = [
-  {
-    L: 20,
-    W: 2.95,
-    doors: [-7.35, -2.45, 2.45, 7.35],
-    doorW: 1.3,
-    skirt: 0.95,
-    floor: 1.15,
-    belt: 2.0,
-    winTop: 2.85,
-    doorTop: 3.0,
-    cornice: 3.3,
-    roof: 3.65,
-    bogie: 6.9,
-    cab: 2.2,
-  },
-  {
-    L: 16,
-    W: 2.55,
-    doors: [-5.1, 0, 5.1],
-    doorW: 1.3,
-    skirt: 0.95,
-    floor: 1.1,
-    belt: 1.95,
-    winTop: 2.8,
-    doorTop: 2.95,
-    cornice: 3.2,
-    roof: 3.5,
-    bogie: 5.5,
-    cab: 2.0,
-  },
-];
+/** 차형 0 = 20 m 통근형 4문(JR — sim CAR_TYPE.commuter20), 1 = 16 m 지하철형 3문(긴자선). 공유 치수 = core TRAIN_CAR_TYPES(physics 차체와 같다), 나머지 = 겉모양. */
+export const CAR_DIMS: readonly CarDims[] = TRAIN_CAR_TYPES.map((t, i) => ({
+  L: t.lengthM,
+  W: t.widthM,
+  doors: t.doorsZ,
+  doorW: t.doorWidthM,
+  skirt: 0.95,
+  floor: t.floorM,
+  belt: i === 0 ? 2.0 : 1.95,
+  winTop: t.doorTopM - 0.15,
+  doorTop: t.doorTopM,
+  cornice: t.ceilingM + 0.07,
+  roof: t.roofM,
+  bogie: t.lengthM * 0.345,
+  cab: t.cabM,
+}));
 
 export const C = {
   stainless: 0xc4c9ce,

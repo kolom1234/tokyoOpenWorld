@@ -207,7 +207,13 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     ...staged.api,
     pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf), setFarDensity: (k) => ctx.farCrowd.setDensity(k) },
     vehicles: { bindShared: (buf) => bindVehicles(ctx, buf) },
-    trains: { bindShared: (buf) => bindTrains(ctx, buf) },
+    trains: {
+      bindShared: (buf) => bindTrains(ctx, buf),
+      setStations: (d) => {
+        ctx.trains.setStations(d);
+        ctx.counters.sceneVersion++;
+      },
+    },
     setSignalLamps: (lamp) => {
       ctx.signalLamp = lamp;
     },

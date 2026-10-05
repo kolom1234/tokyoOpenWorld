@@ -1,4 +1,4 @@
-// global/rail.bin v1(M07-T01, ADR-0070): 메타 JSON + 표본 배열 왕복, 참조 무결성 거부(선로 범위·정차 s·노선/역·잘림·매직).
+// global/rail.bin v1(M07-T01, ADR-0070): 메타 JSON + 표본 배열 왕복(승강장 M07-T04 포함), 참조 무결성 거부(선로 범위·정차 s·노선/역·승강장 번호·잘림·매직).
 import { describe, expect, it } from 'vitest';
 import { RAIL_FLAG, type RailNetwork, TkcErrorCode } from '../src/api.ts';
 import { parseRail, writeRail } from '../src/index.ts';
@@ -29,10 +29,11 @@ function net(): RailNetwork {
         ptCount: n,
         lengthM: 2,
         stepM: 0.5,
-        stops: [{ station: 'shibuya', s: 1, side: 'L', platformLengthM: 220 }],
+        stops: [{ station: 'shibuya', s: 1, side: 'L', platformLengthM: 220, platform: 0 }],
       },
     ],
     stations: [{ id: 'shibuya', name: { ja: '渋谷', en: 'Shibuya' }, posWF: [0, 10, -1], mvpEdge: true }],
+    platforms: [{ id: 'w1', ringXZ: [-1.6, 0, -9, 0, -9, -2, -1.6, -2, -1.6, 0], topY: 11.1 }],
     points,
     speed: new Float32Array(n).fill(25),
     flags: Uint8Array.from([0, RAIL_FLAG.bridge, RAIL_FLAG.bridge, 0, RAIL_FLAG.tunnel]),
@@ -61,6 +62,8 @@ describe('rail.bin', () => {
         ],
       }),
     ).toThrow(/unknown station/);
+    expect(() => writeRail({ ...net(), platforms: [] })).toThrow(/stop platform/);
+    expect(() => writeRail({ ...net(), platforms: [{ id: 'p', ringXZ: [0, 0, 1], topY: 1 }] })).toThrow(/bad ring/);
     const bytes = writeRail(net());
     const cut = parseRail(bytes.subarray(0, bytes.length - 3));
     expect(!cut.ok && cut.error.code).toBe(TkcErrorCode.Truncated);

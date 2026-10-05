@@ -49,6 +49,7 @@ import { type AreaDef, worldJson } from './manifest.ts';
 import { type NavCellOutput, navCell } from './nav-cell.ts';
 import { LANDMARK_MATERIAL, type OverrideCellOutput, type OverrideSet, overrideCell } from './overrides/index.ts';
 import { type PropCellOutput, propsCell } from './props-cell.ts';
+import { trackBuildings } from './rail-buildings.ts';
 import { buildRoads } from './roads-mesh.ts';
 import { buildTerrainGeometry, encodeTerrainMesh, TERRAIN_MATERIAL } from './terrain-mesh.ts';
 
@@ -256,7 +257,10 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
         ...(input.rail ? { rail: input.rail } : {}),
       })
     : null;
-  const bld = await buildBuildings(input.buildings, originWF, ov?.renderSkip);
+  // 선로 위 건물(M07-T04): 충돌 제외, 낮은 승강장 지붕은 렌더도 제외.
+  const tb = trackBuildings(input.buildings, input.rail);
+  const renderSkip = new Set([...(ov?.renderSkip ?? []), ...tb.renderSkip]);
+  const bld = await buildBuildings(input.buildings, originWF, renderSkip, tb.colliderSkip);
   const own = input.cellRoads ?? [];
   const roads = await buildRoads(own, sc.index, originWF[0], originWF[2], sc.shaped, terrainAt);
   const props = await propCell(input, originWF, sc, terrainAt);

@@ -11,8 +11,10 @@ import {
   type PerspectiveCamera,
   Vector3,
 } from 'three/webgpu';
+import type { TrainStationsData } from '../../api.ts';
 import { buildTrainGeometry, TRAIN_CAR_KINDS, TRAIN_CAR_TYPES } from './models.ts';
 import { CAR_DIMS, type CarLod, TRAIN_LOD_M } from './parts.ts';
+import { createStationsField } from './stations.ts';
 
 export const TRAIN_POOL_CAPACITY = [24, 64, 160] as const;
 const STRIDE = 8;
@@ -40,6 +42,8 @@ export interface TrainField {
   readonly root: Group;
   attach(material: Material): void;
   bind(src: SharedInstanceBuffer): void;
+  /** 승강장·홈도어(M07-T04): 정적 메시 + 문 인스턴스(머티리얼 = 열차). null = 제거. */
+  setStations(d: TrainStationsData | null): void;
   update(camera: PerspectiveCamera, renderOriginWF: Readonly<Vec3d>): boolean;
   primeForCompile(): () => void;
   stats(): TrainFieldStats;
@@ -156,15 +160,21 @@ export function createTrainField(): TrainField {
   root.name = 'trains';
   let f: Fill | undefined;
   let src: SharedInstanceBuffer | undefined;
+  let material: Material | undefined;
+  let stationsData: TrainStationsData | null = null;
+  const stations = createStationsField();
+  root.add(stations.root);
   const st: TrainFieldStats = { cars: 0, visible: 0, pools: 0, dropped: 0, lods: [0, 0, 0], ready: false };
   return {
     root,
-    attach(material) {
+    attach(m) {
       if (f) return;
+      material = m;
+      stations.set(stationsData, m);
       const pools: Pool[] = [];
       for (let t = 0; t < TRAIN_CAR_TYPES; t++)
         for (let k = 0; k < TRAIN_CAR_KINDS; k++)
-          for (const l of [0, 1, 2] as const) pools[poolIndex(t, k, l)] = createPool(t, k, l, material);
+          for (const l of [0, 1, 2] as const) pools[poolIndex(t, k, l)] = createPool(t, k, l, m);
       for (const p of pools) root.add(p.mesh);
       f = { pools, st, fwd: new Vector3(), lastMs: performance.now() };
       st.ready = true;
@@ -172,7 +182,12 @@ export function createTrainField(): TrainField {
     bind(s) {
       src = s;
     },
+    setStations(d) {
+      stationsData = d;
+      stations.set(d, material);
+    },
     update(camera, o) {
+      stations.update(o);
       if (!f || !src) return false;
       fill(f, src, camera, o);
       st.pools = flush(f.pools);
@@ -193,6 +208,7 @@ export function createTrainField(): TrainField {
     stats: () => ({ ...st, lods: [...st.lods] }),
     dispose() {
       for (const p of f?.pools ?? []) p.geo.dispose();
+      stations.dispose();
       f = undefined;
     },
   };

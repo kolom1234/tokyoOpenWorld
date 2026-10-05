@@ -307,3 +307,56 @@ export interface RunProfile {
   t: Float64Array;
   duration: number;
 }
+
+/**
+ * 열차 차형(M07-T04, ADR-0073 — 가상 통근형, 실존 형식명 없음): sim 칸 배치·홈도어 문 위치, render 모델, physics 차체 바디가 공유.
+ * 칸 로컬: 원점 = 칸 중심 레일 윗면, −Z = 진행 방향(앞), +X = 오른쪽. 순서 = sim 칸 코드의 차형(추가만).
+ */
+export interface TrainCarTypeInfo {
+  name: string;
+  /** 연결면 간격(차체는 양끝 0.25 m 짧다). */
+  lengthM: number;
+  widthM: number;
+  /** 문 중심 z(양쪽 같은 자리). */
+  doorsZ: readonly number[];
+  doorWidthM: number;
+  /** 차내 바닥·문 위·천장·지붕 높이(레일 윗면 기준). */
+  floorM: number;
+  doorTopM: number;
+  ceilingM: number;
+  roofM: number;
+  /** 운전실 길이(끝벽 → 칸막이). */
+  cabM: number;
+}
+export const TRAIN_CAR_TYPES: readonly TrainCarTypeInfo[] = [
+  {
+    name: 'commuter20',
+    lengthM: 20,
+    widthM: 2.95,
+    doorsZ: [-7.35, -2.45, 2.45, 7.35],
+    doorWidthM: 1.3,
+    floorM: 1.15,
+    doorTopM: 3.0,
+    ceilingM: 3.23,
+    roofM: 3.65,
+    cabM: 2.2,
+  },
+  {
+    name: 'metro16',
+    lengthM: 16,
+    widthM: 2.55,
+    doorsZ: [-5.1, 0, 5.1],
+    doorWidthM: 1.3,
+    floorM: 1.1,
+    doorTopM: 2.95,
+    ceilingM: 3.13,
+    roofM: 3.5,
+    cabM: 2.0,
+  },
+];
+/**
+ * 열차 칸 물리 레코드(M07-T04, 08 §8 — ADR-0073): 메인 sim 열차 → physics(step 명령, 프레임마다). f64 × TRAIN_BODY_STRIDE —
+ * id(편성 일련 × 32 + 칸), x, y, z(WF 레일 윗면 칸 중심), yaw, pitch, 차형(TRAIN_CAR_TYPES 번호), 종류(0 중간·1 팬터그래프·2 앞 운전실·3 뒤 운전실),
+ * 문(−1 왼쪽 … +1 오른쪽 열림 비율), 예약.
+ */
+export const TRAIN_BODY_STRIDE = 10;

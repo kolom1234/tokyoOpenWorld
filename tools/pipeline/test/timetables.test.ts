@@ -72,6 +72,7 @@ function makeNet(
     lines,
     tracks,
     stations: [],
+    platforms: [],
     points: Float32Array.from(pts),
     speed: new Float32Array(n).fill(vmax),
     flags: new Uint8Array(n),

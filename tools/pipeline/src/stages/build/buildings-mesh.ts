@@ -190,24 +190,34 @@ export async function buildBuildings(
   records: readonly BuildingRecord[],
   originWF: Vec3Tuple,
   renderSkip: ReadonlySet<string> = new Set(),
+  colliderSkip: ReadonlySet<string> = new Set(),
 ): Promise<BuildingsBuild> {
   const sorted = [...records].sort((a, b) => (a.gmlId < b.gmlId ? -1 : a.gmlId > b.gmlId ? 1 : 0));
   const s = new Stream();
   const skipped = new Stream();
   const meta: MetaBuilding[] = [];
+  /** 렌더에는 넣고 충돌에서 뺄 s.idx 구간(선로 위 건물, M07-T04). */
+  const noCol: [number, number][] = [];
   let tris = 0;
   for (const [i, b] of sorted.entries()) {
     const h = heightOf(b);
     meta.push(metaOf(b, h));
     const facade = facadeParams({ id: b.gmlId, usage: b.usage, heightM: h, floors: floorsOf(b, h) });
     const ctx: BuildingCtx = { index: i, facade, baseY: minY(b) - originWF[1], heightM: h };
-    if (renderSkip.has(b.gmlId)) addBuilding(skipped, b, ctx, originWF);
-    else tris += addBuilding(s, b, ctx, originWF);
+    const col = !colliderSkip.has(b.gmlId);
+    if (renderSkip.has(b.gmlId)) {
+      if (col) addBuilding(skipped, b, ctx, originWF);
+      continue;
+    }
+    const i0 = s.idx.length;
+    tris += addBuilding(s, b, ctx, originWF);
+    if (!col) noCol.push([i0, s.idx.length]);
   }
   const sources = [...new Set(sorted.map((b) => b.source))].sort();
+  const keep = s.idx.filter((_, k) => !noCol.some(([a, e]) => k >= a && k < e));
   const collision = {
     pos: Float32Array.from([...s.pos, ...skipped.pos]),
-    idx: Uint32Array.from([...s.idx, ...skipped.idx.map((k) => k + s.count)]),
+    idx: Uint32Array.from([...keep, ...skipped.idx.map((k) => k + s.count)]),
   };
   if (s.count === 0) return { glb: null, meta, aabbLocal: null, vertices: 0, tris: 0, sources, collision };
   const aabbLocal = boundsOf(s.pos);

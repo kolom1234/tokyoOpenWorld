@@ -39,7 +39,7 @@ import {
   startCrowdLater,
 } from './world-late.ts';
 import type { LoadedWorld } from './world-load.ts';
-import { startTrainsLater } from './world-rail.ts';
+import { startTrainsLater, trainPhysicsSystem } from './world-rail.ts';
 
 /** 부팅 대기 영역: 스폰 수평 384 m 안 L0 — 스폰 셀 안 어디서든 3×3 모서리 셀(≤ 362 m)까지 포함(06 §8 스폰 3×3). 상위 레벨은 우선순위상 먼저 온다. */
 export const SPAWN_READY_RADIUS_M = 384;
@@ -232,6 +232,11 @@ async function showWorldWith(
     startTrainsLater(v, world, wlog, () => {
       late.trainsSettled = true;
     });
+  // 열차·승강장·홈도어 물리(M07-T04): 철도·물리 준비 뒤부터 프레임마다.
+  if (deps.trains !== false) {
+    const rail = trainPhysicsSystem(v.sim, () => late.physics);
+    deps.scheduler.add({ systems: () => [rail] });
+  }
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 

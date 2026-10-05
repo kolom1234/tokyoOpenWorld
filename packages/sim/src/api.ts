@@ -178,6 +178,12 @@ export interface SimService extends SystemProvider {
   trainsNear(posWF: Vec3d, r: number): ReadonlyArray<TrainInfo>;
   /** 열차 통계(철도 없음 = undefined): 시간표 트립 수·운행 중 열차·그린 칸·터널 안 칸. */
   trainStats(): { trips: number; trains: number; cars: number; hiddenCars: number } | undefined;
+  /** 위치 r(m) 안 칸의 물리 레코드(M07-T04 — core TRAIN_BODY_STRIDE, 이번 프레임 포즈·문). 철도 없음 = 빈 배열. */
+  trainBodies(posWF: Vec3d, r: number): Float64Array;
+  /** 승강장·홈도어 정적 배치(M07-T04, setRail 뒤 — 없으면 undefined). */
+  railStatic(): RailStaticLayout | undefined;
+  /** 홈도어 문 열림 0..1(railStatic().gates 순서) — 프레임마다 제자리 갱신되는 같은 배열. */
+  psdGateOpen(): Float32Array;
   /**
    * 셀 내비·차선(10 §8 addCell — nav.bin·lanes.bin gzip 해제 바이트, streaming requestSections). 워커 시작 전이면 보관했다가 시작 때 보낸다.
    * 같은 셀을 다시 넣으면 무시(먼저 removeCell).
@@ -195,6 +201,17 @@ export interface SimService extends SystemProvider {
   workerStats(): SimWorkerStats | undefined;
   /** 신호 코드(props.inst 신호 기둥 — 교차로 ID × 16 + 계획 × 4 + 그룹)의 지금 상태(10 §5.2, M06-T02). 계획 없음 = 항상 적·보행 적. */
   signalStateAt(code: number): SignalState;
+}
+
+/**
+ * 승강장·홈도어 배치(M07-T04, ADR-0073 — rail.bin 승강장 고리 + 탑승 노선 정차): platforms = WF 정점·삼각형(앞 topIndexCount개 = 윗면 — 물리 바닥),
+ * panels·gates = 홈도어 조각 f64 × 5(x, y(승강장 윗면), z 중심 WF, yaw(전방 = s 증가), 길이), gateStops = 정차별 문 수.
+ */
+export interface RailStaticLayout {
+  platforms: { positions: Float64Array; indices: Uint32Array; topIndexCount: number };
+  panels: Float64Array;
+  gates: Float64Array;
+  gateStops: number[];
 }
 
 export interface SimDeps {

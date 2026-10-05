@@ -204,6 +204,19 @@ export interface VehicleLayer {
  */
 export interface TrainLayer {
   bindShared(buf: SharedInstanceBuffer): Promise<void>;
+  /**
+   * 승강장·홈도어(M07-T04, ADR-0073): sim 배치(WF) — 승강장 삼각형, 홈도어 고정 판·문 조각(f64 × 5: x, y, z, yaw, 길이), 문 열림(제자리 갱신되는 배열),
+   * 띠 색. 열차 머티리얼로 그린다(bindShared 전이면 붙을 때 만든다). null = 제거.
+   */
+  setStations(d: TrainStationsData | null): void;
+}
+
+export interface TrainStationsData {
+  platforms: { positions: Float64Array; indices: Uint32Array };
+  panels: Float64Array;
+  gates: Float64Array;
+  gateOpen: Float32Array;
+  bandColor: number;
 }
 
 /** 선컴파일 진행(M06): 단계·완료 수·총 수. */

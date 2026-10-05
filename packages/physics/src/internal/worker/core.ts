@@ -11,6 +11,8 @@ import { loadJolt } from './jolt-init.ts';
 import { createKinematics, type Kinematics } from './kinematics.ts';
 import { createQueries, type Queries } from './queries.ts';
 import { createPostSink, createSabSink, type SnapshotSink } from './snapshot-writer.ts';
+import { createStaticGroups, type StaticGroups } from './static-groups.ts';
+import { createTrainBodies, type TrainBodies } from './train-bodies.ts';
 import { createWorld, type PhysicsWorld } from './world.ts';
 
 export type Send = (msg: FromWorker, transfer?: Transferable[]) => void;
@@ -28,6 +30,10 @@ interface State {
   /** sim 직결 키네마틱 차량(M06-T06). */
   kin: Kinematics;
   kinPort: MessagePort | undefined;
+  /** 열차 칸(M07-T04, 메인 step 명령). */
+  trains: TrainBodies;
+  /** 승강장 바닥·홈도어(M07-T04). */
+  statics: StaticGroups;
   colliders: CellColliders;
   queries: Queries;
   cellBudgetMs: number;
@@ -56,6 +62,8 @@ function rebase(st: State, to: Readonly<Vec3d>): void {
   st.bodies.shift(dx, dy, dz);
   st.characters.shift(dx, dy, dz);
   st.kin.shift(dx, dy, dz);
+  st.trains.shift(dx, dy, dz);
+  st.statics.shift(dx, dy, dz);
   st.escalators.shift(dx, dy, dz);
   Object.assign(st.anchor, to);
   st.world.system.OptimizeBroadPhase();
@@ -79,6 +87,7 @@ function step(st: State, targetS: number): void {
   let n = 0;
   while (st.simT + st.dt <= targetS + 1e-9 && n < st.maxSteps) {
     st.kin.beforeStep(st.dt);
+    st.trains.beforeStep(st.simT + st.dt, st.dt);
     st.characters.update(st.dt);
     st.world.step(st.dt);
     st.simT += st.dt;
@@ -100,6 +109,8 @@ function step(st: State, targetS: number): void {
   frame[7] = st.loadOver;
   frame[8] = st.kin.count;
   frame[9] = st.kin.frames;
+  frame[10] = st.trains.count;
+  frame[11] = st.statics.count;
   st.sink.commit();
 }
 
@@ -126,6 +137,8 @@ async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<
     characters,
     kin: createKinematics(world, anchor),
     kinPort: undefined,
+    trains: createTrainBodies(world, anchor),
+    statics: createStaticGroups(world, anchor),
     bodies: createBodySlots(world, anchor, characters),
     colliders: createCellColliders(
       world,
@@ -180,6 +193,8 @@ export function createPhysicsCore(send: Send): PhysicsCore {
       for (const c of msg.cmds) {
         if (c.c === 'removeCell') st.colliders.remove(c.key);
         else if (c.c === 'rebase') rebase(st, c.anchorWF);
+        else if (c.c === 'trains') st.trains.apply(c.data, msg.targetS);
+        else if (c.c === 'statics') st.statics.set(c.name, c.group);
         else st.bodies.apply(c);
       }
       step(st, msg.targetS);
@@ -192,6 +207,8 @@ export function createPhysicsCore(send: Send): PhysicsCore {
     else if (msg.t === 'dispose') {
       st.kinPort?.close();
       st.kin.dispose();
+      st.trains.dispose();
+      st.statics.dispose();
       st.colliders.dispose();
       st.queries.dispose();
       st.bodies.dispose();

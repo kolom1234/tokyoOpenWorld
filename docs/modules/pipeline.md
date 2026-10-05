@@ -30,7 +30,7 @@ src/stages/build/facade-params.ts  용도·높이·층 → `_FACADE`(class·tint
 src/stages/build/wall-planes.ts    벽 평면 군집(방향 1°·15 cm → u 원점·폭 공유)·벽과 동일 평면 부속물 판정
 src/stages/build/manifest.ts     buildId·world.json (M01-T05)
 src/stages/build/assemble.ts     셀 TKC 조립 + 영역 빌드(cells.idx·world.json) (M01-T05)
-src/stages/timetables/{compile,synthetic,gtfs-read,gtfs,index}.ts  시간표(M07-T02, ADR-0071): core tripLegs 정차 시각·간격 ≥ 90 s 검사, 합성(JR)·GTFS(긴자선, 키 대기) → global/timetables (+ validate-timetables.ts)
+src/stages/timetables/{compile,synthetic,gtfs-read,gtfs,index}.ts  시간표(M07-T02, ADR-0071) → global/timetables (+ validate-timetables.ts); build/rail-buildings.ts 선로 위 건물 충돌 제외·승강장 지붕(≤ 12 m) 렌더 제외(M07-T04, ADR-0073)
 src/stages/hlod/far-buildings.ts  FarBuilding(중심점·OBB·y0·높이·면적·용도) + 줄 형식 + nightFlags (M02-T04, ADR-0024)
 src/stages/hlod/tokyo23-lod1{,.worker}.ts  23구 zip `unzip -p` 스트림 → 워커 스레드 → L2 버킷(data/derived/far-buildings)
 src/stages/hlod/dem-far.ts        標高タイル dem_png z14 받기(manifest) → WF 8 m 원경 격자, farDemHeight
