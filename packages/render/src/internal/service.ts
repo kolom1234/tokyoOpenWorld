@@ -6,7 +6,7 @@ import { createRenderContext, type RenderContext } from './context.ts';
 import { loadCrowdAssets } from './crowd/assets.ts';
 import { createCrowdMaterial } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
-import { precompileMaterials, yieldFrame } from './materials/precompile.ts';
+import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
 import { loadTreesInto, setTreeWind } from './trees/load.ts';
@@ -130,12 +130,9 @@ async function bindVehicles(ctx: RenderContext, buf: SharedInstanceBuffer): Prom
     const material = createVehicleMaterial(ctx.vehicleUniforms);
     ctx.vehicleMaterials.push(material);
     ctx.vehicles.attach(material);
-    const restore = ctx.vehicles.primeForCompile();
-    try {
-      await ctx.renderer.compileAsync(ctx.vehicles.root, ctx.view.camera, ctx.graph.scene);
-    } finally {
-      restore();
-    }
+    await compileDetached(ctx.renderer, ctx.vehicles.root, ctx.view.camera, ctx.graph.scene, () =>
+      ctx.vehicles.primeForCompile(),
+    );
     ctx.log.info(`vehicles attached ${Math.round(performance.now() - t0)} ms`);
   }
   ctx.vehicles.bind(buf);
@@ -170,12 +167,7 @@ function loaders(
       const material = createCrowdMaterial(assets);
       ctx.crowdMaterials.push(material);
       ctx.crowd.attach(assets, material);
-      const restore = ctx.crowd.primeForCompile();
-      try {
-        await renderer.compileAsync(ctx.crowd.root, view.camera, graph.scene);
-      } finally {
-        restore();
-      }
+      await compileDetached(renderer, ctx.crowd.root, view.camera, graph.scene, () => ctx.crowd.primeForCompile());
       log.info(
         `crowd attached (${assets.bases.length} bases, lod idx ${assets.bases[0]?.lods.map((l) => l.index.count).join('/')}) ${Math.round(performance.now() - t0)} ms`,
       );

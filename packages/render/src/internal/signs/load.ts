@@ -3,6 +3,7 @@
 import { TextureLoader } from 'three/webgpu';
 import type { SignageAssetUrls } from '../../api.ts';
 import type { RenderContext } from '../context.ts';
+import { compileDetached } from '../materials/precompile.ts';
 import { setSignAtlas } from './atlas.ts';
 import { createSignMaterial } from './material.ts';
 
@@ -11,11 +12,8 @@ export async function loadSignageInto(ctx: RenderContext, urls: SignageAssetUrls
   const material = createSignMaterial();
   ctx.signMaterials.push(material);
   ctx.signs.attach(material);
-  const restore = ctx.signs.primeForCompile();
-  try {
-    await ctx.renderer.compileAsync(ctx.signs.root, ctx.view.camera, ctx.graph.scene);
-  } finally {
-    restore();
-  }
+  await compileDetached(ctx.renderer, ctx.signs.root, ctx.view.camera, ctx.graph.scene, () =>
+    ctx.signs.primeForCompile(),
+  );
   ctx.counters.sceneVersion++;
 }
