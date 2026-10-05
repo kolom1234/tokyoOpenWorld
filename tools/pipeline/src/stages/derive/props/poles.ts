@@ -5,7 +5,7 @@
 import { createRng, hash32, WORLD_SEED } from '@sanpo/core';
 import type { OsmRecord } from '../../normalize-osm.ts';
 import { type PlaceCtx, place, toRoadEdge, type V2, yawOf } from './context.ts';
-import { behindCurb, siteTest } from './curb.ts';
+import { behindCurb, preferWalk, siteTest } from './curb.ts';
 
 const POLE_ROADS = new Set(['residential', 'unclassified', 'living_street', 'tertiary']);
 const MIN_EDGE_M = 1.5;
@@ -89,7 +89,7 @@ export function poleAt(c: PlaceCtx, st: { p: V2; d: V2 }, side: 1 | -1, k: PoleP
   const pos: V2 =
     c.roads.classify(walkAt[0], walkAt[1]) === 'walk'
       ? behindCurb(siteTest(c), walkAt)
-      : [p[0] + out[0] * (e - k.offsetM), p[1] + out[1] * (e - k.offsetM)];
+      : preferWalk(siteTest(c), [p[0] + out[0] * (e - k.offsetM), p[1] + out[1] * (e - k.offsetM)]);
   return { p: pos, toRoad: [-out[0], -out[1]] };
 }
 

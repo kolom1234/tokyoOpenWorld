@@ -4,6 +4,7 @@
 import type { BuildingRecord, RingsWF } from '../../readers/plateau/types.ts';
 import { rasterizeRings } from '../build/surface-class.ts';
 import type { LocalGrid } from './grid.ts';
+import { insideRings } from './roads.ts';
 
 /** 평탄화 입력(건물 레코드를 줄인 것 — 이웃 셀 캐시용). */
 export interface FootprintSource {
@@ -39,4 +40,36 @@ export function footprintGrid(
     }
   }
   return out;
+}
+
+const RING_BUCKET_M = 16;
+
+/** 지면 링 정밀 시험(WF, 16 m 버킷) — 1 m 래스터는 경계 ±0.7 m를 건물로 본다(소품 연석 판정, ADR-0068). */
+export function footprintRingTest(sources: readonly FootprintSource[]): (x: number, z: number) => boolean {
+  const rings: RingsWF[] = [];
+  const buckets = new Map<string, number[]>();
+  for (const b of sources)
+    for (const g of b.ground) {
+      const o = g[0] ?? [];
+      let [x0, z0, x1, z1] = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, -1e18, -1e18];
+      for (let i = 0; i < o.length; i += 3) {
+        x0 = Math.min(x0, o[i] as number);
+        x1 = Math.max(x1, o[i] as number);
+        z0 = Math.min(z0, o[i + 2] as number);
+        z1 = Math.max(z1, o[i + 2] as number);
+      }
+      const id = rings.push(g) - 1;
+      for (let bz = Math.floor(z0 / RING_BUCKET_M); bz <= Math.floor(z1 / RING_BUCKET_M); bz++)
+        for (let bx = Math.floor(x0 / RING_BUCKET_M); bx <= Math.floor(x1 / RING_BUCKET_M); bx++) {
+          const k = `${bx},${bz}`;
+          const list = buckets.get(k);
+          if (list) list.push(id);
+          else buckets.set(k, [id]);
+        }
+    }
+  return (x, z) => {
+    for (const id of buckets.get(`${Math.floor(x / RING_BUCKET_M)},${Math.floor(z / RING_BUCKET_M)}`) ?? [])
+      if (insideRings(rings[id] as RingsWF, x, z)) return true;
+    return false;
+  };
 }

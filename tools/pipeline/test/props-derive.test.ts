@@ -321,6 +321,33 @@ describe('carriageway settling (M07 pre ⓪)', () => {
     expect(nearestSide(t, [p?.[0] as number, p?.[2] as number], (s) => s === 'road', CURB_BACK_M, 0.05).d).toBe(-1);
   });
 
+  it('ignores slivers between carriageway pieces (not a road edge) and centres poles on narrow islands', () => {
+    // 차도 두 조각 사이 5 cm 실틈(z 103.00–103.05) — 옛 정착은 이것을 가장자리로 봐 제자리에 뒀다.
+    const pieces = [
+      road('a', 'carriageway', -100, 96, 400, 103),
+      road('b', 'carriageway', -100, 103.05, 400, 110),
+      road('s', 'sidewalk', -100, 110, 400, 114),
+    ];
+    const t2 = siteTest({ roads: roadIndex(pieces), inBuilding: () => false });
+    const near = buildProps(input({ roads: pieces, osm: [osm('n4', 'point', [50, 103.3], { highway: 'stop' })] }));
+    const [s0] = instancesOf(near, 'signStop');
+    expect(t2.side(s0?.[0] as number, s0?.[2] as number)).toBe('walk');
+    // 폭 0.68 m 중앙 분리대(z 120–120.68) 위 가로등 → 양쪽 연석에서 ≥ CURB_BACK_M.
+    const island = [
+      road('c1', 'carriageway', -100, 112, 400, 120),
+      road('i', 'island', -100, 120, 400, 120.68),
+      road('c2', 'carriageway', -100, 120.68, 400, 128),
+    ];
+    const t3 = siteTest({ roads: roadIndex(island), inBuilding: () => false });
+    const lamp = buildProps(
+      input({ roads: island, osm: [osm('n5', 'point', [50, 120.05], { highway: 'street_lamp' })] }),
+    );
+    const [l0] = instancesOf(lamp, 'streetLamp');
+    expect(
+      nearestSide(t3, [l0?.[0] as number, l0?.[2] as number], (s) => s === 'road', CURB_BACK_M - 0.02, 0.05).d,
+    ).toBe(-1);
+  });
+
   it('leaves no ground prop of the arterial fixture on the carriageway', () => {
     const line = osm('w', 'line', [-80, 118, 380, 118], { highway: 'primary', lanes: '6' });
     const xing = osm('x', 'line', [100, 97, 100, 139], {

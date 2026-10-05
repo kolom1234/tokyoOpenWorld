@@ -1,17 +1,18 @@
 // 소품 차도 검사(M07 사전 ⓪): L0 셀 props.inst의 지상 소품이 PLATEAU 차도 폴리곤(carriageway·crosswalk·other — 보행면 우선, 건물 발자국 제외) 위면 오류.
-// 예외: 맨홀(차도 위가 정상)·벽면/옥상 간판(지상 아님), 보도 없는 길의 가장자리(가장 가까운 비차도 = 건물·공지가 ≤ EDGE_M, 그 거리에 보도 없음 —
-// 생활도로 전주·자판기). 연석 오프셋: 보도 위 길가 기둥(신호·표지·전주·가로등)이 차도에서 < CURB_BACK_M면 curbTight(오류). see docs/04-data-pipeline.md §4.6
+// 예외: 맨홀(차도 위가 정상)·벽면/옥상 간판(지상 아님), 보도 없는 길의 가장자리(단단한 비차도 ≤ EDGE_M, 1 m 안 보도 없음 — 생활도로 전주·자판기).
+// 연석 오프셋: 보도 위 길가 기둥(신호·표지·전주·가로등·버스 정류장)이 차도에서 < CURB_BACK_M면 curbTight(오류, 폭 < 0.6 m 교통섬 제외).
+// 판정 함수는 파생(derive/props/curb.ts)과 같다. see docs/04-data-pipeline.md §4.6
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { cellIdString, unpackCellKey } from '@sanpo/core';
 import { gunzip, PROP_TYPE, parseProps, readCellsIndex, readTkc } from '@sanpo/tile-format';
 import { readNdjsonGz } from '../lib/ndjson-gz.ts';
 import type { BuildingRecord, RoadRecord } from '../readers/plateau/types.ts';
-import { CURB_BACK_M, EDGE_M, nearestSide, ROADSIDE_SEARCH_M, type SiteTest } from './derive/props/curb.ts';
-import { insideRings, roadIndex } from './derive/roads.ts';
+import { footprintRingTest, footprintSources } from './derive/footprints.ts';
+import { CURB_BACK_M, EDGE_M, edgeNear, nearestRoad, type SiteTest, walkNear, walkRoom } from './derive/props/curb.ts';
+import { roadIndex } from './derive/roads.ts';
 
 const CELL = 256;
-const BUCKET_M = 16;
 
 /** 검사 제외: 차도 위가 정상(맨홀) 또는 지상이 아님(벽면·옥상 간판). */
 const SKIP = new Set<number>([PROP_TYPE.manhole, PROP_TYPE.signProjecting, PROP_TYPE.signRooftop]);
@@ -32,7 +33,7 @@ export interface PropRoadSample {
   at: [number, number];
   /** 가장 가까운 비차도(m, ROADSIDE_SEARCH_M 안에 없으면 −1) — curbTight면 가장 가까운 차도. */
   edgeM: number;
-  /** 그 거리에 보도가 있었나(= 연석 뒤로 갔어야 했다). */
+  /** 1 m 안에 보도가 있었나(= 보도로 갔어야 했다). */
   walk: boolean;
 }
 
@@ -45,42 +46,13 @@ export interface PropRoadReport {
   byType: Record<string, number>;
   /** 보도 없는 길가(허용). */
   roadsideNoWalk: number;
+  /** 좁은 교통섬(폭 < 2 × CURB_BACK_M) 위 길가 기둥(허용). */
+  narrowWalk: number;
   /** 보도 위 길가 기둥 중 연석 뒤 < CURB_BACK_M(오류). */
   curbTight: number;
   curbTightByType: Record<string, number>;
   curbPoles: number;
   samples: PropRoadSample[];
-}
-
-/** 건물 지면 링 색인(16 m 버킷, WF). */
-function buildingTest(buildings: readonly BuildingRecord[]): (x: number, z: number) => boolean {
-  const rings: (readonly (readonly number[])[])[] = [];
-  const buckets = new Map<string, number[]>();
-  for (const b of buildings)
-    for (const s of b.surfaces) {
-      if (s.kind !== 'ground') continue;
-      const o = s.ringsWF[0] ?? [];
-      let [x0, z0, x1, z1] = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, -1e18, -1e18];
-      for (let i = 0; i < o.length; i += 3) {
-        x0 = Math.min(x0, o[i] as number);
-        x1 = Math.max(x1, o[i] as number);
-        z0 = Math.min(z0, o[i + 2] as number);
-        z1 = Math.max(z1, o[i + 2] as number);
-      }
-      const id = rings.push(s.ringsWF) - 1;
-      for (let bz = Math.floor(z0 / BUCKET_M); bz <= Math.floor(z1 / BUCKET_M); bz++)
-        for (let bx = Math.floor(x0 / BUCKET_M); bx <= Math.floor(x1 / BUCKET_M); bx++) {
-          const k = `${bx},${bz}`;
-          const list = buckets.get(k);
-          if (list) list.push(id);
-          else buckets.set(k, [id]);
-        }
-    }
-  return (x, z) => {
-    for (const id of buckets.get(`${Math.floor(x / BUCKET_M)},${Math.floor(z / BUCKET_M)}`) ?? [])
-      if (insideRings(rings[id] as readonly (readonly number[])[], x, z)) return true;
-    return false;
-  };
 }
 
 function around<T>(dir: string, ix: number, iz: number, cache: Map<string, T[]>): T[] {
@@ -105,26 +77,33 @@ function tally(m: Record<string, number>, name: string): void {
 function checkOne(r: PropRoadReport, t: SiteTest, cell: string, typeId: number, x: number, z: number): void {
   r.checked++;
   const name = TYPE_NAME.get(typeId) ?? String(typeId);
+  const p: [number, number] = [x, z];
   const side = t.side(x, z);
   if (side === 'walk') {
     if (!CURB_POLES.has(typeId)) return;
     r.curbPoles++;
-    const near = nearestSide(t, [x, z], (s) => s === 'road', CURB_BACK_M - 0.02, 0.05);
+    const near = nearestRoad(t, p, CURB_BACK_M - 0.02);
     if (near.d < 0) return;
+    // 좁은 교통섬(폭 < 2 × CURB_BACK_M)은 연석 뒤 거리를 지킬 수 없다 — 가운데면 허용.
+    if (walkRoom(t, p) < 2 * CURB_BACK_M) {
+      r.narrowWalk++;
+      return;
+    }
     r.curbTight++;
     tally(r.curbTightByType, name);
-    if (r.samples.length < 60) r.samples.push({ cell, type: name, at: [x, z], edgeM: near.d, walk: true });
+    if (r.samples.length < 60) r.samples.push({ cell, type: name, at: p, edgeM: near.d, walk: true });
     return;
   }
   if (side !== 'road') return;
-  const edge = nearestSide(t, [x, z], (s) => s !== 'road', ROADSIDE_SEARCH_M);
-  if (edge.d >= 0 && edge.d <= EDGE_M && !edge.walk) {
+  const edge = edgeNear(t, p);
+  const walk = walkNear(t, p);
+  if (edge.d >= 0 && edge.d <= EDGE_M && !walk.u) {
     r.roadsideNoWalk++;
     return;
   }
   r.onRoad++;
   tally(r.byType, name);
-  if (r.samples.length < 60) r.samples.push({ cell, type: name, at: [x, z], edgeM: edge.d, walk: edge.walk });
+  if (r.samples.length < 60) r.samples.push({ cell, type: name, at: p, edgeM: edge.d, walk: Boolean(walk.u) });
 }
 
 function emptyReport(): PropRoadReport {
@@ -134,6 +113,7 @@ function emptyReport(): PropRoadReport {
     onRoad: 0,
     byType: {},
     roadsideNoWalk: 0,
+    narrowWalk: 0,
     curbTight: 0,
     curbTightByType: {},
     curbPoles: 0,
@@ -159,7 +139,9 @@ export async function checkPropsOnRoad(buildDir: string, normalizedDir: string):
     if (!batches?.ok) continue;
     r.cells++;
     const roads = roadIndex(around<RoadRecord>(join(normalizedDir, 'roads'), ix, iz, roadCache));
-    const inBuilding = buildingTest(around<BuildingRecord>(join(normalizedDir, 'buildings'), ix, iz, bldCache));
+    const inBuilding = footprintRingTest(
+      footprintSources(around<BuildingRecord>(join(normalizedDir, 'buildings'), ix, iz, bldCache)),
+    );
     const t: SiteTest = { side: (x, z) => (inBuilding(x, z) ? 'none' : roads.classify(x, z)) };
     const cell = cellIdString(key);
     for (const b of batches.value) {

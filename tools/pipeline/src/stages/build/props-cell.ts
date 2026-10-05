@@ -3,6 +3,7 @@
 import { type CellKey, cellIdString } from '@sanpo/core';
 import { gzip, type JcolShape, writeProps, writeTrees } from '@sanpo/tile-format';
 import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
+import { type FootprintSource, footprintRingTest } from '../derive/footprints.ts';
 import { bilinear, type LocalGrid } from '../derive/grid.ts';
 import type { PropCatalog } from '../derive/props/context.ts';
 import { buildProps, type PropStats } from '../derive/props/index.ts';
@@ -31,6 +32,8 @@ export interface PropCellInput {
   shaped: ShapedGround;
   /** 건물 발자국 격자(성형 창, NaN = 밖). */
   footprints: Float32Array;
+  /** 셀 + 8-이웃 건물 지면 링(소품 정착 정밀 시험 — ADR-0068). */
+  footprintRings?: readonly FootprintSource[];
   terrainAt: (x: number, z: number) => number | undefined;
 }
 
@@ -83,6 +86,7 @@ export async function propsCell(i: PropCellInput): Promise<PropCellOutput> {
   const junctions = i.roads.filter((r) => r.functionCode === INTERSECTION_CODE);
   const out = buildProps({
     ...common,
+    ...(i.footprintRings ? { inFootprint: footprintRingTest(i.footprintRings) } : {}),
     catalog: i.catalog,
     buildings: i.buildings,
     junctions,

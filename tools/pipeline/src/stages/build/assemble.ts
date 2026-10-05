@@ -158,6 +158,7 @@ function propCell(
     index: sc.index,
     shaped: sc.shaped,
     footprints: sc.flat,
+    footprintRings: input.footprintsAround ?? footprintSources(input.buildings),
     terrainAt,
   });
 }

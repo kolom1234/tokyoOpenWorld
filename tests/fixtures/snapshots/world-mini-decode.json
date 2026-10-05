@@ -85,19 +85,19 @@
               "itemSize": 3,
               "type": "Float32Array",
               "normalized": false,
-              "hash": 3091945397
+              "hash": 3866708758
             },
             "NORMAL": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 3722789015
+              "hash": 1468509383
             },
             "_OFF": {
               "itemSize": 3,
               "type": "Int8Array",
               "normalized": true,
-              "hash": 3777128143
+              "hash": 1313942684
             }
           }
         }

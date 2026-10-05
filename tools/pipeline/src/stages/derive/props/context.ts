@@ -60,6 +60,8 @@ export interface PlaceCtx {
   signalSite?: (p: V2, fallback: { center: V2; axis: number }) => SignalSite;
   /** 건물 발자국 안(WF, 셀 + 여유 창). */
   inBuilding: (x: number, z: number) => boolean;
+  /** 건물 지면 링 정밀 시험(WF) — 연석·차도 정착(curb.ts)용. 없으면 inBuilding. */
+  inFootprint?: (x: number, z: number) => boolean;
   out: Map<number, number[]>;
   colliders: JcolShape[];
   /** 남은 예산(인스턴스). 0이면 place가 거절하고 trimmed를 센다 — 배치 순서 = 우선순위. */
