@@ -17,6 +17,8 @@ export interface RailLineMeta {
   maxSpeedKmh: number;
   gaugeM: number;
   formation: { cars: number; carLengthM: number };
+  /** 제3궤조 집전(가선·가선주·팬터그래프 없음 — 긴자선, M07-T03). 없으면 가공 전차선. */
+  thirdRail?: boolean;
 }
 
 export interface RailStopMeta {

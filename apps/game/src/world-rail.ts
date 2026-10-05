@@ -1,0 +1,67 @@
+// 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 →
+// sim.setRail(열차 = 시각의 순수 함수, 메인 스레드) → render.trains. 없으면(world-mini·옛 빌드 404) 열차 없이 계속.
+// see docs/modules/game.md §부트 시퀀스, docs/10-simulation.md §6
+import type { Logger } from '@sanpo/core';
+import type { RenderService } from '@sanpo/render';
+import type { SimService } from '@sanpo/sim';
+import { gunzip, parseRail, type RailNetwork, type TimetableFile, type TimetableIndexFile } from '@sanpo/tile-format';
+import type { LoadedWorld } from './world-load.ts';
+
+type FetchLike = (input: string) => Promise<Response>;
+
+export interface RailData {
+  network: RailNetwork;
+  timetables: TimetableFile[];
+}
+
+/** rail.bin + 시간표. rail.bin이 없으면 undefined, 시간표가 없으면 빈 목록(선로만). 노선 파일 사이 한 프레임 양보(큰 JSON 파싱 분산). */
+export async function loadRail(baseUrl: string, fetchFn: FetchLike, log: Logger): Promise<RailData | undefined> {
+  const res = await fetchFn(`${baseUrl}/global/rail.bin`);
+  if (!res.ok) return undefined;
+  const raw = await gunzip(new Uint8Array(await res.arrayBuffer()));
+  const t0 = performance.now();
+  const net = raw.ok ? parseRail(raw.value) : undefined;
+  log.info(`rail.bin parse ${(performance.now() - t0).toFixed(1)} ms`);
+  if (!net?.ok) {
+    log.warn('rail.bin', raw.ok ? net?.error : raw.error);
+    return undefined;
+  }
+  const timetables: TimetableFile[] = [];
+  const idx = await fetchFn(`${baseUrl}/global/timetables/index.json`);
+  if (!idx.ok) return { network: net.value, timetables };
+  const index = (await idx.json()) as TimetableIndexFile;
+  for (const l of index.lines ?? []) {
+    const r = await fetchFn(`${baseUrl}/${l.file}`);
+    if (!r.ok) continue;
+    const text = await r.text();
+    const t0 = performance.now();
+    timetables.push(JSON.parse(text) as TimetableFile);
+    log.info(
+      `timetable ${l.line}: ${l.trips} trips${l.approximate ? ' (근사)' : ''} ${Math.round(performance.now() - t0)} ms`,
+    );
+    await new Promise((ok) => requestAnimationFrame(() => ok(undefined)));
+  }
+  return { network: net.value, timetables };
+}
+
+/** 첫 표시 뒤: 철도 적재 → sim 열차 → render 열차 레이어(선컴파일 뒤 그림). 끝나면(성공·실패·없음) done(). */
+export function startTrainsLater(
+  v: { render: RenderService; sim: SimService },
+  world: LoadedWorld,
+  log: Logger,
+  done: () => void,
+  fetchFn: FetchLike = (u) => fetch(u),
+): void {
+  void loadRail(world.baseUrl, fetchFn, log)
+    .then(async (rail) => {
+      if (!rail) return;
+      const t0 = performance.now();
+      v.sim.setRail(rail.network, rail.timetables);
+      log.info(`sim.setRail ${(performance.now() - t0).toFixed(1)} ms`);
+      const buf = v.sim.outputs().trains;
+      if (buf) await v.render.trains.bindShared(buf);
+      log.info(`rail: ${rail.network.tracks.length} tracks, ${v.sim.trainStats()?.trips ?? 0} trips`);
+    })
+    .catch((e: unknown) => log.warn('trains', e))
+    .finally(done);
+}

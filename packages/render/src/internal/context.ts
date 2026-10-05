@@ -26,6 +26,7 @@ import { createHlodSwitch, type HlodSwitch } from './scene/hlod-switch.ts';
 import { createRenderView, type RenderView } from './scene/render-view.ts';
 import { createSceneGraph, type SceneGraph } from './scene/scene-graph.ts';
 import { createSignField, type SignField } from './signs/field.ts';
+import { createTrainField, type TrainField } from './trains/field.ts';
 import { createTreeField, type TreeField } from './trees/field.ts';
 import type { TreeUniforms } from './trees/materials.ts';
 import { createVehicleField, type VehicleField } from './vehicles/field.ts';
@@ -58,6 +59,8 @@ export interface RenderContext {
   readonly crowdMaterials: Material[];
   /** 차량(M06-T06): 풀·밤 유니폼·머티리얼(bind 때 — 그림자 티어 재컴파일 대상). */
   readonly vehicles: VehicleField;
+  /** 열차(M07-T03) — 머티리얼은 vehicleMaterials에(그림자 티어 재컴파일 대상 공유). */
+  readonly trains: TrainField;
   readonly vehicleUniforms: VehicleUniforms;
   readonly vehicleMaterials: Material[];
   readonly treeMaterials: Material[];
@@ -132,6 +135,7 @@ function attachActors(graph: SceneGraph): {
   crowd: CrowdField;
   farCrowd: FarCrowd;
   vehicles: VehicleField;
+  trains: TrainField;
   vehicleUniforms: VehicleUniforms;
 } {
   const avatar = createAvatar();
@@ -148,7 +152,9 @@ function attachActors(graph: SceneGraph): {
   graph.roots.dynamic.add(farCrowd.root);
   const vehicles = createVehicleField();
   graph.roots.dynamic.add(vehicles.root);
-  return { avatar, props, trees, signs, crowd, farCrowd, vehicles, vehicleUniforms: createVehicleUniforms() };
+  const trains = createTrainField();
+  graph.roots.dynamic.add(trains.root);
+  return { avatar, props, trees, signs, crowd, farCrowd, vehicles, trains, vehicleUniforms: createVehicleUniforms() };
 }
 
 /** 적재 뒤 붙는 머티리얼(그림자 티어 재컴파일 대상). */

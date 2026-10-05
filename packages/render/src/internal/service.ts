@@ -9,6 +9,7 @@ import { createFrameSystems } from './frame.ts';
 import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
+import { createTrainMaterial } from './trains/material.ts';
 import { loadTreesInto, setTreeWind } from './trees/load.ts';
 import { createVehicleMaterial, nightFromSun } from './vehicles/material.ts';
 
@@ -38,6 +39,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     signs: ctx.signs.stats(),
     crowd: { ...ctx.crowd.stats(), far: ctx.farCrowd.stats() },
     vehicles: ctx.vehicles.stats(),
+    trains: ctx.trains.stats(),
   };
 }
 
@@ -86,6 +88,7 @@ function debugLayerVisible(ctx: RenderContext, layer: RenderDebugLayer, visible:
     crowd: ctx.crowd.root,
     farCrowd: ctx.farCrowd.root,
     vehicles: ctx.vehicles.root,
+    trains: ctx.trains.root,
   };
   roots[layer].visible = visible;
   ctx.counters.sceneVersion++;
@@ -136,6 +139,21 @@ async function bindVehicles(ctx: RenderContext, buf: SharedInstanceBuffer): Prom
     ctx.log.info(`vehicles attached ${Math.round(performance.now() - t0)} ms`);
   }
   ctx.vehicles.bind(buf);
+}
+
+/** 열차 레이어(M07-T03): 처음 bind 때 머티리얼·풀 24 → 선컴파일(보이지 않는 인스턴스, 장면 밖) → 그리기 시작. */
+async function bindTrains(ctx: RenderContext, buf: SharedInstanceBuffer): Promise<void> {
+  if (!ctx.trains.stats().ready) {
+    const t0 = performance.now();
+    const material = createTrainMaterial(ctx.vehicleUniforms);
+    ctx.vehicleMaterials.push(material);
+    ctx.trains.attach(material);
+    await compileDetached(ctx.renderer, ctx.trains.root, ctx.view.camera, ctx.graph.scene, () =>
+      ctx.trains.primeForCompile(),
+    );
+    ctx.log.info(`trains attached ${Math.round(performance.now() - t0)} ms`);
+  }
+  ctx.trains.bind(buf);
 }
 
 function loaders(
@@ -189,6 +207,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     ...staged.api,
     pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf), setFarDensity: (k) => ctx.farCrowd.setDensity(k) },
     vehicles: { bindShared: (buf) => bindVehicles(ctx, buf) },
+    trains: { bindShared: (buf) => bindTrains(ctx, buf) },
     setSignalLamps: (lamp) => {
       ctx.signalLamp = lamp;
     },

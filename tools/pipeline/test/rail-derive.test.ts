@@ -1,4 +1,4 @@
-// M07-T01 철도 파생: 선로 사슬(끝점 공유)·좌측통행 방향, 0.5 m 표본·터널/교량 높이 보간, 곡률 제한속도, 승강장 정차 위치·문 쪽, 셀 선로 메시.
+// M07-T01 철도 파생: 선로 사슬(끝점 공유)·좌측통행 방향, 0.5 m 표본·터널/교량 높이 보간, 곡률 제한속도, 승강장 정차 위치·문 쪽, 셀 선로 메시(제3궤조 = 가선 없음, T03).
 
 import { RAIL_FLAG, type RailNetwork } from '@sanpo/tile-format';
 import { describe, expect, it } from 'vitest';
@@ -147,5 +147,12 @@ describe('rail mesh', () => {
     expect(st.tris).toBeGreaterThan(1000);
     const zs = out.pos.filter((_, i) => i % 3 === 2);
     expect(Math.min(...zs)).toBeGreaterThan(99);
+    // 가선(레일 위 5.2 m)·가선주 있음 → 제3궤조 노선은 없음(긴자선).
+    const top = (o: LStream) => Math.max(...o.pos.filter((_, i) => i % 3 === 1));
+    expect(top(out)).toBeGreaterThan(14);
+    const third = new LStream();
+    emitRail(third, { ...net, lines: net.lines.map((l) => ({ ...l, thirdRail: true })) }, 0, 0);
+    expect(top(third)).toBeLessThan(11);
+    expect(third.tris).toBeGreaterThan(1000);
   });
 });

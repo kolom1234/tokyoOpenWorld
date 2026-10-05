@@ -26,6 +26,8 @@ export interface LateState {
   signsSettled: boolean;
   /** 군중 팩 적재가 끝났거나(성공·실패) 군중 없음(골든뷰 안정 조건, M06-T07). */
   crowdSettled: boolean;
+  /** 철도 적재·열차 선컴파일 끝(성공·실패·없음 — M07-T03). */
+  trainsSettled: boolean;
   /** streaming → sim nav(M06-T03). 군중 off면 없음. */
   simWiring?: StreamingSimWiring;
   /** startStreaming이 만든 워커 감독자(sim.worker도 같이 — M06-T01). */

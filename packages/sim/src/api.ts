@@ -8,9 +8,11 @@ import type {
   Logger,
   SharedInstanceBuffer,
   SystemProvider,
+  TrainInfo,
   Vec3d,
   WorkerSupervisor,
 } from '@sanpo/core';
+import type { RailNetwork, TimetableFile } from '@sanpo/tile-format';
 
 /** 군중 조정값(content/sim/crowd.json — game이 읽어 넘김). */
 export interface CrowdParams {
@@ -165,7 +167,17 @@ export interface SimService extends SystemProvider {
     traffic?: TrafficParams;
   }): SharedInstanceBuffer | undefined;
   /** 워커 출력 버퍼(10 §8 outputs): 보행자·차량(stride 8 — 차량 칸 = x,y,z·yaw·속력·바퀴 회전·variant·flags). 시작 전 빈 객체. */
-  outputs(): { pedestrians?: SharedInstanceBuffer; traffic?: SharedInstanceBuffer };
+  outputs(): { pedestrians?: SharedInstanceBuffer; traffic?: SharedInstanceBuffer; trains?: SharedInstanceBuffer };
+  /**
+   * 철도(M07-T03, ADR-0072): rail.bin(파싱) + 시간표(global/timetables) → 열차. 위치 = 게임 시각의 순수 함수라 **메인 스레드**에서
+   * 시계 시스템(phase 10)이 프레임마다 계산 → `outputs().trains`(stride 8: x,y,z(레일 윗면, WF − anchor)·yaw·pitch·속력·노선색 24비트·
+   * 칸 코드(정수 = 차형 × 4 + 종류, 소수 = (문 + 1) / 2 × 0.999)). 다시 부르면 교체.
+   */
+  setRail(network: RailNetwork, timetables: readonly TimetableFile[]): void;
+  /** 위치 r(m) 안 열차(10 §8 — 선두 기준 + 편성 길이). 철도 없음 = 빈 배열. seats = M07-T05. */
+  trainsNear(posWF: Vec3d, r: number): ReadonlyArray<TrainInfo>;
+  /** 열차 통계(철도 없음 = undefined): 시간표 트립 수·운행 중 열차·그린 칸·터널 안 칸. */
+  trainStats(): { trips: number; trains: number; cars: number; hiddenCars: number } | undefined;
   /**
    * 셀 내비·차선(10 §8 addCell — nav.bin·lanes.bin gzip 해제 바이트, streaming requestSections). 워커 시작 전이면 보관했다가 시작 때 보낸다.
    * 같은 셀을 다시 넣으면 무시(먼저 removeCell).

@@ -2,7 +2,7 @@
 
 ## 1. 구조
 - 메인: `SimHost`(시계, 날씨, 계절, POI 발견 — 가벼운 로직) + sim.worker 프록시.
-- `sim.worker` (30 Hz 고정): 군중, 교통, 신호, 열차. 출력은 `SharedInstanceBuffer`(core 타입, SAB) 3개(보행자/차량/열차 칸) → wiring이 `render.layers.*.bindShared()`로 연결.
+- `sim.worker` (30 Hz 고정): 군중, 교통, 신호. **열차는 메인 스레드**(위치 = 시각의 순수 함수 — 시계 시스템이 프레임마다 계산, 탑승 카메라가 정확한 값을 본다 — ADR-0072). 출력은 `SharedInstanceBuffer`(core 타입, SAB) 3개(보행자/차량/열차 칸) → wiring이 `render.layers.*.bindShared()`로 연결.
   구현(M06-T01, ADR-0061): `worker/{sim.worker,instance-buffer,host}.ts` — SAB 이중 영역(front 뒤집기), 필드 = x,y,z(WF − anchor)·yaw·anim(클립 + 속력/10)·phase·variant(u16)·rate(주기/s, 외삽용), render가 틱 사이 외삽. 조정값 = `content/sim/*.json`(YAML 대신).
 - 태양·달 방향/조도, 계절은 SimHost가 계산해 `environment(): EnvironmentState`로 제공(suncalc 2.x: 도 단위·북 기준 방위).
 - 결정론: 모든 난수는 `createRng(hash32(WORLD_SEED, cellId, entityKind, spawnIndex))`(`WORLD_SEED`는 core 상수). 같은 시각·위치면 같은 풍경.
@@ -70,7 +70,7 @@
 - 같은 선로 이웃 트립 간격 ≥ 90 s(컴파일·validate 검사). 역간 소요 = 아래 §6.2 곡선(core `tripLegs` — 컴파일러와 sim 공용).
 ### 6.2 운동
 - 위치는 **시간의 순수 함수** `s(trip, t)`: 역간 가속 0.83 m/s², 감속 0.97 m/s², 구간 제한속도 준수 프로파일을 사전 계산(트립별 캐시). → 빨리감기·시각 점프 즉시 대응, 네트워크 전체를 싸게 계산.
-- 편성: 야마노테 11량×20 m, 사이쿄 10량×20 m, 긴자선 6량×16 m. 차량 간 연결은 스플라인 위 s 오프셋.
+- 편성: 야마노테 11량×20 m, 사이쿄 10량×20 m, 긴자선 6량×16 m. 차량 간 연결은 스플라인 위 s 오프셋. 구현(M07-T03, ADR-0072): `rail/{network,motion-profile,trains}.ts` — 칸 자세 = 앞·뒤 대차 선로 위치 가운데·yaw·pitch, 터널 칸 숨김.
 - 문: 정차 시 개방(도착 +3 s ~ 출발 −5 s), 홈도어 연동. 문 차임은 자체 제작음.
 ### 6.3 MVP 운행 범위
 | 노선 | 탑승 | 비고 |

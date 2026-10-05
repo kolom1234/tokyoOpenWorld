@@ -3,7 +3,6 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type CellKey, type Logger, unpackCellKey } from '@sanpo/core';
-import { type CellBoundsWF, cellBoundsWF } from '@sanpo/geo';
 import {
   type CellMeta,
   type CellsIndexEntry,

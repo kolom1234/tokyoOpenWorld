@@ -1,6 +1,6 @@
 // 선로 메시(M07-T01, ADR-0070): global/rail.bin 표본 중 이 셀 것(터널 제외) → overrides.mesh 랜드마크 스트림(`_LMAT`):
 // 도상(자갈 사다리꼴, 지면 −0.05 → +0.25), 침목(콘크리트 0.6 m 간격), 레일 2줄(짙은 강판, 궤간 = 노선), 가선주(50 m — 진행 방향 왼쪽 = 좌측통행 바깥)·
-// 가동 브래킷·전차선(레일 위 5.2 m), 교량 = 도상 밑 콘크리트 상판. 셀 소유 = 표본 xz가 셀 안. 충돌 없음(열차는 키네마틱, 도상은 낮다).
+// 가동 브래킷·전차선(레일 위 5.2 m — 제3궤조 노선은 가선 대신 바깥 제3궤조, M07-T03), 교량 = 도상 밑 콘크리트 상판. 셀 소유 = 표본 xz가 셀 안. 충돌 없음(열차는 키네마틱, 도상은 낮다).
 // see docs/04-data-pipeline.md §4.3(철도 — "선로·도상·가선주 메시는 셀에")
 import { RAIL_FLAG, type RailNetwork } from '@sanpo/tile-format';
 import type { Vec3 } from '../../../lib/triangulate.ts';
@@ -89,8 +89,9 @@ function sleepersRailsWire(
   hi: number,
   ox: number,
   oz: number,
-  gauge: number,
+  line: { gauge: number; thirdRail: boolean },
 ) {
+  const gauge = line.gauge;
   const every = Math.max(1, Math.round(SLEEPER_EVERY_M / 0.5));
   for (let k = lo; k <= hi; k += every) {
     const F = frame(net, k, lo, hi, ox, oz);
@@ -103,6 +104,16 @@ function sleepersRailsWire(
       path.push(off(F.p, F.left, sd * (gauge / 2 + 0.035), -0.075));
     }
     if (path.length >= 2) sweep(out, path, 0.07, 0.15, LMAT.steel_dark);
+  }
+  if (line.thirdRail) {
+    // 제3궤조(진행 방향 왼쪽 바깥, 레일 윗면과 비슷한 높이) — 가선 없음.
+    const third: Vec3[] = [];
+    for (let k = lo; k <= hi; k += STRIDE) {
+      const F = frame(net, k, lo, hi, ox, oz);
+      third.push(off(F.p, F.left, gauge / 2 + 0.75, -0.02));
+    }
+    if (third.length >= 2) sweep(out, third, 0.12, 0.14, LMAT.steel_dark);
+    return;
   }
   const wire: Vec3[] = [];
   for (let k = lo; k <= hi; k += STRIDE * 2)
@@ -138,15 +149,16 @@ export function emitRail(out: LStream, net: RailNetwork | undefined, ox: number,
   const before = out.tris;
   const plain = out.plainUv;
   out.plainUv = true;
-  const gauge = new Map(net.lines.map((l) => [l.id, l.gaugeM]));
+  const lines = new Map(net.lines.map((l) => [l.id, { gauge: l.gaugeM, thirdRail: l.thirdRail === true }]));
   for (const t of net.tracks) {
     const runs = runsInCell(net, t, ox, oz);
     if (runs.length > 0) st.tracks++;
     for (const [lo, hi] of runs) {
       st.meters += (hi - lo) * t.stepM;
       ballastAndDeck(out, net, lo, hi, ox, oz);
-      sleepersRailsWire(out, net, lo, hi, ox, oz, gauge.get(t.line) ?? 1.067);
-      masts(out, net, t, lo, hi, ox, oz);
+      const line = lines.get(t.line) ?? { gauge: 1.067, thirdRail: false };
+      sleepersRailsWire(out, net, lo, hi, ox, oz, line);
+      if (!line.thirdRail) masts(out, net, t, lo, hi, ox, oz);
     }
   }
   out.plainUv = plain;

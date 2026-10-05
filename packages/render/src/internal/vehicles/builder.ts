@@ -14,6 +14,11 @@ export const VPART = {
   blinkR: 7,
   roofLamp: 8,
   accent: 9,
+  /** 열차(M07-T03 — trains/models.ts): 문짝(`_vpart.y` = 미닫이 방향 ±1, `.z` = 쪽 ±1)·차내 안내 화면·실내등·스테인리스 차체. */
+  doorLeaf: 10,
+  lcd: 11,
+  cabinLight: 12,
+  stainless: 13,
 } as const;
 export type VPart = (typeof VPART)[keyof typeof VPART];
 
@@ -95,13 +100,13 @@ export class VehicleBuilder {
     this.idx.push(i, i + 1, i + 2, i, i + 2, i + 3);
   }
 
-  /** 육면체(면 6개, 평면 법선). skipBottom = 바닥면 생략(보이지 않음). */
-  hexa(corner: Corner, hex: number, code: VPart, skipBottom = true): this {
+  /** 육면체(면 6개, 평면 법선). skipBottom = 바닥면 생략(보이지 않음). extra = `_vpart.yz`(바퀴 축·문짝 방향). */
+  hexa(corner: Corner, hex: number, code: VPart, skipBottom = true, extra: readonly [number, number] = [0, 0]): this {
     this.c.setHex(hex);
     FACES.forEach((f, k) => {
       if (skipBottom && k === 5) return;
       const [a, b, c, d] = f.map(([x, y, z]) => corner(x, y, z)) as [P3, P3, P3, P3];
-      this.quad(a, b, c, d, code);
+      this.quad(a, b, c, d, code, extra);
     });
     return this;
   }
@@ -121,12 +126,23 @@ export class VehicleBuilder {
   }
 
   /** 축 정렬 상자: 중심·크기. */
-  box(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, hex: number, code: VPart): this {
+  box(
+    cx: number,
+    cy: number,
+    cz: number,
+    sx: number,
+    sy: number,
+    sz: number,
+    hex: number,
+    code: VPart,
+    extra: readonly [number, number] = [0, 0],
+  ): this {
     return this.hexa(
       (ix, iy, iz) => [cx + (ix - 0.5) * sx, cy + (iy - 0.5) * sy, cz + (iz - 0.5) * sz],
       hex,
       code,
       false,
+      extra,
     );
   }
 

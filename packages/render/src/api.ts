@@ -153,6 +153,8 @@ export interface RenderStats {
     lods: number[];
     ready: boolean;
   };
+  /** 열차(M07-T03): sim 칸 수·그린 수·쓰는 풀·용량 초과·LOD별 수(45/300/1600 m)·준비. */
+  trains: { cars: number; visible: number; pools: number; dropped: number; lods: number[]; ready: boolean };
 }
 
 /** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */
@@ -193,6 +195,14 @@ export interface InstanceLayer {
  * 처음 bind 때 가상 차종 7종 절차 모델(LOD 3)·머티리얼을 만들어 선컴파일한 뒤 그리기 시작한다(완료 = resolve).
  */
 export interface VehicleLayer {
+  bindShared(buf: SharedInstanceBuffer): Promise<void>;
+}
+
+/**
+ * 열차 레이어(M07-T03, ADR-0072): sim 열차 칸 버퍼(메인 스레드 — 프레임마다 정확, stride 8: x,y,z(레일 윗면)·yaw·pitch·속력·노선색 24비트·
+ * 코드(정수 차형 × 4 + 종류, 소수 = 문)). 처음 bind 때 가상 통근형 전동차 절차 모델(차형 2 × 종류 4 × LOD 3)을 선컴파일한 뒤 그린다.
+ */
+export interface TrainLayer {
   bindShared(buf: SharedInstanceBuffer): Promise<void>;
 }
 
@@ -270,12 +280,14 @@ export interface RenderService extends SystemProvider {
   readonly pedestrians: InstanceLayer;
   /** 차량 인스턴스 레이어(sim 교통 출력, M06-T06). */
   readonly vehicles: VehicleLayer;
+  /** 열차 인스턴스 레이어(sim 열차 출력, M07-T03). */
+  readonly trains: TrainLayer;
   stats(): RenderStats;
   dispose(): void;
 }
 
 /** `debugLayerVisible` 대상(인스턴스 풀 레이어). */
-export type RenderDebugLayer = 'props' | 'signs' | 'trees' | 'crowd' | 'farCrowd' | 'vehicles';
+export type RenderDebugLayer = 'props' | 'signs' | 'trees' | 'crowd' | 'farCrowd' | 'vehicles' | 'trains';
 
 export interface RenderDeps {
   canvas: HTMLCanvasElement;

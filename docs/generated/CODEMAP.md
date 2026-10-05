@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 426개.
+> 파일 435개.
 
 ## apps/game
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
@@ -32,6 +32,7 @@
 - `apps/game/src/wiring/streaming-sim.ts` — 배선: streaming live L0 셀(버스 `cell/ready`) → sim 반경(448 m — 군중 tier B 250 m + 차량 스폰 400 m) 안이면 nav.bin·lanes.bin을 따로 요청(requestSections)해 | exports: SIM_WIRING_PHASE, SIM_NAV_RADIUS_M, StreamingSimDeps, StreamingSimWiring, createStreamingSimWiring
 - `apps/game/src/world-late.ts` — 첫 표시 뒤 적재(world-view에서 분리 — 400줄 한도): 머티리얼·아바타·나무·간판·군중(sim.worker + 군중 팩)·신호 램프. 실패하면 그 요소 없이 계속. | exports: LateState, loadMaterialsLater, AVATAR_URLS, loadAvatarLater, TREE_URLS, SIGNAGE_URLS, CROWD_URLS, CrowdMode, startCrowdLater, crowdFarDensitySystem, signalLampsOf, loadSignageLater, loadTreesLater
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
+- `apps/game/src/world-rail.ts` — 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 → | exports: RailData, loadRail, startTrainsLater
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
 - `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
 
@@ -111,7 +112,7 @@
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, PrecompileProgress, RenderService, RenderDebugLayer, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, TrainLayer, PrecompileProgress, RenderService, RenderDebugLayer, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, createRenderContext
@@ -173,6 +174,11 @@
 - `packages/render/src/internal/signs/load.ts` — 간판 에셋 적재·연결(M05-T06): atlas.png(브랜드 색까지 구운 sRGB) → 공용 아틀라스 노드(signs/atlas) → 간판 머티리얼 → 필드 attach → | exports: loadSignageInto
 - `packages/render/src/internal/signs/material.ts` — 간판 머티리얼(M05-T06, 07 §4 M_SIGN): 인스턴스 `_ipos`(렌더 좌표·yaw)·`_isig`(브랜드, 배율 xyz) → 셰이더 배치(법선 회전), | exports: createSignMaterial
 - `packages/render/src/internal/signs/models.ts` — 가상 간판 단위 모델(M05-T06): 돌출 상자(袖看板, 세로 타일 양면)·입간판(A형, 세로 타일 앞뒤)·옥상 광고탑(가로 타일 앞면 + 다리). | exports: PROJECTING, BILLBOARD, projectingSign, standingSign, rooftopSign
+- `packages/render/src/internal/trains/body.ts` — 열차 차체(M07-T03, ADR-0072): LOD0 = 창이 뚫린 벽(얇은 상자 — 안팎 모두 보임)·미닫이 문짝(`_vpart.y` 방향·`.z` 쪽)·끝벽·운전실 칸막이 + 차내 | exports: wallSpans, carBody
+- `packages/render/src/internal/trains/field.ts` — 열차 필드(M07-T03, ADR-0072): sim 열차 칸 버퍼(메인 스레드 — 프레임마다 정확한 값, stride 8: x,y,z·yaw·pitch·속력·노선색·코드) → | exports: TRAIN_POOL_CAPACITY, TrainFieldStats, TrainField, decodeCarCode, createTrainField
+- `packages/render/src/internal/trains/material.ts` — 열차 머티리얼(07 §4 M_VEHICLE 계열, M07-T03 — ADR-0072): 스테인리스(금속)·어두운 유리·노선색 띠(인스턴스 24비트 색)·고정 부품(정점색), | exports: DOOR_SLIDE_M, createTrainMaterial
+- `packages/render/src/internal/trains/models.ts` — 열차 절차 모델(M07-T03, 자체 제작 — ADR-0072): 차형(20 m 통근형·16 m 지하철형) × 칸 종류(중간·팬터그래프·앞 운전실·뒤 운전실) × LOD 0–2. | exports: TRAIN_CAR_TYPES, TRAIN_CAR_KINDS, buildTrainGeometry, trainTriangles
+- `packages/render/src/internal/trains/parts.ts` — 열차 절차 모델 공용 부품(M07-T03, 자체 제작 — 실존 회사 로고·정확한 도색 없음, ADR-0072): 차형 치수, 지붕·냉방기, 대차·바퀴, | exports: CarLod, TRAIN_LOD_M, CarDims, CAR_DIMS, C, bodyEnd, beam, roof, underframe, cabFront, pantograph
 - `packages/render/src/internal/trees/assets.ts` — 나무 에셋 적재(M05-T04): 파이프라인 `trees` 산출(trees.json·trees.glb·leaves.png·impostor-color.png) → 수종·LOD·부분별 float 기하 + 텍스처. | exports: TreeManifest, TreeAssets, loadTreeAssets
 - `packages/render/src/internal/trees/blocks.ts` — 나무 블록·LOD 띠(M05-T04): 셀 trees.inst → 64 m 블록·수종별 조각(셀 로컬 `_ipos` = x, y, z, yaw · `_iext` = 높이, 씨앗, 수종, 0), | exports: TREE_EDGES_BY_SPECIES, TREE_EDGES, TREE_SPECIES_IDS, TreeSlice, TreeBlock, treeBlocksOf, treeDistanceTo, treeBandOf
 - `packages/render/src/internal/trees/field.ts` — 나무 필드(M05-T04): 셀 추가·제거·카메라 → 블록 LOD 띠(blocks.ts) → 풀 채우기(pools.ts). 풀 = 수종 × LOD0/1 × {수피, 잎} + 임포스터 1개(전 수종). | exports: TREE_POOL_CAPACITY, TreeFieldStats, TreeMaterials, TreeField, createTreeField
@@ -202,7 +208,10 @@
 - `packages/sim/src/internal/crowd/lod-manager.ts` — 군중 LOD(10 §4.2, M06-T04 — ADR-0064): tier A(DetourCrowd, radiusA 안) ↔ tier B(흐름) 승강격. 히스테리시스 ± lodBandM(80 m ± 5) — | exports: outputPos, LodMoves, lodStep
 - `packages/sim/src/internal/crowd/nav-world.ts` — 내비 월드(M06-T03, ADR-0063): sim.worker 안 타일 Detour NavMesh(원점 0, 64 m 타일 = 파이프라인 nav.bin 타일 좌표 그대로) — | exports: CrossingRec, configureFilter, NavWorld, createNavWorld
 - `packages/sim/src/internal/crowd/route.ts` — 보행 경로의 횡단 분해(M06-T03, ADR-0063): 전체 필터(횡단 포함) 경로의 꺾은선에서 처음 들어가는 횡단보도 띠를 찾고, | exports: V3, CrossingHit, inBand, firstCrossing, keepLeftLat, crossingPoints
+- `packages/sim/src/internal/rail/motion-profile.ts` — 트립 운동(M07-T03, 10 §6.2, ADR-0071·0072): s(trip, t) = 시각의 순수 함수. 구간 곡선 = core tripLegs(시간표 컴파일러와 같은 입력 — | exports: DOOR_OPEN_AFTER_S, DOOR_CLOSED_BEFORE_S, DOOR_MOVE_S, TripMotion, tripMotion, MotionState, motionAt
+- `packages/sim/src/internal/rail/network.ts` — 철도 망 런타임(M07-T03, ADR-0072): rail.bin(RailNetwork) → 선로별 표본 보간. 칸 자세 = 앞·뒤 대차 위치(선로 위 s ± 대차 반간격)의 | exports: TrackRt, RailRt, createRailRt, pointAt, inTunnel, CarPose, carPose
 - `packages/sim/src/internal/rail/timetable.ts` — 열차 시간표 색인(M07-T02, ADR-0071): global/timetables/<lineId>.json(파이프라인 컴파일) → 요일 유형별 트립(enterS 순) → | exports: serviceTimeOf, LineTimetable, ActiveTrip, isTimetableFile, indexTimetable, activeTrips
+- `packages/sim/src/internal/rail/trains.ts` — 열차(M07-T03, ADR-0072): 시간표(운행 중 트립) × 트립 운동(motion-profile) → 편성 칸 자세 → 인스턴스 버퍼(메인 스레드, 프레임마다 — | exports: TRAIN_STRIDE, CAR_KIND, CAR_TYPE, TrainState, TrainStats, TrainSim, carKind, createTrainSim
 - `packages/sim/src/internal/service.ts` — createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시). 날씨·계절은 기본값(M06/M09). | exports: SIM_CLOCK_PHASE, computeEnvironment, createSim
 - `packages/sim/src/internal/signals/controller.ts` — 신호 제어기(10 §5.2, M06-T02 — ADR-0062·0065): 상태 = 게임 시각의 순수 함수(빨리감기·시각 점프 즉시 일관). 코드 = ((교차로 ID × 64 + 오프셋 칸) × 16) + 계획 × 4 + 그룹 | exports: decodeSignal, offsetOf, pedWalkLeftS, signalState
 - `packages/sim/src/internal/signals/plans.ts` — 신호 계획(10 §5.2, M06-T02 — ADR-0062): content/sim/signal-plans.json → 단계 경계 누적·주기. 그룹 = [차량 A, 차량 B, 보행 A, 보행 B]. | exports: VehicleLamp, PedLamp, CompiledPlan, compilePlans

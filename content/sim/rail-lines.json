@@ -1,5 +1,5 @@
 {
-  "note": "철도 노선 목록(M07-T01, ADR-0070). osmNames = OSM 선로 name(본선, service 없음)이 이 중 하나면 그 노선 — 같은 노선 두 선로는 좌측통행으로 북행·남행. n02 = 국토수치정보 N02 노선·사업자(식별 대조). headings = 진행 방향 이름(야마노테 북행 = 外回り). color = 노선색(차체 띠만 — 로고·정확한 도색 복제 없음). stations = 정차역(북 → 남이 아니라 이름만, 순서는 선로 s로 정함). 운행·시간표는 synthetic-lines.json(JR — 합성, ADR-0008)·GTFS(긴자선 — gtfs: 원천 id·route 이름·시발 전/종착 뒤 머묾·최소 정차, ADR-0071).",
+  "note": "철도 노선 목록(M07-T01, ADR-0070). osmNames = OSM 선로 name(본선, service 없음)이 이 중 하나면 그 노선 — 같은 노선 두 선로는 좌측통행으로 북행·남행. n02 = 국토수치정보 N02 노선·사업자(식별 대조). headings = 진행 방향 이름(야마노테 북행 = 外回り). color = 노선색(차체 띠만 — 로고·정확한 도색 복제 없음). thirdRail = 제3궤조(가선·가선주·팬터그래프 없음). stations = 정차역(북 → 남이 아니라 이름만, 순서는 선로 s로 정함). 운행·시간표는 synthetic-lines.json(JR — 합성, ADR-0008)·GTFS(긴자선 — gtfs: 원천 id·route 이름·시발 전/종착 뒤 머묾·최소 정차, ADR-0071).",
   "lines": [
     {
       "id": "yamanote",
@@ -40,6 +40,7 @@
       "maxSpeedKmh": 65,
       "gaugeM": 1.435,
       "formation": { "cars": 6, "carLengthM": 16 },
+      "thirdRail": true,
       "headings": { "north": "asakusa", "south": "shibuya" },
       "stations": ["shibuya"],
       "gtfs": {
