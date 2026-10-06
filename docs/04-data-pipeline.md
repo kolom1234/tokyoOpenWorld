@@ -78,6 +78,8 @@ data/build/<buildId>/                        (build/hlod/validate)
 | ↳ 내비메시 구현(M06-T03, ADR-0063) | `stages/derive/{navmesh,nav/surface,nav/raster,nav/recast-tile}.ts` + `build/nav-cell.ts`: 0.5 m 표본 분류(보도 1·생활도로 2·횡단 띠(끝 +1.5 m) 3·OSM 보행로·광장·공원 4, 건물·소품·줄기 없음, 간선 차도 없음) → Recast 64 m 타일 16개(복셀 0.2 × 0.05 m, 반경 0.3·키 1.8·오름 0.25 m, WF 좌표) + 횡단 기록(끝점·반폭·보행 신호 코드 = 소품 신호기와 같은 규칙, 일직선 조각 합침) → `nav.bin`(gzip). 교량 상판·육교는 ⚠️ 미포함 |
 | ↳ 레인 그래프 구현(M06-T05, ADR-0065) | `stages/derive/{lanes,lanes/graph,lanes/geometry}.ts` + `build/lanes-cell.ts`: 영역 OSM 간선(trunk–tertiary + _link) 좌표 키 위상 → 방향별 차선(좌측통행 왼쪽 절반, 차로 0 = 연석, 3.0 m) → 교차점 정지선 물림·베지어 연결로(좌 = 연석 차로·우 = 안쪽, 유턴 없음)·정지선 신호 코드 → 셀로 잘라 포털 노드 → `lanes.bin` v2(gzip). 횡단 띠 병합(`build/nav-cell.ts mergeCollinear`)은 6 m 미만 끝 조각을 반폭 차·25°까지 본 띠에 흡수(M06-T07, ADR-0067). 점 간격 ≤ 4 m로 나눠 점마다 지면 높이(M06-T06 — 긴 직선에서 차가 ±0.4–0.7 m 뜨고 묻혔다 → ±0.02 m) |
 | 철도 | 트랙 폴리라인 → Catmull-Rom 스플라인(0.5 m 샘플), 높이: 지상=지형+0.8 m(도상), 교량=PLATEAU brid 상판, 터널=비렌더. 역 정차 위치(플랫폼 중심) 산출 |
+| ↳ 철도 구현(M07-T01, ADR-0070) | `fetch --source ksj-n02` → `normalize --layer rail`(OSM railway·승강장·역 → data/normalized/rail/osm-rail.ndjson.gz, 영역 + 1.5 km) → `build`가 먼저 `build/rail-global.ts`: 노선 목록 `content/sim/rail-lines.json`(OSM 선로 name) → `derive/rail/{tracks,splines,speed-limits,platforms}.ts`(끝점 사슬·좌측통행 방향, 구심 Catmull-Rom 0.5 m, 레일 윗면 = 지형 + 0.5 m — 교량·터널 구간은 양끝 지상 보간 + ±20 m 평활, √(0.8 R) 곡률 제한, 승강장 겹침 가운데 정차·문 쪽) → `global/rail.bin`(05 §9) + `rail-report.json`(N02 대조), 셀 overrides.mesh에 도상·침목·레일·가선주·전차선(`build/overrides/rail.ts` — 터널 제외, 교량 상판). 수락 검사 `checks/rail-photo.ts`(항공사진 거울 대칭 중심) |
+| ↳ 시간표(M07-T02, ADR-0071) | rail.bin 직후 `stages/timetables/`: 합성(`content/sim/synthetic-lines.json` — JR 계통·선로 위상·시간대 간격·역 정차, 같은 선로 계통 합쳐 120 s 밀기) + GTFS(`rail-lines.json` `gtfs` — 긴자선, `fetch --source odpt-tokyometro`, 키 = `ODPT_CONSUMER_KEY` 환경 변수, 없으면 'waiting-key') → core `tripLegs` 곡선으로 정차 시각 → 스키마 검증 → `global/timetables/<line>.json` + `index.json` + `timetable-report.json`. 단독 재실행 `timetables --build-id <id> [--gtfs <line>=<dir\|zip>]` |
 | 오디오 존 | 규칙: 교차로 반경 40 m=crossing, 역 건물·플랫폼=station, 공원=park, 폭 < 6 m 도로 주변=alley, 상점가(OSM `shop=*` 밀집)=shopping |
 | 광원 | 가로등·신호·간판·상점 쇼윈도(1층 retail)·자판기 → 점/스포트 광원 목록(색온도, 강도, 점등 시각) |
 | POI | Wikidata(좌표·다국어명) + `content/poi/*.yaml`(자체 설명) → 셀 meta의 `pois[]`, 발견 반경 |
@@ -111,6 +113,9 @@ data/build/<buildId>/                        (build/hlod/validate)
 - 경계 이음새: 이웃 셀 지형 가장자리 높이 차 = 0 (정확 일치).
 - 정확도 샘플: 랜드마크 20곳 높이(measuredHeight vs 메시 bbox) 오차 ≤ max(2 m, 5%).
 - 라이선스: 모든 섹션의 `sources[]`가 lock에 존재.
+- 도로 간극(`road gaps`, M05-T01): 교차로 50곳 보도 가장자리·연석 vs 지형 < 2 cm.
+- 시간표(`timetables`, ADR-0071): rail.bin이 있으면 index·노선 파일 스키마, 같은 선로 이웃 트립 간격 ≥ 90 s, 운행일(04:00–28:00) 안 = 오류.
+- 소품 차도(`props on road`, ADR-0068): L0 지상 소품이 PLATEAU 차도 폴리곤 위(보도 없는 길가 ≤ 1 m 예외)·보도 위 길가 기둥이 연석 < 0.3 m = 오류. MVP 전체 0건 유지.
 - 보고서: `data/build/<buildId>/report.html` (셀별 크기 히트맵, 경고 목록).
 
 ### 4.7 publish

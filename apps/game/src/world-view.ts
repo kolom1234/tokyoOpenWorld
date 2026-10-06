@@ -10,7 +10,6 @@ import {
   type Scheduler,
   type SystemProvider,
   type Vec3d,
-  type WorkerSupervisor,
 } from '@sanpo/core';
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
@@ -19,9 +18,10 @@ import { type ClockMode, createSim, type SignalPlansFile, type SimService } from
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
-import { type BootStage, bootProgressText, precompileText } from './boot-progress.ts';
+import { bootProgressText, precompileText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
+import { trainLcdSystem } from './train-lcd.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
 import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
@@ -40,6 +40,7 @@ import {
   startCrowdLater,
 } from './world-late.ts';
 import type { LoadedWorld } from './world-load.ts';
+import { startTrainsLater, trainPhysicsSystem } from './world-rail.ts';
 
 /** 부팅 대기 영역: 스폰 수평 384 m 안 L0 — 스폰 셀 안 어디서든 3×3 모서리 셀(≤ 362 m)까지 포함(06 §8 스폰 3×3). 상위 레벨은 우선순위상 먼저 온다. */
 export const SPAWN_READY_RADIUS_M = 384;
@@ -68,6 +69,8 @@ export interface WorldView {
   readonly signsSettled: boolean;
   /** 군중: 팩 적재가 끝났고(또는 군중 없음) 처음 채우기가 끝났다(골든뷰 안정 조건, M06-T07). */
   readonly crowdSettled: boolean;
+  /** 철도 적재·열차 선컴파일이 끝났거나(성공·실패·없음) 끔(골든뷰 안정 조건, M07-T03). */
+  readonly trainsSettled: boolean;
   /** streaming 시작 → 스폰 영역 live까지 대기 → 시작 시점으로 이동. 반환 = 스폰 영역 live L0 셀 수. */
   showWorld(world: LoadedWorld): Promise<number>;
   /** 첫 표시 전 준비 단계 글(로딩 패널 — 선컴파일 진행·스폰 셀 수). 첫 표시 뒤 ''. */
@@ -97,6 +100,8 @@ export interface WorldViewDeps {
   crowd?: CrowdMode;
   /** false = 차량 없음(`?traffic=0`, M06-T06 비용 비교). */
   traffic?: boolean;
+  /** false = 열차 없음(`?trains=0`, M07-T03). */
+  trains?: boolean;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -158,10 +163,12 @@ function createTraversalFor(
   input: InputService,
   ground: GroundQuery,
   late: LateState,
+  sim: SimService,
 ): TraversalService {
   const startPose = deps.start?.pose ?? startFreecamPose;
   const fov = deps.start?.fovDeg;
-  return createTraversal(
+  const player = { posWF: { x: 0, y: 0, z: 0 } };
+  const t = createTraversal(
     {
       input,
       bus: deps.bus,
@@ -170,9 +177,16 @@ function createTraversalFor(
       get physics() {
         return late.physics;
       },
+      // 열차(M07-T05): 근처 열차·칸 자세·탑승 정보·시계 점프(빨리감기).
+      trains: () => sim.trainsNear(player.posWF, 300),
+      trainCar: (id, k) => sim.trainCar(id, k),
+      trainRide: (id) => sim.trainRide(id),
+      jumpClock: (ms) => sim.clock.jumpTo(ms),
     },
     { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
   );
+  player.posWF = t.player.posWF;
+  return t;
 }
 
 /**
@@ -223,6 +237,24 @@ async function showWorldWith(
     deps.scheduler.add({ systems: () => [far] });
   }
   render.setSignalLamps(signalLampsOf(v.sim));
+  if (deps.trains === false) late.trainsSettled = true;
+  else
+    startTrainsLater(
+      v,
+      world,
+      wlog,
+      () => {
+        late.trainsSettled = true;
+      },
+      (rail) => {
+        late.rail = rail;
+      },
+    );
+  // 열차·승강장·홈도어 물리(M07-T04): 철도·물리 준비 뒤부터 프레임마다.
+  if (deps.trains !== false) {
+    const rail = trainPhysicsSystem(v.sim, () => late.physics);
+    deps.scheduler.add({ systems: () => [rail] });
+  }
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
@@ -240,6 +272,7 @@ function initialLate(): LateState {
     treesSettled: false,
     signsSettled: false,
     crowdSettled: false,
+    trainsSettled: false,
     boot: { precompile: '대기 LUT…', done: false },
   };
 }
@@ -253,6 +286,16 @@ function startPrecompile(render: RenderService, late: LateState, log: Logger): P
     .catch((e: unknown) => log.child('world').warn('precompile', e));
 }
 
+/** 스케줄러 프레임 소스: 카메라·플레이어 = traversal, 시각 = sim 시계. */
+function frameSourceOf(traversal: TraversalService, sim: SimService): FrameSource {
+  return {
+    camera: () => traversal.camera,
+    player: () => traversal.player,
+    gameTimeMs: () => sim.clock.gameTimeMs,
+    timeScale: () => sim.clock.timeScale,
+  };
+}
+
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
   const config = { ...deps.renderConfig, backend: deps.backend };
@@ -261,18 +304,14 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const precompiled = startPrecompile(render, late, log);
   const input = createInput({ target: canvas, bus, log });
   const ground: GroundQuery = { groundHeightAt: (x, z) => late.streaming?.groundHeightAt(x, z) };
-  const traversal = createTraversalFor(deps, input, ground, late);
   const sim = simFor(deps);
-  const frameSource: FrameSource = {
-    camera: () => traversal.camera,
-    player: () => traversal.player,
-    gameTimeMs: () => sim.clock.gameTimeMs,
-    timeScale: () => sim.clock.timeScale,
-  };
+  const traversal = createTraversalFor(deps, input, ground, late, sim);
+  const frameSource = frameSourceOf(traversal, sim);
   const wiringSystems = [
     createCameraWiring(traversal, render),
     createEnvWiring(sim, render, deps.weather),
     createGroundLoadingIndicator(canvas.ownerDocument, traversal),
+    trainLcdSystem(canvas.ownerDocument, traversal, () => late.rail),
   ];
 
   return {
@@ -309,6 +348,9 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     },
     get crowdSettled() {
       return late.crowdSettled && (sim.workerStats()?.crowd?.filled ?? true);
+    },
+    get trainsSettled() {
+      return late.trainsSettled;
     },
     showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim }, world),
     bootProgress: () => bootProgressText(late.boot, late.streaming),

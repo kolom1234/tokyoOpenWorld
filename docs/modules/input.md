@@ -14,7 +14,7 @@ InputService extends SystemProvider {   // system 'input', phase 0
 }
 ActionState { axis(a: AxisAction): number; pressed(a: ButtonAction): boolean; justPressed(a: ButtonAction): boolean }
 InputContext = 'walk' | 'vehicle' | 'fly' | 'ui'
-ButtonAction = sprint | pace | interact | toggleView | freeCam | map | photo | pause | handbrake | lights
+ButtonAction = sprint | pace | interact | toggleView | freeCam | map | photo | pause | handbrake | lights | skip   // skip = 열차 다음 역까지 빨리감기(T, vehicle 컨텍스트 — M07-T05)
 AxisAction = moveX(오른쪽 +) | moveY(앞 +) | lookX(px, 오른쪽 +) | lookY(px, 아래 +) | fly(위 +) | wheel(노치, 위로 굴림 +)
 Binding = {device:'key', code} | {device:'mouseButton', button} | {device:'keyAxis', negative, positive} | {device:'mouseAxis', axis:'x'|'y'|'wheel'}
         | {device:'padButton', button, hold?} | {device:'padAxis', axis, scale?, perSecond?} | {device:'padButtonAxis', negative, positive, scale?, perSecond?}   // 표준 매핑 번호

@@ -33,6 +33,12 @@ writeJcol(shapes): Uint8Array;  parseJcol(bytes): Result<JcolShape[], TkcError>
 // lanes.bin v2 (gzip 해제 후, M06-T05 ADR-0065) — SoA. LANES_VERSION = 2, LANE_NO_SIGNAL = 0xFFFFFFFF, LANE_KIND = {road 0, connector 1, bus 2}, LANE_TURN = {straight 0, left 1, right 2}
 interface LaneGraphChunk { nodes{key,posLocal}; lanes{id,fromNode,toNode,kind,turn,speedKmh,laneIdx,signal,ptOffset,ptCount,widthCm}; pointsLocal }
 writeLanes(g): Uint8Array;  parseLanes(bytes): Result<LaneGraphChunk, TkcError>
+// global/rail.bin v1(M07-T01, ADR-0070 — 05 §9, 타입 = src/api-rail.ts — api.ts가 재수출, 400줄 제한): RAIL_MAGIC·RAIL_VERSION·RAIL_FLAG{tunnel 1, bridge 2, platform 4}
+interface RailNetwork { lines: RailLineMeta[] /* thirdRail?: 제3궤조(가선 없음, M07-T03); name.ko?(M07-T05 — 역도 같다) */; tracks: RailTrackMeta[] /* ptOffset·ptCount·lengthM·stepM·stops[{station,s,side,platformLengthM}] */; stations: RailStationMeta[]; points: Float32Array /* WF xyz */; speed: Float32Array; flags: Uint8Array }
+writeRail(n): Uint8Array;  parseRail(bytes): Result<RailNetwork, TkcError>
+// global/timetables/<lineId>.json·index.json(M07-T02, ADR-0071 — 05 §9.1, schemas/timetable.schema.json, api-rail.ts): TIMETABLE_SCHEMA = 1, SERVICE_DAY_START_S = 14400, TimetableDay = 'weekday'|'saturday'|'holiday'
+interface TimetableFile { schema; line; source 'synthetic'|'gtfs'; approximate; routes: TimetableRoute[]; calendars: TimetableCalendar[] /* {id, days, trips: TimetableTrip[]} */ }; TimetableIndexFile
+interface TimetableTrip { id; route; track; dir; cars; carLengthM; from; to /* 편성 중심 s */; enterS; exitS /* 운행일 0시 기준 초 */; stops: TimetableStop[] /* {station, s, arrS, depS} */ }   // JSON — 코덱 없음
 // nav.bin (gzip 해제 후, M06-T03 ADR-0063 — 타입은 api-nav.ts, api.ts가 재수출): Detour 타일(WF, 64 m) + 횡단보도 기록
 NAV_MAGIC /*"NAVT"*/; NAV_VERSION = 1; NAV_TILE_M = 64; NAV_NO_SIGNAL = 0xFFFFFFFF; NAV_AREA = { sidewalk: 1, street: 2, crossing: 3, open: 4 }; NAV_FLAG = { walk: 1, cross: 2 };
 interface NavCrossing { id; a: [x,y,z]; b; halfWidth; signal }  interface NavTile { tx; tz; data: Uint8Array }  interface NavCellData { tiles; crossings }

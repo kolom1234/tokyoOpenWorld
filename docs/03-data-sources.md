@@ -14,7 +14,7 @@
 | `gsi-dem-tiles` | 지리원 타일 표고 타일 `dem_png` z14(기반지도정보 수치표고모델 기반, ≈ 8 m 화소) | 국토지리원 | HLOD 원경 지형(L2 16 m·L3 64 m·영역 밖 L1) — hlodExtentWF 48 km 정사각형, 676 타일 | 국토지리원 콘텐츠 이용규약(CC BY 4.0 호환). 표기 `出典：国土地理院（地理院タイル 標高タイル）を加工して作成` |
 | `gsi-photo` | 지리원 타일 전국최신사진(seamlessphoto) | 국토지리원 | **검증 전용**(M05-T02 횡단보도 위치 대조 z18, `checks/markings-photo.ts` — 게임 데이터에 굽지 않음). 원거리 지면 알베도 참고는 미사용 | 동 규약. 표기 `出典：地理院タイル（全国最新写真）` |
 | `osm-kanto` | OpenStreetMap 간토 추출본 (Geofabrik `kanto-260929.osm.pbf` 고정판, `normalize --layer osm`) | OSM 기여자 | 도로 속성(차선·일방통행·제한속도), 신호, 철도 선로 상세, 플랫폼, 나무, 공원, POI 이름, 건물 층수 보완 | **ODbL 1.0**. 표기 `© OpenStreetMap contributors`. 파생 DB 공개 의무 → §4 참조 |
-| `ksj-n02` | 국토수치정보 철도 데이터(N02, 최신판) | 국토교통성 | 노선 중심선, 역 위치, 사업자·노선명 | 국토수치정보 이용약관 ⚠ 데이터셋별 상용 가능 여부 표시 확인. 표기 `出典：国土数値情報（鉄道データ）` |
+| `ksj-n02` | 국토수치정보 철도 데이터(N02, **2025년도판** `N02-25_GML.zip`, `pnpm pipeline fetch --source ksj-n02` — sha256 lock) | 국토교통성 | 노선 식별 대조(OSM 선로 ↔ 노선·사업자, 평균 4.7–9.5 m), 역 위치 | **CC BY 4.0**(2020년도판 이후 오픈 데이터 — 다운로드 페이지 표기). 표기 `出典：国土数値情報（鉄道データ）（国土交通省）を加工して作成` |
 | `estat-small-area` | 국세조사 소지역(町丁・字) 경계 2020 | e-Stat | HUD 지명 표시(○○区 ○○町 ○丁目) | 정부표준이용규약(CC BY 4.0 호환). 표기 `出典：政府統計の総合窓口(e-Stat)` |
 
 - **저장소 커밋 예외(M01-T07)**: `tests/fixtures/`에 `plateau-shibuya`·`gsi-dem`·`osm-kanto`(M05-T02 노면 표시 파생, ODbL)의 소형 가공물만 커밋한다 — `world-mini`(빌드된 L0 셀 4개), `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1 m 창 1셀). 폴더마다 `ATTRIBUTION.json`, 전체 ≤ 6 MB(M05-T02에서 5 → 6). 그 밖의 원천·중간·빌드 데이터는 커밋 금지(CLAUDE.md 규칙 7). 상세 `tests/fixtures/README.md`.
@@ -22,9 +22,10 @@
 ## 2. 교통·시간표
 | ID | 데이터 | 라이선스 | 사용 여부 |
 |---|---|---|---|
-| `odpt-tokyometro` | 도쿄메트로 GTFS/GTFS-JP (ODPT) | 공공교통 오픈데이터 기본 라이선스. ODPT 개발자 등록(키) 필요 | ✅ 긴자선 시간표(시각 운행). 후쿠토신선 등 지하 노선은 M12+ |
+| `odpt-tokyometro` | 도쿄메트로 GTFS/GTFS-JP (ODPT) | 공공교통 오픈데이터 기본 라이선스. ODPT 개발자 등록(키) 필요 | ✅ 긴자선 시간표(시각 운행). 후쿠토신선 등 지하 노선은 M12+. 키 = 환경 변수 `ODPT_CONSUMER_KEY`(로그·파일·커밋 금지) — **키 대기**(M07-T02 컴파일러는 픽스처로 검증, ATTRIBUTION 항목은 실제 데이터를 받을 때 추가) |
 | `odpt-toei` | 도에이 지하철/버스 (ODPT) | ⚠ 라이선스 명칭 확인 | 🔶 MVP 범위 밖(오에도선은 M12+) |
 | `odpt-jreast` | JR동일본 (ODPT) | "공공교통 오픈데이터 챌린지 한정 라이선스" → 상시 서비스 사용 불가 | ❌ 사용 금지. 야마노테선은 **합성 시간표**(`10-simulation.md §6.1`, ADR-0008) |
+| 자체 작성 `synthetic-timetables` | JR 야마노테·사이쿄·쇼난신주쿠 **근사 시간표**(M07-T02, `content/sim/synthetic-lines.json` 시간대 간격·정차 → ADR-0071) + GTFS 테스트 픽스처 `tests/fixtures/gtfs-mini`(가상 시각·가상 사업자) | 프로젝트 소유. 크레딧에 "근사 시간표(실제 시간표 아님)" 명시(`ATTRIBUTION.json` `synthetic-timetables`) | ✅ |
 
 ## 3. 부가 데이터
 | ID | 데이터 | 라이선스 | 비고 |
@@ -49,6 +50,7 @@
 | 자체 제작 (Blender) | 일본 특유 소품(자판기·전신주·신호등·가드레일·표지판) | 프로젝트 소유 |
 | 자체 제작 (명세 + 코드) | 랜드마크 오버라이드(M05-T05, ADR-0053): `content/overrides/<id>/meta.json` — PLATEAU 면 재사용(셸) + 절차 부품(도리이·동상·화면 등). 위치·높이 = PLATEAU·OSM(각 meta `reference`), 화면 영상은 절차 색면(글자·로고·실존 광고 없음). 외부 에셋 없음 | 프로젝트 소유(셸 형상 = PLATEAU 출처 표기, 위치 = OSM ODbL) |
 | 자체 제작 (코드) | 가상 차종 7종 절차 모델(M06-T06, `packages/render/src/internal/vehicles/models.ts` — 세단·택시(무지 지붕등)·경 왜건·경트럭·미니밴·택배 상자 트럭·버스, 육면체·원기둥 정점색 + 가상 도장 팔레트, 실존 차명·엠블럼·로고·번호판·실존 회사 도색 없음, 치수 = core `VEHICLE_TYPES` 일반 차급). 외부 에셋 없음 | 프로젝트 소유(출처 표기 불필요) |
+| 자체 제작 (코드) | 가상 통근형 전동차 절차 모델(M07-T03, `packages/render/src/internal/trains/*` — 20 m 4문·16 m 3문 × 중간·팬터그래프·운전실 × LOD 3 + 차내, 스테인리스 + 노선색 띠만, 실존 회사 로고·차번·정확한 도색 없음, ADR-0072). 외부 에셋 없음 | 프로젝트 소유(출처 표기 불필요) |
 | 자체 제작 (코드) | 거리 소품 15종 절차 모델(M05-T03, `packages/render/src/internal/props/models.ts` — 상자·원기둥 정점색, 로고·글자·실존 상호 없음) + 배치 카탈로그 `content/props/catalog.json`. 외부 에셋 없음 | 프로젝트 소유(출처 표기 불필요) |
 
 ## 5. 사용 금지 목록

@@ -1,0 +1,3 @@
+route_id,agency_id,route_short_name,route_long_name,route_type,route_color
+FX.G,FX,G,銀座線,1,FF9500
+FX.Z,FX,Z,半蔵門線,1,8F76D6

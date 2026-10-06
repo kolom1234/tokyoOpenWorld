@@ -12,6 +12,13 @@ export function createCommandQueue(): CommandQueue {
   let q: Command[] = [];
   return {
     push(c) {
+      if (c.c === 'trains') {
+        const i = q.findIndex((x) => x.c === 'trains');
+        if (i >= 0) {
+          q[i] = c;
+          return;
+        }
+      }
       if (c.c === 'charInput') {
         const i = q.findIndex((x) => x.c === 'charInput' && x.h === c.h);
         if (i >= 0) {

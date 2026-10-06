@@ -15,7 +15,9 @@ export type ButtonAction =
   | 'photo'
   | 'pause'
   | 'handbrake'
-  | 'lights';
+  | 'lights'
+  /** 열차: 다음 역까지 빨리감기(T, M07-T05). */
+  | 'skip';
 
 /**
  * 축 액션. 단위는 디바이스 원값 — 감도(픽셀→라디안 등)는 소비자(traversal) 설정.

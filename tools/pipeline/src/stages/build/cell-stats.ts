@@ -5,6 +5,7 @@ import type { NavCellStats } from '../derive/navmesh.ts';
 import type { PropStats } from '../derive/props/index.ts';
 import type { TreeStats } from '../derive/trees/index.ts';
 import type { LanesCellStats } from './lanes-cell.ts';
+import type { RailMeshStats } from './overrides/rail.ts';
 import type { DetailStats } from './overrides/rooftops.ts';
 
 export interface CellBuildStats {
@@ -35,6 +36,8 @@ export interface CellBuildStats {
     tris: number;
     details: DetailStats;
     walk: { bridges: number; stairs: number; risers: number; carved: number };
+    /** 선로 메시(M07-T01). */
+    rail: RailMeshStats;
   } | null;
   /** 내비메시(M06-T03). */
   nav: NavCellStats | null;
@@ -54,6 +57,7 @@ export interface StatsParts {
     tris: number;
     details: DetailStats;
     walk: { bridges: number; stairs: number; risers: number; carved: number };
+    rail: RailMeshStats;
   } | null;
   nav: { stats: NavCellStats } | null;
   lanes: { stats: LanesCellStats } | null;
@@ -84,7 +88,9 @@ export function cellStats(
     markings: marks,
     props: p.props?.stats ?? null,
     trees: p.props?.treeStats ?? null,
-    overrides: p.ov ? { landmarks: p.ov.landmarks, tris: p.ov.tris, details: p.ov.details, walk: p.ov.walk } : null,
+    overrides: p.ov
+      ? { landmarks: p.ov.landmarks, tris: p.ov.tris, details: p.ov.details, walk: p.ov.walk, rail: p.ov.rail }
+      : null,
     nav: p.nav?.stats ?? null,
     lanes: p.lanes?.stats ?? null,
   };

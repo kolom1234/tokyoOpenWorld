@@ -2,7 +2,7 @@
 
 ## 1. 구조
 - 메인: `SimHost`(시계, 날씨, 계절, POI 발견 — 가벼운 로직) + sim.worker 프록시.
-- `sim.worker` (30 Hz 고정): 군중, 교통, 신호, 열차. 출력은 `SharedInstanceBuffer`(core 타입, SAB) 3개(보행자/차량/열차 칸) → wiring이 `render.layers.*.bindShared()`로 연결.
+- `sim.worker` (30 Hz 고정): 군중, 교통, 신호. **열차는 메인 스레드**(위치 = 시각의 순수 함수 — 시계 시스템이 프레임마다 계산, 탑승 카메라가 정확한 값을 본다 — ADR-0072). 출력은 `SharedInstanceBuffer`(core 타입, SAB) 3개(보행자/차량/열차 칸) → wiring이 `render.layers.*.bindShared()`로 연결.
   구현(M06-T01, ADR-0061): `worker/{sim.worker,instance-buffer,host}.ts` — SAB 이중 영역(front 뒤집기), 필드 = x,y,z(WF − anchor)·yaw·anim(클립 + 속력/10)·phase·variant(u16)·rate(주기/s, 외삽용), render가 틱 사이 외삽. 조정값 = `content/sim/*.json`(YAML 대신).
 - 태양·달 방향/조도, 계절은 SimHost가 계산해 `environment(): EnvironmentState`로 제공(suncalc 2.x: 도 단위·북 기준 방위).
 - 결정론: 모든 난수는 `createRng(hash32(WORLD_SEED, cellId, entityKind, spawnIndex))`(`WORLD_SEED`는 core 상수). 같은 시각·위치면 같은 풍경.
@@ -59,16 +59,18 @@
 - 구현(M06-T02, ADR-0062): 신호 기둥 = `props.inst` 현시 코드(교차로 ID × 16 + 계획 × 4 + 그룹 0 차량 A·1 차량 B·2 보행 A·3 보행 B — 파이프라인이 OSM 차도 방향 두 봉우리로 그룹을 정함).
   상태 = 게임 시각의 순수 함수 `sim.signalStateAt(code)`(메인 — 빨리감기·점프 일관), 사이트 계획 = 오프셋 0. T05 차선 그룹도 같은 방향 규칙.
   **M06-T05(ADR-0065)**: 코드 = `((ID 14비트 × 64 + 연동 오프셋 칸) × 16) + 계획 × 4 + 그룹` — 기본 계획 오프셋 = 칸 × 2 s(주축 위치 ÷ 12 m/s, 녹색 물결), 주축 A = 등급 가중 OSM 차도 방향(간선), 기본 계획 A 녹 67 s·B 43 s.
+  **ADR-0069**: 간선(secondary 이상) × tertiary 이하 교차로 = `minor` 계획(2번, 주기 100 s, A 녹 62 s·B 28 s), 계획 `coordinated` 플래그 = 연동 오프셋(그 주기로 접음). 메이지도리 평균 속도 비율 0.36 → 0.41.
 - 신호 상태는 render(신호등 발광), 군중, 교통, 오디오(보행자 신호 유도음: **자체 합성 "뻐꾹/삐요" 계열 톤**)가 공유.
 
 ## 6. 열차
 ### 6.1 데이터
 - `global/rail.bin`: 노선 → 방향별 트랙 스플라인(0.5 m 샘플), 역·플랫폼 정차 위치, 구간 제한속도(곡률 기반: `v = min(lineMax, sqrt(0.8 m/s² × R))`), 터널 구간 플래그.
-- `global/timetables/<lineId>.json`: `trips[{id, dir, formation, stops[{stationId, arrS, depS}]}]` (운행일 04:00 기준 초).
-- 출처: 도쿄메트로 = ODPT GTFS 컴파일. JR 야마노테·사이쿄/쇼난신주쿠 = **합성 시간표** (`content/sim/synthetic-lines.yaml`: 시간대별 운행 간격, 역별 정차 시간). 실측이 아닌 근사임을 크레딧에 명시.
+- `global/timetables/<lineId>.json`: `calendars[{days, trips[{id, route, track, dir, cars, carLengthM, from, to, enterS, exitS, stops[{station, s, arrS, depS}]}]}]` (운행일 0시 기준 초, 04:00 경계 — 형식 05 §9.1, ADR-0071).
+- 출처: 도쿄메트로 = ODPT GTFS 컴파일(키 대기 — 픽스처로 검증). JR 야마노테·사이쿄/쇼난신주쿠 = **합성 시간표** (`content/sim/synthetic-lines.json`: 계통·선로 위상, 시간대별 운행 간격, 역별 정차 시간). 실측이 아닌 근사임을 크레딧에 명시(ATTRIBUTION `synthetic-timetables`).
+- 같은 선로 이웃 트립 간격 ≥ 90 s(컴파일·validate 검사). 역간 소요 = 아래 §6.2 곡선(core `tripLegs` — 컴파일러와 sim 공용).
 ### 6.2 운동
 - 위치는 **시간의 순수 함수** `s(trip, t)`: 역간 가속 0.83 m/s², 감속 0.97 m/s², 구간 제한속도 준수 프로파일을 사전 계산(트립별 캐시). → 빨리감기·시각 점프 즉시 대응, 네트워크 전체를 싸게 계산.
-- 편성: 야마노테 11량×20 m, 사이쿄 10량×20 m, 긴자선 6량×16 m. 차량 간 연결은 스플라인 위 s 오프셋.
+- 편성: 야마노테 11량×20 m, 사이쿄 10량×20 m, 긴자선 6량×16 m. 차량 간 연결은 스플라인 위 s 오프셋. 구현(M07-T03, ADR-0072): `rail/{network,motion-profile,trains}.ts` — 칸 자세 = 앞·뒤 대차 선로 위치 가운데·yaw·pitch, 터널 칸 숨김.
 - 문: 정차 시 개방(도착 +3 s ~ 출발 −5 s), 홈도어 연동. 문 차임은 자체 제작음.
 ### 6.3 MVP 운행 범위
 | 노선 | 탑승 | 비고 |

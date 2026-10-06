@@ -14,10 +14,20 @@ export interface SignalPlanSite {
   plan: number;
 }
 
+/** 계획 규칙(content/sim/signal-plans.json — ADR-0069): 계획별 주기·연동 여부, minor 계획 번호(간선 × 작은 길 교차로). */
+export interface SignalPlanRules {
+  cycles: readonly number[];
+  coordinated: readonly boolean[];
+  minorPlan?: number;
+}
+
 export interface SignalSite {
   id: number;
   cx: number;
   cz: number;
+  /** 이 계획의 주기(s)·연동 여부 — 오프셋 칸(없으면 120 s·0번 계획만 연동). */
+  cycleS?: number;
+  coordinated?: boolean;
   /** 도로 방향 A·B(rad, mod π, WF x·z 평면 atan2(z, x)) — 신호기는 가까운 쪽 그룹. */
   axis: number;
   axisB: number;
@@ -142,6 +152,29 @@ export function osmSegmentsNear(
   return out;
 }
 
+/** 축(mod π) ±15° 안 OSM 차도 선분의 최대 등급 가중(중심 AXIS_REACH_M 안, 없으면 0) — minor 교차로 판정(ADR-0069). */
+export function axisClass(
+  lines: readonly (readonly number[])[],
+  weights: readonly number[] | undefined,
+  cx: number,
+  cz: number,
+  axis: number,
+): number {
+  let best = 0;
+  for (const [li, xz] of lines.entries())
+    for (let i = 0; i + 3 < xz.length; i += 2) {
+      const [ax, az, bx, bz] = [xz[i] as number, xz[i + 1] as number, xz[i + 2] as number, xz[i + 3] as number];
+      if (Math.hypot((ax + bx) / 2 - cx, (az + bz) / 2 - cz) > AXIS_REACH_M) continue;
+      if (axisGap(Math.atan2(bz - az, bx - ax), axis) > Math.PI / 12) continue;
+      best = Math.max(best, weights?.[li] ?? 1);
+    }
+  return best;
+}
+
+/** minor 계획 조건: 주축이 간선(secondary 이상 — 가중 ≥ 3)이고 다른 축이 tertiary 이하(≤ 2). */
+export const MINOR_MAIN_CLASS = 3;
+export const MINOR_CROSS_CLASS = 2;
+
 /** 1020 조각 → 교차로(붙은 조각 묶음의 bbox 중심 + 주변 차도 방향 축). 셀 + 8-이웃이면 셀이 달라도 같은 묶음·같은 축. */
 export function junctionsOf(roads: readonly RoadRecord[]): { cx: number; cz: number; axis: number }[] {
   const boxes: Box[] = [];
@@ -189,6 +222,8 @@ export function siteFinder(
   osmLines: readonly (readonly number[])[] = [],
   /** osmLines별 등급 가중(없으면 1). */
   weights?: readonly number[],
+  /** 계획 규칙(주기·연동·minor — ADR-0069). 없으면 사이트 밖 = 0번, 120 s. */
+  rules?: SignalPlanRules,
 ) {
   const axisCache = new Map<number, [number, number]>();
   const axesOf = (cx: number, cz: number, fallback: number): [number, number] => {
@@ -200,8 +235,14 @@ export function siteFinder(
     }
     return a;
   };
-  const planAt = (cx: number, cz: number): number =>
-    plans.find((s) => Math.hypot(cx - s.centerWF[0], cz - s.centerWF[1]) <= s.radiusM)?.plan ?? 0;
+  const planAt = (cx: number, cz: number, axes: [number, number]): number => {
+    const site = plans.find((s) => Math.hypot(cx - s.centerWF[0], cz - s.centerWF[1]) <= s.radiusM);
+    if (site) return site.plan;
+    if (rules?.minorPlan === undefined) return 0;
+    const a = axisClass(osmLines, weights, cx, cz, axes[0]);
+    const b = axisClass(osmLines, weights, cx, cz, axes[1]);
+    return a >= MINOR_MAIN_CLASS && b <= MINOR_CROSS_CLASS ? rules.minorPlan : 0;
+  };
   return (p: V2, fallback: { center: V2; axis: number }): SignalSite => {
     let best: { cx: number; cz: number; axis: number } | undefined;
     let bd = NEAR_M;
@@ -215,7 +256,9 @@ export function siteFinder(
     const cx = best ? best.cx : Math.round(fallback.center[0] / 4) * 4;
     const cz = best ? best.cz : Math.round(fallback.center[1] / 4) * 4;
     const [axis, axisB] = axesOf(cx, cz, best ? best.axis : ((fallback.axis % Math.PI) + Math.PI) % Math.PI);
-    return { id: idOf(cx, cz), cx, cz, axis, axisB, plan: planAt(cx, cz) };
+    const plan = planAt(cx, cz, [axis, axisB]);
+    const timing = rules ? { cycleS: rules.cycles[plan] ?? 120, coordinated: rules.coordinated[plan] ?? false } : {};
+    return { id: idOf(cx, cz), cx, cz, axis, axisB, plan, ...timing };
   };
 }
 
@@ -225,14 +268,15 @@ export function nearerA(site: Pick<SignalSite, 'axis' | 'axisB'>, dx: number, dz
   return axisGap(a, site.axis) <= axisGap(a, site.axisB);
 }
 
-/** 연동(系統) 오프셋 칸(2 s): 주축 A 방향 위치 ÷ 진행 속도(12 m/s ≈ 43 km/h)만큼 늦춰 같은 간선의 교차로가 녹색 물결(M06-T05, ADR-0065). 사이트 계획(≥ 1) = 0. */
+/** 연동(系統) 오프셋 칸(2 s): 주축 A 방향 위치 ÷ 진행 속도(12 m/s ≈ 43 km/h)를 계획 주기로 접어 같은 간선의 교차로가 녹색 물결(M06-T05, ADR-0065·0069). 연동 아닌 계획 = 0. */
 export const PROGRESSION_MS = 12;
 const CYCLE_S = 120;
-export function offsetSlot(site: Pick<SignalSite, 'cx' | 'cz' | 'axis' | 'plan'>): number {
-  if (site.plan !== 0) return 0;
+export function offsetSlot(site: Pick<SignalSite, 'cx' | 'cz' | 'axis' | 'plan' | 'cycleS' | 'coordinated'>): number {
+  if (!(site.coordinated ?? site.plan === 0)) return 0;
+  const cycle = site.cycleS ?? CYCLE_S;
   const p = site.cx * Math.cos(site.axis) + site.cz * Math.sin(site.axis);
-  const off = ((((-p / PROGRESSION_MS) % CYCLE_S) + CYCLE_S) % CYCLE_S) / 2;
-  return Math.floor(off) % 60;
+  const off = ((((-p / PROGRESSION_MS) % cycle) + cycle) % cycle) / 2;
+  return Math.floor(off) % 64;
 }
 
 /**

@@ -7,6 +7,9 @@ import type { SimDeps, SimService } from '../api.ts';
 import { clearSkyIlluminanceLux, moonPosition, sunPosition } from './clock/astronomy.ts';
 import { createWorldClock } from './clock/world-clock.ts';
 import { weatherScale } from './crowd/density.ts';
+import { createRailRt } from './rail/network.ts';
+import { createRailStations, type RailStations } from './rail/stations.ts';
+import { createTrainSim, type TrainSim } from './rail/trains.ts';
 import { signalState } from './signals/controller.ts';
 import { compilePlans } from './signals/plans.ts';
 import { createWorkerLink } from './worker/link.ts';
@@ -52,6 +55,8 @@ export function createSim(deps: SimDeps): SimService {
   const observer: Vec3d = { x: 0, y: 0, z: 0 };
   let cache: { ms: number; x: number; z: number; env: EnvironmentState } | undefined;
   const link = createWorkerLink(clock, deps);
+  let trains: TrainSim | undefined;
+  let stations: RailStations | undefined;
   const env = (): EnvironmentState => {
     const ms = clock.gameTimeMs;
     const x = Math.round(observer.x / OBSERVER_GRID_M) * OBSERVER_GRID_M;
@@ -71,6 +76,9 @@ export function createSim(deps: SimDeps): SimService {
       observer.y = f.camera.posWF.y;
       observer.z = f.camera.posWF.z;
       link.frame(f.player, f.camera, weatherScale(env().weather.rainMmH));
+      // 열차(M07-T03): 시계 뒤 같은 프레임 시각으로 — 탑승 카메라·render가 이번 프레임 값을 본다(ADR-0072).
+      trains?.update(clock.gameTimeMs, observer);
+      if (trains) stations?.update(trains.trains());
     },
     dispose() {},
   };
@@ -80,7 +88,21 @@ export function createSim(deps: SimDeps): SimService {
     clock,
     startWorker: (o) => link.start(o),
     addCell: (key, nav, lanes) => link.addCell(key, nav, lanes),
-    outputs: () => link.outputs(),
+    outputs: () => ({ ...link.outputs(), ...(trains ? { trains: trains.buffer } : {}) }),
+    setRail(net, tables) {
+      const rt = createRailRt(net);
+      trains = createTrainSim(rt, tables);
+      stations = createRailStations(rt);
+      trains.update(clock.gameTimeMs, observer);
+      stations.update(trains.trains());
+    },
+    trainBodies: (p, r) => trains?.bodiesNear(p, r) ?? new Float64Array(0),
+    trainCar: (id, k) => trains?.car(id, k),
+    trainRide: (id) => trains?.ride(id),
+    railStatic: () => stations?.layout,
+    psdGateOpen: () => stations?.gateOpen ?? new Float32Array(0),
+    trainsNear: (p, r) => trains?.trainsNear(p, r) ?? [],
+    trainStats: () => trains?.stats(),
     removeCell: (key) => link.removeCell(key),
     crowdScenario: (c, r, n) => link.scenario(c, r, n),
     connectPhysics: (l) => link.connectPhysics(l),

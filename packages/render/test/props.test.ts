@@ -130,6 +130,31 @@ describe('prop field', () => {
     f.dispose();
   });
 
+  it('keeps the refill upload range when signal lamps change in the same frame (M07 pre ⓪)', () => {
+    // 회귀: updateSignals가 _itype 범위를 지우고 신호 슬롯만 올려, 재작성된 다른 인스턴스 종류가 GPU에 안 갔다(가까이 가면 소품이 사라짐).
+    const f = createPropField(material);
+    f.addCell(packCellKey(0, 0, 0), { x: 0, y: 0, z: 0 }, [
+      batch(PROP_TYPE.phoneBooth, [
+        [10, 10],
+        [11, 10],
+        [12, 10],
+      ]),
+      batch(PROP_TYPE.signalVehicle, [[13, 10]]),
+    ]);
+    f.update({ x: 10, y: 5, z: 10 }, { x: 0, y: 0, z: 0 }, false);
+    f.updateSignals(() => 3);
+    const near = (f.root.children as unknown as Pool[])[0] as Pool;
+    const a = near.geometry.getAttribute('_itype') as unknown as { updateRanges: { start: number; count: number }[] };
+    const covered = (k: number) => a.updateRanges.some((r) => r.start <= k * 2 && k * 2 + 2 <= r.start + r.count);
+    for (let k = 0; k < near.count; k++) expect(covered(k), `slot ${k}`).toBe(true);
+    // 다음 프레임(업로드 뒤 범위 비움)에 램프만 바뀌면 신호 슬롯만.
+    a.updateRanges.length = 0;
+    f.updateSignals(() => 1);
+    expect(a.updateRanges).toHaveLength(1);
+    expect(a.updateRanges[0]?.count).toBe(2);
+    f.dispose();
+  });
+
   it('stays within the 8 WebGPU vertex buffers (geometry attributes + instance matrix/colour + velocity pass)', () => {
     // M06-T02 회귀: `_lamp`·`_isig`를 따로 두면 9–10개 → 실 GPU에서 파이프라인 생성 실패(소품 전부 사라짐, WebGL2 SwiftShader는 통과).
     const f = createPropField(material);

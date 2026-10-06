@@ -26,7 +26,10 @@ TraversalSettings { lookRadPerPx 0.0025; fovDeg 70; nearM 0.1; freecam: { dampin
           thirdPerson { shoulderM 0.4; distanceM 3.5; min 1.5; max 6; pivotHeightM 1.55 }; returnToBodyM 150; view 'first' } }
 forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad };  DEFAULT_TRAVERSAL_SETTINGS
 ```
-미구현: `interactables`(M08), drive/cycle/train/transition 모드, phase 35(traversalPost).
+**M07-T05**(ADR-0074): `TraversalContext += trainCar(tripId, car): TrainCarPose | undefined; trainRide(tripId): TrainRideInfo | undefined; jumpClock(gameMs)`(core 타입),
+`TrainParams { tripId; car?; view?: TrainView('standing'|'seated'|'frontView') }`, `HudHints += train?: TrainHud { tripId, lineId, routeId, heading, view, car, stoppedAtStationId, nextStationId, doorSide, arrivalInS, notice('mvpEdge'|null), skipping }; fade?: 0..1`,
+`ModeOutput += next?: { mode, params? }`(모드가 스스로 전환 — 서비스가 출력 뒤 요청), `WalkParams += exact?`(지면 탐색 없이 그 자리 — 열차 하차).
+미구현: `interactables`(M08), drive/cycle/transition 모드, phase 35(traversalPost).
 
 ## Invariants
 - 모드 1개 = 파일 1개(`internal/modes/<id>.ts`), 레지스트리 등록으로 확장(기존 모드 수정 금지).
@@ -43,13 +46,14 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 - 바디 없는 모드(freecam)에서는 `player.posWF` = 카메라 위치, `player.yawRad` = 카메라 수평 방위. walk = 발 위치·물리 속도·몸 방향.
 
 ## Files
-api.ts, internal/(fsm, service, settings, walk-placement — 착지점 하늘 레이, ground-guard — 발밑·앞 셀 적재 확인), internal/modes/(freecam, walk), internal/camera/(free-rig, free-guard — freecam 지오메트리 진입 방지(구 캐스트 쓸기 + 6방향 레이 안쪽 판정, ADR-0059), first-person-rig — 시선 스무딩·발 높이 스프링·헤드밥, third-person-rig — 붐·아바타 페이드, boom — 부채꼴 sphereCast·회전 상한).
+api.ts, internal/(fsm, service — 승차 판정(walk 중 F + 칸 안)·모드 next 요청, settings, walk-placement — 착지점 하늘 레이, ground-guard — 발밑·앞 셀 적재 확인), internal/modes/(freecam, walk, train — 칸 카메라 시점·빨리감기·하차·경계역 자동 하차, M07-T05), internal/camera/(attached-rig — 부모 칸 로컬 오프셋·시선·미세 진동(M07-T05), free-rig, free-guard — freecam 지오메트리 진입 방지(구 캐스트 쓸기 + 6방향 레이 안쪽 판정, ADR-0059), first-person-rig — 시선 스무딩·발 높이 스프링·헤드밥, third-person-rig — 붐·아바타 페이드, boom — 부채꼴 sphereCast·회전 상한).
 예정: modes/(drive, cycle, train, transition), camera/(chase-rig, attached-rig), interactables.ts, interest.ts.
 
 ## Tests
 test/free-rig.test.ts(방향 규약·쿼터니언 = forwardOf·롤 잠금, lookAt 역함수, 관성 감쇠 수치, 휠 속도 범위, sprint, 고도 상한·지면 여유, 피치 제한),
 test/service.test.ts(시작 포즈·fly 컨텍스트·phase, W 이동·km/h, teleport, physics 필요 모드 거부·C 토글·중복 등록),
 test/free-guard.test.ts(벽 접촉 멈춤·법선 속도 제거, 닿은 채 떨어지기, 닫힌 판 안 → 가까운 뒷면 너머, 바깥 시작 유지·늦은 결과 버림),
+test/train.test.ts(M07-T05: 붙은 카메라 오프셋·yaw, 시점 순환·다음 역·4 s 앞 관심점, T 빨리감기 = 페이드 → 도착 8 s 전 점프, F 하차 = 승강장 쪽 문 앞 exact, 마지막 정차 안내 뒤 자동 하차, 칸 안 판정),
 test/walk.test.ts(가짜 physics: C → 지붕 아닌 지면 착지·대기 중 카메라 유지, 걸음 단계·달리기·대각선, FP 눈높이, V 3인칭 어깨·뒤·붐 풀림·벽 1 m → 0.95 m 안·아바타 페이드, C 복귀 = 바디, 멀면 다시 놓기).
 
 ## Status

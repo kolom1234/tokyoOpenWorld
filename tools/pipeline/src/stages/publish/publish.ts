@@ -68,6 +68,8 @@ async function withRetry<T>(what: string, fn: () => Promise<T>, log: Logger): Pr
 
 /** 공유 에셋: 머티리얼 KTX2 배열·manifest(M03-T01, materials --build-id가 설치). */
 const SHARED_FILE_RE = /^shared\/materials\/[A-Za-z0-9_-]+\.(json|ktx2)$/;
+/** 전역 파일(M07): 철도 망·시간표. */
+const GLOBAL_FILE_RE = /^global\/(rail\.bin|timetables\/[A-Za-z0-9_-]+\.json)$/;
 
 /** 퍼블리시 대상: world.json, cells.idx, L<n>/**.tkc, shared/materials/*(보고서·작업 파일 제외). 정렬된 상대 경로. */
 export function buildFiles(dir: string): string[] {
@@ -77,7 +79,11 @@ export function buildFiles(dir: string): string[] {
       const p = join(d, name);
       if (statSync(p).isDirectory()) {
         const relDir = relative(dir, p).replaceAll('\\', '/');
-        if (/^L[0-3]$|^-?\d+$/.test(name) || relDir === 'shared' || relDir === 'shared/materials') walk(p);
+        if (
+          /^L[0-3]$|^-?\d+$/.test(name) ||
+          ['shared', 'shared/materials', 'global', 'global/timetables'].includes(relDir)
+        )
+          walk(p);
         continue;
       }
       const rel = relative(dir, p).replaceAll('\\', '/');
@@ -85,7 +91,8 @@ export function buildFiles(dir: string): string[] {
         rel === 'world.json' ||
         rel === 'cells.idx' ||
         /^L[0-3]\/-?\d+\/-?\d+\.tkc$/.test(rel) ||
-        SHARED_FILE_RE.test(rel)
+        SHARED_FILE_RE.test(rel) ||
+        GLOBAL_FILE_RE.test(rel)
       )
         out.push(rel);
     }

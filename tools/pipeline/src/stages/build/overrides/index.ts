@@ -1,7 +1,7 @@
 // 셀 랜드마크 오버라이드(M05-T05): 이 셀 건물 중 대체 대상 → 셸, 기준점이 이 셀인 부품 → overrides.mesh(glb, 머티리얼 landmark,
 // POSITION u16·NORMAL i8·TEXCOORD_0 f32(미터)·`_LMAT` u8). 대체 건물은 buildings.mesh 렌더에서 빠지고(renderSkip) 충돌·meta에는 남는다.
 // 수락 검사: 셸 + 붙은 부품 경계 vs PLATEAU 렌더 면 경계 — 수평 ≤ 0.5 m, 높이(위) ≤ 1 m. 넘으면 빌드 실패. see ADR-0053, docs/04 §4.4-4
-import type { JcolShape, Vec3Tuple } from '@sanpo/tile-format';
+import type { JcolShape, RailNetwork, Vec3Tuple } from '@sanpo/tile-format';
 import { MeshoptEncoder } from 'meshoptimizer';
 import { encodeGlb } from '../../../lib/gltf.ts';
 import type { BridgeRecord, BuildingRecord } from '../../../readers/plateau/types.ts';
@@ -11,10 +11,12 @@ import { remapVertices } from '../terrain-mesh.ts';
 import { emitBridge, emitStair } from './bridges.ts';
 import { LStream } from './geom.ts';
 import { emitPart, hostOf, ownsFreePart, type PartCtx } from './parts.ts';
+import { emitRail, type RailMeshStats } from './rail.ts';
 import { type DetailStats, emitFireEscape, emitRooftop, emptyDetailStats } from './rooftops.ts';
 import { type Bounds, emitShell, emptyBounds, growBounds, plateauExtent } from './shell.ts';
 import type { OverrideSet } from './spec.ts';
 
+export { LStream } from './geom.ts';
 export { type LandmarkSpec, LMAT, type OverrideSet, overrideSetOf, readOverrides } from './spec.ts';
 
 export const LANDMARK_MATERIAL = 'landmark';
@@ -33,6 +35,8 @@ export interface OverrideCheck {
 
 /** 교량·높이 계단 입력(M05-T08): 셀 교량, 셀이 가진 계단, 교량 면을 걷어낼 계단 통로(이웃 포함). */
 export interface WalkwayInput {
+  /** 철도 망(M07-T01) — 이 셀 선로 메시(도상·침목·레일·가선). */
+  rail?: RailNetwork;
   bridges?: readonly BridgeRecord[];
   stairs?: readonly StairSpec[];
   corridors?: readonly StairSpec[];
@@ -54,6 +58,8 @@ export interface OverrideCellOutput {
   /** 계단 램프 프록시·옆 벽(JCOL 프리미티브·triMesh). */
   walkShapes: JcolShape[];
   walk: { bridges: number; stairs: number; risers: number; carved: number };
+  /** 선로 메시(M07-T01). */
+  rail: RailMeshStats;
 }
 
 function boundsDelta(a: Bounds, b: Bounds): { dxz: number; dy: number } {
@@ -62,16 +68,21 @@ function boundsDelta(a: Bounds, b: Bounds): { dxz: number; dy: number } {
   return { dxz, dy: Math.abs(a.max[1] - b.max[1]) };
 }
 
-/** 셀 1개의 랜드마크 메시·충돌·검사. groundAt = 지형(셀 로컬). */
-export async function overrideCell(
+export interface LandmarkEmit {
+  renderSkip: Set<string>;
+  landmarks: Set<string>;
+  checks: OverrideCheck[];
+}
+
+/** 셀 랜드마크(대체 셸 + 부품)만 out·collider에 — L0 overrides.mesh와 L1 HLOD(같은 모양, M07 사전 ⓪)가 함께 쓴다. groundAt = 지형(셀 로컬). */
+export function emitLandmarks(
   set: OverrideSet,
   records: readonly BuildingRecord[],
   originWF: Vec3Tuple,
   groundAt: (x: number, z: number) => number | undefined,
-  walk: WalkwayInput = {},
-): Promise<OverrideCellOutput> {
-  const out = new LStream();
-  const collider = new LStream();
+  out: LStream,
+  collider: LStream,
+): LandmarkEmit {
   const byGml = new Map(records.map((b) => [b.gmlId, b]));
   const ctx: PartCtx = { originWF, groundAt, building: (g) => byGml.get(g), out, collider };
   const renderSkip = new Set<string>();
@@ -101,8 +112,23 @@ export async function overrideCell(
       if (host) checks.push(attachedCheck(lm.id, host, out.pos, from, originWF, true));
     }
   }
+  return { renderSkip, landmarks, checks };
+}
+
+/** 셀 1개의 랜드마크 메시·충돌·검사. groundAt = 지형(셀 로컬). */
+export async function overrideCell(
+  set: OverrideSet,
+  records: readonly BuildingRecord[],
+  originWF: Vec3Tuple,
+  groundAt: (x: number, z: number) => number | undefined,
+  walk: WalkwayInput = {},
+): Promise<OverrideCellOutput> {
+  const out = new LStream();
+  const collider = new LStream();
+  const { renderSkip, landmarks, checks } = emitLandmarks(set, records, originWF, groundAt, out, collider);
   const details = emitDetails(out, records, renderSkip, originWF);
   const walkway = emitWalkways(out, walk, originWF);
+  const rail = emitRail(out, walk.rail, originWF[0], originWF[2]);
   const bad = checks.filter((c) => c.dxz > POSITION_TOL_M || c.dy > HEIGHT_TOL_M);
   if (bad.length > 0) throw new Error(`overrides: tolerance exceeded ${JSON.stringify(bad)}`);
   const encoded = out.count > 0 ? await encodeOverrides(out) : null;
@@ -116,6 +142,7 @@ export async function overrideCell(
     checks,
     details,
     ...walkway,
+    rail,
   };
 }
 

@@ -1,13 +1,17 @@
 // 영역 빌드 입력 읽기: 정규화 층 파일(셀별 ndjson.gz) + 8-이웃 캐시(도로 조각·건물 발자국·교량·계단·道路標示). assemble.ts buildArea가 쓴다.
-import { existsSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type CellKey, cellIdString, packCellKey, unpackCellKey } from '@sanpo/core';
+import { type CellKey, cellIdString, type Logger, packCellKey, unpackCellKey } from '@sanpo/core';
+import type { RailNetwork } from '@sanpo/tile-format';
 import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
 import type { MarkingRecord } from '../../readers/plateau/frn-markings.ts';
 import type { BridgeRecord, BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { type FootprintSource, footprintSources } from '../derive/footprints.ts';
 import { isVehicleRoad } from '../derive/markings/stopline.ts';
 import type { OsmRecord } from '../normalize-osm.ts';
+import { RAIL_FILE } from '../rail/normalize.ts';
+import { buildTimetables } from '../timetables/index.ts';
+import { buildRailGlobal } from './rail-global.ts';
 
 export function readLayer<T>(normalizedDir: string, layer: string, key: CellKey): T[] {
   const f = join(normalizedDir, layer, `${cellIdString(key)}.ndjson.gz`);
@@ -81,4 +85,30 @@ export function aroundReader(normalizedDir: string) {
     roadsAround: (k: CellKey) => around(k, roadsOf),
     footprintsAround: (k: CellKey) => around(k, printsOf),
   };
+}
+
+/**
+ * 철도 망(M07-T01): `input.rail`이 있고 정규화 철도(data/normalized/rail)가 있으면 global/rail.bin을 빌드해 셀에 넘긴다(outDir = 이미 비운 빌드 폴더).
+ * 없으면 undefined(선로 메시 없음 — 픽스처·옛 정규화).
+ */
+export async function railNetworkFor(
+  input: { normalizedDir: string; log: Logger; rail?: { repoRoot: string; derivedDir: string } },
+  outDir: string,
+): Promise<RailNetwork | undefined> {
+  if (!input.rail || !existsSync(join(input.normalizedDir, 'rail', RAIL_FILE))) return undefined;
+  const { network, report } = await buildRailGlobal({
+    repoRoot: input.rail.repoRoot,
+    buildDir: outDir,
+    normalizedDir: input.normalizedDir,
+    derivedDir: input.rail.derivedDir,
+    log: input.log.child('rail'),
+  });
+  writeFileSync(
+    join(outDir, 'rail-report.json'),
+    `${JSON.stringify(report, null, 1)}
+`,
+  );
+  // 시간표(M07-T02): 같은 rail.bin 위에서 합성·GTFS 컴파일 → global/timetables.
+  buildTimetables({ repoRoot: input.rail.repoRoot, buildDir: outDir, network, log: input.log.child('timetables') });
+  return network;
 }

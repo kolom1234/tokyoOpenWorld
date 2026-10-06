@@ -9,6 +9,7 @@ import { isVehicleRoad } from '../derive/markings/stopline.ts';
 import { buildNavCell, type NavCellStats } from '../derive/navmesh.ts';
 import {
   junctionsOf,
+  type SignalPlanRules,
   type SignalPlanSite,
   signalCode,
   siteFinder,
@@ -32,6 +33,8 @@ export interface NavCellBuildInput {
   bands: readonly CrossBand[];
   colliders: readonly JcolShape[];
   signalSites?: readonly SignalPlanSite[];
+  /** 계획 규칙(ADR-0069). */
+  signalRules?: SignalPlanRules;
 }
 
 /** 표시 없는 횡단(footway=crossing, unmarked 등)도 내비엔 넣는다(폭 ≤ 3 m). */
@@ -99,6 +102,7 @@ export function navCell(i: NavCellBuildInput): Promise<NavCellOutput> {
     [...(i.signalSites ?? [])],
     w.lines,
     w.weights,
+    i.signalRules,
   );
   // 소품 보행 신호기(props/signals.ts)와 같은 식: 띠 중점·보행 방향 w, 대체 축 = w의 수직.
   const signalOf = (b: CrossBand): number => {

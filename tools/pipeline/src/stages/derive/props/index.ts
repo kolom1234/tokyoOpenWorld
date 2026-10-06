@@ -42,6 +42,8 @@ export interface PropInput {
   roads: RoadIndex;
   inIntersection: (x: number, z: number) => boolean;
   inBuilding: (x: number, z: number) => boolean;
+  /** 건물 지면 링 정밀 시험(WF) — 소품 정착(curb.ts). 없으면 inBuilding. */
+  inFootprint?: (x: number, z: number) => boolean;
   /** 셀 + 8-이웃 PLATEAU 車道交差部(1020) — 신호 사이트(M06-T02). */
   junctions?: readonly RoadRecord[];
   /** 셀 + 8-이웃 OSM 차도 선(교차로 도로 방향이 셀마다 같게). 없으면 osm 중 차도. */
@@ -59,7 +61,13 @@ export interface PropOutput {
 
 function signalSiteOf(i: PropInput) {
   const w = weightedRoadLines(i.vehicleRoadsAround ?? i.osm.filter(isVehicleRoad));
-  return siteFinder(junctionsOf(i.junctions ?? []), i.catalog.signalSites ?? [], w.lines, w.weights);
+  return siteFinder(
+    junctionsOf(i.junctions ?? []),
+    i.catalog.signalSites ?? [],
+    w.lines,
+    w.weights,
+    i.catalog.signalRules,
+  );
 }
 
 export function buildProps(i: PropInput): PropOutput {
@@ -72,6 +80,7 @@ export function buildProps(i: PropInput): PropOutput {
     surfaceAt: i.surfaceAt,
     inIntersection: i.inIntersection,
     inBuilding: i.inBuilding,
+    ...(i.inFootprint ? { inFootprint: i.inFootprint } : {}),
     signalSite: signalSiteOf(i),
     out: new Map(),
     colliders: [],

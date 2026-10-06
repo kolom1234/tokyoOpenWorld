@@ -20,7 +20,7 @@ type Entry =
   | { handle: number; kind: 'rigid'; id: InstanceType<PhysicsWorld['Jolt']['BodyID']> }
   | { handle: number; kind: 'char'; c: CharacterBody };
 
-export type BodyCommand = Exclude<Command, { c: 'removeCell' } | { c: 'rebase' }>;
+export type BodyCommand = Exclude<Command, { c: 'removeCell' } | { c: 'rebase' } | { c: 'trains' } | { c: 'statics' }>;
 
 export interface BodySlots {
   apply(cmd: BodyCommand): void;

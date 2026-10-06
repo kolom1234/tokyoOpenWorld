@@ -17,6 +17,7 @@ import { decodeGlb } from '../lib/gltf.ts';
 import { type HlodCellReport, hlodSummary, inspectHlodCell } from './validate-hlod.ts';
 import { checkMaterials, type MaterialsReport } from './validate-materials.ts';
 import { type CellTerrain, checkSeams, type SeamReport } from './validate-seams.ts';
+import { checkTimetables, type TimetablesSummary } from './validate-timetables.ts';
 
 /** docs/04 §4.6 예산(L0). 크기는 10진 MB. */
 export const BUDGET = { cellBytes: 4_000_000, tris: 400_000, colliderTris: 60_000, instances: 5_000 } as const;
@@ -44,6 +45,8 @@ export interface ValidateReport {
   seams: Omit<SeamReport, 'errors'>;
   /** shared/materials(없으면 null). */
   materials: MaterialsReport | null;
+  /** global/timetables(M07-T02, rail.bin 없으면 null). */
+  timetables?: TimetablesSummary | null;
   errors: string[];
 }
 
@@ -208,7 +211,8 @@ export async function validateBuild(
   const { errors: seamErrors, ...seams } = checkSeams(terrains);
   errors.push(...seamErrors);
   const materials = checkMaterials(dir, ctx.v.materials, errors);
-  return { buildId: world.buildId, cells, hlod, seams, materials, errors };
+  const timetables = checkTimetables(dir, schemasDir, errors);
+  return { buildId: world.buildId, cells, hlod, seams, materials, timetables, errors };
 }
 
 /** 셀 표(Markdown): PR 본문·인계용. */
@@ -231,6 +235,9 @@ export function reportMarkdown(r: ValidateReport): string {
     r.materials
       ? `materials: ${r.materials.layers} layers, ${(r.materials.bytes / 1e6).toFixed(2)} MB`
       : 'materials: none',
+    r.timetables
+      ? `timetables: ${r.timetables.lines.map((l) => `${l.line} ${l.trips} trips (${l.source}, min gap ${l.minGapS} s)`).join(', ')}`
+      : 'timetables: none',
     `errors: ${r.errors.length}`,
     ...r.errors.map((e) => `- ${e}`),
     '',

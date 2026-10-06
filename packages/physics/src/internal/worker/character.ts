@@ -148,7 +148,12 @@ function moveCharacter(u: UpdateCtx, escalators: Escalators, c: CharacterBody, d
   c.escalator = esc !== undefined;
   approach(c.horizontal, esc ? capped(c.desired, ESCALATOR.walkMaxMs) : c.desired, dt);
   const onGround = ch.GetGroundState() === Jolt.EGroundState_OnGround;
-  const own = onGround ? ch.GetGroundVelocity().GetY() : ch.GetLinearVelocity().GetY() - c.escVy;
+  // 움직이는 바닥(열차 칸 키네마틱, M07-T04): 지면 속도(접점 — 곡선 회전 포함)를 이번 바디 속도로 갱신해 수평에도 더한다(미끄러짐 없음).
+  if (onGround) ch.UpdateGroundVelocity();
+  const gv = onGround ? ch.GetGroundVelocity() : undefined;
+  const gx = gv?.GetX() ?? 0;
+  const gz = gv?.GetZ() ?? 0;
+  const own = onGround ? (gv?.GetY() ?? 0) : ch.GetLinearVelocity().GetY() - c.escVy;
   // 에스컬레이터 위 접지 중엔 중력을 더하지 않는다(경사 투영으로 운반 속도가 0.5 → 0.46 m/s로 줄지 않게, 바닥 붙기가 접지 유지).
   // 램프 프록시 접지 중엔 수평 속도를 지면 평면에 올린다 — 접촉 투영은 오르막 수평을 cos²θ로 줄인다(28° 계단 1.35 → 1.0 m/s, ADR-0056).
   const vy =
@@ -156,7 +161,7 @@ function moveCharacter(u: UpdateCtx, escalators: Escalators, c: CharacterBody, d
   const e = esc ? esc.dir : ([0, 0, 0] as const);
   const s = ESCALATOR.speedMs;
   c.escVy = e[1] * s;
-  ch.SetLinearVelocity(scratch.vec3(c.horizontal.x + e[0] * s, vy + c.escVy, c.horizontal.z + e[2] * s));
+  ch.SetLinearVelocity(scratch.vec3(c.horizontal.x + e[0] * s + gx, vy + c.escVy, c.horizontal.z + e[2] * s + gz));
   ch.ExtendedUpdate(dt, u.g, u.ext, u.bpFilter, u.objFilter, u.bodyFilter, u.shapeFilter, iface.GetTempAllocator());
 }
 

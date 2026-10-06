@@ -53,3 +53,9 @@ tools/pipeline/docker/run.sh node tools/pipeline/src/cli.ts fixture             
 tools/pipeline/docker/run.sh node tools/pipeline/src/cli.ts fixture --only world-mini
 ```
 전제: `data/normalized/{buildings,terrain}`(M01-T02·T03), `data/raw/plateau-shibuya/extracted/udx`.
+
+## gtfs-mini/ — 가상 GTFS(M07-T02, 손으로 작성)
+**실제 시간표가 아니다** — 가상 사업자 `Fixture Metro (made-up)`, 역 이름·좌표(渋谷·表参道·外苑前 근방)만 실제 지명. 시각은 임의.
+`tools/pipeline/test/timetables.test.ts`가 GTFS 컴파일러(`stages/timetables/{gtfs-read,gtfs}.ts`)를 검사한다:
+route 이름 필터(銀座線만 — 半蔵門線 트립 제외), 부모 역 이름 대조(`渋谷駅` → 渋谷), 따옴표·쌍따옴표·BOM, 요일 묶음(평일 / 토·일), 자정 넘김(24:24) 트립.
+ODPT 키가 생기면 실제 원천은 `data/raw/odpt-tokyometro/`(커밋 안 함)에서 읽는다. 출처 표기 `content/ATTRIBUTION.json` `synthetic-timetables`.

@@ -1,6 +1,6 @@
 // 신호 제어기(10 §5.2, M06-T02 — ADR-0062·0065): 상태 = 게임 시각의 순수 함수(빨리감기·시각 점프 즉시 일관). 코드 = ((교차로 ID × 64 + 오프셋 칸) × 16) + 계획 × 4 + 그룹
-// (파이프라인 derive/props/signal-sites.ts와 같은 비트 배치). 주기 오프셋 = 기본 계획은 연동 칸 × 2 s(파이프라인: 주축 위치 ÷ 12 m/s — 녹색 물결),
-// 사이트 계획(스크램블 등 — 계획 ≥ 1)은 0: 한 사이트가 1020 묶음 여러 개(ID 여러 개)여도 같은 박자.
+// (파이프라인 derive/props/signal-sites.ts와 같은 비트 배치). 주기 오프셋 = 연동 계획(coordinated — 기본·minor)은 연동 칸 × 2 s를 그 주기로 접음
+// (파이프라인: 주축 위치 ÷ 12 m/s — 녹색 물결), 사이트 계획(스크램블 등)은 0: 한 사이트가 1020 묶음 여러 개(ID 여러 개)여도 같은 박자. ADR-0065·0069
 import type { SignalState } from '../../api.ts';
 import type { CompiledPlan } from './plans.ts';
 
@@ -38,7 +38,7 @@ export function signalState(plans: readonly CompiledPlan[], code: number, timeS:
   const { slot, plan, group } = decodeSignal(code);
   const p = plans[plan] ?? plans[0];
   if (!p || p.phases.length === 0) return { vehicle: 'R', ped: 'D', phase: 0, remainingS: 0, cycleS: 0 };
-  const off = plan === 0 ? offsetOf(slot, p.cycleS) : 0;
+  const off = p.coordinated ? offsetOf(slot, p.cycleS) : 0;
   const t = (((timeS + off) % p.cycleS) + p.cycleS) % p.cycleS;
   let k = p.starts.length - 1;
   while (k > 0 && (p.starts[k] as number) > t) k--;

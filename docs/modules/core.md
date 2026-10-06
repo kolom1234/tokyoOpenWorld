@@ -54,6 +54,11 @@ export interface VehicleTypeInfo { name; lengthM; widthM; heightM; share }   // 
 export const VEHICLE_TYPES: readonly VehicleTypeInfo[]   // sedan·taxi·kei·keiTruck·minivan·deliveryTruck·bus(순서 = 차량 variant 하위 3비트, 추가만)
 export const KINEMATIC_STRIDE = 9;
 export interface KinematicFrame { t: 'kin'; atMs: number /* 틱 절대 시각 */; data: Float64Array /* id, x,y,z(WF 바닥 중심), yaw, 속력, 길이, 폭, 높이 */ }   // sim → physics 직결 포트(08 §8)
+export const RAIL_ACCEL = 0.83; RAIL_DECEL = 0.97;   // 열차 가감속 m/s²(10 §6.2)
+export interface RunProfile { s0; s1; step; v: Float32Array; t: Float64Array; duration }   // 열차 주행 곡선(M07-T02, ADR-0071) — 시간표 컴파일러·sim 공용
+export interface TrainCarTypeInfo { name; lengthM; widthM; doorsZ; doorWidthM; floorM; doorTopM; ceilingM; roofM; cabM }; TRAIN_CAR_TYPES   // M07-T04(ADR-0073): 20 m 통근형·16 m 지하철형 — sim·render·physics 공유
+export interface TrainCarPose { posWF; yawRad; pitchRad; carType; kind; doors; speedMs }; TrainRideInfo { tripId; lineId; routeId; heading; cars; speedMs; stoppedAtStationId; nextStationId; nextArrivalMs; departureMs; doorSide; lastStop }   // M07-T05 sim → traversal(탑승)
+export const TRAIN_BODY_STRIDE = 10;   // 칸 물리 레코드: id, x,y,z(WF 레일 윗면), yaw, pitch, 차형, 종류, 문, 예약 — sim → physics
 
 // ── 함수 (index.ts ← internal/*) ──
 packCellKey(level, ix, iz): CellKey; unpackCellKey(k); cellIdString(k): CellId      // 범위 밖 → RangeError
@@ -65,6 +70,9 @@ ok(v); err(e); unwrapOr(r, fb); mapResult(r, f)
 // math (out 파라미터 기록 후 out 반환, 할당 없음; out이 입력과 같아도 안전)
 vec3(x?,y?,z?); vec3Set/Copy/Add/Sub/Scale/AddScaled/Cross/Normalize/Lerp/ApplyQuat(out, …); vec3Dot/Length/LengthSq/Distance/DistanceSq(a, b?)
 quatIdentity(); quatSet/Copy/FromAxisAngle/FromYaw/Multiply/Normalize/Slerp(out, …); clamp; lerp; degToRad; radToDeg
+// 열차 곡선(M07-T02, ADR-0071): 제한속도 표본 → 전진 가속·후진 감속 통과 → 사다리꼴 시간. profileAt ↔ timeAtS 역함수
+computeRunProfile(limits, stepM, s0, s1, vStart = 0, vEnd = 0, accel?, decel?): RunProfile; profileAt(p, dt): {s, v}; timeAtS(p, s): number
+tripLegs(limits, stepM, from, to, stopS[]): RunProfile[]   // 정차 n → 곡선 n+1, from < 첫 정차 = 진입 속도(제한), = 시발(0); 끝도 같다. RAIL_STOP_EPS_M = 0.01
 ```
 - 이벤트 맵은 `src/events.ts`에만 정의 (01-architecture §6). api.ts ↔ events.ts는 type-only 순환(ADR-0013).
 
@@ -94,6 +102,7 @@ quatIdentity(); quatSet/Copy/FromAxisAngle/FromYaw/Multiply/Normalize/Slerp(out,
 | src/internal/math.ts | Vec3d/Quat 연산(할당 최소화 out 파라미터) |
 | src/internal/config.ts | 딥 머지 |
 | src/internal/worker-supervisor.ts | 워커 생성·오류·재시작 |
+| src/internal/rail-profile.ts | 열차 주행 곡선·트립 구간(M07, 시간표·sim 공용) |
 
 ## Tests
 `test/*.test.ts`: rng 재현성·골든 값(스냅숏), hash32 구분성, cellKey 왕복(±2^15 경계·음수), 스케줄러 순서·클램프·격리·예산 경고,

@@ -86,6 +86,8 @@ export interface BootFlags {
   crowd?: CrowdMode;
   /** `?traffic=0` → 차량 없음(교통 sim·렌더·키네마틱 비용 비교, M06-T06). */
   noTraffic?: boolean;
+  /** `?trains=0` → 열차 없음(철도 적재·렌더 비용 비교, M07-T03). */
+  noTrains?: boolean;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -130,6 +132,7 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('trees') === '0' ? { noTrees: true } : {}),
     ...crowdFlag(q.get('crowd')),
     ...(q.get('traffic') === '0' ? { noTraffic: true } : {}),
+    ...(q.get('trains') === '0' ? { noTrains: true } : {}),
   };
 }
 
@@ -251,6 +254,7 @@ async function setupWorldView(
       ...(flags.noTrees ? { trees: false } : {}),
       ...(flags.crowd ? { crowd: flags.crowd } : {}),
       ...(flags.noTraffic ? { traffic: false } : {}),
+      ...(flags.noTrains ? { trains: false } : {}),
       ...(golden
         ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
         : {}),
@@ -305,7 +309,8 @@ function addGoldenWatch(scheduler: Scheduler, world: WorldView, golden: GoldenVi
     render: () => world.render.stats(),
     // 나무 에셋(M05-T04)도 첫 표시 뒤 적재 — 붙기 전에 찍으면 나무가 빠진다(오모테산도 골든뷰).
     // 군중(M06-T07)도 — 팩 적재 + 처음 채우기(스크램블 골든뷰 = 군중 밀도).
-    extra: () => world.materialsSettled && world.treesSettled && world.signsSettled && world.crowdSettled,
+    extra: () =>
+      world.materialsSettled && world.treesSettled && world.signsSettled && world.crowdSettled && world.trainsSettled,
   });
   scheduler.add({ systems: () => [watch.system] });
   Object.assign(globalThis, { __SANPO_GOLDEN__: { view: golden, render: () => world.render.stats() } });

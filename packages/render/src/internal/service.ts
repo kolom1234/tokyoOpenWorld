@@ -1,14 +1,15 @@
 // createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3
 import type { CellKey, SharedInstanceBuffer } from '@sanpo/core';
 import { Group, type Object3D } from 'three/webgpu';
-import type { PrecompileProgress, RenderDeps, RenderService, RenderStats } from '../api.ts';
+import type { PrecompileProgress, RenderDebugLayer, RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
 import { loadCrowdAssets } from './crowd/assets.ts';
 import { createCrowdMaterial } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
-import { precompileMaterials, yieldFrame } from './materials/precompile.ts';
+import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
+import { createTrainMaterial } from './trains/material.ts';
 import { loadTreesInto, setTreeWind } from './trees/load.ts';
 import { createVehicleMaterial, nightFromSun } from './vehicles/material.ts';
 
@@ -38,6 +39,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     signs: ctx.signs.stats(),
     crowd: { ...ctx.crowd.stats(), far: ctx.farCrowd.stats() },
     vehicles: ctx.vehicles.stats(),
+    trains: ctx.trains.stats(),
   };
 }
 
@@ -75,6 +77,21 @@ function createStaging(ctx: RenderContext) {
       },
     } satisfies Pick<RenderService, 'stageCells' | 'compileStaged' | 'commitStaged'>,
   };
+}
+
+/** 디버그 레이어 숨김/보임(ADR-0068) — 그림자 캐시도 새로 그리게 장면 버전을 올린다. */
+function debugLayerVisible(ctx: RenderContext, layer: RenderDebugLayer, visible: boolean): void {
+  const roots = {
+    props: ctx.props.root,
+    signs: ctx.signs.root,
+    trees: ctx.trees.root,
+    crowd: ctx.crowd.root,
+    farCrowd: ctx.farCrowd.root,
+    vehicles: ctx.vehicles.root,
+    trains: ctx.trains.root,
+  };
+  roots[layer].visible = visible;
+  ctx.counters.sceneVersion++;
 }
 
 /** 선컴파일(06 §6): 대기 LUT → 머티리얼 묶음(소품 풀 priming 포함) → 아바타, 단계마다 진행 보고·프레임 양보(ADR-0060 보충). */
@@ -116,15 +133,27 @@ async function bindVehicles(ctx: RenderContext, buf: SharedInstanceBuffer): Prom
     const material = createVehicleMaterial(ctx.vehicleUniforms);
     ctx.vehicleMaterials.push(material);
     ctx.vehicles.attach(material);
-    const restore = ctx.vehicles.primeForCompile();
-    try {
-      await ctx.renderer.compileAsync(ctx.vehicles.root, ctx.view.camera, ctx.graph.scene);
-    } finally {
-      restore();
-    }
+    await compileDetached(ctx.renderer, ctx.vehicles.root, ctx.view.camera, ctx.graph.scene, () =>
+      ctx.vehicles.primeForCompile(),
+    );
     ctx.log.info(`vehicles attached ${Math.round(performance.now() - t0)} ms`);
   }
   ctx.vehicles.bind(buf);
+}
+
+/** 열차 레이어(M07-T03): 처음 bind 때 머티리얼·풀 24 → 선컴파일(보이지 않는 인스턴스, 장면 밖) → 그리기 시작. */
+async function bindTrains(ctx: RenderContext, buf: SharedInstanceBuffer): Promise<void> {
+  if (!ctx.trains.stats().ready) {
+    const t0 = performance.now();
+    const material = createTrainMaterial(ctx.vehicleUniforms);
+    ctx.vehicleMaterials.push(material);
+    ctx.trains.attach(material);
+    await compileDetached(ctx.renderer, ctx.trains.root, ctx.view.camera, ctx.graph.scene, () =>
+      ctx.trains.primeForCompile(),
+    );
+    ctx.log.info(`trains attached ${Math.round(performance.now() - t0)} ms`);
+  }
+  ctx.trains.bind(buf);
 }
 
 function loaders(
@@ -156,12 +185,7 @@ function loaders(
       const material = createCrowdMaterial(assets);
       ctx.crowdMaterials.push(material);
       ctx.crowd.attach(assets, material);
-      const restore = ctx.crowd.primeForCompile();
-      try {
-        await renderer.compileAsync(ctx.crowd.root, view.camera, graph.scene);
-      } finally {
-        restore();
-      }
+      await compileDetached(renderer, ctx.crowd.root, view.camera, graph.scene, () => ctx.crowd.primeForCompile());
       log.info(
         `crowd attached (${assets.bases.length} bases, lod idx ${assets.bases[0]?.lods.map((l) => l.index.count).join('/')}) ${Math.round(performance.now() - t0)} ms`,
       );
@@ -183,9 +207,17 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     ...staged.api,
     pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf), setFarDensity: (k) => ctx.farCrowd.setDensity(k) },
     vehicles: { bindShared: (buf) => bindVehicles(ctx, buf) },
+    trains: {
+      bindShared: (buf) => bindTrains(ctx, buf),
+      setStations: (d) => {
+        ctx.trains.setStations(d);
+        ctx.counters.sceneVersion++;
+      },
+    },
     setSignalLamps: (lamp) => {
       ctx.signalLamp = lamp;
     },
+    debugLayerVisible: (layer, visible) => debugLayerVisible(ctx, layer, visible),
     addCell: (p) => {
       cells.add(p, view.renderOriginWF);
       staged.take(p.key);

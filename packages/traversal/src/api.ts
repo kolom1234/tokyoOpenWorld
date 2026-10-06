@@ -12,7 +12,9 @@ import type {
   ModeId,
   PlayerState,
   SystemProvider,
+  TrainCarPose,
   TrainInfo,
+  TrainRideInfo,
   Vec3,
   Vec3d,
 } from '@sanpo/core';
@@ -30,6 +32,37 @@ export interface TraversalContext {
   ground: GroundQuery;
   physics?: PhysicsService | undefined;
   trains?: () => ReadonlyArray<TrainInfo>;
+  /** 운행 중 트립 칸 자세(M07-T05 — 탑승 카메라·승차 판정·하차 위치). */
+  trainCar?: (tripId: string, car: number) => TrainCarPose | undefined;
+  /** 탑승 트립 정보(다음 역·도착 예정·문 쪽·마지막 정차). */
+  trainRide?: (tripId: string) => TrainRideInfo | undefined;
+  /** 게임 시계 점프(빨리감기 — 열차는 시각의 순수 함수라 바로 재배치된다). */
+  jumpClock?: (gameMs: number) => void;
+}
+
+/** 열차 탑승 시점(09 §2 train): 서기(문 옆)·좌석·전면 전망(선두 운전실). */
+export type TrainView = 'standing' | 'seated' | 'frontView';
+/** train 진입: 트립·칸(기본 = 가운데)·시점(기본 standing). */
+export interface TrainParams {
+  tripId: string;
+  car?: number;
+  view?: TrainView;
+}
+/** 열차 HUD·차내 안내 화면(M07-T05): 다음 역·정차 역·문 쪽(진행 방향 왼쪽 −1)·도착까지 s·안내(경계역 하차)·빨리감기 중. */
+export interface TrainHud {
+  tripId: string;
+  lineId: string;
+  routeId: string;
+  heading: string;
+  view: TrainView;
+  car: number;
+  stoppedAtStationId: string | null;
+  nextStationId: string | null;
+  doorSide: -1 | 0 | 1;
+  arrivalInS: number | null;
+  /** mvpEdge = 이 앞 미개방 구역 — 곧 자동 하차. */
+  notice: 'mvpEdge' | null;
+  skipping: boolean;
 }
 export interface HudHints {
   promptKey?: I18nKey;
@@ -39,6 +72,10 @@ export interface HudHints {
   rpm?: number;
   /** 발밑·앞 셀 콜라이더 적재 대기(이동 멈춤 — 08 §4 groundMissing, M04-T06). */
   groundLoading?: boolean;
+  /** 열차 탑승 중(M07-T05). */
+  train?: TrainHud;
+  /** 화면 페이드 0..1(빨리감기 등 — 게임 배선이 검은 막으로). */
+  fade?: number;
 }
 /** 플레이어 바디가 있는 모드(walk…)의 출력. 없으면 카메라 위치·방위를 플레이어로 본다(freecam). */
 export interface ModePlayer {
@@ -53,6 +90,8 @@ export interface ModeOutput {
   player?: ModePlayer;
   /** 바디가 있는 모드의 아바타(없으면 마지막 아바타를 대기 자세로 유지 — freecam에서 세워 둔 바디). */
   avatar?: AvatarState;
+  /** 모드가 스스로 다른 모드로(열차 하차 → walk 등, M07-T05) — 서비스가 이번 프레임 출력 뒤 요청. */
+  next?: { mode: ModeId; params?: unknown };
 }
 export type ModeRequirement = 'physics' | 'trains';
 export interface TraversalMode {
@@ -93,6 +132,8 @@ export interface WalkParams {
   posWF: Vec3d;
   yawRad: number;
   pitchRad?: number;
+  /** true = 바디를 posWF에 바로(지면 탐색·바디 복귀 없이 — 열차 하차 승강장, M07-T05). */
+  exact?: boolean;
 }
 export type WalkView = 'first' | 'third';
 export interface WalkSettings {

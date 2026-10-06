@@ -208,7 +208,7 @@ export async function normalizeOsm(
   return { features, records, cells: buckets.size };
 }
 
-function sha256File(path: string): Promise<string> {
+export function sha256File(path: string): Promise<string> {
   return new Promise((done, reject) => {
     const h = createHash('sha256');
     createReadStream(path)

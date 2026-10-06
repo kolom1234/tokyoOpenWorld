@@ -199,6 +199,15 @@ function holdCamera(rt: Rt): void {
 
 function arriveAt(rt: Rt, physics: PhysicsService, p: WalkParams): void {
   const { st } = rt;
+  if (p.exact) {
+    // 열차 하차(M07-T05): 승강장 위 정확한 자리 — 하늘 레이 탐색(지붕·건물 셸 제외 규칙)을 거치지 않는다.
+    cancel(st);
+    Object.assign(rt.look, createLookState(p.yawRad, p.pitchRad ?? 0));
+    if (st.handle === undefined) st.handle = physics.spawnCharacter(p.posWF, p.yawRad);
+    else physics.teleport(st.handle, p.posWF, p.yawRad);
+    settle(rt, { ...p.posWF });
+    return;
+  }
   const body = st.handle !== undefined ? physics.pose(st.handle) : undefined;
   if (body && horiz(body.posWF, p.posWF) <= rt.w.returnToBodyM) return;
   Object.assign(st.arrive, p.posWF);

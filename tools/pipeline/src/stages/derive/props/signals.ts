@@ -5,6 +5,7 @@ import type { OsmRecord } from '../../normalize-osm.ts';
 import { isMarkedCrossing } from '../markings/crosswalk.ts';
 import { isVehicleRoad } from '../markings/stopline.ts';
 import { type PlaceCtx, place, toRoadEdge, type V2, yawOf } from './context.ts';
+import { behindCurb, siteTest } from './curb.ts';
 import { signalCode } from './signal-sites.ts';
 
 /** 교차부 탐색 거리(m). */
@@ -31,7 +32,7 @@ function pedestrianSpot(c: PlaceCtx, p: V2, u: V2): V2 | undefined {
   for (let s = 0; s <= 4; s += 0.25) {
     if (c.roads.classify(p[0] + u[0] * s, p[1] + u[1] * s) === 'road') continue;
     const at: V2 = [p[0] + u[0] * (s + back), p[1] + u[1] * (s + back)];
-    return c.roads.classify(at[0], at[1]) === 'road' ? undefined : at;
+    return c.roads.classify(at[0], at[1]) === 'road' ? undefined : behindCurb(siteTest(c), at);
   }
   return undefined;
 }
@@ -62,7 +63,8 @@ function vehicleSignal(c: PlaceCtx, x: V2, d: V2): boolean {
   const left: V2 = [d[1], -d[0]];
   const e = toRoadEdge(c, x, left);
   const back = Number(c.catalog.types.signalVehicle.place?.backM ?? 0.8);
-  const p: V2 = [x[0] + left[0] * (e + back), x[1] + left[1] * (e + back)];
+  // 연석 뒤(모퉁이에서 다른 차도에 붙으면 민다 — M07 사전 ⓪ validate curbTight).
+  const p = behindCurb(siteTest(c), [x[0] + left[0] * (e + back), x[1] + left[1] * (e + back)]);
   if (c.roads.classify(p[0], p[1]) === 'road' || c.inIntersection(p[0], p[1]) || occupied(c, 'signalVehicle', p))
     return false;
   return place(c, 'signalVehicle', p, yawOf([-d[0], -d[1]]), 1, undefined, code);

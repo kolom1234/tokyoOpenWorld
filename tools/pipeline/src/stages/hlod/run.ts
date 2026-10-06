@@ -16,6 +16,7 @@ import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
 import type { BuildingRecord } from '../../readers/plateau/types.ts';
 import { readDemWindow } from '../build/dem-window.ts';
 import type { AreaDef } from '../build/manifest.ts';
+import type { OverrideSet } from '../build/overrides/index.ts';
 import { type ChildGeometry, encodeHlod, type HlodEncoded } from './child-split.ts';
 import { type FarDem, readFarDem } from './dem-far.ts';
 import type { FarBuilding } from './far-buildings.ts';
@@ -36,6 +37,8 @@ export interface HlodInput {
   outDir: string;
   levels: readonly (1 | 2 | 3)[];
   log: Logger;
+  /** 랜드마크(content/overrides) — L1이 L0와 같은 모양을 쓴다(없으면 PLATEAU 원 건물, M07 사전 ⓪). */
+  overrides?: OverrideSet;
 }
 
 export interface HlodCellStats {
@@ -174,6 +177,7 @@ async function l1Cell(c: Ctx, key: CellKey): Promise<Built & { attempts: number;
     dem1m,
     farDem: c.farDem,
     far,
+    ...(input.overrides ? { overrides: input.overrides } : {}),
   };
   return withBudget(L1_PARAMS.budgetBytes, async (a) => {
     const r = await buildL1(key, src, L1_PARAMS.ratio * 0.6 ** a);

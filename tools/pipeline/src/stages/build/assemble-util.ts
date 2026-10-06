@@ -1,4 +1,6 @@
 // 셀 조립 보조(assemble.ts에서 분리 — 400줄 한도): 스트림 합치기·AABB·창 자르기.
+import type { CellKey } from '@sanpo/core';
+import { type CellBoundsWF, cellBoundsWF } from '@sanpo/geo';
 import type { Vec3Tuple } from '@sanpo/tile-format';
 import type { Aabb } from './buildings-mesh.ts';
 import type { CellWindow } from './dem-window.ts';
@@ -60,4 +62,16 @@ export function crop<T extends Uint8Array | Float32Array>(w: CellWindow, arr: T,
   for (let r = 0; r < stride; r++)
     out.set(arr.subarray((r + off) * w.stride + off, (r + off) * w.stride + off + stride), r * stride);
   return out;
+}
+
+/** 셀 목록의 합집합(양끝 포함) WF 경계. */
+export function unionBounds(cells: readonly CellKey[]): CellBoundsWF {
+  const bs = cells.map(cellBoundsWF);
+  const pick = (f: (...v: number[]) => number, k: keyof CellBoundsWF): number => f(...bs.map((b) => b[k]));
+  return {
+    minX: pick(Math.min, 'minX'),
+    minZ: pick(Math.min, 'minZ'),
+    maxX: pick(Math.max, 'maxX'),
+    maxZ: pick(Math.max, 'maxZ'),
+  };
 }

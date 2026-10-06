@@ -3,6 +3,7 @@ import { AtmosphereLight } from '@takram/three-atmosphere/webgpu';
 import { lights } from 'three/tsl';
 import type { TreeAssetUrls } from '../../api.ts';
 import type { RenderContext } from '../context.ts';
+import { compileDetached } from '../materials/precompile.ts';
 import { loadTreeAssets } from './assets.ts';
 import { createBarkMaterial, createImpostorMaterial, createLeafMaterial, createTreeUniforms } from './materials.ts';
 import { SPECIES_SLOTS } from './season.ts';
@@ -21,12 +22,9 @@ export async function loadTreesInto(ctx: RenderContext, urls: TreeAssetUrls): Pr
   ctx.treeUniforms = u;
   ctx.treeMaterials.push(materials.bark, materials.leaf, materials.impostor);
   ctx.trees.attach(assets, materials);
-  const restore = ctx.trees.primeForCompile();
-  try {
-    await ctx.renderer.compileAsync(ctx.trees.root, ctx.view.camera, ctx.graph.scene);
-  } finally {
-    restore();
-  }
+  await compileDetached(ctx.renderer, ctx.trees.root, ctx.view.camera, ctx.graph.scene, () =>
+    ctx.trees.primeForCompile(),
+  );
   ctx.counters.sceneVersion++;
 }
 

@@ -35,6 +35,7 @@ export {
   vec3Set,
   vec3Sub,
 } from './internal/math.ts';
+export { computeRunProfile, profileAt, RAIL_STOP_EPS_M, timeAtS, tripLegs } from './internal/rail-profile.ts';
 export { err, mapResult, ok, unwrapOr } from './internal/result.ts';
 export { createRng } from './internal/rng.ts';
 export { createScheduler, MAX_DT_REAL_S } from './internal/scheduler.ts';

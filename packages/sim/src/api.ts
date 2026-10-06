@@ -8,9 +8,13 @@ import type {
   Logger,
   SharedInstanceBuffer,
   SystemProvider,
+  TrainCarPose,
+  TrainInfo,
+  TrainRideInfo,
   Vec3d,
   WorkerSupervisor,
 } from '@sanpo/core';
+import type { RailNetwork, TimetableFile } from '@sanpo/tile-format';
 
 /** 군중 조정값(content/sim/crowd.json — game이 읽어 넘김). */
 export interface CrowdParams {
@@ -69,7 +73,8 @@ export interface CrowdAgentsParams {
 
 /** 신호 계획 파일(content/sim/signal-plans.json — game이 넘김). 그룹 = [차량 A, 차량 B, 보행 A, 보행 B]. */
 export interface SignalPlansFile {
-  plans: { name: string; phases: { durS: number; groups: string[] }[] }[];
+  /** coordinated = 연동 오프셋 적용(없으면 0번 계획만 — M06-T05 호환, ADR-0069). */
+  plans: { name: string; coordinated?: boolean; phases: { durS: number; groups: string[] }[] }[];
   sites: { name: string; centerWF: [number, number]; radiusM: number; plan: string }[];
 }
 
@@ -164,7 +169,27 @@ export interface SimService extends SystemProvider {
     traffic?: TrafficParams;
   }): SharedInstanceBuffer | undefined;
   /** 워커 출력 버퍼(10 §8 outputs): 보행자·차량(stride 8 — 차량 칸 = x,y,z·yaw·속력·바퀴 회전·variant·flags). 시작 전 빈 객체. */
-  outputs(): { pedestrians?: SharedInstanceBuffer; traffic?: SharedInstanceBuffer };
+  outputs(): { pedestrians?: SharedInstanceBuffer; traffic?: SharedInstanceBuffer; trains?: SharedInstanceBuffer };
+  /**
+   * 철도(M07-T03, ADR-0072): rail.bin(파싱) + 시간표(global/timetables) → 열차. 위치 = 게임 시각의 순수 함수라 **메인 스레드**에서
+   * 시계 시스템(phase 10)이 프레임마다 계산 → `outputs().trains`(stride 8: x,y,z(레일 윗면, WF − anchor)·yaw·pitch·속력·노선색 24비트·
+   * 칸 코드(정수 = 차형 × 4 + 종류, 소수 = (문 + 1) / 2 × 0.999)). 다시 부르면 교체.
+   */
+  setRail(network: RailNetwork, timetables: readonly TimetableFile[]): void;
+  /** 위치 r(m) 안 열차(10 §8 — 선두 기준 + 편성 길이). 철도 없음 = 빈 배열. seats = M07-T05. */
+  trainsNear(posWF: Vec3d, r: number): ReadonlyArray<TrainInfo>;
+  /** 열차 통계(철도 없음 = undefined): 시간표 트립 수·운행 중 열차·그린 칸·터널 안 칸. */
+  trainStats(): { trips: number; trains: number; cars: number; hiddenCars: number } | undefined;
+  /** 운행 중 트립 칸 k의 자세(M07-T05 — 탑승 카메라·하차 위치). 운행 끝·철도 없음 = undefined. */
+  trainCar(tripId: string, car: number): TrainCarPose | undefined;
+  /** 탑승 중 트립 정보(다음 역·도착 예정·문 쪽·마지막 정차, M07-T05). */
+  trainRide(tripId: string): TrainRideInfo | undefined;
+  /** 위치 r(m) 안 칸의 물리 레코드(M07-T04 — core TRAIN_BODY_STRIDE, 이번 프레임 포즈·문). 철도 없음 = 빈 배열. */
+  trainBodies(posWF: Vec3d, r: number): Float64Array;
+  /** 승강장·홈도어 정적 배치(M07-T04, setRail 뒤 — 없으면 undefined). */
+  railStatic(): RailStaticLayout | undefined;
+  /** 홈도어 문 열림 0..1(railStatic().gates 순서) — 프레임마다 제자리 갱신되는 같은 배열. */
+  psdGateOpen(): Float32Array;
   /**
    * 셀 내비·차선(10 §8 addCell — nav.bin·lanes.bin gzip 해제 바이트, streaming requestSections). 워커 시작 전이면 보관했다가 시작 때 보낸다.
    * 같은 셀을 다시 넣으면 무시(먼저 removeCell).
@@ -182,6 +207,17 @@ export interface SimService extends SystemProvider {
   workerStats(): SimWorkerStats | undefined;
   /** 신호 코드(props.inst 신호 기둥 — 교차로 ID × 16 + 계획 × 4 + 그룹)의 지금 상태(10 §5.2, M06-T02). 계획 없음 = 항상 적·보행 적. */
   signalStateAt(code: number): SignalState;
+}
+
+/**
+ * 승강장·홈도어 배치(M07-T04, ADR-0073 — rail.bin 승강장 고리 + 탑승 노선 정차): platforms = WF 정점·삼각형(앞 topIndexCount개 = 윗면 — 물리 바닥),
+ * panels·gates = 홈도어 조각 f64 × 5(x, y(승강장 윗면), z 중심 WF, yaw(전방 = s 증가), 길이), gateStops = 정차별 문 수.
+ */
+export interface RailStaticLayout {
+  platforms: { positions: Float64Array; indices: Uint32Array; topIndexCount: number };
+  panels: Float64Array;
+  gates: Float64Array;
+  gateStops: number[];
 }
 
 export interface SimDeps {

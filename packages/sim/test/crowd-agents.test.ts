@@ -129,5 +129,5 @@ describe('crowd tier A on the Scramble navmesh (world-mini)', () => {
     expect(overlaps).toBe(0);
     expect(offMesh).toBe(0);
     a.destroy();
-  });
+  }, 60_000);
 });

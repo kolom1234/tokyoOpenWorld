@@ -207,6 +207,9 @@ export interface JcolRound extends JcolShapeBase {
 }
 export type JcolShape = JcolTriMesh | JcolConvexHull | JcolBox | JcolRound;
 
+// ── global/rail.bin (05 §9, M07-T01 — ADR-0070): 형식·타입은 api-rail.ts(이 파일 400줄 제한), 공개 경로는 여기 재수출 ──
+export * from './api-rail.ts';
+
 // ── lanes.bin (05 §7, v2 M06-T05). SoA — sim 워커 핫루프용 ──
 
 export interface LaneGraphChunk {

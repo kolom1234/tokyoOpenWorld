@@ -306,6 +306,8 @@ export function createPhysics(deps: PhysicsDeps): PhysicsService {
       deps.log.child('physics').info('anchor rebase', anchorWF);
     },
     connectKinematicSource: (port) => transport.post({ t: 'kinematicPort', port }, [port]),
+    setTrainCars: (data) => queue.push({ c: 'trains', data }),
+    setStaticGroup: (name, group) => queue.push({ c: 'statics', name, group }),
     stats: () => ({ ...statsOf(history.latest, link.st, isolation, handles.count, anchorWF), rebases: rebase.count }),
     systems: () => [system],
     dispose: () => system.dispose(),
@@ -336,5 +338,7 @@ function statsOf(
     loadTicksOver8Ms: f?.[7] ?? 0,
     kinematicBodies: f?.[8] ?? 0,
     kinematicFrames: f?.[9] ?? 0,
+    trainBodies: f?.[10] ?? 0,
+    staticGroups: f?.[11] ?? 0,
   };
 }

@@ -6,8 +6,8 @@ import type { HeightfieldData } from '@sanpo/tile-format';
 export const MAX_BODIES = 128;
 /** posWF(3), quat(4), linVel(3), angVel(3), flags, groundMat, reserved. */
 export const BODY_STRIDE = 16;
-/** simTimeS, stepIndex, bodyCount(슬롯 상한), tickMs, 콜라이더 남은 작업, 콜라이더 셀 수, 적재 틱 최대 ms, 8 ms 초과 적재 틱 수, 키네마틱 바디 수, 받은 키네마틱 프레임 수. */
-export const META_STRIDE = 10;
+/** simTimeS, stepIndex, bodyCount(슬롯 상한), tickMs, 콜라이더 남은 작업, 콜라이더 셀 수, 적재 틱 최대 ms, 8 ms 초과 적재 틱 수, 키네마틱 바디 수, 받은 키네마틱 프레임 수, 열차 칸 바디 수, 정적 묶음 수. */
+export const META_STRIDE = 12;
 export const HEADER_INTS = 16;
 /** 헤더 인덱스. */
 export const H_WRITE_INDEX = 0;
@@ -46,7 +46,18 @@ export type Command =
   | { c: 'charInput'; h: number; moveWF: Vec3; yaw?: number; hold?: boolean }
   /** 앵커 재설정(08 §2): 모든 바디·캐릭터·구간을 −Δ 이동, 브로드페이즈 최적화. */
   | { c: 'rebase'; anchorWF: Vec3d }
-  | { c: 'removeCell'; key: CellKey };
+  | { c: 'removeCell'; key: CellKey }
+  /** 열차 칸(M07-T04): core TRAIN_BODY_STRIDE 레코드 — 이 step targetS의 포즈. */
+  | { c: 'trains'; data: Float64Array }
+  /** 이름 붙인 정적 묶음(승강장 바닥·홈도어, M07-T04): boxes = STATIC_BOX_STRIDE 레코드, mesh = WF 삼각형. null = 제거. */
+  | {
+      c: 'statics';
+      name: string;
+      group: {
+        boxes?: Float64Array;
+        mesh?: { positions: Float64Array; indices: Uint32Array; material: number };
+      } | null;
+    };
 
 /** 레이캐스트 결과(WF). */
 export interface RayHitMsg {

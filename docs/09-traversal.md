@@ -37,6 +37,8 @@
 ### cycle
 - 페달(W), 브레이크(S), 조향(A/D), 벨(B). 카메라: 추적 / 1인칭.
 ### train
+- 구현(M07-T05, ADR-0074): 차내 걷기 = walk(물리 칸 바닥), train = 칸에 붙은 카메라(`camera/attached-rig.ts`) — `standing`(문 옆)·`seated`(롱시트)·`frontView`(선두 운전실), V 순환.
+  승차 = walk 중 F + 발이 칸 안, 하차 = 문 열린 정차 F / 경계역(트립 마지막 정차) 안내 4 s 뒤 자동 → 승강장 쪽 문 앞(`WalkParams.exact`). LCD = 게임 오버레이(`train-lcd.ts`, 일·영·한 4 s 순환).
 - 하위 뷰: `standing`(캐릭터가 차내에서 이동), `seated`(좌석 상호작용), `frontView`(선두차 전면 전망 시점, 일본 前面展望 스타일).
 - "다음 역까지 빨리감기"(T): 페이드 → 월드 시계 점프 → 열차 위치를 시간표 기준 재배치 → 도착 직전 복귀.
 - 차내 안내: 자체 제작 차임 + 텍스트 표시(LCD 풍, 다국어), 실제 안내방송 음성 사용 금지.
@@ -51,7 +53,7 @@
 | `FirstPersonRig` | 눈높이 1.60 m, FOV 기본 70°(설정 55–95), 헤드밥 수직 1.2 cm·측면 0.6 cm(끌 수 있음), 룩 스무딩 30 ms. 발 높이 = 임계 감쇠 스프링(ω 12, ADR-0044) — 공중에선 남은 오프셋을 둔 채 몸과 함께(스냅 없음, 착지 첫 프레임 속도 ≤ 1 m/s), 헤드밥은 공중 0.3 s 미만이면 유지(ADR-0056) |
 | `ThirdPersonRig` | 어깨 오프셋 0.4 m, 거리 3.5 m(휠 1.5–6), sphereCast 충돌, 가까우면 아바타 디더 페이드 |
 | `ChaseRig` | 차량 뒤 5.5 m·위 1.6 m, 위치 스프링 ω=6, 회전 지연, 고속 시 FOV +5° |
-| `AttachedRig` | 차량 보닛/운전석/열차 전면: 부모 바디 로컬 오프셋 + 미세 진동(서스펜션 가속도 기반) |
+| `AttachedRig` | 차량 보닛/운전석/열차 전면: 부모 바디 로컬 오프셋 + 미세 진동(서스펜션 가속도 기반). 열차 구현(M07-T05): 칸 자세(sim, 프레임마다 정확) · 오프셋 · 칸 기준 시선, 속력 비례 상하 4 mm·좌우 3 mm |
 | `FreeRig` | 관성(감쇠 3/s), 시네마틱 스무딩 옵션 |
 - 모든 리그 출력은 `CameraState { posWF: Vec3d; quat; fovDeg; near }` → render.setCamera + streaming 관심점.
 - ThirdPersonRig 구현(M04-T05, ADR-0045): 회전 프레임당 ≤ 8°, 부채꼴 5개 sphereCast(1프레임 비동기 보상), 아바타 = Microsoft Rocketbox Male_Adult_10 GLB + KTX2 아틀라스(리그 23뼈, 속력 블렌드 idle·walk·jog·sprint — ADR-0048 → ADR-0057), 적재 전·실패 시 자체 절차 마네킹.

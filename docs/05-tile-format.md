@@ -132,6 +132,23 @@ u32 pointCount; f32[pointCount*3]                           // 셀 로컬(M06-T0
 - 신호 코드 = `((교차로 ID 14비트 × 64 + 연동 오프셋 칸) × 16) + 계획 × 4 + 그룹`(ADR-0065 — props.inst 신호 기둥·nav.bin 횡단과 같은 코드).
 - reader 거부: 노드 인덱스 ≥ nodeCount, 점 범위 초과, 비유한 좌표(`corrupt`), 길이 부족(`truncated`), 버전 ≠ 2(`version`).
 
+## 9. global/rail.bin
+v1(M07-T01, ADR-0070) — 셀이 아니라 빌드 전역 파일(`world.json files.rail`), gzip:
+```
+u32 'RAIL', u16 version=1, u16 pad, u32 jsonBytes, 메타 JSON(UTF-8, 공백으로 4바이트 정렬)
+u32 pointCount; f32[pointCount*3] 표본 WF xyz(레일 윗면 중심선); f32[pointCount] 제한속도 m/s; u8[pointCount] 플래그(1 터널·2 교량·4 승강장 옆)
+```
+- 메타 = `{ lines: [{id, name{ja,en}, color, kind, rideable, maxSpeedKmh, gaugeM, formation{cars, carLengthM}}], tracks: [{id, line, heading, ptOffset, ptCount, lengthM, stepM, stops: [{station, s, side 'L'|'R', platformLengthM}]}], stations: [{id, name, posWF, mvpEdge}] }`.
+- 선로 표본 k의 s = k × stepM(0.5 m, 마지막 = lengthM). 점 순서 = 진행 방향(좌측통행 — 같은 노선 두 선로 중 북행 = 서쪽). 정차 s = 편성 중심이 오는 승강장 가운데, side = 문 쪽(진행 방향 기준).
+- reader 거부: 매직·버전, 잘림, 메타 JSON 오류(`header`), 선로 표본 범위·정차 s ∉ [0, 길이]·미지 노선/역·비유한 값(`corrupt`).
+- M07-T04(ADR-0073, 추가 필드 — v1 유지): 메타 `platforms: [{id(OSM), ringXZ(닫힌 고리 WF xz), topY(레일 윗면 + 1.1)}]`, 정차 `platform`(번호), 노선 `thirdRail?`. 옛 파일 = `platforms: []`.
+
+### 9.1 global/timetables (M07-T02, ADR-0071)
+`<lineId>.json`(스키마 `schemas/timetable.schema.json`, 타입 tile-format `TimetableFile`) + `index.json`(`{schema 1, lines[{line, file, source, approximate, trips}]}`).
+- `{schema 1, line, source 'synthetic'|'gtfs', approximate, routes[{id, name{ja,en}, color}], calendars[{id, days['weekday'|'saturday'|'holiday'], trips[]}]}`.
+- trip = `{id, route, track, dir, cars, carLengthM, from, to, enterS, exitS, stops[{station, s, arrS, depS}]}` — s = 편성 중심 선로 위치(m), 시각 = 운행일 0시 기준 초(04:00 경계, 24:00 넘김).
+- 운동 = core `tripLegs(선로 제한속도, step, from, to, stops.s)` 곡선: 구간 0은 enterS, 구간 i는 정차 i−1 depS에서 출발(도착 뒤 depS까지 정차). from < 첫 정차 = 진입 속도로 들어옴, = 시발.
+
 ## 8. 버전 정책
 - 포맷 비호환 변경 → `formatVersion` 증가 + ADR + 런타임은 단일 버전만 지원(구 빌드 즉시 폐기).
 - 섹션 추가는 호환 변경 (formatVersion 유지).

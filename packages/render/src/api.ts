@@ -153,6 +153,8 @@ export interface RenderStats {
     lods: number[];
     ready: boolean;
   };
+  /** 열차(M07-T03): sim 칸 수·그린 수·쓰는 풀·용량 초과·LOD별 수(45/300/1600 m)·준비. */
+  trains: { cars: number; visible: number; pools: number; dropped: number; lods: number[]; ready: boolean };
 }
 
 /** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */
@@ -194,6 +196,27 @@ export interface InstanceLayer {
  */
 export interface VehicleLayer {
   bindShared(buf: SharedInstanceBuffer): Promise<void>;
+}
+
+/**
+ * 열차 레이어(M07-T03, ADR-0072): sim 열차 칸 버퍼(메인 스레드 — 프레임마다 정확, stride 8: x,y,z(레일 윗면)·yaw·pitch·속력·노선색 24비트·
+ * 코드(정수 차형 × 4 + 종류, 소수 = 문)). 처음 bind 때 가상 통근형 전동차 절차 모델(차형 2 × 종류 4 × LOD 3)을 선컴파일한 뒤 그린다.
+ */
+export interface TrainLayer {
+  bindShared(buf: SharedInstanceBuffer): Promise<void>;
+  /**
+   * 승강장·홈도어(M07-T04, ADR-0073): sim 배치(WF) — 승강장 삼각형, 홈도어 고정 판·문 조각(f64 × 5: x, y, z, yaw, 길이), 문 열림(제자리 갱신되는 배열),
+   * 띠 색. 열차 머티리얼로 그린다(bindShared 전이면 붙을 때 만든다). null = 제거.
+   */
+  setStations(d: TrainStationsData | null): void;
+}
+
+export interface TrainStationsData {
+  platforms: { positions: Float64Array; indices: Uint32Array };
+  panels: Float64Array;
+  gates: Float64Array;
+  gateOpen: Float32Array;
+  bandColor: number;
 }
 
 /** 선컴파일 진행(M06): 단계·완료 수·총 수. */
@@ -261,13 +284,23 @@ export interface RenderService extends SystemProvider {
    * 배선이 sim.signalStateAt로 만든다. 매 renderPrep에 보이는 기둥만 묻는다. null = 램프 끔.
    */
   setSignalLamps(lamp: ((code: number) => number) | null): void;
+  /**
+   * 디버그(M07 사전 ⓪): 인스턴스 레이어 하나를 숨기거나 다시 보인다 — 게임 동작 없음. e2e·실제 GPU 진단이 보임/숨김 픽셀 차로
+   * 같은 물체가 거리(LOD 띠)마다 끊김 없이 그려지는지 잰다.
+   */
+  debugLayerVisible(layer: RenderDebugLayer, visible: boolean): void;
   /** 보행자 인스턴스 레이어(sim 출력). */
   readonly pedestrians: InstanceLayer;
   /** 차량 인스턴스 레이어(sim 교통 출력, M06-T06). */
   readonly vehicles: VehicleLayer;
+  /** 열차 인스턴스 레이어(sim 열차 출력, M07-T03). */
+  readonly trains: TrainLayer;
   stats(): RenderStats;
   dispose(): void;
 }
+
+/** `debugLayerVisible` 대상(인스턴스 풀 레이어). */
+export type RenderDebugLayer = 'props' | 'signs' | 'trees' | 'crowd' | 'farCrowd' | 'vehicles' | 'trains';
 
 export interface RenderDeps {
   canvas: HTMLCanvasElement;

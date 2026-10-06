@@ -96,6 +96,21 @@ function writeInstances(
   return dropped;
 }
 
+/**
+ * 올릴 범위를 기존 대기 범위와 합친다(하나로). 지우면 안 된다 — 같은 프레임의 풀 재작성 범위([0, n))를 신호 슬롯 범위로 덮으면
+ * 나머지 인스턴스 `_itype`가 GPU에서 옛 값으로 남아 정점이 퇴화(소품이 사라지거나 다른 종류로) — M07 사전 ⓪(LOD 전환 때 직육면체가 사라짐).
+ */
+export function mergeUpdateRange(a: InstancedBufferAttribute, start: number, count: number): void {
+  let lo = start;
+  let hi = start + count;
+  for (const r of a.updateRanges) {
+    lo = Math.min(lo, r.start);
+    hi = Math.max(hi, r.start + r.count);
+  }
+  a.clearUpdateRanges();
+  a.addUpdateRange(lo, hi - lo);
+}
+
 class PropFieldImpl implements PropField {
   readonly root = new Group();
   readonly material: Material;
@@ -183,8 +198,7 @@ class PropFieldImpl implements PropField {
         hi = Math.max(hi, slot);
       }
       if (hi < 0) continue;
-      a.clearUpdateRanges();
-      a.addUpdateRange(lo * 2, (hi - lo + 1) * 2);
+      mergeUpdateRange(a, lo * 2, (hi - lo + 1) * 2);
       a.needsUpdate = true;
     }
   }

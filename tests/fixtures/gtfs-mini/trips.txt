@@ -1,0 +1,9 @@
+route_id,service_id,trip_id,direction_id
+FX.G,WD,G.WD.01,1
+FX.G,WD,G.WD.02,0
+FX.G,WD,G.WD.03,1
+FX.G,WD,G.WD.04,0
+FX.G,WD,G.WD.05,1
+FX.G,SH,G.SH.01,1
+FX.G,SH,G.SH.02,0
+FX.Z,WD,Z.WD.01,1

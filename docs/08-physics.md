@@ -78,9 +78,9 @@ Jolt `WheeledVehicleController`. 일반 소형 세단(가상 모델) 기본값 �
 - 보도 주행: 일본 규정상 원칙 차도 좌측. 게임은 보도 허용하되 보행자 근접 시 자동 감속(서행 6 km/h).
 
 ## 8. 열차
-- 열차는 **시뮬레이션(sim.worker)이 위치의 진실**. 각 차량 = TRAIN 키네마틱 바디(바닥·벽·천장 박스 합성 셰이프).
-- sim.worker → physics.worker **직접 MessageChannel**로 sim 틱(30 Hz)마다 키네마틱 목표 전송 → 물리 워커가 120 Hz 스텝 사이를 보간해 매 스텝 `MoveKinematic(target, dt)`(목표 시각 = sim 타임스탬프 + 1틱, 1틱 지연 허용).
-- 문 개폐 상태에 따라 출입구 벽 셰이프 on/off(서브셰이프 토글 대신 문 바디 별도).
+- 열차는 **sim이 위치의 진실**(메인 스레드 순수 함수 — ADR-0072). 각 차량 = TRAIN 키네마틱 바디(바닥·천장·끝벽·옆벽(문 자리 비움)·롱시트·칸막이 합성 셰이프, 치수 = core `TRAIN_CAR_TYPES`).
+- 구현(M07-T04, ADR-0073): 게임 `trainPhysicsSystem`(phase 25)이 메인 프레임마다 플레이어 60 m 안 칸 레코드(core `TRAIN_BODY_STRIDE`)를 `physics.setTrainCars`(step 명령)로 → 워커가 스텝마다 직전·이번 레코드를 보간해 `MoveKinematic`.
+- 문 = 쪽마다 별도 닫힌 문 바디(열림 ≥ 0.9면 제거). 캐릭터는 접지 바닥 속도를 수평에도 더한다(`UpdateGroundVelocity` — 미끄러짐 0). 승강장 바닥·홈도어 = 정적 묶음(`setStaticGroup`).
 
 ## 9. 스냅샷 공유 (SAB)
 ```

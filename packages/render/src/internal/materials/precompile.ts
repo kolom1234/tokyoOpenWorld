@@ -8,6 +8,7 @@ import {
   Group,
   type Material,
   Mesh,
+  type Object3D,
   type Scene,
   type WebGPURenderer,
 } from 'three/webgpu';
@@ -44,6 +45,30 @@ export function yieldFrame(): Promise<void> {
     if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => r());
     else setTimeout(r, 0);
   });
+}
+
+/**
+ * 늦게 붙는 인스턴스 레이어(간판·나무·군중·차량) 선컴파일: priming(보이지 않던 풀을 1개씩 보이게) 동안 레이어 루트를 장면에서 떼어 둔다 —
+ * 붙여 둔 채면 compileAsync를 기다리는 사이 일반 프레임이 그 풀을 그리며 파이프라인을 **동기**로 만들어 1.8–2.3 s 멈춤이 났다(M07 사전 ①-3).
+ * 조명·환경은 targetScene(장면)으로 같은 캐시 키. 반환 전 원래 부모에 다시 붙인다.
+ */
+export async function compileDetached(
+  renderer: WebGPURenderer,
+  root: Object3D,
+  camera: Camera,
+  scene: Scene,
+  prime: () => () => void,
+): Promise<void> {
+  const parent = root.parent;
+  root.removeFromParent();
+  const restore = prime();
+  try {
+    root.updateMatrixWorld(true);
+    await renderer.compileAsync(root, camera, scene);
+  } finally {
+    restore();
+    parent?.add(root);
+  }
 }
 
 /**

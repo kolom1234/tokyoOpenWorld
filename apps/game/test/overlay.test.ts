@@ -38,6 +38,7 @@ describe('describeDebug', () => {
         far: { points: 0, drawn: 0 },
       },
       vehicles: { instances: 0, visible: 0, pools: 0, dropped: 0, casters: 0, lods: [0, 0, 0], ready: false },
+      trains: { cars: 0, visible: 0, pools: 0, dropped: 0, lods: [0, 0, 0], ready: false },
     };
     const t = { camera: { posWF: { x: -60, y: 75.4, z: -15 } }, hud: { speedKmh: 54 } } as unknown as TraversalService;
     const lines = describeDebug(stats, 59.94, t, 15.4);

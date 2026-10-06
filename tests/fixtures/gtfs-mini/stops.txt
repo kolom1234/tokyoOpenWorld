@@ -1,0 +1,6 @@
+﻿stop_id,stop_name,stop_desc,stop_lat,stop_lon,location_type,parent_station
+FX.Shibuya,渋谷,"made-up, fixture",35.6590,139.7016,1,
+FX.G.Shibuya,渋谷駅,"platform ""G""",35.6590,139.7016,0,FX.Shibuya
+FX.G.Omotesando,表参道,,35.6654,139.7122,0,
+FX.G.Gaienmae,外苑前,,35.6705,139.7177,0,
+FX.Z.Shibuya,渋谷,,35.6585,139.7010,0,

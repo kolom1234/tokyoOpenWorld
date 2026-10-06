@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createRng, hash32, type Rng, WORLD_SEED } from '@sanpo/core';
 import { JCOL_MATERIAL, type JcolShape, PROP_TYPE, type PropBatch, type PropTypeName } from '@sanpo/tile-format';
 import type { RoadIndex } from '../roads.ts';
-import type { SignalPlanSite, SignalSite } from './signal-sites.ts';
+import type { SignalPlanRules, SignalPlanSite, SignalSite } from './signal-sites.ts';
 
 export type ColliderSpec =
   | { kind: 'cylinder'; halfHeight: number; radius: number; material: keyof typeof JCOL_MATERIAL }
@@ -21,10 +21,12 @@ export interface PropCatalog {
   budget: { maxInstancesPerCell: number };
   /** 신호 계획 사이트(content/sim/signal-plans.json sites — M06-T02). 없으면 전부 기본 계획. */
   signalSites?: SignalPlanSite[];
+  /** 계획 규칙(주기·연동·minor 계획 번호 — ADR-0069). 없으면 기본 120 s·0번만 연동. */
+  signalRules?: SignalPlanRules;
 }
 
 interface SignalPlansFile {
-  plans: { name: string }[];
+  plans: { name: string; coordinated?: boolean; phases: { durS: number }[] }[];
   sites: { name: string; centerWF: [number, number]; radiusM: number; plan: string }[];
 }
 
@@ -38,9 +40,15 @@ export function readCatalog(repoRoot: string): PropCatalog {
       0,
       sp.plans.findIndex((p) => p.name === name),
     );
+  const minor = sp.plans.findIndex((p) => p.name === 'minor');
   return {
     ...cat,
     signalSites: sp.sites.map((s) => ({ centerWF: s.centerWF, radiusM: s.radiusM, plan: index(s.plan) })),
+    signalRules: {
+      cycles: sp.plans.map((p) => p.phases.reduce((t, ph) => t + ph.durS, 0)),
+      coordinated: sp.plans.map((p, i) => p.coordinated ?? i === 0),
+      ...(minor > 0 ? { minorPlan: minor } : {}),
+    },
   };
 }
 
@@ -60,6 +68,8 @@ export interface PlaceCtx {
   signalSite?: (p: V2, fallback: { center: V2; axis: number }) => SignalSite;
   /** 건물 발자국 안(WF, 셀 + 여유 창). */
   inBuilding: (x: number, z: number) => boolean;
+  /** 건물 지면 링 정밀 시험(WF) — 연석·차도 정착(curb.ts)용. 없으면 inBuilding. */
+  inFootprint?: (x: number, z: number) => boolean;
   out: Map<number, number[]>;
   colliders: JcolShape[];
   /** 남은 예산(인스턴스). 0이면 place가 거절하고 trimmed를 센다 — 배치 순서 = 우선순위. */
@@ -131,9 +141,19 @@ export function batchesOf(out: Map<number, number[]>): PropBatch[] {
     .map(([typeId, v]) => ({ typeId, transforms: Float32Array.from(v) }));
 }
 
-/** 점 p에서 방향 v로 차도가 끝나는 거리(m, 0.25 m 행진 + 이분 5회 ≈ 8 mm, ≤ max). */
+/** 도로 조각 사이 실틈 허용(m) — 이보다 얇은 무분류(none) 틈은 차도가 이어진다고 본다(curb.ts SOLID_M과 같은 값, ADR-0068). */
+const SLIVER_M = 0.75;
+
+/**
+ * 점 p에서 방향 v로 차도가 끝나는 거리(m, 0.25 m 행진 + 이분 5회 ≈ 8 mm, ≤ max). PLATEAU 차도 조각 사이 실틈(무분류, < SLIVER_M)은 건너뛴다
+ * — 전주가 실틈을 가장자리로 보고 차도 한가운데에 서던 것(M07 사전 ⓪). 교통섬·보도(walk)는 얇아도 가장자리.
+ */
 export function toRoadEdge(c: Pick<PlaceCtx, 'roads'>, p: V2, v: V2, max = 15): number {
-  const road = (s: number): boolean => c.roads.classify(p[0] + v[0] * s, p[1] + v[1] * s) === 'road';
+  const at = (s: number) => c.roads.classify(p[0] + v[0] * s, p[1] + v[1] * s);
+  const road = (s: number): boolean => {
+    const k = at(s);
+    return k === 'road' || (k === 'none' && at(s + SLIVER_M) === 'road');
+  };
   let s = 0;
   while (s < max && road(s + 0.25)) s += 0.25;
   if (s >= max) return max;
