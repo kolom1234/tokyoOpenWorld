@@ -1,13 +1,13 @@
 # PROGRESS
-Updated: 2026-10-11 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
+Updated: 2026-10-12 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
 
-## Current Milestone: M09 — Weather, Night, Audio ✅(T01–T05, 볼류메트릭 구름 ⚠️ 보류) + M07-T06 ✅ · 다음 = M08(다음 세션)
-## Current Task: 큐 마무리 — MVP 빌드 dev publish → staging 배포 → PR 정리 (M07-T06까지 커밋됨)
+## Current Milestone: M09 ✅ (T01–T05, 볼류메트릭 구름 ⚠️ 보류) + M07-T06 ✅ → 다음 = M08 UI(다음 세션)
+## Current Task: (없음 — 세션 #21–22 큐 완료) 다음 세션 = M08
 - Done in this session (#21–22, 2026-10-11~12, PR #21 draft): ⓪ 역 건물(ADR-0075), M09 T01 비(0076)·T02 구름(0077)·T03 야간(0078)·T04 오디오(0079)·T05 계절(0080), M07-T06 역 동선(0081).
-  로컬 최신 빌드 `20261011-a095dfd-cba213ec`(294셀·HLOD 177·validate 0, audio.json·shared/audio 5.04 MB·승강장 레일 수평화 포함).
-- Next step (정확히 한 걸음): 위 빌드 `pnpm pipeline publish --build-id 20261011-a095dfd-cba213ec --env dev --set-current --verify-url https://tokyo-sanpo-staging.kolom1357.workers.dev/world`
-  → `pnpm pipeline gc --env dev`(7일 지난 것만 `--apply`) → 게임 빌드 + `apps/worker pnpm deploy:staging` → smoke → staging 실제 GPU(첫 로드 MB·첫 표시 s·소리) → PR 본문·인계.
-- Blockers: 없음.
+  staging = 코드 d942e68(Worker 80c70e87) + 월드 `20261011-a095dfd-cba213ec`(dev 버킷 current, 505파일 392.9 MB). 첫 로드 26.4 MB ✅ · 첫 표시 10.2–11.9 s ⚠️.
+- In progress: dev 버킷 gc(7일 규칙, 2026-10-04 이전 13개 빌드) — R2 REST 429로 5분 간격 재시도. 남았으면 `pnpm pipeline gc --env dev`(dry run)로 확인 후 `--apply` 다시(현재·직전·7일 이내는 자동 보존).
+- Next step (정확히 한 걸음): 사용자 staging 청취·육안 확인 결과 반영(PR #21 "How to listen") → PR 머지 → M08 시작(`docs/roadmap/M08.md` 첫 태스크). M08에서 첫 표시 회귀(대기 LUT 선컴파일 4.9 s) 함께 볼 것.
+- Blockers: 없음. 사용자 확인 대기: 녹음 베드에 안내방송·발차 멜로디·가게 음악·브랜드 음이 섞였는지(귀 검수), 존 경계 클릭 여부, 음량.
 
 ## Recently Completed
 - M07-T06 Stations: gates, interactables, audio(2026-10-12) — `content/stations/access.json`(하라주쿠 다케시타 출구) → 실물 개찰구 4통로(캐비닛·울타리 물리, 0.75 m 통로, 플랩 애니메이션,
@@ -45,20 +45,7 @@ Updated: 2026-10-11 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 
   횡단 중 승격은 횡단 필터로), 오케스트레이터(`crowd-sim.ts` — 목표 1,000 × 시간대 × 날씨(비 ×0.6), 면적 균일 스폰·평소 멀리/시야 밖), render 원경 tier C 스프라이트(`crowd/far.ts` 보도 점 235–800 m,
   밀도 = sim 수 ÷ 1,000). **수락**: 총 950–1,000 유지 ✅, 승강격 100+회 위치 튐 < 0.25 m/틱 ✅(단위), 팝핑 리뷰 GIF docs/screenshots/M06/T04(승격 150·강등 97 — 육안 팝핑 없음),
   GPU(1440p High, 22 W 소비) 군중 켬−끔 +0.44 ms(지상)·+0.56 ms(상공) ≤ 2.5 ✅. ⚠️ 소지품(가방·우산) 미구현. ADR-0064 (2026-10-04)
-- M06-T03 Crowd tier A (DetourCrowd) — 파이프라인 `derive/nav/*`·`derive/navmesh.ts`·`build/nav-cell.ts`: 0.5 m 보행면 분류(보도·생활도로·횡단 띠(끝 +1.5 m)·OSM 보행로, 간선 차도·건물·소품 없음) →
-  Recast 64 m 타일 16개(WF 좌표) + 횡단 기록(보행 신호 코드 = 소품 신호기 규칙) → `nav.bin` v1 bin+gzip(셀 66–161 KB). sim.worker: 타일 NavMesh·DetourCrowd tier A 상태 기계
-  (걷기 → 대기점 접근 → 보행 W 대기·반응 → 횡단(좌측 보행 차로) → 재계획), 플레이어 = 조향 없는 에이전트, game `wiring/streaming-sim.ts`(256 m nav 공급), 군중 기본 켬(`?crowd=0|dummy|scramble`).
-  **수락**: world-mini 실데이터 250명 적색 대기 → 녹색 동시 횡단 250, 틱 p95 1.6–1.7 ms ≤ 12 ✅, 관통 0·내비 밖 0 ✅(단위 테스트, 결정론). 실제 GPU 워커 p95 1.6–2.6 ms(22–34 W), 60 FPS,
-  docs/screenshots/M06/T03. world-mini 픽스처 재빌드(nav 포함·OSM 횡단 보정, 5.7 MB). e2e `crowd.spec.ts` agents 추가, 픽셀·물리 스펙 `crowd=0`. ADR-0063 (2026-10-04)
-- M06 사전 정리(9bc9241) — 원점 재설정 e2e 픽셀 차 = Node PNG 디코드(19 s). 부팅 실측(실제 GPU): 메인 long task 최대 0.44 s, 프레임 멈춤 1.4–1.9 s × 3(GPU 파이프라인 생성)·진행 표시 없음 →
-  선컴파일 머티리얼 묶음마다 1프레임 양보 + 대기 LUT 비동기 컴파일 + 로딩 패널 "준비" 행: 첫 표시 7.37–7.51 → 6.41–6.73 s, 머티리얼 멈춤 ≤ 0.77 s(대기 LUT 1.3–1.55 s 남음). ADR-0060 보충
-- M06-T02 Signal controllers — 신호 기둥 `props.inst` 5번째 칸 = 현시 코드(교차로 ID × 16 + 계획 × 4 + 그룹), 교차로 = 1020 묶음, 그룹 = OSM 차도 방향 봉우리 2개(셀 + 8-이웃),
-  `content/sim/signal-plans.json`(standard 120 s·scramble 120 s 전방향 보행 26 + 점멸 6, 사이트 = 시부야 스크램블), sim 제어기 = 게임 시각 순수 함수(`signalStateAt`), render 렌즈 발광(`setSignalLamps`).
-  **수락**: 스크램블 사이클 계획표 1 s 이내 단위 테스트 ✅. 실 GPU 북향·서향 차량 등 / 전방향 보행 녹 확인(docs/screenshots/M06/T02). 9셀 그룹 일관성 126쌍 중 6쌍 어긋남(5갈래 교차로 기둥 1개 ⚠️).
-  실 GPU에서 소품 전체 사라짐(정점 버퍼 9–10 > 8) 발견·수정 + 단위 테스트. ADR-0062 (2026-10-04)
-- M06-T01 Sim worker & instance outputs — sim.worker 30 Hz + SAB 이중 버퍼(stride 8: 위치·yaw·anim(클립+속력/10)·phase·variant·rate), 더미 1,000명 원형 걷기,
-  군중 팩(Rocketbox 12종 LOD 4·팔레트 half·KTX2 12층, 3.9 MB), render 뼈 팔레트 스키닝 풀 48(틱 사이 외삽·LOD0 그림자), 후처리 NaN 정리(블룸 전체 검정 근본 원인).
-  **수락 GPU(30 W, 1440p High)**: 군중 켬−끔 p50 0.33–2.34 ms(보이는 195–472명) ≤ 2.5 ✅, sim 틱 0.1–0.5 ms. 임포스터는 T04로(편차). e2e crowd 스모크(WebGL2) 추가. ADR-0061 (2026-10-04)
+
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
 - [bridges] **PLATEAU 상판 없는 OSM 단독 육교**(M05-T08 ⚠️): `highway=footway + bridge=yes`(+ 계단 두 끝) 중 PLATEAU brid가 없는 것 — OSM 선 + 폭 태그(없으면 2.5 m)로 절차 상판·난간·계단 메시 + JCOL 램프. 공원 비탈 계단(두 끝 지형)도 같은 경로.
@@ -68,6 +55,8 @@ Updated: 2026-10-11 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
+- [perf] staging 첫 표시 10.2–11.9 s ⚠️(M06 7.2–7.9 s) — 선컴파일 "대기 LUT" 단계 4.9 s(전 1.3–1.5 s): 비·구름·야간 후처리 패스가 같은 단계에서 컴파일되는 것으로 추정(`?nightLights=0` 무관). M08 로딩 작업에서 분할·병렬화.
+- [audio] 녹음 베드는 자동 음조 검사만 거침 — 사람 귀 검수 필요(안내방송·음악 섞임 시 library.json 원천·구간 교체 후 `pnpm pipeline audio --update-lock`). drive 모드 엔진음은 합성만 준비.
 - [stations] 역 계단·콘코스 기하 없음 — 개찰구 안 계단 입구 ↔ 승강장은 F 페이드 이동(ADR-0081), 출구는 하라주쿠 다케시타 1곳, HUD 안내는 임시 DOM(M08 대체).
 - [rail] 역 건물 = 선로·승강장 구간 벽만 레일 띠에서 잘림(ADR-0075) — 잘린 가장자리 두께 없음, 회랑 밖 벽 유지(승강장 바깥쪽 시야 일부), 선로 위 건물 충돌 제외 유지(역 동선은 M07-T06).
 - [rail] 항공사진 대조 1 m 초과 15 %(T01 ⚠️ — 0.49 m/px 한계, 시부야 데크·고층 그늘), 역간 소요 = 곡선 그대로라 실제보다 짧다(시부야→하라주쿠 91 s vs ≈ 2분, 근사 — 노선별 여유 계수 후보).
