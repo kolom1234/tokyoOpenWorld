@@ -207,6 +207,8 @@ export interface JcolRound extends JcolShapeBase {
 }
 export type JcolShape = JcolTriMesh | JcolConvexHull | JcolBox | JcolRound;
 
+// lights.bin 종류·일정(M09-T03 — ADR-0078) — api-lights.ts
+export * from './api-lights.ts';
 // ── global/rail.bin (05 §9, M07-T01 — ADR-0070): 형식·타입은 api-rail.ts(이 파일 400줄 제한), 공개 경로는 여기 재수출 ──
 export * from './api-rail.ts';
 

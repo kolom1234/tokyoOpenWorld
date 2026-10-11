@@ -1,5 +1,5 @@
 // 간판 머티리얼(M05-T06, 07 §4 M_SIGN): 인스턴스 `_ipos`(렌더 좌표·yaw)·`_isig`(브랜드, 배율 xyz) → 셰이더 배치(법선 회전),
-// 면(`_face` 1 세로·2 가로 타일) = 아틀라스(색까지 구운 sRGB), 틀 = 짙은 금속. 세 종류(돌출·입간판·옥상) 풀이 같은 노드 빌드를 쓴다. 야간 발광은 M09. see ADR-0054
+// 면(`_face` 1 세로·2 가로 타일) = 아틀라스(색까지 구운 sRGB), 틀 = 짙은 금속. 세 종류(돌출·입간판·옥상) 풀이 같은 노드 빌드를 쓴다. 야간 발광 = 면 색 × SIGN_NIGHT_GLOW × 밤(M09-T03 — 내부 조명 간판). see ADR-0054, ADR-0078
 import {
   attribute,
   cos,
@@ -14,9 +14,12 @@ import {
   vec3,
 } from 'three/tsl';
 import { type Material, MeshStandardNodeMaterial } from 'three/webgpu';
+import { nightU } from '../lighting/night.ts';
 import { signFace } from './atlas.ts';
 
 const FRAME = vec3(0.07, 0.07, 0.075);
+/** 밤 간판 면 발광(장면 단위 — 실제 GPU 21:00 스크램블에서 조정). */
+const SIGN_NIGHT_GLOW = 0.9;
 
 export function createSignMaterial(): Material {
   const m = new MeshStandardNodeMaterial({ roughness: 0.5, metalness: 0.2 });
@@ -36,7 +39,9 @@ export function createSignMaterial(): Material {
   })();
   const face = attribute('_face', 'float');
   const isFace = face.greaterThan(0.5);
-  m.colorNode = select(isFace, signFace(isig.x, uv(), face.lessThan(1.5)), FRAME);
+  const faceColor = signFace(isig.x, uv(), face.lessThan(1.5));
+  m.colorNode = select(isFace, faceColor, FRAME);
+  m.emissiveNode = select(isFace, faceColor.mul(nightU.mul(SIGN_NIGHT_GLOW)), vec3(0));
   m.roughnessNode = select(isFace, float(0.35), float(0.55));
   m.metalnessNode = select(isFace, float(0), float(0.6));
   return m;

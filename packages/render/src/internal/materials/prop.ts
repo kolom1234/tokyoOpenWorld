@@ -15,7 +15,11 @@ import {
   vertexColor,
 } from 'three/tsl';
 import { DoubleSide, type Material, MeshStandardNodeMaterial } from 'three/webgpu';
+import { nightU } from '../lighting/night.ts';
 
+/** 밤 가로등 등기구·자판기 앞면 발광(장면 단위). */
+const LAMP_NIGHT = 4;
+const VENDING_GLOW = 0.8;
 /** 전선 실제 반폭(m). */
 const WIRE_HALF_M = 0.015;
 /** 켜진 신호 렌즈 발광 배율(HDR — 낮에도 블룸이 살짝 번지는 정도). */
@@ -41,10 +45,14 @@ export function createPropMaterial(): Material {
   const vehLit = lamp.greaterThan(0.5).and(lamp.lessThan(3.5)).and(lamp.sub(veh).abs().lessThan(0.5));
   const pedLit = lamp.greaterThan(3.5).and(lamp.sub(3).sub(ped).abs().lessThan(0.5));
   const lit = vehLit.or(pedLit);
-  const lens = lamp.greaterThan(0.5);
+  const lens = lamp.greaterThan(0.5).and(lamp.lessThan(5.5));
   // colorNode = 밝기 계수만(three가 정점색 × 인스턴스색을 곱한다 — 자판기 가상 브랜드색 유지).
   m.colorNode = vec4(vec3(select(lens.and(lit.not()), float(0.18), float(1))), 1);
-  m.emissiveNode = select(lit, vertexColor().mul(LAMP_EMISSIVE), vec3(0));
+  // 야간(M09-T03): 가로등 등기구(6)는 밤에, 자판기 앞면(7)은 늘(밤 더 밝게).
+  const night = select(lamp.sub(6).abs().lessThan(0.5), nightU.mul(LAMP_NIGHT), float(0)).add(
+    select(lamp.sub(7).abs().lessThan(0.5), nightU.mul(0.7).add(0.15).mul(VENDING_GLOW), float(0)),
+  );
+  m.emissiveNode = select(lit, vertexColor().mul(LAMP_EMISSIVE), vertexColor().mul(night));
   return m;
 }
 

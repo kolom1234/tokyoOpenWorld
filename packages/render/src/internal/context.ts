@@ -1,6 +1,7 @@
 // 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다.
 // see docs/modules/render.md
 import { type Logger, mergeConfig, type QualityTier } from '@sanpo/core';
+import { ClusteredLighting } from 'three/examples/jsm/lighting/ClusteredLighting.js';
 import { uniform } from 'three/tsl';
 import { type Material, type UniformNode, Vector3, type WebGPURenderer } from 'three/webgpu';
 import type { DepthMode, PostEffects, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
@@ -9,6 +10,7 @@ import { createFarCrowd, type FarCrowd } from './crowd/far.ts';
 import { type CrowdField, createCrowdField } from './crowd/field.ts';
 import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
 import { attachEnvProbe, type EnvProbe } from './lighting/env-probe.ts';
+import { createNightLights, type NightLights } from './lighting/night-lights.ts';
 import { enableSunShadows, type SunShadows } from './lighting/shadows.ts';
 import { DEFAULT_MOON_DIR_WF, DEFAULT_SUN_DIR_WF } from './lighting/sun.ts';
 import { glassRoughness } from './materials/glass.ts';
@@ -97,7 +99,10 @@ export interface RenderContext {
     cover: number;
     fog: number;
     sun: { x: number; y: number; z: number };
+    gameMs: number;
   };
+  /** 야간 광원(M09-T03): ClusteredLighting 고정 풀 + 발광 스프라이트. */
+  readonly nightLights: NightLights;
   /** 구름층·연무(M09-T02) 유니폼 + 카메라 WF 위치. */
   readonly sky: { u: WeatherSkyUniforms; camWF: UniformNode<'vec3', Vector3> };
 }
@@ -199,12 +204,39 @@ function casterMaterials(
   ];
 }
 
+/** 실제 야간 광원 풀 크기(07 §9 High 1024 — 풀은 부팅 때 고정, 티어는 켜는 수만 바꾼다). */
+export const NIGHT_LIGHT_POOL = 1024;
+export const NIGHT_LIGHTS_ACTIVE: Readonly<Record<QualityTier, number>> = {
+  low: 64,
+  medium: 256,
+  high: 1024,
+  ultra: 1024,
+};
+
+/** 야간 광원(M09-T03): WebGPU만 ClusteredLighting(컴퓨트 클러스터링) + 풀, 그 밖은 스프라이트만(07 §9 폴백). */
+function attachNightLights(renderer: WebGPURenderer, graph: SceneGraph, clustered: boolean): NightLights {
+  if (clustered) renderer.lighting = new ClusteredLighting(NIGHT_LIGHT_POOL) as unknown as WebGPURenderer['lighting'];
+  const n = createNightLights(clustered ? NIGHT_LIGHT_POOL : 0);
+  graph.roots.light.add(n.root);
+  return n;
+}
+
 /** 날씨 렌더 상태(M09-T01·T02): 빗줄기 층·구름/연무 유니폼·마지막 환경 날씨. */
 function weatherState(): Pick<RenderContext, 'rain' | 'sky' | 'weather'> {
   return {
     rain: createRainField(),
     sky: { u: createWeatherSkyUniforms(), camWF: uniform(new Vector3()) },
-    weather: { rainMmH: 0, snow: 0, windX: 0, windZ: 0, night: 0, cover: 0, fog: 0, sun: { x: 0, y: 1, z: 0 } },
+    weather: {
+      rainMmH: 0,
+      snow: 0,
+      windX: 0,
+      windZ: 0,
+      night: 0,
+      cover: 0,
+      fog: 0,
+      sun: { x: 0, y: 1, z: 0 },
+      gameMs: 0,
+    },
   };
 }
 
@@ -258,6 +290,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
     ...wx,
+    nightLights: attachNightLights(renderer, graph, backend === 'webgpu' && !software),
   };
   ctx.quality = attachQuality(ctx, deps, { post, software }, (tier) => {
     ctx.shadows?.setTier(tier);

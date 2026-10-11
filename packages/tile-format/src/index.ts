@@ -5,6 +5,7 @@ export { gunzip, gzip } from './internal/gzip.ts';
 export { parseHeightfield, quantizeHeightfield, writeHeightfield } from './internal/heightfield.ts';
 export { parseJcol, writeJcol } from './internal/jcol.ts';
 export { parseLanes, writeLanes } from './internal/lanes.ts';
+export { parseLights, writeLights } from './internal/lights.ts';
 export { parseNav, writeNav } from './internal/nav.ts';
 export { parseProps, writeProps } from './internal/props.ts';
 export { parseRail, writeRail } from './internal/rail.ts';

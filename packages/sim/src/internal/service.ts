@@ -5,7 +5,7 @@ import type { EnvironmentState, GameSystem, SeasonParams, Vec3d, WeatherParams }
 import { wfToLonLat } from '@sanpo/geo';
 import type { SimDeps, SimService } from '../api.ts';
 import { clearSkyIlluminanceLux, moonPosition, sunPosition } from './clock/astronomy.ts';
-import { createWorldClock } from './clock/world-clock.ts';
+import { createWorldClock, dayTypeOf } from './clock/world-clock.ts';
 import { weatherScale } from './crowd/density.ts';
 import { createRailRt } from './rail/network.ts';
 import { createRailStations, type RailStations } from './rail/stations.ts';
@@ -56,6 +56,7 @@ export function computeEnvironment(
     weather: { ...weather },
     season: seasonOf(ms),
     wind: windOf(weather),
+    dayType: dayTypeOf(ms),
   };
 }
 

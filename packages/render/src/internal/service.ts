@@ -6,6 +6,7 @@ import { createRenderContext, type RenderContext } from './context.ts';
 import { loadCrowdAssets } from './crowd/assets.ts';
 import { createCrowdMaterial } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
+import { updateNight } from './lighting/night.ts';
 import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
@@ -28,6 +29,7 @@ function applyWeather(ctx: RenderContext, e: Readonly<EnvironmentState>): void {
     cover: w.cloudCover,
     fog: w.fog,
     sun: e.sunDirWF,
+    gameMs: e.gameTimeMs,
   });
   ctx.envUniforms.rain.value = Math.min(w.rainMmH / 8, 1);
   ctx.crowd.setRain(w.rainMmH);
@@ -219,6 +221,7 @@ function setEnvironment(ctx: RenderContext, e: Readonly<EnvironmentState>): void
   applyWeather(ctx, e);
   ctx.treeUniforms?.setSeason(e.season.dayOfYear);
   ctx.vehicleUniforms.night.value = nightFromSun(e.sunDirWF.y);
+  updateNight(e.sunDirWF.y, e.gameTimeMs, e.dayType ?? 'weekday');
   setTreeWind(ctx, e.weather.windMs, e.weather.windDirDeg);
 }
 
@@ -254,6 +257,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       ctx.trees.addCell(p.key, p.originWF, p.instances?.trees);
       ctx.signs.addCell(p.key, p.originWF, p.instances?.props);
       if (p.level === 0) ctx.farCrowd.addCell(p.key, p.originWF, p.meshes.roads);
+      if (p.level === 0) ctx.nightLights.addCell(p.key, p.originWF, p.lights);
       ctx.counters.sceneVersion++;
     },
     removeCell: (key) => {
@@ -262,6 +266,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       ctx.trees.removeCell(key);
       ctx.signs.removeCell(key);
       ctx.farCrowd.removeCell(key);
+      ctx.nightLights.removeCell(key);
       ctx.counters.sceneVersion++;
     },
     setHlodChildVisible: (parent, child, visible) => {

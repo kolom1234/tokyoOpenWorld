@@ -7,6 +7,7 @@ import {
   gunzip,
   type MeshSlot,
   parseHeightfield,
+  parseLights,
   parseProps,
   parseTrees,
   readTkc,
@@ -39,9 +40,10 @@ export const DEFAULT_SECTIONS: readonly SectionType[] = [
   'terrain.height',
   'props.inst',
   'trees.inst',
+  'lights.bin',
 ];
 
-/** 이 디코더가 아는 섹션. 나머지(lights/audio)는 해당 태스크에서 추가 — 지금은 건너뛴다. */
+/** 이 디코더가 아는 섹션. 나머지(audio)는 해당 태스크에서 추가 — 지금은 건너뛴다. lights.bin = M09-T03. */
 export const DECODABLE: ReadonlySet<SectionType> = new Set([
   ...DEFAULT_SECTIONS,
   'collision.bin',
@@ -95,6 +97,10 @@ async function decodeSection(tkc: TkcReader, type: SectionType, out: CellPayload
     const trees = parseTrees(raw.value);
     if (!trees.ok) return fail(trees.error.code, `${type}: ${trees.error.message}`);
     out.instances = { ...out.instances, trees: trees.value };
+  } else if (type === 'lights.bin') {
+    const lights = parseLights(raw.value);
+    if (!lights.ok) return fail(lights.error.code, `${type}: ${lights.error.message}`);
+    out.lights = lights.value;
   } else if (type === 'meta.json') {
     try {
       out.meta = JSON.parse(new TextDecoder().decode(raw.value)) as CellMeta;

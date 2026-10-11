@@ -1,15 +1,15 @@
 # PROGRESS
 Updated: 2026-10-11 (session #21 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
 
-## Current Milestone: M09 — Weather, Night, Audio (⓪ ✅ · T01 ✅ · T02 ✅ → T03 진행) · M08은 다음 세션
-## Current Task: M09-T03 Night lighting
-- Done in this session: ⓪ 역 건물 = 선로·승강장 구간 벽 잘라내기(사용자 결정 (a), ADR-0075 — `build/rail-walls.ts`, L0·L1, 낮은 승강장 지붕 렌더 제외 삭제). 실제 GPU 전후 `docs/screenshots/M09/pre/station-*`.
-  MVP 재빌드 `20261011-08ecc26-aefbe9ff`(로컬만, validate 0 — publish 안 함).
-- M09-T01 ✅(0f8fde6, ADR-0076): sim 날씨(시각 순수 함수 마르코프·젖음 적분·live 매핑), render 빗줄기 = 깊이 인지 화면 공간 원통 4겹(TAAU 뒤 — 별도 장면 패스는 r186에서 안 그려져 폐기)·파문·구름 직사광·우산,
-  game `?weather=auto|live|<상태>`(골든 = 고정, `?time=` = 맑음), staging LIVE_WEATHER=true. e2e 13 통과. GPU 비용·night-rain 골든은 마지막 측정 회차에서.
-- M09-T02 ✅(ADR-0077): `post/weather-sky.ts` 2D 구름층(고도 1.6 km fbm, 덮임 ≈ 구름량)·연무·밤 도시 불빛 반사, 태양 가림 = 같은 잡음 CPU 짝(`tslHash`) → 직사광. 볼류메트릭(Ultra) ⚠️ 보류.
-- Next step (정확히 한 걸음): T03 — facade 창 점등 스케줄(용도·시각·시드) → lights.bin(파이프라인) → ClusteredLighting 풀 → 원거리 발광 스프라이트 → HLOD 야경.
-- Blockers: 없음. 실제 GPU 스크립트 = 세션 scratchpad(`stshots.mjs`·`stscenes.json` — 역 승강장 장면, `rebuild.sh` — build→hlod→materials→validate).
+## Current Milestone: M09 — Weather, Night, Audio (⓪ ✅ · T01 ✅ · T02 ✅ · T03 진행 중 WIP) · M08은 다음 세션
+## Current Task: M09-T03 Night lighting (WIP 커밋 — `pnpm check` lint 2건 남음)
+- Done in this session (#21, 2026-10-11, PR #21 draft): ⓪ 역 건물 벽 잘라내기(ADR-0075, 실제 GPU 전후 docs/screenshots/M09/pre), T01 날씨·빗줄기(ADR-0076), T02 구름(ADR-0077, 볼류메트릭 ⚠️ 보류).
+- T03 WIP(이 커밋, 미검증): render `lighting/{schedule,night,night-lights}.ts`(창 점등 = 클래스·JST 시·요일·창 시드 → 밤에 일부 창만 켜짐 ✅ 실제 GPU 확인, ClusteredLighting 풀 1024 + 가로등·자판기 발광 스프라이트),
+  간판·1층 간판 띠·가로등 등기구·자판기 야간 발광, core `EnvironmentState.dayType`, tile-format lights.bin 코덱(api-lights.ts)·streaming 디코드, 파이프라인 `build/{lights-cell,cell-extras}.ts`(가로등·자판기·간판·상점 앞).
+  로컬 시험 빌드 `m09-lights-test`(16셀) — **vite가 가장 최근 빌드를 고르므로 다음 세션 시작 시 전체 MVP 재빌드 필요**(그 전엔 world=local이 16셀만).
+- Next step (정확히 한 걸음): `pnpm check` lint 2건 수정 → 밤 노출·LIGHT_SCENE_K(0.12)·스프라이트 크기 실제 GPU 조정(scratchpad `night.mjs`) → HLOD 야경 창(materials/hlod.ts emissive) →
+  LightProbeGrid 불채택 ADR-0078 → fixture 재생성(lights.bin 추가로 world-mini 스냅샷 바뀜: `docker/run.sh node tools/pipeline/src/cli.ts fixture`) → test·e2e → 커밋. 그다음 T04 오디오(전부 자체 합성 계획 — 녹음 음원 다운로드는 사용자 승인 필요), T05, M07-T06, 마지막 MVP 재빌드 → dev publish → staging.
+- Blockers: 없음. 남은 측정: 빗줄기 ≤ 0.8 ms·구름 ≤ 0.5 ms·광원 ≤ 2 ms(GPU W 기록), 골든뷰 3장(night-rain·21:00·오모테산도 가을).
 
 ## Recently Completed
 - M07 Trains T01–T05(session #20, 2026-10-05~06) — 선로(OSM 이름 + N02 대조, 좌측통행, 0.5 m 표본, 곡률 제한, 승강장 정차) → 시간표(JR 합성 근사 + 긴자선 GTFS 컴파일러·키 대기) → 열차(메인 스레드 순수 함수,

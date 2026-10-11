@@ -30,6 +30,7 @@ import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
 import { aroundReader, railNetworkFor, readLayer } from './area-reader.ts';
 import { crop, mergeStreams, outward, union, unionBounds, withOverrideCollider, yRange } from './assemble-util.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
+import { encodeMeta, lightsOf } from './cell-extras.ts';
 import { type CellBuildStats, cellStats } from './cell-stats.ts';
 import { buildCollision } from './collision.ts';
 import { encodeDecals } from './decals-mesh.ts';
@@ -94,17 +95,6 @@ export interface CellBuildInput {
   groundAround?: (x: number, z: number) => number | undefined;
   /** 철도 망(M07-T01) — overrides.mesh 선로 메시. */
   rail?: RailNetwork;
-}
-
-async function encodeMeta(meta: CellMeta): Promise<Uint8Array> {
-  const ordered: CellMeta = {
-    buildings: meta.buildings,
-    pois: meta.pois,
-    placeNames: meta.placeNames,
-    signals: meta.signals,
-    interactables: meta.interactables,
-  };
-  return gzip(new TextEncoder().encode(JSON.stringify(ordered)));
 }
 
 /** 성형(M05-T01): 넓은 창 → 성형 높이(여유 1 창)·`_SURF`·RTIN 허용 오차(257²). */
@@ -204,6 +194,8 @@ async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSec
   const propSources = [...new Set([OSM_SOURCE, TERRAIN_SOURCE, ...roadSources(own), ...bld.sources])].sort();
   if (props?.inst) sections.push({ type: 'props.inst', sources: propSources, data: props.inst });
   if (props?.trees) sections.push({ type: 'trees.inst', sources: propSources, data: props.trees });
+  const lights = await lightsOf(input, p);
+  if (lights) sections.push({ type: 'lights.bin', sources: propSources, data: lights });
   if (p.nav?.bytes) sections.push({ type: 'nav.bin', sources: propSources, data: p.nav.bytes });
   if (p.lanes?.bytes) sections.push({ type: 'lanes.bin', sources: [OSM_SOURCE, TERRAIN_SOURCE], data: p.lanes.bytes });
   if (col.data) {

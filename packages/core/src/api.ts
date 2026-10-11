@@ -234,6 +234,8 @@ export interface EnvironmentState {
   weather: WeatherParams;
   season: SeasonParams;
   wind: Vec3;
+  /** 운행일(04:00 JST 경계) 요일 유형(M09-T03 — 창 점등·밀도). 없으면 평일. */
+  dayType?: 'weekday' | 'saturday' | 'holiday';
 }
 /**
  * sim 워커가 `WF − anchorWF`(float32)로 기록 → render가 `anchorWF − renderOrigin`(float64) 오프셋을 더해 사용.
