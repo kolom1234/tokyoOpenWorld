@@ -31,6 +31,7 @@ import { createTreeField, type TreeField } from './trees/field.ts';
 import type { TreeUniforms } from './trees/materials.ts';
 import { createVehicleField, type VehicleField } from './vehicles/field.ts';
 import { createVehicleUniforms, type VehicleUniforms } from './vehicles/material.ts';
+import { createRainField, type RainField } from './weather/rain.ts';
 import { createEnvUniforms, type EnvUniforms } from './weather/wetness.ts';
 
 export interface RenderContext {
@@ -82,6 +83,10 @@ export interface RenderContext {
   readonly counters: { frames: number; fading: number; sceneVersion: number; shadowUpdates: number };
   /** 신호 램프 원천(M06-T02 — setSignalLamps). */
   signalLamp?: ((code: number) => number) | null;
+  /** 빗줄기·눈(M09-T01) — 후처리 경로에서만 그린다(화면 공간 층). */
+  readonly rain: RainField;
+  /** 마지막 setEnvironment 날씨(프레임 시스템이 입자·파문 갱신에 쓴다). */
+  weather: { rainMmH: number; snow: number; windX: number; windZ: number; night: number };
 }
 
 /** WebGL2 고정 노출(WebGPU 자동 노출 골든뷰 배율 0.8–1.9의 기하 중간 ≈ 1.25). */
@@ -201,9 +206,10 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const actors = attachActors(graph);
   const late: LateMaterials = { treeMaterials: [], signMaterials: [], crowdMaterials: [], vehicleMaterials: [] };
   const casters = () => casterMaterials(materials, actors, late);
+  const rain = createRainField();
   const makePost = (tier: QualityTier): PostPipeline =>
     post
-      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad)
+      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, software ? {} : { rain: rain.uniforms })
       : createDirectRender(renderer, graph.scene, view.camera);
   const ctx: Omit<RenderContext, 'quality'> & { quality?: QualityManager } = {
     cfg,
@@ -227,6 +233,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     post: makePost(cfg.quality),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
+    rain,
+    weather: { rainMmH: 0, snow: 0, windX: 0, windZ: 0, night: 0 },
   };
   ctx.quality = attachQuality(ctx, deps, { post, software }, (tier) => {
     ctx.shadows?.setTier(tier);

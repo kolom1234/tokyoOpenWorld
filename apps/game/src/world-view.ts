@@ -14,14 +14,16 @@ import {
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
-import { type ClockMode, createSim, type SignalPlansFile, type SimService } from '@sanpo/sim';
+import { type ClockMode, createSim, type SignalPlansFile, type SimService, type WeatherClimateFile } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
+import WEATHER_CLIMATE from '../../../content/sim/weather-climate.json';
 import { bootProgressText, precompileText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
 import { trainLcdSystem } from './train-lcd.ts';
+import { applyWeatherSpec, startLiveWeather, type WeatherSpec } from './weather-mode.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
 import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
@@ -94,6 +96,9 @@ export interface WorldViewDeps {
   clock?: ClockMode;
   /** 디버그 날씨 덮어쓰기(`?wet=`). */
   weather?: WeatherOverride;
+  /** 날씨 모드(M09-T01 — weather-mode.ts). 없으면 auto. live = /api/weather 폴링(onLiveWeather = 크레딧 표기). */
+  weatherSpec?: WeatherSpec;
+  onLiveWeather?: (on: boolean) => void;
   /** false = 나무 에셋 적재 안 함(`?trees=0`, GPU 비용 비교). */
   trees?: boolean;
   /** 군중(M06-T03 기본 agents — DetourCrowd tier A, `?crowd=0` off, dummy = 더미 1,000명(M06-T01), scramble = agents + 스크램블 시험 250명). */
@@ -258,11 +263,23 @@ async function showWorldWith(
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
-/** sim(시계 + 신호 계획 content/sim/signal-plans.json — M06-T02). */
+/** sim(시계 + 신호 계획 content/sim/signal-plans.json — M06-T02 + 날씨 기후표 — M09-T01). */
 function simFor(deps: WorldViewDeps): SimService {
   const now = deps.now ?? Date.now;
   const signalPlans = SIGNAL_PLANS as unknown as SignalPlansFile;
-  return createSim({ bus: deps.bus, log: deps.log, now, initialClock: deps.clock ?? defaultClock(now()), signalPlans });
+  const weatherClimate = WEATHER_CLIMATE as unknown as WeatherClimateFile;
+  const sim = createSim({
+    bus: deps.bus,
+    log: deps.log,
+    now,
+    initialClock: deps.clock ?? defaultClock(now()),
+    signalPlans,
+    weatherClimate,
+  });
+  const spec = deps.weatherSpec ?? { mode: 'auto' };
+  applyWeatherSpec(sim, spec, weatherClimate);
+  if (spec.mode === 'live') startLiveWeather(sim, deps.log.child('weather'), deps.onLiveWeather ?? (() => {}));
+  return sim;
 }
 
 function initialLate(): LateState {

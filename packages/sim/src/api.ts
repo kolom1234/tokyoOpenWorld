@@ -12,6 +12,7 @@ import type {
   TrainInfo,
   TrainRideInfo,
   Vec3d,
+  WeatherParams,
   WorkerSupervisor,
 } from '@sanpo/core';
 import type { RailNetwork, TimetableFile } from '@sanpo/tile-format';
@@ -69,6 +70,65 @@ export interface CrowdAgentsParams {
   lodBandM: number;
   plansPerTickB: number;
   fillPerTick: number;
+}
+
+/** 날씨 상태 1개(content/sim/weather-climate.json states — M09-T01, ADR-0076). */
+export interface WeatherStateDef {
+  id: string;
+  cloudCover: number;
+  rainMmH: number;
+  fog: number;
+  snow: number;
+  windMs: number;
+}
+
+/** 날씨 기후표(10 §3): 30분 칸 마르코프(확률 1 − stay로 그 달 p에서 다시 뽑기 — 정상 분포 = p), 전이 보간 blendMin, 노면 젖음 램프. */
+export interface WeatherClimateFile {
+  schema: 1;
+  slotMin: number;
+  blendMin: number;
+  states: WeatherStateDef[];
+  /** 1–12월: 상태 확률(states 순서, 합 1)·칸 유지 확률·주 풍향(°, 바람이 불어오는 쪽)·평균 기온(°C). */
+  months: { p: number[]; stay: number; windDirDeg: number; tempC: number }[];
+  /** 젖음: 1 mm/h 이상이면 wetMin 분에 흠뻑, 마름 = dryMin × (1 + 구름 × dryCloudK) × (밤이면 dryNightK), 과거 historyH 시간을 stepMin 간격으로 적분. */
+  wetness: {
+    wetMin: number;
+    fullAtMmH: number;
+    dryMin: number;
+    dryCloudK: number;
+    dryNightK: number;
+    historyH: number;
+    stepMin: number;
+  };
+}
+
+/** auto = 기후표 마르코프(게임 시각 순수 함수), live = 실시간(Worker /api/weather), fixed = 고정(골든뷰·디버그). */
+export type WeatherMode = 'auto' | 'live' | 'fixed';
+
+/** `/api/weather` 응답(Open-Meteo 프록시, 13 §4). */
+export interface LiveWeatherSample {
+  time: string;
+  temperatureC: number;
+  precipitationMm: number;
+  /** WMO 날씨 코드. */
+  weatherCode: number;
+  /** 0–1. */
+  cloudCover: number;
+  windMs: number;
+  windDirDeg: number;
+  isDay: boolean;
+}
+
+export interface WeatherService {
+  /** 지금(게임 시각) 날씨 — environment().weather와 같다. */
+  readonly params: Readonly<WeatherParams>;
+  readonly mode: WeatherMode;
+  /** auto: 지금 칸 상태 id(디버그), live·fixed: 모드 이름. */
+  readonly stateId: string;
+  /** fixed면 주어진 값(없는 필드 = 맑음, 젖음 없으면 비 > 0일 때 1). live는 setLive 표본이 올 때까지 auto 값. */
+  setMode(m: WeatherMode, fixed?: Partial<WeatherParams>): void;
+  /** live 표본(game이 10분마다 /api/weather를 받아 넘김). 젖음은 실시간으로 램프. */
+  setLive(sample: LiveWeatherSample): void;
 }
 
 /** 신호 계획 파일(content/sim/signal-plans.json — game이 넘김). 그룹 = [차량 A, 차량 B, 보행 A, 보행 B]. */
@@ -153,6 +213,8 @@ export interface WorldClock {
 
 export interface SimService extends SystemProvider {
   readonly clock: WorldClock;
+  /** 날씨(M09-T01, 10 §3·§8). 기후표가 없으면 맑음 고정(auto = 맑음). */
+  readonly weather: WeatherService;
   /** 현재 시각·관측 위치(카메라 WF)의 환경 — render·audio가 소비. 같은 시각·1 km 안이면 캐시. */
   environment(): EnvironmentState;
   /**
@@ -228,4 +290,6 @@ export interface SimDeps {
   initialClock?: ClockMode;
   /** 신호 계획(M06-T02). 없으면 signalStateAt = 적색 고정. */
   signalPlans?: SignalPlansFile;
+  /** 날씨 기후표(M09-T01, content/sim/weather-climate.json). 없으면 맑음 고정. */
+  weatherClimate?: WeatherClimateFile;
 }

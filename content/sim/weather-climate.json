@@ -1,0 +1,32 @@
+{
+  "$comment": "날씨 기후표(M09-T01, 10 §3 — ADR-0076). 30분(게임 시간) 칸마다 확률 1 − stay로 그 달 분포 p에서 다시 뽑는 마르코프 사슬(정상 분포 = p), 전이 보간 10분. 상태 순서 = states. p 근거: 기상청 도쿄 평년값 1991–2020(강수일 ≥ 1 mm·일조 시간·기온·최다 풍향) → 강수 시간 비율·맑음 비율 근사. 실측 관측이 아니다(근사).",
+  "schema": 1,
+  "slotMin": 30,
+  "blendMin": 10,
+  "states": [
+    { "id": "clear", "cloudCover": 0.08, "rainMmH": 0, "fog": 0, "snow": 0, "windMs": 2.5 },
+    { "id": "partly", "cloudCover": 0.4, "rainMmH": 0, "fog": 0, "snow": 0, "windMs": 3 },
+    { "id": "cloudy", "cloudCover": 0.75, "rainMmH": 0, "fog": 0.05, "snow": 0, "windMs": 3.5 },
+    { "id": "overcast", "cloudCover": 1, "rainMmH": 0, "fog": 0.15, "snow": 0, "windMs": 3 },
+    { "id": "drizzle", "cloudCover": 1, "rainMmH": 0.8, "fog": 0.3, "snow": 0, "windMs": 3 },
+    { "id": "rain", "cloudCover": 1, "rainMmH": 4, "fog": 0.35, "snow": 0, "windMs": 4.5 },
+    { "id": "heavy", "cloudCover": 1, "rainMmH": 14, "fog": 0.5, "snow": 0, "windMs": 7 },
+    { "id": "fog", "cloudCover": 0.9, "rainMmH": 0, "fog": 0.75, "snow": 0, "windMs": 1 },
+    { "id": "snow", "cloudCover": 1, "rainMmH": 0, "fog": 0.4, "snow": 1, "windMs": 3 }
+  ],
+  "months": [
+    { "p": [0.42, 0.2, 0.17, 0.14, 0.018, 0.025, 0.005, 0.012, 0.01], "stay": 0.88, "windDirDeg": 330, "tempC": 5.4 },
+    { "p": [0.36, 0.19, 0.18, 0.18, 0.024, 0.033, 0.008, 0.012, 0.013], "stay": 0.88, "windDirDeg": 330, "tempC": 6.1 },
+    { "p": [0.29, 0.189, 0.19, 0.2, 0.038, 0.056, 0.016, 0.018, 0.003], "stay": 0.88, "windDirDeg": 340, "tempC": 9.4 },
+    { "p": [0.28, 0.19, 0.2, 0.2, 0.038, 0.056, 0.016, 0.02, 0], "stay": 0.88, "windDirDeg": 180, "tempC": 14.3 },
+    { "p": [0.28, 0.19, 0.2, 0.2, 0.038, 0.056, 0.016, 0.02, 0], "stay": 0.88, "windDirDeg": 180, "tempC": 18.8 },
+    { "p": [0.16, 0.14, 0.24, 0.26, 0.06, 0.085, 0.025, 0.03, 0], "stay": 0.9, "windDirDeg": 180, "tempC": 21.9 },
+    { "p": [0.22, 0.16, 0.22, 0.24, 0.045, 0.065, 0.03, 0.02, 0], "stay": 0.9, "windDirDeg": 180, "tempC": 25.7 },
+    { "p": [0.3, 0.17, 0.21, 0.22, 0.028, 0.042, 0.02, 0.01, 0], "stay": 0.88, "windDirDeg": 180, "tempC": 26.9 },
+    { "p": [0.2, 0.16, 0.23, 0.25, 0.045, 0.07, 0.025, 0.02, 0], "stay": 0.89, "windDirDeg": 350, "tempC": 23.3 },
+    { "p": [0.24, 0.16, 0.22, 0.24, 0.042, 0.058, 0.02, 0.02, 0], "stay": 0.89, "windDirDeg": 350, "tempC": 18 },
+    { "p": [0.33, 0.17, 0.19, 0.2, 0.028, 0.04, 0.012, 0.03, 0], "stay": 0.88, "windDirDeg": 330, "tempC": 12.5 },
+    { "p": [0.4, 0.2, 0.18, 0.16, 0.018, 0.025, 0.007, 0.007, 0.003], "stay": 0.88, "windDirDeg": 330, "tempC": 7.7 }
+  ],
+  "wetness": { "wetMin": 5, "fullAtMmH": 1, "dryMin": 75, "dryCloudK": 2, "dryNightK": 2, "historyH": 6, "stepMin": 5 }
+}

@@ -713,6 +713,20 @@
         "tests/fixtures/gtfs-mini/**"
       ],
       "modified": false
+    },
+    {
+      "id": "open-meteo",
+      "kind": "data",
+      "title": "Open-Meteo Weather Forecast API (current weather)",
+      "url": "https://open-meteo.com/",
+      "license": "CC-BY-4.0",
+      "attribution": {
+        "ja": "気象データ：Open-Meteo.com（CC BY 4.0）",
+        "en": "Weather data by Open-Meteo.com (CC BY 4.0)",
+        "ko": "날씨 데이터: Open-Meteo.com (CC BY 4.0)"
+      },
+      "files": [],
+      "modified": true
     }
   ]
 }

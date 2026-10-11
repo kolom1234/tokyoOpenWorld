@@ -15,7 +15,8 @@
 
 ## 3. 날씨·계절
 - 상태 파라미터(`WeatherParams`, core): `cloudCover 0–1, rainMmH, fog 0–1, windMs, windDirDeg, snow 0–1, temperatureC?`(실시간 모드 = API 값, 자체 모드 = 월·시각별 기후 평년값 테이블).
-- 자체 모드: 30분(게임시간) 단위 마르코프 전이, 월별 확률표 `content/sim/weather-climate.yaml`(도쿄 기후 경향: 6–7월 장마 강수↑, 겨울 맑음↑). 전이 보간 10분.
+- 자체 모드: 30분(게임시간) 단위 마르코프 전이, 월별 확률표 `content/sim/weather-climate.json`(도쿄 기후 경향: 6–7월 장마 강수↑, 겨울 맑음↑). 전이 보간 10분.
+  구현(M09-T01, ADR-0076): 칸마다 확률 1 − stay로 달 분포에서 다시 뽑기 → 시각 순수 함수(뒤로 찾은 마지막 다시 뽑기), 젖음 = 과거 6 h 적분. `?time=` 고정 시각은 맑음 고정(골든·e2e 결정론).
 - 실시간 모드(`liveWeather` 플래그): Worker `/api/weather`(Open-Meteo 프록시, 10분 캐시) → WMO 코드 매핑표로 상태 변환.
 - 계절: 날짜 → `SeasonParams { foliageTint, bloom, leafDensity, outfitPalette }` (테이블 `content/sim/season.yaml`).
 

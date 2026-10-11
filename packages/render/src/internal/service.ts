@@ -1,5 +1,5 @@
 // createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3
-import type { CellKey, SharedInstanceBuffer } from '@sanpo/core';
+import type { CellKey, EnvironmentState, SharedInstanceBuffer } from '@sanpo/core';
 import { Group, type Object3D } from 'three/webgpu';
 import type { PrecompileProgress, RenderDebugLayer, RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
@@ -14,6 +14,16 @@ import { loadTreesInto, setTreeWind } from './trees/load.ts';
 import { createVehicleMaterial, nightFromSun } from './vehicles/material.ts';
 
 export { RENDER_PHASE, RENDER_PREP_PHASE } from './frame.ts';
+
+/** 날씨(M09-T01): 입자·파문 입력 보관, 구름이 직사광을 가린다(직사 = 1 − 0.9 × 구름^1.5 — 흐림 날 그림자 대비↓, 간접 하늘빛 유지). */
+function applyWeather(ctx: RenderContext, e: Readonly<EnvironmentState>): void {
+  const w = e.weather;
+  const night = nightFromSun(e.sunDirWF.y);
+  Object.assign(ctx.weather, { rainMmH: w.rainMmH, snow: w.snow, windX: e.wind.x, windZ: e.wind.z, night });
+  ctx.envUniforms.rain.value = Math.min(w.rainMmH / 8, 1);
+  ctx.crowd.setRain(w.rainMmH);
+  ctx.atmosphere.light.color.setScalar(1 - 0.9 * Math.min(Math.max(w.cloudCover, 0), 1) ** 1.5);
+}
 
 function statsOf(ctx: RenderContext): RenderStats {
   const { renderer, view } = ctx;
@@ -40,6 +50,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     crowd: { ...ctx.crowd.stats(), far: ctx.farCrowd.stats() },
     vehicles: ctx.vehicles.stats(),
     trains: ctx.trains.stats(),
+    weather: { rain: ctx.rain.stats(), wetness: ctx.envUniforms.wetness.value, direct: ctx.atmosphere.light.color.r },
   };
 }
 
@@ -193,6 +204,16 @@ function loaders(
   };
 }
 
+/** 환경(sim) → 대기 해·달·젖음·날씨·나무 계절·차량 밤·바람. */
+function setEnvironment(ctx: RenderContext, e: Readonly<EnvironmentState>): void {
+  ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF);
+  ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);
+  applyWeather(ctx, e);
+  ctx.treeUniforms?.setSeason(e.season.dayOfYear);
+  ctx.vehicleUniforms.night.value = nightFromSun(e.sunDirWF.y);
+  setTreeWind(ctx, e.weather.windMs, e.weather.windDirDeg);
+}
+
 export async function createRender(deps: RenderDeps): Promise<RenderService> {
   const ctx = await createRenderContext(deps);
   const { prep, draw } = createFrameSystems(ctx);
@@ -243,13 +264,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     ...loaders(ctx),
     setCamera: (c) => view.setCamera(c),
     setAvatar: (a) => ctx.avatar.set(a),
-    setEnvironment: (e) => {
-      ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF);
-      ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);
-      ctx.treeUniforms?.setSeason(e.season.dayOfYear);
-      ctx.vehicleUniforms.night.value = nightFromSun(e.sunDirWF.y);
-      setTreeWind(ctx, e.weather.windMs, e.weather.windDirDeg);
-    },
+    setEnvironment: (e) => setEnvironment(ctx, e),
     stats: () => statsOf(ctx),
     dispose: () => draw.dispose(),
     systems: () => [prep, draw],

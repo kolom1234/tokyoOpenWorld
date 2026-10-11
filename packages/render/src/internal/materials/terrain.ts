@@ -189,6 +189,7 @@ export function createTerrainMaterial(lib: MaterialLibrary, env: EnvUniforms, op
       puddleNoise: nb.n9.y.mul(0.6).add(nb.n29.w.mul(0.25)).add(nb.n1.w.mul(0.15)),
       flatY: n.y,
       geomNormalW: n,
+      ripple: { xz, rain: env.rain, time: env.time },
     },
     env.wetness,
   );

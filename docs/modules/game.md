@@ -61,6 +61,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/wiring/quality.ts | 품질 티어: `?quality=` > localStorage `sanpo.quality.v1` > 첫 표시 뒤 스트리밍이 2 s 조용해지면 `render.detectQuality()`, `quality/changed`마다 저장. 골든뷰는 고정·동적 해상도 끔(M03-T08). 반환 `{ settled, off }` — settled = 첫 티어 결정 끝(e2e 안정 조건) |
 | src/debug/physics-probe.ts | `?probe=physics`(+`&physicsIsolation=degraded`): 렌더 없이 물리 워커 + 상자 낙하 3 s → `__SANPO_PHYSICS_PROBE__`, `#app[data-probe]`(e2e physics.spec.ts, M04-T01) |
 | src/debug/post-flags.ts | `?quality=low\|medium\|high\|ultra`, `?post=ao:gtao,ssr:0,scale:0.85,…` → RenderConfig.quality·post(M03-T07 A/B). `?dynres=0` 동적 해상도 끔, `?gpuLoad=n` 디버그 GPU 부하(M03-T08), `?forcePost=1` 소프트웨어 래스터에서도 후처리(정지 떨림 e2e, ADR-0038). `?post=aerial:full|half,exp:<n>`(ADR-0039·0040) |
+| src/weather-mode.ts | M09-T01 날씨 모드: `?weather=auto\|live\|<상태 id>` > 골든뷰 weather > `?time=`(맑음 고정) > auto, `applyWeatherSpec`, live = `/api/weather` 10분 폴링(`startLiveWeather` — 크레딧 Open-Meteo 줄 `credits.setLiveCredit`) |
 | src/debug/wet-override.ts | `?wet=0..1` → `WeatherOverride`(env 배선·태양 고정이 `weather.wetness`를 덮음) + 왼쪽 아래 슬라이더(골든뷰 제외) — M03-T06 젖음 수동 검증 |
 | src/three-compat.ts | Vite alias `three` 대상: `three/webgpu` + WebGL 전용 이름 2개 대체(ADR-0028) |
 | src/debug/bookmarks.ts | 골든뷰 북마크(M03-T10): `?view=<id>` → `tests/golden/views.json` 동적 import(별도 청크) → 시작 포즈(절대 또는 지면 + AGL)·부팅 대기 중심·fov, `createGoldenWatch`(스트리밍 큐 0·HLOD 페이드 0·`extra` 1.5 s → `#app[data-golden=ready]`), `__SANPO_GOLDEN__` |

@@ -3,13 +3,13 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 449개.
+> 파일 452개.
 
 ## apps/game
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
 - `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
-- `apps/game/src/credits.ts` — 화면 오른쪽 아래 상시 출처 표기(03 §6 ODbL "Produced Work" 표기 — OSM 파생 노면 표시, M05-T02). M08 크레딧 화면·지도 하단 표기가 생기면 그쪽으로. | exports: CREDIT_LINE, mountCredits
+- `apps/game/src/credits.ts` — 화면 오른쪽 아래 상시 출처 표기(03 §6 ODbL "Produced Work" 표기 — OSM 파생 노면 표시, M05-T02). M08 크레딧 화면·지도 하단 표기가 생기면 그쪽으로. | exports: CREDIT_LINE, mountCredits, LIVE_WEATHER_CREDIT, setLiveCredit
 - `apps/game/src/debug/bookmarks.ts` — 골든뷰 북마크(`?view=<id>`, M03-T10): tests/golden/views.json의 고정 시점·시각·날씨·시드 → 시작 포즈·부팅 대기 중심, | exports: GoldenWeather, GoldenView, GoldenViewsFile, GOLDEN_SETTLE_MS, findView, loadGoldenView, viewCenterWF, viewPose, isQuiet, GoldenWatchDeps, createGoldenWatch
 - `apps/game/src/debug/decode-probe.ts` — `?probe=decode` 디버그 프로브(렌더 없이 실행): world-mini 셀을 streaming fetch → 디코드 워커로 두 번(네트워크·Cache Storage) 읽어 | exports: ProbeCell, DecodeProbeReport, runDecodeProbe
 - `apps/game/src/debug/overlay.ts` — `?debug=1` 오버레이: FPS·백엔드·깊이·카메라 WF/고도·원점 재설정 횟수 + [O] 원점 재설정 강제 테스트(먼 곳 순간이동 → 복귀). see docs/modules/game.md | exports: REBASE_TEST_OFFSET_M, REBASE_TEST_HOLD_MS, REBASE_TEST_KEY, DebugOverlayDeps, DebugOverlay, describeStreaming, describeMaterials, describeDebug, createDebugOverlay
@@ -24,6 +24,7 @@
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
 - `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainLcdSystem
+- `apps/game/src/weather-mode.ts` — 날씨 모드(M09-T01, 10 §3): `?weather=auto|live|<기후표 상태 id>` > 골든뷰 weather > `?time=`(고정 시각 = 맑음 고정 — e2e·비교 결정론) > auto(기후표 마르코프). | exports: WeatherSpec, parseWeatherFlag, weatherSpecOf, applyWeatherSpec, startLiveWeather
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라·아바타(phase 20 확정) → render.setCamera·setAvatar(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
 - `apps/game/src/wiring/env.ts` — 배선: sim.environment()(태양·달·날씨, 카메라 위치) → render.setEnvironment. camera(65) 뒤·renderPrep(70) 앞. see docs/modules/game.md, docs/01-architecture.md §5 | exports: ENV_WIRING_PHASE, defaultClock, createEnvWiring
 - `apps/game/src/wiring/ground-loading.ts` — 배선: 발밑·앞 셀 콜라이더 적재 대기(traversal.hud.groundLoading, M04-T06) → 화면 아래 가운데 작은 로딩 표시. HUD(M08 ui) 전까지의 최소 표시. | exports: GROUND_LOADING_PHASE, createGroundLoadingIndicator
@@ -123,6 +124,7 @@
 - `packages/render/src/internal/crowd/far.ts` — 원경 군중 tier C(10 §4.2, M06-T04 — ADR-0064): sim 밖(250 m+) 사람은 렌더 전용 스프라이트. L0 셀 roads.mesh의 보도 윗면(`_SURF` 1) 삼각형에서 | exports: FAR_PER_M2, FAR_CAPACITY, FarCrowdStats, FarCrowd, samplePoints, createFarCrowd
 - `packages/render/src/internal/crowd/field.ts` — 군중 필드(M06-T01): sim SAB 인스턴스(stride 8) → 프레임마다 외삽(30 Hz 틱 사이 — 속력·주기율) → 베이스(variant 가중 선택)·LOD(거리)·시야 원뿔 → | exports: CROWD_POOL_CAPACITY, CrowdFieldStats, CrowdField, createCrowdField
 - `packages/render/src/internal/crowd/material.ts` — 군중 머티리얼(07 §4 M_CHARACTER, M06-T01·ADR-0057): VAT 대신 **뼈 팔레트 텍스처 스키닝** — 정점 4영향 × (사원수 + 이동) 2텍셀 textureLoad, | exports: createCrowdMaterial
+- `packages/render/src/internal/crowd/umbrella.ts` — 우산(M09-T01 "우산 확률 연동"): 비가 오면 근거리 군중(≤ UMBRELLA_MAX_M) 중 variant 해시 < 확률인 사람 머리 위에 우산(가상 무지 — 로고 없음). | exports: UMBRELLA_CAPACITY, UMBRELLA_MAX_M, umbrellaShare, variantHash, Umbrellas, createUmbrellas
 - `packages/render/src/internal/frame.ts` — 프레임 시스템: renderPrep(70: 캔버스 크기·원점 재설정·카메라·HLOD 페이드) / render(80). see docs/01-architecture.md §5, docs/07-rendering.md §1–3 | exports: RENDER_PREP_PHASE, RENDER_PHASE, createFrameSystems
 - `packages/render/src/internal/lighting/atmosphere.ts` — 대기(M03-T02, 07 §6): @takram/three-atmosphere WebGPU — AtmosphereContext(렌더러 contextNode) + AtmosphereLight(태양 직사·하늘 간접) + 하늘 배경. | exports: GEOID_HEIGHT_M, worldToEcef, AtmosphereRig, createAtmosphere
 - `packages/render/src/internal/lighting/env-probe.ts` — 환경 조명(07 §6): 하늘에서 동적 큐브맵 → PMREM(`SkyEnvironmentNode`) → scene.environmentNode. | exports: ENV_CUBE_SIZE, EnvProbe, attachEnvProbe
@@ -154,7 +156,7 @@
 - `packages/render/src/internal/post/config.ts` — 품질 티어 → 후처리 효과(07 §9 표의 AO/GI/SSR 행 + 07 §7 나머지). 티어 선택·동적 해상도는 M03-T08, 여기는 표와 덮어쓰기만. | exports: POST_TIERS, resolvePost
 - `packages/render/src/internal/post/exposure.ts` — 자동 노출(07 §7): 씬 패스 HDR(하늘·공중원근 전)을 32² 격자로 읽어 로그 휘도 평균 → EMA → 노출 배율. 전부 GPU(컴퓨트 1회/프레임, | exports: REF_LUM, ADAPT, AutoExposure, createAutoExposure
 - `packages/render/src/internal/post/lut.ts` — 3D LUT 그레이딩(07 §7, M03-T07): 톤매핑·sRGB 뒤에 적용. 외부 .cube 대신 결정론 절차 LUT(라이선스 무관) — 약한 S 커브·채도 +6 %, | exports: LUT_SIZE, grade, createGradeLut
-- `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness]) | exports: PostPipeline, createDirectRender, createPostPipeline
+- `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness]) | exports: PostPipeline, createDirectRender, PostOverlays, createPostPipeline
 - `packages/render/src/internal/props/blocks.ts` — 소품 블록·LOD 띠(M05-T03): 셀 소품을 64 m 블록으로 나눠 종류별 조각(셀 로컬 행렬·색)을 만들고, 블록 AABB 3D 거리로 LOD 띠(히스테리시스 2 m)를 정한다. | exports: FAR_M, DEFAULT_FAR_M, TypeSlice, Block, blocksOf, distanceTo, bandOf
 - `packages/render/src/internal/props/geo.ts` — 소품 절차 모델 조립기(M05-T03): 상자·원기둥(축 x/y/z)·삼각 기둥 → 정점색 BufferGeometry(위치·법선 f32, 색 f32 선형). | exports: PartBuilder
 - `packages/render/src/internal/props/models.ts` — 소품 절차 모델(M05-T03, 자체 제작 — 로고·상표·실존 상호 없음): PROP_TYPE별 LOD 0–2 기하. 원점 = 바닥 중심, 로컬 +Z = 정면. | exports: PropLod, PROP_TYPE_IDS, buildPropGeometry, buildMergedPropGeometry
@@ -194,7 +196,8 @@
 - `packages/render/src/internal/vehicles/field.ts` — 차량 필드(M06-T06, ADR-0066): sim 교통 SAB(stride 8: x,y,z·yaw·속력·바퀴 회전·variant·flags) → 프레임마다 외삽(30 Hz 틱 사이 — 속력·바퀴) → | exports: VEHICLE_POOL_CAPACITY, VehicleFieldStats, VehicleField, createVehicleField
 - `packages/render/src/internal/vehicles/material.ts` — 차량 머티리얼(07 §4 M_VEHICLE, M06-T06 — ADR-0066): 클리어코트 도장(인스턴스 색)·어두운 유리·고정 부품(정점색), 바퀴 = 축 둘레 회전(인스턴스 회전 수), | exports: VehicleUniforms, createVehicleUniforms, createVehicleMaterial, nightFromSun
 - `packages/render/src/internal/vehicles/models.ts` — 차량 절차 모델(M06-T06, 자체 제작 — 실존 차명·로고·엠블럼·번호판 없음, ADR-0066): core VEHICLE_TYPES 7종(치수 공유) × LOD 0–2. | exports: VehicleLod, VEHICLE_LOD_M, buildVehicleGeometry, vehicleColors
-- `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06). | exports: EnvUniforms, createEnvUniforms, WetInput, WetOutput, applyWetness
+- `packages/render/src/internal/weather/rain.ts` — 빗줄기·눈(07 §8 비, M09-T01 — ADR-0076): 깊이 인지 화면 공간 층 — 카메라 둘레 원통 4겹(반경 2.2–18 m)에 칸마다 무작위 빗줄기를 두고, 화소 시선이 원통에 닿는 점의 | exports: RAIN_LAYERS, RainUniforms, RainField, createRainField, rainLayers
+- `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06), 비 파문 노멀(M09-T01). | exports: EnvUniforms, createEnvUniforms, rainRipples, WetInput, WetOutput, applyWetness
 
 ## packages/sim
 - `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, SimService, RailStaticLayout, SimDeps

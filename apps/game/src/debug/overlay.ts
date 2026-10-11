@@ -75,6 +75,7 @@ export function describeDebug(
     describeStreaming(st, s),
     describeMaterials(s.materials),
     `소품 ${s.props.visible}/${s.props.instances} · 풀 ${s.props.pools} · 나무 ${s.trees.visible}/${s.trees.instances} · ${s.trees.pools}${s.trees.ready ? '' : ' (에셋 대기)'} · 간판 ${s.signs.visible}/${s.signs.instances}${s.signs.ready ? '' : ' (대기)'}`,
+    `날씨 비 ${s.weather.rain.density > 0 ? `${s.weather.rain.snow ? '눈' : '줄기'} ${s.weather.rain.count}·밀도 ${fmt(s.weather.rain.density, 2)}` : '없음'} · 젖음 ${fmt(s.weather.wetness, 2)} · 직사 ${fmt(s.weather.direct, 2)}`,
     `[클릭] 마우스 잠금 · WASD 이동 · E/Q 상승/하강 · 휠 속도 · Shift ×4 · [O] 원점 재설정 테스트`,
   ];
 }

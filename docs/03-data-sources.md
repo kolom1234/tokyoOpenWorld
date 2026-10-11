@@ -31,7 +31,7 @@
 | ID | 데이터 | 라이선스 | 비고 |
 |---|---|---|---|
 | `wikidata` | 랜드마크 다국어 이름·좌표·짧은 설명 | CC0 | Wikipedia 본문(CC BY-SA)은 번들 금지. 설명문은 자체 작성(`content/poi/*.yaml`) |
-| `open-meteo` | 현재 날씨(실시간 날씨 모드) | 데이터 CC BY 4.0. 무료 API는 비상업 한정 ⚠ 상업화 시 유료 플랜 | 기능 플래그 `liveWeather` 기본 OFF |
+| `open-meteo` | 현재 날씨(실시간 날씨 모드) | 데이터 CC BY 4.0. 무료 API는 비상업 한정 ⚠ 상업화 시 유료 플랜 | 게임 `?weather=live`(기본 auto), Worker LIVE_WEATHER = staging·local true / production false(M09-T01). 켜지면 크레딧 줄에 'Open-Meteo.com (CC BY 4.0)' |
 
 ## 4. 에셋 (텍스처·모델·폰트·사운드)
 | 소스 | 사용 | 라이선스 |

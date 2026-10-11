@@ -155,6 +155,8 @@ export interface RenderStats {
   };
   /** 열차(M07-T03): sim 칸 수·그린 수·쓰는 풀·용량 초과·LOD별 수(45/300/1600 m)·준비. */
   trains: { cars: number; visible: number; pools: number; dropped: number; lods: number[]; ready: boolean };
+  /** 날씨(M09-T01): 빗줄기·눈 입자(그리는 수·밀도·눈)·노면 젖음·직사광 배율(구름). */
+  weather: { rain: { count: number; density: number; snow: boolean }; wetness: number; direct: number };
 }
 
 /** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */

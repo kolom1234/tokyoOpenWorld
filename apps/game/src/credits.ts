@@ -9,3 +9,11 @@ export function mountCredits(doc: Document): HTMLElement {
   doc.body.append(el);
   return el;
 }
+
+/** 실시간 날씨(M09-T01 live — Open-Meteo, CC BY 4.0)가 켜지면 출처 줄에 덧붙인다. */
+export const LIVE_WEATHER_CREDIT = ' · 날씨: Open-Meteo.com (CC BY 4.0)';
+
+export function setLiveCredit(doc: Document, on: boolean): void {
+  const el = doc.querySelector<HTMLElement>('.credits');
+  if (el) el.textContent = CREDIT_LINE + (on ? LIVE_WEATHER_CREDIT : '');
+}

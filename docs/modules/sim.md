@@ -39,6 +39,7 @@ clock/(world-clock — 모드·운행일 요일, astronomy — suncalc → 도�
 IDM 단일 차로 수렴, 신호 사이클, 운동 프로파일(시간 점프 일관성), 시간표 컴파일, 날씨 전이 확률 합=1, 공휴일 판정, 밀도 곡선.
 
 ## Status
+M09-T01(ADR-0076): `weather/{markov,wetness,live-mapper,service}.ts` — `SimService.weather: WeatherService{params, mode, stateId, setMode('auto'|'live'|'fixed', fixed?), setLive(LiveWeatherSample)}`, `SimDeps.weatherClimate`(content/sim/weather-climate.json — `WeatherClimateFile`), environment().weather·wind = 날씨(시각 순수 함수 — 다시 뽑기 마르코프 + 6 h 젖음 적분).
 M06-T07: `crowd/agent-fsm.ts` 늦은 출발 금지(`canMakeIt`)·대기 깊이 4.5 m, `crowd/crowd-sim.ts` 핫스팟 건너편 목적지(`acrossHotspot`)·`inspect()`(시험), `agents-detour` 분리 가중 1.5 — ADR-0067.
 M07-T04: `rail/{platforms,stations}.ts`(ADR-0073) — 승강장 귀 자르기 삼각화(윗면 +Y·옆면 바깥), 홈도어 배치(편성 문 = 2 m 문·사이 판 ≤ 2 m, 선로 중심 2.05 m)·열림 = 그 정차 열차 문, trains `bodiesNear`(편성 일련 id).
 M07-T03: `rail/{network,motion-profile,trains}.ts`(ADR-0072) — 선로 표본 보간·칸 자세(앞·뒤 대차 가운데·yaw·pitch)·터널 칸 숨김, 트립 운동(core tripLegs 캐시·정차·문 도착 +3 s ~ 출발 −5 s·쪽), 편성 칸 종류(앞/뒤 운전실·팬터그래프 — 제3궤조 없음).

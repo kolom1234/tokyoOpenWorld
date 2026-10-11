@@ -15,7 +15,7 @@ import type { PostEffects, QualityTier, RenderConfig } from '@sanpo/render';
 import type { ClockMode } from '@sanpo/sim';
 import { bootProgressSystem } from './boot-progress.ts';
 import { detectCaps } from './caps.ts';
-import { mountCredits } from './credits.ts';
+import { mountCredits, setLiveCredit } from './credits.ts';
 import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewPose } from './debug/bookmarks.ts';
 import { createDebugOverlay } from './debug/overlay.ts';
 import { parsePostFlag, parseQualityFlag } from './debug/post-flags.ts';
@@ -24,6 +24,7 @@ import { createSunOverride, parseSunFlag } from './debug/sun-override.ts';
 import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-override.ts';
 import { createLoop, type Loop } from './loop.ts';
 import type { StatusView } from './status-view.ts';
+import { parseWeatherFlag, type WeatherSpec, weatherSpecOf } from './weather-mode.ts';
 import { loadTier, type QualityWiring, startQualityWiring } from './wiring/quality.ts';
 import type { CrowdMode } from './world-late.ts';
 import {
@@ -88,6 +89,8 @@ export interface BootFlags {
   noTraffic?: boolean;
   /** `?trains=0` → 열차 없음(철도 적재·렌더 비용 비교, M07-T03). */
   noTrains?: boolean;
+  /** `?weather=auto|live|<상태 id>`(M09-T01 — weather-mode.ts). */
+  weather?: WeatherSpec;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -133,6 +136,7 @@ export function parseFlags(search: string): BootFlags {
     ...crowdFlag(q.get('crowd')),
     ...(q.get('traffic') === '0' ? { noTraffic: true } : {}),
     ...(q.get('trains') === '0' ? { noTrains: true } : {}),
+    ...(parseWeatherFlag(q.get('weather')) ? { weather: parseWeatherFlag(q.get('weather')) as WeatherSpec } : {}),
   };
 }
 
@@ -141,13 +145,9 @@ function crowdFlag(v: string | null): { crowd?: CrowdMode } {
   return v === 'dummy' || v === 'scramble' || v === 'agents' ? { crowd: v } : {};
 }
 
-/** 골든뷰 비(`weather: 'rain'`)의 노면 젖음 — sim 날씨(M06) 전까지 고정값. */
-const GOLDEN_RAIN_WETNESS = 0.85;
-
-/** 날씨 덮어쓰기: `?wet=` > 골든뷰 비 > 없음(sim 값). */
-function weatherOf(flags: BootFlags, golden: GoldenView | undefined): WeatherOverride | undefined {
-  if (flags.wet !== undefined) return { wetness: flags.wet };
-  return golden?.weather === 'rain' ? { wetness: GOLDEN_RAIN_WETNESS } : undefined;
+/** 젖음 덮어쓰기: `?wet=`만(골든뷰 비는 sim 날씨 고정 — M09-T01). */
+function weatherOf(flags: BootFlags): WeatherOverride | undefined {
+  return flags.wet !== undefined ? { wetness: flags.wet } : undefined;
 }
 
 /** 월드 출처 결정(API 또는 픽스처) → 데이터 로드. 각 단계 상태를 onStatus로 알리고, 성공하면 로드 결과를 돌려준다. */
@@ -230,6 +230,37 @@ interface LateReady {
   quality?: QualityWiring;
 }
 
+/** 플래그·골든뷰 → createWorldView 입력. */
+function worldViewDeps(
+  flags: BootFlags,
+  scheduler: Scheduler,
+  log: Logger,
+  golden: GoldenView | undefined,
+  bus: EventBus,
+  weather: WeatherOverride | undefined,
+): Parameters<typeof createWorldView>[0] {
+  return {
+    canvas: mountCanvas(document),
+    bus,
+    log,
+    scheduler,
+    backend: flags.backend === 'webgl' ? 'webgl' : 'auto',
+    renderConfig: renderConfigOf(flags, golden),
+    ...clockOf(flags, golden),
+    ...(weather ? { weather } : {}),
+    weatherSpec: weatherSpecOf(flags.weather, golden?.weather, flags.timeMs !== undefined),
+    onLiveWeather: (on) => setLiveCredit(document, on),
+    ...(flags.mode ? { startMode: flags.mode } : {}),
+    ...(flags.noTrees ? { trees: false } : {}),
+    ...(flags.crowd ? { crowd: flags.crowd } : {}),
+    ...(flags.noTraffic ? { traffic: false } : {}),
+    ...(flags.noTrains ? { trains: false } : {}),
+    ...(golden
+      ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
+      : {}),
+  };
+}
+
 async function setupWorldView(
   flags: BootFlags,
   scheduler: Scheduler,
@@ -240,25 +271,8 @@ async function setupWorldView(
   late: LateReady,
 ): Promise<WorldView | undefined> {
   try {
-    const weather = weatherOf(flags, golden);
-    const world = await createWorldView({
-      canvas: mountCanvas(document),
-      bus,
-      log,
-      scheduler,
-      backend: flags.backend === 'webgl' ? 'webgl' : 'auto',
-      renderConfig: renderConfigOf(flags, golden),
-      ...clockOf(flags, golden),
-      ...(weather ? { weather } : {}),
-      ...(flags.mode ? { startMode: flags.mode } : {}),
-      ...(flags.noTrees ? { trees: false } : {}),
-      ...(flags.crowd ? { crowd: flags.crowd } : {}),
-      ...(flags.noTraffic ? { traffic: false } : {}),
-      ...(flags.noTrains ? { trains: false } : {}),
-      ...(golden
-        ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
-        : {}),
-    });
+    const weather = weatherOf(flags);
+    const world = await createWorldView(worldViewDeps(flags, scheduler, log, golden, bus, weather));
     for (const p of world.providers) scheduler.add(p);
     scheduler.add({ systems: () => [bootProgressSystem(view, world)] });
     if (flags.sun)

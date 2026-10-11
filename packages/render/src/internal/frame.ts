@@ -77,6 +77,9 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
       library.setOrigin(view.renderOriginWF);
       if (syncProps(ctx, rebased)) counters.sceneVersion++;
       ctx.avatar.update(f.dtReal, view.renderOriginWF);
+      const pxAngle = (2 * Math.tan((view.camera.fov * Math.PI) / 360)) / Math.max(1, ctx.canvas.height);
+      ctx.rain.update({ ...ctx.weather, dtS: f.dtReal, pxAngle });
+      ctx.envUniforms.time.value = (ctx.envUniforms.time.value + f.dtReal) % 3600;
       counters.fading = hlod.update(f.dtReal);
       cells.syncHlodMaterials();
       const sceneChanged = counters.sceneVersion !== sceneVersion || counters.fading > 0;

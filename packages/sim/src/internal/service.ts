@@ -1,4 +1,4 @@
-// createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시). 날씨·계절은 기본값(M06/M09).
+// createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시) + 날씨(M09-T01 weather/service.ts). 계절은 M09-T05.
 // see docs/modules/sim.md, docs/10-simulation.md §2
 
 import type { EnvironmentState, GameSystem, SeasonParams, Vec3d, WeatherParams } from '@sanpo/core';
@@ -12,6 +12,7 @@ import { createRailStations, type RailStations } from './rail/stations.ts';
 import { createTrainSim, type TrainSim } from './rail/trains.ts';
 import { signalState } from './signals/controller.ts';
 import { compilePlans } from './signals/plans.ts';
+import { CLEAR_WEATHER, createWeatherService, type WeatherCore } from './weather/service.ts';
 import { createWorkerLink } from './worker/link.ts';
 
 /** 01-architecture §5: sim 시계 = phase 10. */
@@ -21,8 +22,6 @@ export const SIM_CLOCK_PHASE = 10;
  * 결과가 1 LSB씩 달라져 같은 장소·시각의 화면이 경로 의존적이 된다(원점 재설정 e2e에서 실측).
  */
 const OBSERVER_GRID_M = 1000;
-
-const CLEAR: WeatherParams = { cloudCover: 0, rainMmH: 0, fog: 0, windMs: 2, windDirDeg: 0, snow: 0, wetness: 0 };
 
 function dayOfYearJst(ms: number): number {
   const d = new Date(ms + 9 * 3600_000);
@@ -34,7 +33,17 @@ function seasonOf(ms: number): SeasonParams {
   return { dayOfYear: dayOfYearJst(ms), foliageTint: 0, bloom: 0, leafDensity: 1, outfitPalette: 0 };
 }
 
-export function computeEnvironment(ms: number, observerWF: Readonly<Vec3d>): EnvironmentState {
+/** 바람 벡터(WF m/s, 부는 쪽) — windDirDeg = 불어오는 방위(북 0°, 시계 +). */
+function windOf(w: WeatherParams): { x: number; y: number; z: number } {
+  const to = ((w.windDirDeg + 180) * Math.PI) / 180;
+  return { x: Math.sin(to) * w.windMs, y: 0, z: -Math.cos(to) * w.windMs };
+}
+
+export function computeEnvironment(
+  ms: number,
+  observerWF: Readonly<Vec3d>,
+  weather: WeatherParams = CLEAR_WEATHER,
+): EnvironmentState {
   const ll = wfToLonLat({ x: observerWF.x, y: observerWF.y, z: observerWF.z });
   const sun = sunPosition(ms, ll);
   const moon = moonPosition(ms, ll);
@@ -44,29 +53,36 @@ export function computeEnvironment(ms: number, observerWF: Readonly<Vec3d>): Env
     moonDirWF: moon.dirWF,
     sunIlluminanceLux: clearSkyIlluminanceLux(sun.elDeg),
     moonPhase: moon.phase,
-    weather: { ...CLEAR },
+    weather: { ...weather },
     season: seasonOf(ms),
-    wind: { x: 0, y: 0, z: 0 },
+    wind: windOf(weather),
+  };
+}
+
+/** environment() 캐시: 같은 시각·관측 격자점·날씨 객체면 같은 결과. */
+function envCache(clock: { readonly gameTimeMs: number }, weather: WeatherCore, observer: Readonly<Vec3d>) {
+  let cache: { ms: number; x: number; z: number; w: WeatherParams; env: EnvironmentState } | undefined;
+  return (): EnvironmentState => {
+    const ms = clock.gameTimeMs;
+    const x = Math.round(observer.x / OBSERVER_GRID_M) * OBSERVER_GRID_M;
+    const z = Math.round(observer.z / OBSERVER_GRID_M) * OBSERVER_GRID_M;
+    const w = weather.at(ms);
+    const c = cache;
+    if (c && c.ms === ms && c.x === x && c.z === z && c.w === w) return c.env;
+    const e = computeEnvironment(ms, { x, y: 0, z }, w);
+    cache = { ms, x, z, w, env: e };
+    return e;
   };
 }
 
 export function createSim(deps: SimDeps): SimService {
   const clock = createWorldClock(deps.now ?? Date.now, deps.initialClock);
+  const weather = createWeatherService(deps.weatherClimate, () => clock.gameTimeMs);
   const observer: Vec3d = { x: 0, y: 0, z: 0 };
-  let cache: { ms: number; x: number; z: number; env: EnvironmentState } | undefined;
   const link = createWorkerLink(clock, deps);
   let trains: TrainSim | undefined;
   let stations: RailStations | undefined;
-  const env = (): EnvironmentState => {
-    const ms = clock.gameTimeMs;
-    const x = Math.round(observer.x / OBSERVER_GRID_M) * OBSERVER_GRID_M;
-    const z = Math.round(observer.z / OBSERVER_GRID_M) * OBSERVER_GRID_M;
-    const c = cache;
-    if (c && c.ms === ms && c.x === x && c.z === z) return c.env;
-    const e = computeEnvironment(ms, { x, y: 0, z });
-    cache = { ms, x, z, env: e };
-    return e;
-  };
+  const env = envCache(clock, weather, observer);
   const system: GameSystem = {
     id: 'sim/clock',
     phase: SIM_CLOCK_PHASE,
@@ -86,6 +102,7 @@ export function createSim(deps: SimDeps): SimService {
   return {
     signalStateAt: (code) => signalState(plans, code, clock.gameTimeMs / 1000),
     clock,
+    weather,
     startWorker: (o) => link.start(o),
     addCell: (key, nav, lanes) => link.addCell(key, nav, lanes),
     outputs: () => ({ ...link.outputs(), ...(trains ? { trains: trains.buffer } : {}) }),
