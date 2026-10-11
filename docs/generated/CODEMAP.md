@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 444개.
+> 파일 449개.
 
 ## apps/game
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
@@ -197,7 +197,7 @@
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06). | exports: EnvUniforms, createEnvUniforms, WetInput, WetOutput, applyWetness
 
 ## packages/sim
-- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, SimService, RailStaticLayout, SimDeps
+- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, SimService, RailStaticLayout, SimDeps
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts', createSim
 - `packages/sim/src/internal/clock/astronomy.ts` — 천문(10 §2, 01 §7): suncalc 2.x(도 단위, 방위 = 진북 기준 시계방향, 고도 = 대기차 보정 겉보기) → 도북 방위(수렴각 보정) → WF 단위 벡터. | exports: BodyPosition, dirWFFromGrid, sunPosition, moonPosition, clearSkyIlluminanceLux
 - `packages/sim/src/internal/clock/world-clock.ts` — 월드 시계(10 §2): realtime / custom(시작 시각 + 배속, 프레임 dtReal 누적) / frozen. 요일 유형은 04:00 JST 운행일 경계. | exports: dayTypeOf, ClockCore, createWorldClock
@@ -218,7 +218,7 @@
 - `packages/sim/src/internal/rail/stations.ts` — 역 정적 배치·홈도어 상태(M07-T04, ADR-0073): setRail 때 승강장 기하·홈도어 조각(WF) 한 번 → 프레임마다 문(gate) 열림 = 그 정차에 선 열차의 문. | exports: PSD_PIECE_STRIDE, RailStations, createRailStations
 - `packages/sim/src/internal/rail/timetable.ts` — 열차 시간표 색인(M07-T02, ADR-0071): global/timetables/<lineId>.json(파이프라인 컴파일) → 요일 유형별 트립(enterS 순) → | exports: serviceTimeOf, LineTimetable, ActiveTrip, isTimetableFile, indexTimetable, activeTrips
 - `packages/sim/src/internal/rail/trains.ts` — 열차(M07-T03, ADR-0072): 시간표(운행 중 트립) × 트립 운동(motion-profile) → 편성 칸 자세 → 인스턴스 버퍼(메인 스레드, 프레임마다 — | exports: TRAIN_STRIDE, CAR_KIND, CAR_TYPE, TrainState, TrainStats, TrainSim, carKind, createTrainSim
-- `packages/sim/src/internal/service.ts` — createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시). 날씨·계절은 기본값(M06/M09). | exports: SIM_CLOCK_PHASE, computeEnvironment, createSim
+- `packages/sim/src/internal/service.ts` — createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시) + 날씨(M09-T01 weather/service.ts). 계절은 M09-T05. | exports: SIM_CLOCK_PHASE, computeEnvironment, createSim
 - `packages/sim/src/internal/signals/controller.ts` — 신호 제어기(10 §5.2, M06-T02 — ADR-0062·0065): 상태 = 게임 시각의 순수 함수(빨리감기·시각 점프 즉시 일관). 코드 = ((교차로 ID × 64 + 오프셋 칸) × 16) + 계획 × 4 + 그룹 | exports: decodeSignal, offsetOf, pedWalkLeftS, signalState
 - `packages/sim/src/internal/signals/plans.ts` — 신호 계획(10 §5.2, M06-T02 — ADR-0062): content/sim/signal-plans.json → 단계 경계 누적·주기. 그룹 = [차량 A, 차량 B, 보행 A, 보행 B]. | exports: VehicleLamp, PedLamp, CompiledPlan, compilePlans
 - `packages/sim/src/internal/traffic/idm.ts` — IDM(Intelligent Driver Model, 10 §5.1, M06-T05): a = a·[1 − (v/v0)^δ − (s*/s)²], s* = s0 + vT + v·Δv / (2√(ab)). | exports: IdmParams, IDM_DEFAULT, idmAccel
@@ -227,6 +227,10 @@
 - `packages/sim/src/internal/traffic/spawner.ts` — 차량 스폰(10 §5.1, M06-T05 — ADR-0065): 플레이어 spawnM(400 m) 안 도로 차선(연결로 아님)에서 — 처음엔 어디든 채우고, 평소엔 시야 밖 또는 farM(250 m) 밖, | exports: TrafficParams, NewVehicle, newVehicle, pickSpawn
 - `packages/sim/src/internal/traffic/traffic-sim.ts` — 교통(10 §5.1, M06-T05 — ADR-0065): 차선 위 차량 = (차선, s, v). 틱마다 차선별 정렬 → 앞차 간격(다음 차선까지 이어 봄)·가상 정지(yielding) → IDM → 이동·차선 넘김 | exports: Vehicle, TrafficStats, TrafficSim, TrafficDeps, createTrafficSim
 - `packages/sim/src/internal/traffic/yielding.ts` — 양보·정지 규칙(10 §5.1·§5.2, M06-T05 — ADR-0065): 차 앞 "가상 정지 지점"까지 거리 — 적신호(황색은 편하게 설 수 있을 때만, 정지선 못 서게 가까우면 통과 약속), | exports: CrossBand, YieldVehicle, YieldCtx, virtualGap
+- `packages/sim/src/internal/weather/live-mapper.ts` — 실시간 날씨(10 §3 liveWeather, M09-T01): `/api/weather`(Open-Meteo 현재값 프록시) 표본 → WeatherParams(젖음 제외). WMO 코드 표 = Open-Meteo 문서의 WMO 4677 요약. | exports: liveParams
+- `packages/sim/src/internal/weather/markov.ts` — 자체 날씨(10 §3, M09-T01 — ADR-0076): 30분 칸 마르코프. 칸마다 시드 난수 u1 > stay면 그 달 분포 p에서 u2로 다시 뽑고, 아니면 앞 칸 상태 유지. | exports: monthOfSlot, pickState, MarkovCache, createMarkovCache, stateAtSlot, slotOf, weatherAt
+- `packages/sim/src/internal/weather/service.ts` — 날씨 서비스(10 §3·§8 WeatherService, M09-T01 — ADR-0076): auto(기후표 마르코프 + 젖음 적분, 게임 시각 순수 함수) / live(실시간 표본 + 젖음 램프) / fixed. | exports: CLEAR_WEATHER, WeatherCore, fixedWeather, createWeatherService
+- `packages/sim/src/internal/weather/wetness.ts` — 노면 젖음 램프(07 §8 "wetness 0→1 (5분 게임시간)", M09-T01): 지난 historyH 시간 날씨를 stepMin 간격으로 적분 — 게임 시각 순수 함수(점프해도 같다). | exports: stepWetness, wetnessAt
 - `packages/sim/src/internal/worker/crowd-runtime.ts` — sim.worker 군중 실행(M06-T03): Recast WASM 초기화 → 내비 월드(셀 nav.bin) + tier A 군중, 신호 램프 = 계획(게임 시각 순수 함수), 게임 시각 = 메인 동기값 + 경과 × 배속. | exports: ClockSync, CrowdRuntime, createCrowdRuntime
 - `packages/sim/src/internal/worker/host.ts` — sim.worker 호스트(10 §1, M06-T01·T03): 감독자로 워커를 띄우고 SAB 인스턴스 버퍼를 넘긴다. 재시작되면 같은 SAB·파라미터로 다시 init하고 | exports: PEDESTRIAN_CAPACITY, TRAFFIC_CAPACITY, CrowdWorkerStats, SimWorkerHost, startSimWorker
 - `packages/sim/src/internal/worker/instance-buffer.ts` — SAB 인스턴스 버퍼(10 §1, M06-T01): 머리 64 B(Int32 seq·count·front, Float64 anchor x·y·z·tick 절대 ms) + 이중 데이터 영역 × capacity × stride 8. | exports: STRIDE, instanceBytes, allocInstanceSab, InstanceReader, instanceReader, InstanceWriter, instanceWriter
@@ -371,8 +375,9 @@
 - `tools/pipeline/src/stages/build/overrides/spec.ts` — 랜드마크 오버라이드 명세(M05-T05): content/overrides/<id>/meta.json — 대체할 PLATEAU 건물(replace)의 면을 랜드마크 머티리얼로 다시 내보내고(shell) | exports: LMAT, LmatName, XZ, ShellRule, ShellSpec, BoxPart, CylPart, ExtrudePart, CurbPart, RailingPart, RibbonPart, ScreenPart, TentPart, ToriiPart, DogPart, PartSpec, LandmarkSpec, OverrideSet, overrideSetOf, readOverrides
 - `tools/pipeline/src/stages/build/overrides/tent.ts` — 현수 지붕(M05-T05 요요기 국립경기장): PLATEAU 발자국(ground 링) 둘레 링(처마) → 주 케이블 능선(spine, 기둥 사이 포물선 처짐)으로 | exports: tentRoof
 - `tools/pipeline/src/stages/build/props-cell.ts` — 셀 소품(M05-T03)·나무(M05-T04): 성형 결과·지형 메시·도로 색인 → buildProps → props.inst(gzip) + 콜라이더 + 전선, 이어서 buildTrees(소품 자리 피함) | exports: PropCellInput, PropCellOutput, propsCell
-- `tools/pipeline/src/stages/build/rail-buildings.ts` — 선로 위 건물(M07-T04, ADR-0073): PLATEAU 역 상옥·역사·선로 위 빌딩은 땅에서 지붕까지 막힌 껍질이라 열차가 그 안을 지나간다. | exports: CANOPY_MAX_M, TrackBuildings, trackBuildings
+- `tools/pipeline/src/stages/build/rail-buildings.ts` — 선로 위 건물(M07-T04, ADR-0073): PLATEAU 역 상옥·역사·선로 위 빌딩은 땅에서 지붕까지 막힌 껍질이라 열차가 그 안을 지나간다. | exports: TrackBuildings, trackBuildings
 - `tools/pipeline/src/stages/build/rail-global.ts` — 철도 전역 빌드(M07-T01, ADR-0070): content/sim/rail-lines.json + data/normalized/rail(OSM) + N02(대조) + 지형(dem_1m, 밖은 원경 DEM) | exports: RailCatalog, readRailCatalog, RailTrackReport, RailBuildInput, buildRailGlobal, PLATFORM_TOP_M
+- `tools/pipeline/src/stages/build/rail-walls.ts` — 역 건물 선로 구간 벽 잘라내기(⓪ M09 사전, ADR-0075): PLATEAU 역사·선로 위 빌딩의 벽 중 선로 회랑(중심선 ± CORRIDOR_HALF_M)·승강장과 겹치는 | exports: CORRIDOR_HALF_M, BAND_BELOW_M, BAND_ABOVE_M, LINTEL_TOP_M, ENVELOPE_M, RailCorridor, railCorridorOf, railCorridor, subtractRect, WallCutStats, cutRailWalls
 - `tools/pipeline/src/stages/build/roads-mesh.ts` — roads.mesh 섹션(M05-T01, 05 §4): 보도·교통섬 윗면(성형 윗면 + 6 mm, 2 m 격자 조각) + 연석 세로 면 + 바깥 가장자리 치마 → | exports: RoadsBuild, TerrainAt, buildRoads
 - `tools/pipeline/src/stages/build/surface-class.ts` — 지형 표면 분류(M03-T06, 05 §4 `_SURF`): PLATEAU 도로 폴리곤(TrafficArea) → 셀 1 m 격자(257²) 분류 래스터. | exports: SURF, rasterizeRings, surfaceGrid
 - `tools/pipeline/src/stages/build/terrain-mesh.ts` — terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금, `_SURF` 경계 ≤ 2 m 세분) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: TERRAIN_SIMPLIFY_ERROR_M, TERRAIN_MATERIAL, TerrainGeometry, remapVertices, buildTerrainGeometry, encodeTerrainMesh

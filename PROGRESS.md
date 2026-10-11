@@ -1,20 +1,13 @@
 # PROGRESS
-Updated: 2026-10-06 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 → ② M07 T01–T05 완료, 브랜치 `claude/m07-trains`, draft PR #20)
+Updated: 2026-10-11 (session #21 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
 
-## Current Milestone: M07 — Trains (T01–T05 ✅ · T06 보류 = M09-T04 오디오 코어 의존) → 다음 M08 Vehicles
-## Current Task: M07 T01–T05 ✅(PR #20 리뷰 대기) — 다음 = **M08-T01 Sedan physics & drive mode**
-- Done in this session: ⓪ 소품 차도 정착·validate `props on road`(ADR-0068)·소품 `_itype` 범위 합치기·L1 랜드마크 + e2e `lod-continuity`, ① TAA(나무·간판·원경 군중)·minor 신호 계획(ADR-0069)·늦은 레이어 compileDetached,
-  M07-T01 선로·rail.bin(aa9e502, ADR-0070) · T02 시간표 컴파일러(a51fc4a, ADR-0071) · T03 열차 운동·절차 전동차(01d29bc, ADR-0072) · T04 칸 물리·문·승강장·홈도어(962ed6c, ADR-0073) · T05 train 모드(e526b74, ADR-0074).
-- 배포(2026-10-06 03:13): MVP 빌드 **`20261005-962ed6c-aefbe9ff`**(L0 294 + HLOD 177 + 머티리얼 32층, validate 0 — 선로·시간표 1,758 트립·승강장 11·홈도어, 선로 위 건물 충돌 제외) → dev 버킷 publish(482파일 386.8 MB, current 설정, worker 검증)
-  + staging Worker 배포(efe8ea3, 버전 9d31482c — sanpo-world-dev 바인딩) + 실제 GPU staging 탑승·걸어서 승차 확인(승강장 가장자리 띠·F 재입력 수정 — efe8ea3). dev gc: 20260928 빌드 1개 삭제(7일 유지 규칙). production 배포·버킷·KV 쓰기 없음.
-- 수락 요약: T01 정차 = 승강장 중심 0.01–1.15 m ✅·항공사진 1 m 초과 15 % ⚠️ / T02 스키마·간격 ≥ 90 s(최소 120–150 s) ✅ / T03 역간 소요 차 ≤ 0.05 s·점프 vs 연속 0 m ✅ /
-  T04 미끄러짐 1.75 cm·관통 0·승차·닫힌 문 차단 ✅ / T05 시부야→신주쿠 전면 전망 1배속 6분 평균 59.9 fps·p99 16.91 ms·지면 공백 0 ✅(RTX 3050 Laptop 1600×900, 22.6 W).
-- 실제 GPU 스크립트(scratchpad, 커밋 안 함): `ride.mjs`(탑승 측정 — `WORLD=api`면 staging), `ff.mjs`(빨리감기), `trains.mjs`·`carpos.mjs`·`trdbg.mjs`(열차 표시 진단), `pl/{railpos,runcheck,findtrain,trackbldg}.mjs`(rail.bin·시간표 점검).
-  측정 주의: 15–25 s마다 스크린샷을 찍으면 그때마다 100–270 ms 끊김(인공물), 측정 중 `pnpm test`를 같이 돌리면 그 구간 30 fps — 깨끗한 회차만 기록.
-- **키 대기**: ODPT_CONSUMER_KEY 없음 → 긴자선 GTFS 'waiting-key'(컴파일러는 가상 픽스처 `tests/fixtures/gtfs-mini`로 검증). 키가 생기면 `ODPT_CONSUMER_KEY=… pnpm pipeline fetch --source odpt-tokyometro --update-lock`
-  → `pnpm pipeline timetables --build-id <id>`(또는 다음 build) → validate → publish(키 값은 로그·파일·커밋 금지 — fetch.ts가 URL·오류에 남기지 않음).
-- Next step (정확히 한 걸음): PR #20 리뷰·병합 뒤 M08-T01 — `docs/roadmap/M08.md` `### M08-T01` 블록 → `packages/physics/src/internal/worker/vehicle-sedan.ts`(WheeledVehicleController) + `content/vehicles/sedan.json`.
-- Blockers: 없음(M07-T06은 M09-T04 의존 — 보류)
+## Current Milestone: M09 — Weather, Night, Audio (⓪ 역 건물 ✅ → T01 진행) · M08은 다음 세션
+## Current Task: M09-T01 Weather service & rain rendering
+- Done in this session: ⓪ 역 건물 = 선로·승강장 구간 벽 잘라내기(사용자 결정 (a), ADR-0075 — `build/rail-walls.ts`, L0·L1, 낮은 승강장 지붕 렌더 제외 삭제). 실제 GPU 전후 `docs/screenshots/M09/pre/station-*`.
+  MVP 재빌드 `20261011-08ecc26-aefbe9ff`(로컬만, validate 0 — publish 안 함).
+- 진행 중(M09-T01): sim `weather/{markov,wetness,live-mapper,service}.ts` + `content/sim/weather-climate.json` + 테스트(`test/weather.test.ts`) 작성, 다음 = render 빗줄기·파문·game `?weather=` 배선.
+- Next step (정확히 한 걸음): render `weather/rain.ts`(무상태 빗줄기 + 별도 패스 합성) → `post/pipeline.ts` 합성 → game `?weather=`·골든 날씨 고정 → 우산(crowd field).
+- Blockers: 없음. 실제 GPU 스크립트 = 세션 scratchpad(`stshots.mjs`·`stscenes.json` — 역 승강장 장면, `rebuild.sh` — build→hlod→materials→validate).
 
 ## Recently Completed
 - M07 Trains T01–T05(session #20, 2026-10-05~06) — 선로(OSM 이름 + N02 대조, 좌측통행, 0.5 m 표본, 곡률 제한, 승강장 정차) → 시간표(JR 합성 근사 + 긴자선 GTFS 컴파일러·키 대기) → 열차(메인 스레드 순수 함수,
@@ -60,7 +53,7 @@ Updated: 2026-10-06 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 �
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
-- [rail] **역 = PLATEAU 역사·선로 위 빌딩 껍질 안**(16동): 선로 표본 ≥ 6 m 덮는 건물은 충돌 제외, 431·461 ≤ 12 m 상옥만 렌더 제외 → 하라주쿠·요요기·신주쿠에서 열차·승강장·운전실 시야를 건물 면이 가린다(ADR-0073 대안: 선로 회랑에서 역사 면 잘라 내기·역 오버라이드).
+- [rail] 역 건물 = 선로·승강장 구간 벽만 레일 띠에서 잘림(ADR-0075) — 잘린 가장자리 두께 없음, 회랑 밖 벽 유지(승강장 바깥쪽 시야 일부), 선로 위 건물 충돌 제외 유지(역 동선은 M07-T06).
 - [rail] 항공사진 대조 1 m 초과 15 %(T01 ⚠️ — 0.49 m/px 한계, 시부야 데크·고층 그늘), 역간 소요 = 곡선 그대로라 실제보다 짧다(시부야→하라주쿠 91 s vs ≈ 2분, 근사 — 노선별 여유 계수 후보).
 - [trains] LOD0 창 = 구멍(유리 반사 없음), 차내 벽 안쪽 = 스테인리스 색, 차내 안내 화면 면은 빈 발광(글자 = 화면 오버레이), 터널 입구에서 칸 통째 사라짐(긴자선 고가 끝), 차임·음성 없음(M09).
 - [trains] 긴자선 GTFS 키 대기(ODPT) — 시부야 고가에 긴자선 열차가 아직 없다. 종착 시부야는 도착·출발 열차가 서로 다른 선로 트립이라 승강장에서 바뀐다(block_id 미사용).
@@ -126,7 +119,6 @@ Updated: 2026-10-06 (session #20 — 큐 모드 ⓪ 버그 → ① M06 잔여 �
 ## Decisions Pending
 - 라이선스 ⚠ 항목 → M11-T05 (단, 공개 배포 전 필수)
 - M06 사전 2 ⚠️: 스크램블 등 PLATEAU 밖 횡단의 ≤ 0.5 m 수치 검증 — 고해상도 정사영상(유료·별도 라이선스 가능) 도입 여부.
-- M07 ⚠️: 역사 껍질 처리 — (a) 선로 회랑의 PLATEAU 역사 벽 면 잘라 내기(지붕만), (b) 4개 역 오버라이드로 다시 짓기, (c) 지금처럼 둠. 역 동선(M07-T06) 전에 결정.
 
 ## Pre-flight (사람이 해야 할 일)
 - [x] GitHub 저장소 + Actions 시크릿(`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`)
