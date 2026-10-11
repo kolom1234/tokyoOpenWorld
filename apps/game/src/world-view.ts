@@ -1,5 +1,6 @@
 // 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선.
 // 지면 질의는 streaming 높이장(월드 로드 전 = 미적재). see docs/modules/game.md §부트 시퀀스, docs/06-world-streaming.md §8
+import type { AudioService } from '@sanpo/audio';
 import {
   createWorkerSupervisor,
   type DeepPartial,
@@ -30,6 +31,7 @@ import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
 import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
 import { createStreamingSimWiring } from './wiring/streaming-sim.ts';
+import { type AudioFlags, audioForWorld } from './world-audio.ts';
 import {
   type CrowdMode,
   crowdFarDensitySystem,
@@ -57,6 +59,8 @@ export interface WorldView {
   readonly frameSource: FrameSource;
   /** showWorld 뒤에만 있다. */
   readonly streaming: StreamingService | undefined;
+  /** 오디오(M09-T04) — showWorld 뒤, `?audio=0`이면 없음. */
+  readonly audio: AudioService | undefined;
   readonly wiring: StreamingRenderWiring | undefined;
   /** showWorld 뒤에만 있다(물리 워커 — M04-T02 셀 콜라이더). */
   readonly physics: PhysicsService | undefined;
@@ -85,6 +89,8 @@ export interface WorldViewDeps {
   log: Logger;
   scheduler: Pick<Scheduler, 'add'>;
   backend: 'auto' | 'webgl';
+  /** 오디오 플래그(`?audio=0`·`?vol=`, M09-T04). */
+  audio?: AudioFlags;
   /** render 설정 덮어쓰기(`?exposure=`·`?gpuTiming=1`). */
   renderConfig?: DeepPartial<RenderConfig>;
   now?: () => number;
@@ -218,6 +224,8 @@ async function showWorldWith(
   render.stageCells(true);
   const pre = v.precompiled;
   const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
+  // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
+  late.audio = audioForWorld(deps, { ...v, streaming: s }, world.baseUrl, () => late.physics);
   late.boot.spawn = world.spawnCells;
   const centerWF = deps.start?.centerWF ?? world.spawnWF;
   // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
@@ -315,8 +323,7 @@ function frameSourceOf(traversal: TraversalService, sim: SimService): FrameSourc
 
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
-  const config = { ...deps.renderConfig, backend: deps.backend };
-  const render = await createRender({ canvas, bus, log, config });
+  const render = await createRender({ canvas, bus, log, config: { ...deps.renderConfig, backend: deps.backend } });
   const late = initialLate();
   const precompiled = startPrecompile(render, late, log);
   const input = createInput({ target: canvas, bus, log });
@@ -341,6 +348,9 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     providers: [input, sim, traversal, { systems: () => wiringSystems }, render],
     get streaming() {
       return late.streaming;
+    },
+    get audio() {
+      return late.audio;
     },
     get wiring() {
       return late.wiring;

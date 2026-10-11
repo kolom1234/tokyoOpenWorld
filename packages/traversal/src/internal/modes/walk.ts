@@ -81,6 +81,8 @@ interface WalkState {
   grounded: boolean;
   /** 에스컬레이터로 운반 중(헤드밥 끔). */
   escalator: boolean;
+  /** 발밑 지면 재질(JCOL_MATERIAL — 발소리). */
+  material: number;
   bodyYaw: number;
 }
 
@@ -126,6 +128,7 @@ function createRt(settings: Readonly<TraversalSettings>): Rt {
     vel: { x: 0, y: 0, z: 0 },
     grounded: false,
     escalator: false,
+    material: 0,
     bodyYaw: 0,
   };
   const camera: CameraState = {
@@ -227,6 +230,7 @@ function readPose(st: WalkState, physics: PhysicsService, h: BodyHandle): void {
   Object.assign(st.vel, pose.linVel);
   st.grounded = pose.grounded;
   st.escalator = pose.escalator;
+  st.material = pose.groundMaterial;
 }
 
 /** 입력 → 캐릭터 속도 명령, 포즈 → 카메라(1인칭·3인칭)·HUD·플레이어. */
@@ -253,7 +257,7 @@ function drive(rt: Rt, frame: FrameContext, ctx: TraversalContext, physics: Phys
   } else thirdPerson(rt, frame, ctx, physics, feetY);
   rt.output.hud.speedKmh = hSpeed * MS_TO_KMH;
   rt.player.yawRad = st.bodyYaw;
-  Object.assign(rt.avatar, { yawRad: st.bodyYaw, speedMs: hSpeed, grounded: st.grounded });
+  Object.assign(rt.avatar, { yawRad: st.bodyYaw, speedMs: hSpeed, grounded: st.grounded, groundMaterial: st.material });
   rt.output.avatar = rt.avatar;
 }
 

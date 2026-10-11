@@ -1,5 +1,6 @@
 // @sanpo/tile-format 공개 계약: 포맷 상수·섹션 레지스트리·헤더/바이너리 모델·셀 데이터 모델. see docs/05-tile-format.md, docs/modules/tile-format.md
 import type { CellId, CellKey, CellLevel, Vec3d } from '@sanpo/core';
+import type { AudioZones } from './api-audio.ts';
 
 export * from './api-nav.ts';
 
@@ -207,6 +208,8 @@ export interface JcolRound extends JcolShapeBase {
 }
 export type JcolShape = JcolTriMesh | JcolConvexHull | JcolBox | JcolRound;
 
+// audio.json 존·발음체 + 오디오 manifest(M09-T04 — ADR-0079) — api-audio.ts
+export * from './api-audio.ts';
 // lights.bin 종류·일정(M09-T03 — ADR-0078) — api-lights.ts
 export * from './api-lights.ts';
 // ── global/rail.bin (05 §9, M07-T01 — ADR-0070): 형식·타입은 api-rail.ts(이 파일 400줄 제한), 공개 경로는 여기 재수출 ──
@@ -334,10 +337,6 @@ export interface LightRecord {
   dirOct: [number, number];
   lumen: number;
   range: number;
-}
-export interface AudioZones {
-  zones: Array<{ kind: string; polygonLocal: [number, number][]; y0: number; y1: number }>;
-  emitters: Array<{ kind: string; pos: Vec3Tuple }>;
 }
 
 // ── meta.json (schemas/cell-meta.schema.json과 일치) ──

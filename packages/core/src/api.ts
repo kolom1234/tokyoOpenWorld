@@ -84,6 +84,8 @@ export interface AvatarState {
   speedMs: number;
   grounded: boolean;
   opacity: number;
+  /** 발밑 지면 재질(tile-format JCOL_MATERIAL — 발소리, M09-T04). 없으면 콘크리트. */
+  groundMaterial?: number;
 }
 export interface FrameContext {
   frameIndex: number;

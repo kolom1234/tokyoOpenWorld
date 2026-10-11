@@ -30,7 +30,7 @@ import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
 import { aroundReader, railNetworkFor, readLayer } from './area-reader.ts';
 import { crop, mergeStreams, outward, union, unionBounds, withOverrideCollider, yRange } from './assemble-util.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
-import { encodeMeta, lightsOf } from './cell-extras.ts';
+import { audioOf, encodeMeta, lightsOf } from './cell-extras.ts';
 import { type CellBuildStats, cellStats } from './cell-stats.ts';
 import { buildCollision } from './collision.ts';
 import { encodeDecals } from './decals-mesh.ts';
@@ -196,6 +196,8 @@ async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSec
   if (props?.trees) sections.push({ type: 'trees.inst', sources: propSources, data: props.trees });
   const lights = await lightsOf(input, p);
   if (lights) sections.push({ type: 'lights.bin', sources: propSources, data: lights });
+  const audio = await audioOf(input, p);
+  if (audio) sections.push({ type: 'audio.json', sources: propSources, data: audio });
   if (p.nav?.bytes) sections.push({ type: 'nav.bin', sources: propSources, data: p.nav.bytes });
   if (p.lanes?.bytes) sections.push({ type: 'lanes.bin', sources: [OSM_SOURCE, TERRAIN_SOURCE], data: p.lanes.bytes });
   if (col.data) {

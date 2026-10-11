@@ -50,6 +50,9 @@ quantizeHeightfield(heightsM: ArrayLike<number>, size, step = 0.01, minH = HEIGH
 writeProps(batches: PropBatch[]): Uint8Array;  parseProps(bytes): Result<PropBatch[], TkcError>
 // trees.inst (M05-T04 ADR-0052): {u32 count} + 24 B 레코드
 writeTrees(records: TreeRecord[]): Uint8Array;  parseTrees(bytes): Result<TreeBatch, TkcError>;  treeRecordAt(batch, i): TreeRecord;  TREE_RECORD_BYTES = 24
+// audio.json (M09-T04 ADR-0079, api-audio.ts 재수출 — json+gzip): AudioZones { zones: AudioZone { kind: AudioZoneKind; polygonLocal; y0; y1 }[]; emitters: AudioEmitter { kind; pos; code? }[] }
+//   AUDIO_ZONE_KINDS = street·crossing·station·shopping·alley·park·elevated, AUDIO_EMITTER.signalTone(code = 신호 코드)
+// 빌드 shared/audio/manifest.json: AudioManifest { schema 1; hash; files: Record<id, AudioManifestEntry { file; bytes; kind 'bed'|'steps'; durS; steps?: [s, len][]; source }>; credits: AudioCredit { id; title; author; license; url }[] }
 // lights.bin (M09-T03 ADR-0078, api-lights.ts 재수출): {u32 count} + 24 B {u8 kind, u8 schedule, u16 kelvin, f32 x,y,z, i8×2 dirOct, u16 lumen, f32 range}
 writeLights(lights: LightRecord[]): Uint8Array;  parseLights(bytes): Result<LightRecord[], TkcError>;  LIGHT_KIND{streetLamp 1, shopFront 2, sign 3, vending 4, platform 5};  LIGHT_SCHEDULE{night 0, shop 1, sign 2, always 3};  LIGHT_RECORD_BYTES = 24
 TREE_SPECIES = { ginkgo: 1, zelkova: 2, cherry: 3, camphor: 4, pine: 5, shrub: 6 }; TreeSpeciesName; TreeRecord { species, seed, x, y, z, height, crownR }

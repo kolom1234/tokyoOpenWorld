@@ -24,13 +24,16 @@ AudioContext
 | `elevated` | 고가 하부 공명, 열차 통과 | 콘크리트 |
 - 시간·날씨 변조: 비 = 빗소리 레이어(표면별: 우산 위, 아스팔트, 나뭇잎), 밤 = 군중 게인↓·곤충(여름).
 - 보행자 신호 유도음: 일본식 "뻐꾹/삐요삐요" 계열을 **자체 합성**(주파수·패턴 파라미터화). 음향식 신호기 대상 교차로만.
+- 구현(M09-T04, ADR-0079): 존 = 셀 `audio.json`(32 m 격자 규칙 + `street` 기본), 베드 = Freesound CC0 녹음 15개(`content/audio/library.json` → `pnpm pipeline audio` → 빌드 `shared/audio/` Opus, 지연 로딩),
+  가중 = 원반 표본 32점 → 이득 램프 τ 0.8 s. 볼륨 `[`/`]`/`\`(음소거)·`?vol=`·`?audio=0`.
 
 ## 3. 발소리
 - 지면 재질(physics `groundMaterial`) × 신발 타입 × 속도 → 샘플 세트 무작위(반복 방지 라운드로빈 + 피치 ±5%).
 - 빗속 젖은 노면 레이어.
 
 ## 4. 라이선스 규칙 (재확인)
-- 사용 가능: 자체 녹음·합성, Freesound **CC0만**, 기타 CC0 라이브러리. 출처는 `content/ATTRIBUTION.json`.
+- 사용 가능: 자체 녹음·합성, Freesound **CC0·CC BY**(사용자 결정 2026-10-11 — BY-SA·NC·출처 불명 금지), 기타 CC0 라이브러리. 출처는 `content/ATTRIBUTION.json`(자동 생성 `tools/pipeline/scripts/audio-attribution.py`).
+- 녹음 금지(자체 합성): 신호 유도음·개찰구음·차임·LCD 안내음 등 실물 재현 우려가 있는 음.
 - 금지: 발차 멜로디, 실제 역 안내방송, 편의점 입점 징글, 상업 음악, 실제 광고 음성.
 
 ## 5. 공개 API

@@ -1,0 +1,382 @@
+{
+  "$comment": "M09-T04 오디오 원천(ADR-0079). 녹음 = Freesound CC0(승인 범위: CC0·CC BY만 — BY-SA·NC·출처 불명 금지). 원천 = HQ 미리듣기 MP3(sha256 = data/sources.lock.json freesound-audio). `pnpm pipeline audio`가 루프·발소리 조각 → Opus(OGG) → 빌드 shared/audio/. 신호 유도음·개찰구·차임·LCD음은 런타임 합성(packages/audio synth/) — 녹음 금지.",
+  "schema": 1,
+  "sources": [
+    {
+      "id": "fs-75271",
+      "freesound": 75271,
+      "url": "https://freesound.org/people/markystar/sounds/75271/",
+      "preview": "https://cdn.freesound.org/previews/75/75271_384438-hq.mp3",
+      "title": "busy_tokyo_street_evening_rush_3waves_120.wav",
+      "author": "markystar",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-42195",
+      "freesound": 42195,
+      "url": "https://freesound.org/people/markystar/sounds/42195/",
+      "preview": "https://cdn.freesound.org/previews/42/42195_384438-hq.mp3",
+      "title": "TokyoStreetAtNight_120.wav",
+      "author": "markystar",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-31791",
+      "freesound": 31791,
+      "url": "https://freesound.org/people/Heigh-hoo/sounds/31791/",
+      "preview": "https://cdn.freesound.org/previews/31/31791_21830-hq.mp3",
+      "title": "cross_road_shibuya.mp3",
+      "author": "Heigh-hoo",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-789672",
+      "freesound": 789672,
+      "url": "https://freesound.org/people/jrussell_tm/sounds/789672/",
+      "preview": "https://cdn.freesound.org/previews/789/789672_7154469-hq.mp3",
+      "title": "Ambient sound of shops in Japan",
+      "author": "jrussell_tm",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-244645",
+      "freesound": 244645,
+      "url": "https://freesound.org/people/Tasshi/sounds/244645/",
+      "preview": "https://cdn.freesound.org/previews/244/244645_2898499-hq.mp3",
+      "title": "20140813hachimanyama_residential.mp3",
+      "author": "Tasshi",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-42211",
+      "freesound": 42211,
+      "url": "https://freesound.org/people/markystar/sounds/42211/",
+      "preview": "https://cdn.freesound.org/previews/42/42211_384438-hq.mp3",
+      "title": "ShinNakanoAutumnNightScape120.wav",
+      "author": "markystar",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-75273",
+      "freesound": 75273,
+      "url": "https://freesound.org/people/markystar/sounds/75273/",
+      "preview": "https://cdn.freesound.org/previews/75/75273_384438-hq.mp3",
+      "title": "tokyo_park_at_dusk.wav",
+      "author": "markystar",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-364808",
+      "freesound": 364808,
+      "url": "https://freesound.org/people/RutgerMuller/sounds/364808/",
+      "preview": "https://cdn.freesound.org/previews/364/364808_179538-hq.mp3",
+      "title": "Japan_Matsudo_Yabashira_Crazy_Bird_Sounds.wav",
+      "author": "RutgerMuller",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-365257",
+      "freesound": 365257,
+      "url": "https://freesound.org/people/RutgerMuller/sounds/365257/",
+      "preview": "https://cdn.freesound.org/previews/365/365257_179538-hq.mp3",
+      "title": "Japan_Kashiwa_Insects_Far_and_Upclose.wav",
+      "author": "RutgerMuller",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-44681",
+      "freesound": 44681,
+      "url": "https://freesound.org/people/moxobna/sounds/44681/",
+      "preview": "https://cdn.freesound.org/previews/44/44681_43834-hq.mp3",
+      "title": "museum1.wav",
+      "author": "moxobna",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-454143",
+      "freesound": 454143,
+      "url": "https://freesound.org/people/kyles/sounds/454143/",
+      "preview": "https://cdn.freesound.org/previews/454/454143_612689-hq.mp3",
+      "title": "rain medium on street pavement.flac",
+      "author": "kyles",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-171980",
+      "freesound": 171980,
+      "url": "https://freesound.org/people/conleec/sounds/171980/",
+      "preview": "https://cdn.freesound.org/previews/171/171980_221578-hq.mp3",
+      "title": "AMB_M_City_Rain_Light.wav",
+      "author": "conleec",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-534929",
+      "freesound": 534929,
+      "url": "https://freesound.org/people/jordanrainer325/sounds/534929/",
+      "preview": "https://cdn.freesound.org/previews/534/534929_5557348-hq.mp3",
+      "title": "Rain From Under An Umbrella",
+      "author": "jordanrainer325",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-390740",
+      "freesound": 390740,
+      "url": "https://freesound.org/people/FunWithSound/sounds/390740/",
+      "preview": "https://cdn.freesound.org/previews/390/390740_6456158-hq.mp3",
+      "title": "Wind 2.mp3",
+      "author": "FunWithSound",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-330427",
+      "freesound": 330427,
+      "url": "https://freesound.org/people/janbezouska/sounds/330427/",
+      "preview": "https://cdn.freesound.org/previews/330/330427_3287894-hq.mp3",
+      "title": "Downtown LA, Little Tokyo, late night semi distant traffic.wav",
+      "author": "janbezouska",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-459964",
+      "freesound": 459964,
+      "url": "https://freesound.org/people/florianreichelt/sounds/459964/",
+      "preview": "https://cdn.freesound.org/previews/459/459964_6253486-hq.mp3",
+      "title": "Footsteps on concrete",
+      "author": "florianreichelt",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-637556",
+      "freesound": 637556,
+      "url": "https://freesound.org/people/kyles/sounds/637556/",
+      "preview": "https://cdn.freesound.org/previews/637/637556_612689-hq.mp3",
+      "title": "footsteps shoes walk road asphalt hard.flac",
+      "author": "kyles",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-256904",
+      "freesound": 256904,
+      "url": "https://freesound.org/people/PandaKub/sounds/256904/",
+      "preview": "https://cdn.freesound.org/previews/256/256904_2461989-hq.mp3",
+      "title": "Walking on Tile with Shoes",
+      "author": "PandaKub",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-206030",
+      "freesound": 206030,
+      "url": "https://freesound.org/people/Yuval/sounds/206030/",
+      "preview": "https://cdn.freesound.org/previews/206/206030_770707-hq.mp3",
+      "title": "footsteps grass.wav",
+      "author": "Yuval",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-352870",
+      "freesound": 352870,
+      "url": "https://freesound.org/people/PotatokingXII/sounds/352870/",
+      "preview": "https://cdn.freesound.org/previews/352/352870_4187409-hq.mp3",
+      "title": "Footsteps Dirt Gravel",
+      "author": "PotatokingXII",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-235718",
+      "freesound": 235718,
+      "url": "https://freesound.org/people/speedygonzo/sounds/235718/",
+      "preview": "https://cdn.freesound.org/previews/235/235718_3865966-hq.mp3",
+      "title": "Footsteps_sneakers on wood.wav",
+      "author": "speedygonzo",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    },
+    {
+      "id": "fs-148462",
+      "freesound": 148462,
+      "url": "https://freesound.org/people/conleec/sounds/148462/",
+      "preview": "https://cdn.freesound.org/previews/148/148462_221578-hq.mp3",
+      "title": "FOLEY_Footsteps_Metal_001.wav",
+      "author": "conleec",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "street-day",
+      "source": "fs-75271",
+      "kind": "bed",
+      "note": "도심 거리 낮 — 차량 흐름·오토바이·사람(도쿄)",
+      "loopS": 45
+    },
+    {
+      "id": "street-night",
+      "source": "fs-42195",
+      "kind": "bed",
+      "note": "도심 거리 밤 — 먼 차량·풀벌레(도쿄 시나가와)",
+      "loopS": 45
+    },
+    {
+      "id": "crowd",
+      "source": "fs-31791",
+      "kind": "bed",
+      "note": "교차로 보행자 웅성임·발소리(시부야)",
+      "loopS": 45
+    },
+    {
+      "id": "shopping",
+      "source": "fs-789672",
+      "kind": "bed",
+      "note": "상점가 소음(도쿄)",
+      "loopS": 40
+    },
+    {
+      "id": "residential-day",
+      "source": "fs-244645",
+      "kind": "bed",
+      "note": "주택가 낮 — 매미(여름, 도쿄 하치만야마)",
+      "loopS": 45
+    },
+    {
+      "id": "residential-night",
+      "source": "fs-42211",
+      "kind": "bed",
+      "note": "주택가 밤 — 풀벌레·먼 도시(도쿄 신나카노 가을)",
+      "loopS": 45
+    },
+    {
+      "id": "park",
+      "source": "fs-75273",
+      "kind": "bed",
+      "note": "공원 해 질 녘 — 새·먼 도시(도쿄)",
+      "loopS": 45
+    },
+    {
+      "id": "birds",
+      "source": "fs-364808",
+      "kind": "bed",
+      "note": "새소리(지바 마쓰도)",
+      "loopS": 40
+    },
+    {
+      "id": "insects-night",
+      "source": "fs-365257",
+      "kind": "bed",
+      "note": "풀벌레(지바 가시와, 가을)",
+      "loopS": 45
+    },
+    {
+      "id": "station",
+      "source": "fs-44681",
+      "kind": "bed",
+      "note": "실내 대공간 웅성임·발소리(안내방송 없는 홀 — 역 콘코스 대용)",
+      "loopS": 45
+    },
+    {
+      "id": "rain-street",
+      "source": "fs-454143",
+      "kind": "bed",
+      "note": "노면 빗소리(중간)",
+      "loopS": 30
+    },
+    {
+      "id": "rain-light",
+      "source": "fs-171980",
+      "kind": "bed",
+      "note": "도시 가랑비",
+      "loopS": 45
+    },
+    {
+      "id": "rain-umbrella",
+      "source": "fs-534929",
+      "kind": "bed",
+      "note": "우산 위 빗소리",
+      "loopS": 40
+    },
+    {
+      "id": "wind",
+      "source": "fs-390740",
+      "kind": "bed",
+      "note": "바람(가벼움~돌풍)",
+      "loopS": 40
+    },
+    {
+      "id": "traffic-far",
+      "source": "fs-330427",
+      "kind": "bed",
+      "note": "먼 차량 흐름(밤)",
+      "loopS": 60
+    },
+    {
+      "id": "step-concrete",
+      "source": "fs-459964",
+      "kind": "steps",
+      "note": "발소리 콘크리트",
+      "maxSteps": 10
+    },
+    {
+      "id": "step-asphalt",
+      "source": "fs-637556",
+      "kind": "steps",
+      "note": "발소리 아스팔트",
+      "maxSteps": 10
+    },
+    {
+      "id": "step-tile",
+      "source": "fs-256904",
+      "kind": "steps",
+      "note": "발소리 타일(구두)",
+      "maxSteps": 10
+    },
+    {
+      "id": "step-grass",
+      "source": "fs-206030",
+      "kind": "steps",
+      "note": "발소리 풀",
+      "maxSteps": 10
+    },
+    {
+      "id": "step-soil",
+      "source": "fs-352870",
+      "kind": "steps",
+      "note": "발소리 흙·자갈",
+      "maxSteps": 10
+    },
+    {
+      "id": "step-wood",
+      "source": "fs-235718",
+      "kind": "steps",
+      "note": "발소리 나무(운동화)",
+      "maxSteps": 10
+    },
+    {
+      "id": "step-metal",
+      "source": "fs-148462",
+      "kind": "steps",
+      "note": "발소리 금속",
+      "maxSteps": 10
+    }
+  ]
+}

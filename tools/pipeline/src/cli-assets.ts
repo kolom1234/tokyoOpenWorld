@@ -3,6 +3,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import type { Logger } from '@sanpo/core';
+import { AUDIO_LOCK_ID, type AudioLock } from './stages/audio/fetch.ts';
+import { readAudioLibrary } from './stages/audio/library.ts';
+import { buildAudio, installAudio } from './stages/audio/run.ts';
 import { buildCharacters } from './stages/characters/run.ts';
 import type { RocketboxLock } from './stages/characters/source.ts';
 import type { LockSource } from './stages/fixture.ts';
@@ -94,4 +97,42 @@ export async function characters(ctx: AssetCtx, args: string[]): Promise<void> {
       `${JSON.stringify(lockFile, null, 2)}
 `,
     );
+}
+
+/** 오디오(M09-T04 — ADR-0079): content/audio/library.json → Freesound 원천(sha256 lock `freesound-audio`) → Opus 루프·발소리 → (--build-id) 빌드 shared/audio. 컨테이너 전용(ffmpeg). */
+export async function audio(ctx: AssetCtx, args: string[]): Promise<void> {
+  const LOCK_PATH = join(ctx.repoRoot, 'data/sources.lock.json');
+  const { values } = parseArgs({
+    args,
+    options: {
+      'build-id': { type: 'string' },
+      'update-lock': { type: 'boolean', default: false },
+      force: { type: 'boolean', default: false },
+    },
+  });
+  const lockFile = JSON.parse(readFileSync(LOCK_PATH, 'utf8')) as { sources: (LockSource | AudioLock)[] };
+  const lock = lockFile.sources.find((s) => s.id === AUDIO_LOCK_ID) as AudioLock | undefined;
+  if (!lock) throw new Error(`sources.lock.json: no "${AUDIO_LOCK_ID}" source`);
+  const alog = ctx.log.child('audio');
+  const r = await buildAudio({
+    library: readAudioLibrary(join(ctx.repoRoot, 'content/audio/library.json')),
+    lock,
+    updateLock: values['update-lock'],
+    rawDir: join(ctx.repoRoot, 'data/raw/audio'),
+    derivedDir: join(ctx.repoRoot, 'data/derived'),
+    log: alog,
+    force: values.force,
+  });
+  if (values['update-lock'])
+    writeFileSync(
+      LOCK_PATH,
+      `${JSON.stringify(lockFile, null, 2)}
+`,
+    );
+  const bytes = Object.values(r.manifest.files).reduce((a, f) => a + f.bytes, 0);
+  alog.info(
+    `audio ${r.manifest.hash}${r.cached ? ' (cached)' : ''}: ${Object.keys(r.manifest.files).length} files, ${(bytes / 1e6).toFixed(2)} MB`,
+  );
+  if (values['build-id'])
+    alog.info(`installed → ${installAudio(r.dir, join(ctx.repoRoot, 'data/build', values['build-id']))}`);
 }

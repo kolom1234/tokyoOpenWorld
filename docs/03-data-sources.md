@@ -47,6 +47,8 @@
 | `opentype.js` 2.0.0 | 글꼴 윤곽 읽기(파이프라인 `signage`) | MIT |
 | 자체 제작 (설정 + 코드) | 가상 브랜드 64개(`content/signage/brands.json` 생성 규칙 + `real-brands.txt` 실존 상호 254개 대조 — 일치 0건), 간판 모델·아틀라스(ADR-0054) | 프로젝트 소유 |
 | Freesound (CC0 필터만) / 자체 녹음·합성 | 환경음·효과음 | CC0 / 자체 |
+| Freesound `freesound-audio` (M09-T04, ADR-0079) | 앰비언스 베드 15·발소리 7세트 — 녹음 22개(전부 CC0: 도쿄 거리·교차로·상점가·주택가·공원·풀벌레·비·바람·실내 홀 등), 목록·작성자 = `content/audio/library.json`, HQ 미리듣기 MP3 sha256 = `sources.lock` `freesound-audio`, 출처 = `ATTRIBUTION.json` `fs-<id>`(크레딧 화면). 파이프라인 `audio`가 구간 루프·발소리 조각·Opus로 가공 → 빌드 `shared/audio/`(R2, 지연 로딩). **사용자 결정(2026-10-11)**: CC0·CC BY만, BY-SA·NC·출처 불명 금지, 실제 발차 멜로디·안내방송·상업 음악·브랜드 효과음 금지(녹음·재현 모두) — 고른 구간의 지속 음조(신호음·차임·음악) 자동 검사 + staging 귀 검수 | CC0 |
+| 자체 합성 (코드) | 보행 신호 유도음(새 울음·뻐꾸기 계열 매개변수 음형)·개찰구 날개·카드 접촉·거부음·역 차임·LCD 알림·문 차임·열차 주행음(이음매·모터)·엔진(`packages/audio/src/internal/synth/*`) — 실제 기기·사업자 음과 다른 음형 | 프로젝트 소유 |
 | 자체 제작 (Blender) | 일본 특유 소품(자판기·전신주·신호등·가드레일·표지판) | 프로젝트 소유 |
 | 자체 제작 (명세 + 코드) | 랜드마크 오버라이드(M05-T05, ADR-0053): `content/overrides/<id>/meta.json` — PLATEAU 면 재사용(셸) + 절차 부품(도리이·동상·화면 등). 위치·높이 = PLATEAU·OSM(각 meta `reference`), 화면 영상은 절차 색면(글자·로고·실존 광고 없음). 외부 에셋 없음 | 프로젝트 소유(셸 형상 = PLATEAU 출처 표기, 위치 = OSM ODbL) |
 | 자체 제작 (코드) | 가상 차종 7종 절차 모델(M06-T06, `packages/render/src/internal/vehicles/models.ts` — 세단·택시(무지 지붕등)·경 왜건·경트럭·미니밴·택배 상자 트럭·버스, 육면체·원기둥 정점색 + 가상 도장 팔레트, 실존 차명·엠블럼·로고·번호판·실존 회사 도색 없음, 치수 = core `VEHICLE_TYPES` 일반 차급). 외부 에셋 없음 | 프로젝트 소유(출처 표기 불필요) |

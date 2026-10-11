@@ -66,8 +66,8 @@ async function withRetry<T>(what: string, fn: () => Promise<T>, log: Logger): Pr
   }
 }
 
-/** 공유 에셋: 머티리얼 KTX2 배열·manifest(M03-T01, materials --build-id가 설치). */
-const SHARED_FILE_RE = /^shared\/materials\/[A-Za-z0-9_-]+\.(json|ktx2)$/;
+/** 공유 에셋: 머티리얼 KTX2 배열·manifest(M03-T01, materials --build-id가 설치), 오디오 Opus·manifest(M09-T04, audio --build-id). */
+const SHARED_FILE_RE = /^shared\/(materials\/[A-Za-z0-9_-]+\.(json|ktx2)|audio\/[A-Za-z0-9_-]+\.(json|ogg))$/;
 /** 전역 파일(M07): 철도 망·시간표. */
 const GLOBAL_FILE_RE = /^global\/(rail\.bin|timetables\/[A-Za-z0-9_-]+\.json)$/;
 
@@ -81,7 +81,7 @@ export function buildFiles(dir: string): string[] {
         const relDir = relative(dir, p).replaceAll('\\', '/');
         if (
           /^L[0-3]$|^-?\d+$/.test(name) ||
-          ['shared', 'shared/materials', 'global', 'global/timetables'].includes(relDir)
+          ['shared', 'shared/materials', 'shared/audio', 'global', 'global/timetables'].includes(relDir)
         )
           walk(p);
         continue;
@@ -113,6 +113,7 @@ export function checkBuildDir(dir: string, buildId: string, files: readonly stri
 
 function contentType(path: string): string {
   if (path.endsWith('.json')) return 'application/json';
+  if (path.endsWith('.ogg')) return 'audio/ogg';
   return path.endsWith('.ktx2') ? 'image/ktx2' : 'application/octet-stream';
 }
 

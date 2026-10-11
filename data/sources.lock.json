@@ -264,6 +264,38 @@
       "license": "OFL-1.1",
       "attribution": "Noto Sans JP © 2014-2021 Adobe (http://www.adobe.com/), SIL Open Font License 1.1",
       "retrievedAt": "2026-10-01"
+    },
+    {
+      "id": "freesound-audio",
+      "url": "https://cdn.freesound.org/previews/{bucket}/{id}_{user}-hq.mp3",
+      "dataset": "https://freesound.org/",
+      "resource": "Freesound CC0 녹음 HQ 미리듣기 MP3 — 목록·출처 = content/audio/library.json(M09-T04, ADR-0079). sha256 = 파일별 맵(fs-<id>.mp3)",
+      "fiscalYear": null,
+      "license": "CC0-1.0",
+      "sha256": {
+        "fs-75271.mp3": "ad2c5ebb649a2daafabe5fe7de23f52e1262460a90d1dc810828e2e23c540b34",
+        "fs-42195.mp3": "93751cbf6668877a9c9fde9ce5911d9b3247355b7c66c8e0dc6fb949f8734d78",
+        "fs-31791.mp3": "e4e77c5fde52502468fd3307a9695708437300a1badd375ae79ef99eb14c510f",
+        "fs-789672.mp3": "00074ef6b00ff13173a70111ae28ce6ad72a2c4019352742272efc970612c1d3",
+        "fs-244645.mp3": "830b1a063cf80f4fce679884fbbbfa68735508310b37d6d5ca54980fc47814f8",
+        "fs-42211.mp3": "9ad73b928248b59e767b760b096714e8b95d6bc66f4f720ca89edfc53d1733e2",
+        "fs-75273.mp3": "37bf158ba008b2815a5c7e5b59957ffacad8659598153d4b80ca50d824475712",
+        "fs-364808.mp3": "b7b19b89ebda4638f91d879ab309e6f5355092c11a38fde2d7d1967b04c8ff8b",
+        "fs-365257.mp3": "5e44be27a16f8694382f05a4d71387687634da9a0c5107f7372d9157e681d872",
+        "fs-44681.mp3": "a296ebacca4215df1a3d0ed91deb249241892cc8a3288f19bdc4f736016e078b",
+        "fs-454143.mp3": "5b556add3b92da87cccbef326c062feb415d753dad2ac66eaf724db578747c1c",
+        "fs-171980.mp3": "41eb895bbadddf575a94f8fcbec78ce8a628309498b4e8d23a32b0de69d24eb5",
+        "fs-534929.mp3": "cbb803c3431cb6951c68da6677b80067e2e4413ea6b4d366c3a0ce5c35acdf82",
+        "fs-390740.mp3": "f20daa3abdf84527538710f24b8240b64ee555402f8b06bfa2664d17d75d1f82",
+        "fs-330427.mp3": "9f174e75723676046b9384610b2bec10f8be200fba539bea023887ca35705116",
+        "fs-459964.mp3": "a212ad7c507cfae371b92568c511e82e03c7014006ac0cd6704a07c67f9ad486",
+        "fs-637556.mp3": "d734f2e56f9017daa86e0cb83c33a6e01fe23512e1edba218433190a80706a79",
+        "fs-256904.mp3": "c0ec506ec96d27ca706cf0d7b810bc60b143b160f26cc987a6ccf7cf80681b6f",
+        "fs-206030.mp3": "8ebc1634fd00d03e31ec82bbdcec3ea1300dec044500f622a179b447aed928ff",
+        "fs-352870.mp3": "75dc7fc5cb4fe225eab27070e6b6b6771f8aa8ef00884b0028e13b767348b3a6",
+        "fs-235718.mp3": "59737d04c7c9f504b79169711bc2b5e9e3bfc2d83803f388c92973c57ffef928",
+        "fs-148462.mp3": "a88245611c57dc365ccfa1cc8443d261913c1dc0b546cd771e824aa48d4122d2"
+      }
     }
   ]
 }
