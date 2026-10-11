@@ -65,7 +65,7 @@ scene
    방 중심에서 광선 추적한 **자체 제작**(`materials/interiors.ts`, 256² × 6면 × 8방 = 2D 배열 48레이어 ETC1S 0.14 MB, manifest `interiors`).
    셰이더 `facade/interior.ts`(유리 픽셀에서만 동적 분기, 명시 LOD, 베이 < ≈ 3 px면 방 평균색) + `glass.ts`(실내 = 발광 × (1 − 프레넬) × 투과율 0.8/커튼월 0.35 ×
    `interiorExposure` 0.02, 블라인드 = 유리 안쪽 확산 알베도·살 무늬). 방 선택: 사무(열린 사무실 45 %·회의 20 %·소등 25 %·창고 10 %), 주거 4종 균등, 좌우 반전 50 %.
-5. **야간 점등**: 창별 점등 확률 = f(class, 시각, 요일) — 오피스는 19–22시 감소 곡선, 주거는 18–23시 피크. 점등 창은 실내 매핑 밝기 + 색온도 변화.
+5. **야간 점등**: 창별 점등 확률 = f(class, 시각, 요일) — 오피스는 19–22시 감소 곡선, 주거는 18–23시 피크. 점등 창은 실내 매핑 밝기 + 색온도 변화. 구현(M09-T03, ADR-0078): `lighting/{schedule,night}.ts` — L0 파사드·HLOD(`_FACADE.flags` 격자)·랜드마크 창 칸이 같은 비율 유니폼을 읽는다.
 6. **1층 상점(flags.retail)**: 셔터(영업시간 외 닫힘), 차양, **가상 간판**(M_SIGN과 같은 아틀라스 — M05-T06: 간판 띠 베이 가운데 4:1 타일 + 나머지 = 브랜드 바탕색), 쇼윈도 광원(lights.bin과 연동). 창문 시트는 ⚠️ 미구현.
 7. **맨션 발코니**: 노멀+시차(POM)로 표현(M05-T07), 필요 시 파이프라인에서 슬래브 지오메트리 압출(ADR). **구현(ADR-0055)** `facade/balcony.ts`: 난간판·슬래브 끝·칸막이 + 안쪽 깊이 1.2 m 시차 격자(gIn) + 천장 그늘, 기하 없음. 평지붕 방수 마감 색(walls.ts). 옥상 설비·외부 비상계단은 파이프라인 기하(overrides.mesh).
 8. **디테일**: 층간 줄눈, 배수관·실외기(데칼 마스크), 빗물 얼룩(상단→하단 그라디언트 노이즈), AO 모서리 어둡힘.
@@ -76,8 +76,8 @@ scene
 | 태양/달 | takram `AtmosphereLight`(DirectionalLight) + takram `CascadedShadowMapsNode`(three CSM 확장, 캐스케이드 페이드). High: 4 캐스케이드×2048², 그림자 거리 600 m, cast = 건물·랜드마크, HLOD 제외. 방향은 **sim이 계산**(suncalc + 수렴각, 1 km 격자 관측점)해 `EnvironmentState.sunDirWF`로 전달, render는 소비만(ADR-0029) |
 | 하늘/대기 | `@takram/three-atmosphere/webgpu` 0.19.1(+ r186 호환 패치) — `AtmosphereContext`(WF→ECEF: 원점 위치·NUE·수렴각 γ·지오이드 36.7 m) + `AtmosphereLight`(직사·하늘 간접) + `skyBackground()` + 후처리 `aerialPerspective`(ADR-0028) |
 | 환경 조명 | `SkyEnvironmentNode`(하늘 64² 큐브 → PMREM) = `scene.environmentNode`, 라이트 간접 끔. 갱신 = 카메라 1 km 이동 또는 태양 각도 변화(라이브러리 임계값, 분할 렌더 안 함 — ADR-0028) |
-| 간접광 | `SSGINode`(High+), `GTAONode`(Medium+). 플레이어 주변 `LightProbeGrid`는 M09-T03에서 효용 평가 후 채택 |
-| 야간 광원 | `ClusteredLightsNode` — 반경 300 m 내 최대 1024개(가로등 4000 K LED, 편의점풍 5500 K, 주거 2700 K). 원거리는 발광 스프라이트 + 블룸 |
+| 간접광 | `SSGINode`(High+), `GTAONode`(Medium+). `LightProbeGrid`는 **불채택**(ADR-0078 — 시각·스트리밍마다 재굽기 비용). 밤 = 반구 산란광(상공 페이드) |
+| 야간 광원 | `ClusteredLightsNode` — 반경 300 m 내 최대 1024개(가로등 4000 K LED, 편의점풍 5500 K, 주거 2700 K). 원거리는 발광 스프라이트 + 블룸. 구현(M09-T03, ADR-0078): lights.bin 규칙 배치 → 고정 풀 1024(티어별 켜는 수), 상점·간판 1차 감쇠, 스프라이트 1.5 km |
 | 신호/차량등 | 발광 머티리얼 + 근거리만 실제 광원. 신호 렌즈 = 소품 풀 `_ptype.y`(렌즈 표식) × 인스턴스 `_itype.y`(램프 값, `setSignalLamps`) 일치 시 정점색 × 6 발광(M06-T02, ADR-0062) |
 | 안개 | 고도 감쇠 높이 안개 + 대기 공중원근 강도(습도·비와 연동) |
 

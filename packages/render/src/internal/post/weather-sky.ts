@@ -44,6 +44,8 @@ const UPPER_WIND = 4;
 const HAZE_MIN = 0;
 const FOG_DENSITY = 0.005;
 const RAIN_HAZE = 0.00012;
+/** 맑은 밤 지평선 광해 = 장면 평균 휘도(연무 색) × 이 값(M09-T03). */
+const SKY_GLOW = 0.9;
 
 export interface WeatherSkyUniforms {
   readonly cover: UniformNode<'float', number>;
@@ -175,6 +177,10 @@ export function weatherSky(
       const k = mix(float(2.2), float(0.75), c.thick).add(silver);
       out.assign(mix(out, vec3(lum.mul(k)), c.a));
       mask.assign(c.a);
+      // 맑은 밤 광해(도쿄 하늘은 검지 않다): 지평선 주황 → 위로 갈수록 어두운 보라, 장면 평균 휘도 비례.
+      const up = exp(ray.dir.y.max(0).mul(-4));
+      const glowSky = mix(vec3(0.4, 0.38, 0.6), vec3(1, 0.62, 0.38), up).mul(mix(float(0.12), float(SKY_GLOW), up));
+      out.addAssign(glowSky.mul(u.hazeLum).mul(u.night).mul(float(1).sub(c.a)));
     });
     const dist = select(ray.sky, float(6000), ray.dist);
     const fog = float(1)

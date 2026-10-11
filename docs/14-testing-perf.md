@@ -33,6 +33,7 @@
 | `yoyogi-aerial-300m` ★ | 요요기 공원 상공 300 m → 신주쿠 | 5/15 10:00 맑음 | HLOD 원경·공중원근·스카이라인 |
 | `shibuya-residential-lowrise` ★ | 富ヶ谷 저층 주택가(L0 −4,−3), 지면 + 11 m | 5/15 14:00 맑음 | 주택·맨션 파사드·지붕·지면 |
 | `shibuya-scramble-night-rain` | 스크램블과 동일 | 5/15 21:00 비 | 젖은 노면 반사·간판·광원 |
+| `shibuya-scramble-night` | 스크램블과 동일 | 5/15 21:00 맑음 | 야간 조명(창 점등·간판·가로등, M09-T03) |
 | `omotesando-zelkova-autumn` | 오모테산도 느티나무길 | 11/15 15:00 맑음 | 식생·계절·그림자 |
 | `aerial-shinjuku-400m` | 신주쿠 상공 400 m | 5/15 16:00 맑음 | HLOD 전환·원경 스카이라인 |
 | `yamanote-front-view` (M07에서 추가) | 하라주쿠→요요기 전면 전망 | 10:00 흐림 | 철도 스플라인·선로 주변 |

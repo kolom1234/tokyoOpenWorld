@@ -73,6 +73,8 @@ export interface RenderConfig {
   gpuTiming: boolean;
   /** 태양 CSM 그림자(WebGPU만, 품질 티어 T08이 조정). */
   shadows: boolean;
+  /** 야간 실제 광원(M09-T03 ClusteredLighting 풀 1024, WebGPU만) — false = 발광 스프라이트만(`?nightLights=0`, 비용 A/B). */
+  nightLights: boolean;
   /** 'flat' = 파사드를 단색 PBR로(셰이더 비용 A/B 측정·최저 품질). */
   facade: 'procedural' | 'flat';
   /** 품질 티어(`?quality=`). 후처리 효과 기본값을 정한다(07 §9). */
@@ -157,6 +159,8 @@ export interface RenderStats {
   trains: { cars: number; visible: number; pools: number; dropped: number; lods: number[]; ready: boolean };
   /** 날씨(M09-T01): 빗줄기·눈 입자(그리는 수·밀도·눈)·노면 젖음·직사광 배율(구름). */
   weather: { rain: { count: number; density: number; snow: boolean }; wetness: number; direct: number };
+  /** 야간 조명(M09-T03): 밤 정도·적재 광원 셀·광원 수·켠 실제 광원(클러스터 풀)·발광 스프라이트. */
+  night: { level: number; cells: number; lights: number; active: number; sprites: number };
 }
 
 /** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */
@@ -302,7 +306,15 @@ export interface RenderService extends SystemProvider {
 }
 
 /** `debugLayerVisible` 대상(인스턴스 풀 레이어). */
-export type RenderDebugLayer = 'props' | 'signs' | 'trees' | 'crowd' | 'farCrowd' | 'vehicles' | 'trains';
+export type RenderDebugLayer =
+  | 'props'
+  | 'signs'
+  | 'trees'
+  | 'crowd'
+  | 'farCrowd'
+  | 'vehicles'
+  | 'trains'
+  | 'nightLights';
 
 export interface RenderDeps {
   canvas: HTMLCanvasElement;

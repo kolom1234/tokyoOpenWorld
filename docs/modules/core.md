@@ -43,7 +43,7 @@ export interface InterestPoint { posWF: Vec3d; velWF?: Vec3; forward?: Vec3; wei
 export interface WeatherParams { cloudCover: number; rainMmH: number; fog: number; windMs: number; windDirDeg: number; snow: number; wetness: number /* 노면 젖음 0..1, M03-T06 */; temperatureC?: number }
 export interface SeasonParams { dayOfYear: number; foliageTint: number; bloom: number; leafDensity: number; outfitPalette: number }
 export interface EnvironmentState { gameTimeMs: number; sunDirWF: Vec3; moonDirWF: Vec3; sunIlluminanceLux: number; moonPhase: number;
-  weather: WeatherParams; season: SeasonParams; wind: Vec3 }   // sim이 계산, render/audio가 소비
+  weather: WeatherParams; season: SeasonParams; wind: Vec3; dayType?: 'weekday'|'saturday'|'holiday' /* M09-T03 운행일(04:00 JST 경계) 요일 유형 — 창 점등·밀도, 없으면 평일 */ }   // sim이 계산, render/audio가 소비
 export interface SharedInstanceBuffer { data: Float32Array /* SAB, stride 8: x,y,z(=WF−anchorWF), yaw, anim, phase, variant, flags */; stride: 8; anchorWF(): Vec3d; count(): number; seq(): number }
 export interface GroundQuery { groundHeightAt(x: number, z: number): number | undefined }
 export interface TrainInfo { tripId: string; lineId: string; cars: number; carLengthM: number; headPosWF: Vec3d; headingRad: number; speedMs: number;

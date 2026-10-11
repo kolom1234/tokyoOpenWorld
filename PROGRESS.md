@@ -1,17 +1,21 @@
 # PROGRESS
-Updated: 2026-10-11 (session #21 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
+Updated: 2026-10-11 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
 
-## Current Milestone: M09 — Weather, Night, Audio (⓪ ✅ · T01 ✅ · T02 ✅ · T03 진행 중 WIP) · M08은 다음 세션
-## Current Task: M09-T03 Night lighting (WIP 커밋 — `pnpm check` lint 2건 남음)
-- Done in this session (#21, 2026-10-11, PR #21 draft): ⓪ 역 건물 벽 잘라내기(ADR-0075, 실제 GPU 전후 docs/screenshots/M09/pre), T01 날씨·빗줄기(ADR-0076), T02 구름(ADR-0077, 볼류메트릭 ⚠️ 보류).
-- T03 WIP(이 커밋, 미검증): render `lighting/{schedule,night,night-lights}.ts`(창 점등 = 클래스·JST 시·요일·창 시드 → 밤에 일부 창만 켜짐 ✅ 실제 GPU 확인, ClusteredLighting 풀 1024 + 가로등·자판기 발광 스프라이트),
-  간판·1층 간판 띠·가로등 등기구·자판기 야간 발광, core `EnvironmentState.dayType`, tile-format lights.bin 코덱(api-lights.ts)·streaming 디코드, 파이프라인 `build/{lights-cell,cell-extras}.ts`(가로등·자판기·간판·상점 앞).
-  로컬 시험 빌드 `m09-lights-test`(16셀) — **vite가 가장 최근 빌드를 고르므로 다음 세션 시작 시 전체 MVP 재빌드 필요**(그 전엔 world=local이 16셀만).
-- Next step (정확히 한 걸음): `pnpm check` lint 2건 수정 → 밤 노출·LIGHT_SCENE_K(0.12)·스프라이트 크기 실제 GPU 조정(scratchpad `night.mjs`) → HLOD 야경 창(materials/hlod.ts emissive) →
-  LightProbeGrid 불채택 ADR-0078 → fixture 재생성(lights.bin 추가로 world-mini 스냅샷 바뀜: `docker/run.sh node tools/pipeline/src/cli.ts fixture`) → test·e2e → 커밋. 그다음 T04 오디오(전부 자체 합성 계획 — 녹음 음원 다운로드는 사용자 승인 필요), T05, M07-T06, 마지막 MVP 재빌드 → dev publish → staging.
-- Blockers: 없음. 남은 측정: 빗줄기 ≤ 0.8 ms·구름 ≤ 0.5 ms·광원 ≤ 2 ms(GPU W 기록), 골든뷰 3장(night-rain·21:00·오모테산도 가을).
+## Current Milestone: M09 — Weather, Night, Audio (⓪ ✅ · T01 ✅ · T02 ✅ · T03 ✅ · T04 다음) · M08은 다음 세션
+## Current Task: M09-T04 Audio core & ambience (시작 전)
+- Done in this session (#21, 2026-10-11, PR #21 draft): ⓪ 역 건물 벽 잘라내기(ADR-0075), T01 날씨·빗줄기(ADR-0076), T02 구름(ADR-0077, 볼류메트릭 ⚠️ 보류),
+  T03 야간 조명(ADR-0078 — 아래 수락 요약). MVP 재빌드 `20261011-a037427-aefbe9ff`(로컬 data/build, 294셀 269.5 MB·HLOD 177·validate 0, 9.3분 — lights.bin 포함, 아직 publish 안 함).
+- Next step (정확히 한 걸음): T04 오디오 — `docs/11-audio.md` 전체 + `docs/modules/audio.md`. 계획: 환경음 = Freesound CC0·CC BY 녹음(HQ 미리듣기 OGG, 검색 스크래퍼 scratchpad `tools/fsearch.py`,
+  역 안내방송·음악·신호음이 섞인 구간은 음조 검출로 피함), 신호 유도음·개찰구·차임·LCD음 = 자체 합성(WebAudio). 파이프라인 `audio` 단계(ffmpeg → Opus, R2 `shared/audio/*`, ATTRIBUTION 자동 기록) +
+  `derive/audio-zones.ts`(셀 audio.json) → 다시 MVP 재빌드. ffmpeg는 파이프라인 Dockerfile에 추가 필요. 그다음 T05, M07-T06, MVP 재빌드 → dev publish → staging.
+- Blockers: 없음. 남은 측정: 골든뷰 오모테산도 가을(T05).
 
 ## Recently Completed
+- M09-T03 Night lighting(2026-10-11) — lights.bin 규칙 배치(가로등·자판기·간판·상점 앞, 셀 ≤ 600) → ClusteredLighting 고정 풀 1024(티어별 켜는 수) + 발광 스프라이트(1.5 km),
+  창 점등 스케줄(클래스 × JST 시 × 요일)을 L0 파사드·**HLOD**(`_FACADE.flags` 격자 발광)·**랜드마크**(커튼월 칸)에 공통 적용, 상점·간판 1차 감쇠(벽 흰 얼룩 제거), 밤 반구 산란광(상공 페이드),
+  맑은 밤 지평선 광해, 밤 잎 투과광 끔(가로수가 빛나던 문제). LightProbeGrid 불채택. **수락(실제 GPU 2560×1440 High, rAF p50, 21–22 W·상한 34 W)**: 광원 처리 +1.6 ms ≤ 2 ✅
+  (클러스터 켬 27.21 / 켠 광원 0 27.29 / 클러스터 없음 25.59 ms — 비용 = 클러스터 고정분), 비 +0.2 ms ≤ 0.8 ✅(26.68 vs 26.47), 2D 구름 ≈ 0 ms ≤ 0.5 ✅(하늘 보기 21.07 vs 21.11),
+  재선택 메인 스레드 renderPrep 4 ms 초과 0(후보 재사용·300 m만 정렬·낮 생략). 골든뷰 docs/screenshots/M09/T03(21:00 맑음 `shibuya-scramble-night` 신규, `night-rain`). e2e 13/13. ADR-0078
 - M07 Trains T01–T05(session #20, 2026-10-05~06) — 선로(OSM 이름 + N02 대조, 좌측통행, 0.5 m 표본, 곡률 제한, 승강장 정차) → 시간표(JR 합성 근사 + 긴자선 GTFS 컴파일러·키 대기) → 열차(메인 스레드 순수 함수,
   절차 가상 통근형 전동차 LOD 3 + 차내, 노선색 띠만) → 칸 물리(키네마틱 합성 바디·문·승강장·홈도어) → train 모드(서기·좌석·전면 전망·빨리감기·LCD 일영한·경계역 자동 하차). 수치는 위 수락 요약. ADR-0070–0074
 - M06 MVP 재빌드·staging(2026-10-05) — `20261004-ed3d33c-8de63322`: L0 294(243.5 s, 260.4 MB — nav 18.3 MB·횡단 1,500(신호 522), 차선 4,432 + 연결로 4,227(신호 1,101), 1.32 MB) + HLOD 177 + 머티리얼 32층, validate 0(도로 간극 최대 1.9 cm).
@@ -73,7 +77,7 @@ Updated: 2026-10-11 (session #21 — 큐 모드 ⓪ 역 건물 → ① M09 T01�
 - [avatar] Rocketbox 리그 23뼈 — 손가락·표정 애니메이션 없음(편 손 고정), 발 IK 없음(재생 속도 [0.75, 1.6] 자르기 → sprint 6.81 m/s 클립을 5 m/s에 쓰면 약간 미끄럼). ADR-0057.
 - [worker] 이 PC에서 miniflare 테스트 'GET 200 … ETag'가 5 s 시간 초과(HEAD에서도 같음 — 환경). 로컬 전체 테스트는 `SANPO_SKIP_MINIFLARE=1` 고려.
 - [physics] 셀 콜라이더 = 건물(0.3 m 단순화) + 높이장 + 보도 triMesh + 소품 프리미티브(M05-T03, 64 m 블록 합성). 나무 줄기 = M05-T04. CI(SwiftShader)에선 워커가 CPU 경합으로 적재 틱이 길다(기록만).
-- [render] 밤에 모든 건물 창(실내 매핑 발광)이 켜진다 — 창 점등 스케줄(용도·시각·층별 확률, `facade-params` 야간 점등 단계)은 **M09-T03**(Night lighting)에서. M03 보강 ⑤ 결정(2026-09-30).
+- [night] 광원 = 규칙 배치(가상)·그림자 없음, HLOD 창 = 3.4 m 고정 층 격자, 나무 잎은 가로등을 받지 않음(산란광만), 야간 간판·영상 화면은 낮과 같은 발광(ADR-0078). 절대 프레임 시간(2560×1440 High 21–27 ms, 21 W)은 dev 서버 기준.
 - [render] 동적 해상도는 60 Hz 수직 동기에서 여유를 못 재 "시도-후퇴"로 0.05씩 오르내린다(15 W 1080p High: 120 s에 19회, 0.5–0.85). 정지 떨림에는 영향 없음(ADR-0038 측정) — 선명도 변화가 거슬리면 시도 간격·히스테리시스 조정.
 - [perf] **이 PC GPU 전력 상한이 15 W ↔ 30 W로 바뀐다**(LG gram 17 17ZD90R, RTX 3050 4GB Laptop, 기본 30 W·최대 45 W, 전원 모드 최고 성능) — 15 W에선 2배 느림.
   측정은 행마다 `nvidia-smi enforced.power.limit` 기록. 15 W 기준 1080p Medium 회전 15.4–17.0 ms(2뷰가 16.6 ms 살짝 초과 → 동적 해상도가 흡수), 30 W 8–9 ms(ADR-0039).

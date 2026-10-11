@@ -290,7 +290,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
     ...wx,
-    nightLights: attachNightLights(renderer, graph, backend === 'webgpu' && !software),
+    nightLights: attachNightLights(renderer, graph, backend === 'webgpu' && !software && cfg.nightLights),
   };
   ctx.quality = attachQuality(ctx, deps, { post, software }, (tier) => {
     ctx.shadows?.setTier(tier);

@@ -29,7 +29,7 @@ export async function loadTreesInto(ctx: RenderContext, urls: TreeAssetUrls): Pr
 }
 
 /**
- * 잎 조명 = 태양(장면 조명, 그림자 포함) + 하늘 간접광만 켠 보조 AtmosphereLight(장면에 넣지 않음 — 다른 머티리얼은 환경맵이 간접광).
+ * 잎 조명 = 태양(장면 조명, 그림자 포함) + 하늘 간접광만 켠 보조 AtmosphereLight + 밤 산란광(반구)(장면에 넣지 않음 — 다른 머티리얼은 환경맵이 간접광).
  * 환경 프로브가 없는 경로(소프트웨어 WebGL2)는 태양 조명이 이미 간접광을 켜 둔다 → 장면 조명 그대로.
  */
 function foliageLights(ctx: RenderContext): { lightsNode?: object } {
@@ -39,7 +39,8 @@ function foliageLights(ctx: RenderContext): { lightsNode?: object } {
   sky.name = 'tree-sky';
   sky.direct.value = false;
   sky.indirect.value = true;
-  return { lightsNode: lights([sun, sky as unknown as typeof sun]) };
+  // 밤 도시 산란광(M09-T03)도 — 클러스터 가로등은 장면 조명 목록 밖이라 잎에 닿지 않는다(ADR-0078).
+  return { lightsNode: lights([sun, sky as unknown as typeof sun, ctx.nightLights.fill as unknown as typeof sun]) };
 }
 
 /** 바람(풍향 = 불어 가는 쪽, 도) → 유니폼. */

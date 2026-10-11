@@ -6,7 +6,7 @@ import { createRenderContext, type RenderContext } from './context.ts';
 import { loadCrowdAssets } from './crowd/assets.ts';
 import { createCrowdMaterial } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
-import { updateNight } from './lighting/night.ts';
+import { nightU, updateNight } from './lighting/night.ts';
 import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
@@ -61,6 +61,7 @@ function statsOf(ctx: RenderContext): RenderStats {
     vehicles: ctx.vehicles.stats(),
     trains: ctx.trains.stats(),
     weather: { rain: ctx.rain.stats(), wetness: ctx.envUniforms.wetness.value, direct: ctx.atmosphere.light.color.r },
+    night: { level: nightU.value, ...ctx.nightLights.stats() },
   };
 }
 
@@ -111,7 +112,9 @@ function debugLayerVisible(ctx: RenderContext, layer: RenderDebugLayer, visible:
     vehicles: ctx.vehicles.root,
     trains: ctx.trains.root,
   };
-  roots[layer].visible = visible;
+  // 야간 광원은 풀 PointLight를 장면에서 빼면 조명 목록이 바뀌어 재컴파일된다 → 켠 수만 0으로(클러스터 컴퓨트는 그대로).
+  if (layer === 'nightLights') ctx.nightLights.setEnabled(visible);
+  else roots[layer].visible = visible;
   ctx.counters.sceneVersion++;
 }
 

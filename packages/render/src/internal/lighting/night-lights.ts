@@ -8,6 +8,7 @@ import {
   AdditiveBlending,
   Color,
   Group,
+  HemisphereLight,
   InstancedMesh,
   Matrix4,
   MeshBasicNodeMaterial,
@@ -28,6 +29,22 @@ export const SPRITE_CAPACITY = 6000;
  * 가로등 아래 노면이 보이도록 실제 GPU에서 맞춘 값(ADR-0078).
  */
 export const LIGHT_SCENE_K = 0.12;
+/**
+ * 종류별 세기 배율·감쇠 지수: 가로등·자판기 = 역제곱(2), 상점 앞·간판 = 1(벽에 0.6 m 붙은 점광원의 역제곱은 벽에 흰 얼룩을 만든다 —
+ * 실제로는 처마 다운라이트·쇼윈도 면광원이라 넓게 퍼진다). 키 = LIGHT_KIND.
+ */
+const KIND_LOOK: Readonly<Record<number, { gain: number; decay: number }>> = {
+  [LIGHT_KIND.streetLamp]: { gain: 1, decay: 2 },
+  [LIGHT_KIND.shopFront]: { gain: 0.25, decay: 1 },
+  [LIGHT_KIND.sign]: { gain: 0.2, decay: 1 },
+  [LIGHT_KIND.vending]: { gain: 1, decay: 2 },
+  [LIGHT_KIND.platform]: { gain: 1, decay: 2 },
+};
+const LOOK_DEFAULT = { gain: 1, decay: 2 };
+/** 밤 도시 산란광(반구 조명 — 하늘 = 광해 보라·땅 = 노면 반사 주황): 광원이 닿지 않는 노면·벽도 어렴풋이 보이게(실제 GPU 21:00 스크램블에서 조정). */
+export const NIGHT_FILL = 0.015;
+/** 산란광 고도 페이드(T.P. m): 상공에서는 밝은 단색 HLOD 상자 전체가 회색으로 떠오른다 → 창 불빛만 남긴다. */
+const FILL_FADE_Y: readonly [number, number] = [90, 260];
 /** 스프라이트 밝기(장면 단위)·크기(m, 광속 1000 lm 기준). */
 const SPRITE_GAIN = 0.35;
 const SPRITE_SIZE_M = 0.3;
@@ -46,6 +63,8 @@ export interface NightLights {
   readonly root: Group;
   /** ClusteredLighting에 들어가는 고정 풀(장면에 붙어 있다). */
   readonly pool: readonly PointLight[];
+  /** 밤 도시 산란광(반구) — 자체 조명 목록을 쓰는 머티리얼(나무 잎)도 넣는다. */
+  readonly fill: HemisphereLight;
   addCell(key: CellKey, originWF: Vec3d, lights: readonly LightRecord[] | undefined): void;
   removeCell(key: CellKey): void;
   /** 프레임마다. camWF = 카메라 WF, origin = 렌더 원점, maxActive = 티어별 실제 광원 수. */
@@ -59,6 +78,8 @@ export interface NightLights {
     maxActive: number;
   }): void;
   stats(): { cells: number; lights: number; active: number; sprites: number };
+  /** 디버그 A/B(`debugLayerVisible('nightLights')`): false = 켠 광원 0·스프라이트 숨김. */
+  setEnabled(on: boolean): void;
   dispose(): void;
 }
 
@@ -95,11 +116,31 @@ interface Cand {
   k: number;
 }
 
-/** 켜진 광원 중 스프라이트 반경 안 후보를 모아 거리순 정렬. 반환 = 전체 광원 수. */
-function gatherCandidates(cells: ReadonlyMap<CellKey, CellLights>, o: UpdateArgs, cand: Cand[]): number {
-  cand.length = 0;
+/** 후보 목록(프레임 간 재사용 — 0.25 s마다 수천 개를 새로 만들면 GC·메인 스레드 4 ms 예산을 넘는다). near = 실제 광원 반경 안(거리순 정렬), far = 스프라이트만(정렬 안 함). */
+interface Candidates {
+  store: Cand[];
+  used: number;
+  near: Cand[];
+  far: Cand[];
+}
+
+function slot(c: Candidates): Cand {
+  let e = c.store[c.used];
+  if (!e) {
+    e = { d2: 0, cell: undefined as unknown as CellLights, k: 0 };
+    c.store.push(e);
+  }
+  c.used++;
+  return e;
+}
+
+/** 켜진 광원 중 스프라이트 반경 안 후보 → near(300 m 안, 거리순)·far. 반환 = 전체 광원 수. */
+function gatherCandidates(cells: ReadonlyMap<CellKey, CellLights>, o: UpdateArgs, c: Candidates): number {
   const h = hourJst(o.gameMs);
   let total = 0;
+  c.used = 0;
+  c.near.length = 0;
+  c.far.length = 0;
   for (const cl of cells.values()) {
     const dx0 = cl.originWF.x + 128 - o.camWF.x;
     const dz0 = cl.originWF.z + 128 - o.camWF.z;
@@ -113,10 +154,15 @@ function gatherCandidates(cells: ReadonlyMap<CellKey, CellLights>, o: UpdateArgs
       const y = cl.originWF.y + r.posLocal[1] - o.camWF.y;
       const z = cl.originWF.z + r.posLocal[2] - o.camWF.z;
       const d2 = x * x + y * y + z * z;
-      if (d2 < SPRITE_RADIUS_M * SPRITE_RADIUS_M) cand.push({ d2, cell: cl, k });
+      if (d2 >= SPRITE_RADIUS_M * SPRITE_RADIUS_M) continue;
+      const e = slot(c);
+      e.d2 = d2;
+      e.cell = cl;
+      e.k = k;
+      (d2 > LIGHT_RADIUS_M * LIGHT_RADIUS_M ? c.far : c.near).push(e);
     }
   }
-  cand.sort((a, b) => a.d2 - b.d2);
+  c.near.sort((a, b) => a.d2 - b.d2);
   return total;
 }
 
@@ -140,8 +186,10 @@ function assignPool(pool: readonly PointLight[], cand: readonly Cand[], o: Updat
     );
     const rgb = e.cell.rgb;
     l.color.setRGB(rgb[e.k * 3] as number, rgb[e.k * 3 + 1] as number, rgb[e.k * 3 + 2] as number);
-    l.intensity = (r.lumen / (4 * Math.PI)) * LIGHT_SCENE_K * o.night;
+    const look = KIND_LOOK[r.kind] ?? LOOK_DEFAULT;
+    l.intensity = (r.lumen / (4 * Math.PI)) * LIGHT_SCENE_K * look.gain * o.night;
     l.distance = r.range;
+    l.decay = look.decay;
     active++;
   }
   return active;
@@ -152,10 +200,11 @@ const v3 = new Vector3();
 const col = new Color();
 
 /** 스프라이트 = 실제 등기구가 있는 종류만(가로등·자판기 — 상점 앞·간판 광원은 빛 번짐 자리라 공중에 공이 뜬다). 반환 = 스프라이트 수. */
-function fillSprites(sprites: InstancedMesh, cand: readonly Cand[], o: UpdateArgs): number {
+function fillSprites(sprites: InstancedMesh, c: Candidates, o: UpdateArgs): number {
   let ns = 0;
-  for (const e of cand) {
-    if (ns >= SPRITE_CAPACITY) break;
+  const n = c.near.length;
+  for (let j = 0; j < n + c.far.length && ns < SPRITE_CAPACITY; j++) {
+    const e = (j < n ? c.near[j] : c.far[j - n]) as Cand;
     const r = e.cell.recs[e.k] as LightRecord;
     if (r.kind !== LIGHT_KIND.streetLamp && r.kind !== LIGHT_KIND.vending) continue;
     const i = ns++;
@@ -178,7 +227,23 @@ function fillSprites(sprites: InstancedMesh, cand: readonly Cand[], o: UpdateArg
   return ns;
 }
 
-export function createNightLights(poolSize: number): NightLights {
+function cellLightsOf(key: CellKey, originWF: Vec3d, lights: readonly LightRecord[]): CellLights {
+  const seeds = new Float32Array(lights.length);
+  const rgb = new Float32Array(lights.length * 3);
+  for (const [k, r] of lights.entries()) {
+    seeds[k] = seedOf(key, k);
+    rgb.set(kelvinRgb(r.kelvin), k * 3);
+  }
+  return { originWF: { ...originWF }, recs: [...lights], seeds, rgb };
+}
+
+/** 고정 풀(세기 0·지하) + 스프라이트 + 산란광을 root에 붙인다. */
+function buildRoot(poolSize: number): {
+  root: Group;
+  pool: PointLight[];
+  sprites: InstancedMesh;
+  fill: HemisphereLight;
+} {
   const root = new Group();
   root.name = 'nightLights';
   const pool: PointLight[] = [];
@@ -190,36 +255,50 @@ export function createNightLights(poolSize: number): NightLights {
     root.add(l);
   }
   const sprites = spriteMesh();
-  root.add(sprites);
+  const fill = new HemisphereLight(new Color(0.42, 0.4, 0.62), new Color(0.62, 0.45, 0.3), 0);
+  fill.name = 'nightFill';
+  root.add(sprites, fill);
+  return { root, pool, sprites, fill };
+}
+
+export function createNightLights(poolSize: number): NightLights {
+  const { root, pool, sprites, fill } = buildRoot(poolSize);
   const cells = new Map<CellKey, CellLights>();
   let since = RESELECT_S;
   let last: Vec3d = { x: Number.NaN, y: 0, z: 0 };
   let st = { cells: 0, lights: 0, active: 0, sprites: 0 };
-  const cand: Cand[] = [];
-  const reselect = (o: UpdateArgs) => {
+  const cand: Candidates = { store: [], used: 0, near: [], far: [] };
+  let enabled = true;
+  let dayDone = false;
+  const reselect = (o0: UpdateArgs) => {
+    const o = enabled ? o0 : { ...o0, maxActive: 0, night: 0 };
+    // 낮(밤 정도 0)에는 한 번 비운 뒤 훑지 않는다(켤 것이 없다).
+    if (o.night <= 0 && dayDone) {
+      st = { ...st, cells: cells.size };
+      return;
+    }
+    dayDone = o.night <= 0;
     const lights = gatherCandidates(cells, o, cand);
-    const active = assignPool(pool, cand, o);
+    const active = assignPool(pool, cand.near, o);
     const ns = fillSprites(sprites, cand, o);
     st = { cells: cells.size, lights, active, sprites: ns };
   };
   return {
     root,
     pool,
+    fill,
     addCell(key, originWF, lights) {
       if (!lights || lights.length === 0) return;
-      const seeds = new Float32Array(lights.length);
-      const rgb = new Float32Array(lights.length * 3);
-      for (const [k, r] of lights.entries()) {
-        seeds[k] = seedOf(key, k);
-        rgb.set(kelvinRgb(r.kelvin), k * 3);
-      }
-      cells.set(key, { originWF: { ...originWF }, recs: [...lights], seeds, rgb });
+      cells.set(key, cellLightsOf(key, originWF, lights));
       since = RESELECT_S;
     },
     removeCell(key) {
       if (cells.delete(key)) since = RESELECT_S;
     },
     update(o) {
+      const lowF = 1 - Math.min(Math.max((o.camWF.y - FILL_FADE_Y[0]) / (FILL_FADE_Y[1] - FILL_FADE_Y[0]), 0), 1);
+      fill.intensity = NIGHT_FILL * o.night * lowF;
+      fill.visible = o.night > 0;
       since += o.dtS;
       const moved = Math.hypot(o.camWF.x - last.x, o.camWF.z - last.z) > RESELECT_MOVE_M || Number.isNaN(last.x);
       if (!o.rebased && !moved && since < RESELECT_S) return;
@@ -228,6 +307,10 @@ export function createNightLights(poolSize: number): NightLights {
       reselect(o);
     },
     stats: () => ({ ...st }),
+    setEnabled(on) {
+      enabled = on;
+      since = RESELECT_S;
+    },
     dispose() {
       sprites.geometry.dispose();
       (sprites.material as MeshBasicNodeMaterial).dispose();

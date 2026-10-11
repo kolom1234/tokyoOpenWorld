@@ -63,6 +63,8 @@ export interface BootFlags {
   timeMs?: number;
   /** `?shadows=0` → 태양 그림자 끔(A/B 성능 비교). */
   noShadows?: boolean;
+  /** `?nightLights=0` → 야간 실제 광원(클러스터) 끔 — 비용 A/B. */
+  noNightLights?: boolean;
   /** `?facade=flat` → 파사드 단색(셰이더 비용 A/B). */
   flatFacade?: boolean;
   /** `?wet=<0..1>` → 노면 젖음 고정 + 슬라이더(debug/wet-override.ts). */
@@ -124,6 +126,7 @@ export function parseFlags(search: string): BootFlags {
     ...(Number.isFinite(Date.parse(q.get('time') ?? '')) ? { timeMs: Date.parse(q.get('time') ?? '') } : {}),
     ...(q.get('clock') === 'run' ? { clockRun: true } : {}),
     ...(q.get('shadows') === '0' ? { noShadows: true } : {}),
+    ...(q.get('nightLights') === '0' ? { noNightLights: true } : {}),
     ...(q.get('facade') === 'flat' ? { flatFacade: true } : {}),
     ...(parseWetFlag(q.get('wet')) !== undefined ? { wet: parseWetFlag(q.get('wet')) as number } : {}),
     ...(parseQualityFlag(q.get('quality')) ? { quality: parseQualityFlag(q.get('quality')) as QualityTier } : {}),
@@ -208,6 +211,7 @@ function renderConfigOf(flags: BootFlags, golden: GoldenView | undefined): DeepP
     ...(flags.exposure ? { exposure: flags.exposure } : {}),
     ...(flags.gpuTiming ? { gpuTiming: true } : {}),
     ...(flags.noShadows ? { shadows: false } : {}),
+    ...(flags.noNightLights ? { nightLights: false } : {}),
     ...(flags.flatFacade ? { facade: 'flat' as const } : {}),
     ...(quality ? { quality } : {}),
     ...(flags.post ? { post: flags.post } : {}),

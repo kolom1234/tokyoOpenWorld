@@ -13,11 +13,13 @@ QualityTier = 'low'|'medium'|'high'|'ultra'; PostEffects { ao: 'none'|'gtao'|'ss
 RenderStats += post: PostEffects | null, exposure: { lum, scale } | null, quality: { tier, renderScale, dynamic, frameMs }
 RenderConfig += dynamicResolution (true), gpuBenchmarksPath ('/detect-gpu/'), debugGpuLoad (0)  // M03-T08
 RenderConfig += debugForcePost (false)  // 소프트웨어 래스터에서도 후처리 체인(CI 정지 떨림 e2e, ADR-0038)
+RenderConfig += nightLights (true)  // M09-T03 야간 실제 광원(ClusteredLighting 풀 1024, WebGPU만) — false = 스프라이트만(`?nightLights=0` 비용 A/B), ADR-0078
 PostEffects += aerial: 'full' | 'half'   // 공중원근 해상도(Low–High half, Ultra full, `?post=aerial:full`) — ADR-0039
 RenderStats += shadows: { cascades, mapSize, maxFarM, updated } | null;  gpu.passes: GpuPassTime[] { index, label, ms }  // ADR-0039
 RenderStats += props: { instances, visible, pools, rebuilds, dropped }  // M05-T03 거리 소품: LOD당 InstancedMesh 1개(전 종류 합친 기하) → pools = 소품 드로우콜 ≤ 3, dropped = 고정 용량 초과, ADR-0051
 RenderStats += trees: { instances, visible, pools, dropped, ready }; RenderService += loadTrees(urls: TreeAssetUrls{manifest, glb, leaves, impostor}): Promise<void>  // M05-T04 ADR-0052 — 첫 표시 뒤
 RenderStats += weather: { rain: { count, density, snow }, wetness, direct }  // M09-T01 빗줄기 층·젖음·직사광 배율(구름), ADR-0076
+RenderStats += night: { level, cells, lights, active, sprites }  // M09-T03 밤 정도·lights.bin 셀·광원 수·켠 클러스터 광원(풀 1024)·발광 스프라이트, ADR-0078
 RenderStats += signs: { instances, visible, pools, ready }; RenderService += loadSignage(urls: SignageAssetUrls{atlas}): Promise<void>  // M05-T06 ADR-0054 — 첫 표시 뒤, 파사드 간판 띠도 같은 아틀라스
 RenderService += setQuality(tier), detectQuality(): Promise<QualityTier>  // 버스 'quality/changed'도 적용(되먹임 없음), 자기 변경은 방출. 소프트웨어 래스터 = detect-gpu 생략 → low
 QualityTier = @sanpo/core 재수출
@@ -32,7 +34,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;   // 대기 LUT → 머티리얼 ID 묶음마다 1프레임 양보 → 아바타 (M06, PrecompileProgress{stage,done,total})
   stageCells(on); compileStaged(): Promise<void>; commitStaged();
   setSignalLamps(lamp: ((code) => number) | null): void;   // M06-T02(ADR-0062): props 신호 기둥 현시 코드 → 램프 값(차량 1–3 + 4 × 보행 1–2), 보이는 슬롯만·바뀐 범위만 업로드. 소품 풀 정점 버퍼 ≤ 8(_ptype·_itype = vec2). 램프 범위는 같은 프레임 풀 재작성 범위와 **합친다**(지우면 다른 소품 `_itype`가 GPU에 안 가 사라짐 — ADR-0068)
-  debugLayerVisible(layer: RenderDebugLayer /* 'props'|'signs'|'trees'|'crowd'|'farCrowd'|'vehicles' */, visible): void;   // 디버그(ADR-0068): 인스턴스 레이어 숨김/보임 — e2e lod-continuity·실제 GPU 진단의 보임/숨김 픽셀 차
+  debugLayerVisible(layer: RenderDebugLayer /* 'props'|'signs'|'trees'|'crowd'|'farCrowd'|'vehicles'|'trains'|'nightLights'(M09-T03: 켠 광원 0·스프라이트 숨김) */, visible): void;   // 디버그(ADR-0068): 인스턴스 레이어 숨김/보임 — e2e lod-continuity·실제 GPU 진단의 보임/숨김 픽셀 차
   readonly vehicles: VehicleLayer { bindShared(buf): Promise<void> };
   readonly trains: TrainLayer { bindShared(buf): Promise<void>; setStations(d: TrainStationsData | null) /* M07-T04: 승강장 삼각형·홈도어 판·문(f64 × 5)·문 열림 배열·띠 색 — 열차 머티리얼 재사용 */ };   // M07-T03(ADR-0072): sim 열차 칸 버퍼(메인 스레드 — 프레임마다 정확) → 가상 통근형 전동차 절차 모델(20 m 4문·16 m 3문 × 중간·팬터그래프·앞/뒤 운전실 × LOD 45/300/1600 m, LOD0 = 창 구멍 + 차내), 노선색 띠·문 미닫이·등화. stats.trains{cars, visible, pools, dropped, lods[3], ready}, debugLayerVisible('trains')   // M06-T06(ADR-0066): sim 교통 SAB → 가상 차종 7 절차 모델 × LOD 3, 처음 bind 때 풀·머티리얼 → compileAsync 뒤 그림. stats.vehicles{instances, visible, pools, dropped, casters, lods[3], ready}
   loadCrowd(urls: CrowdAssetUrls { manifest, bin, texture }): Promise<void>; readonly pedestrians: InstanceLayer { bindShared(buf), setFarDensity(k) /* M06-T04 원경 스프라이트 밀도 0..1, 기본 0 */ };   // M06-T01(ADR-0061): crowd/{assets,material,field} — 뼈 팔레트 스키닝, (베이스 × LOD) 48풀, 틱 사이 외삽, stats.crowd   // M06 사전 4(ADR-0060): 부팅 스폰 셀을 장면 밖 대기 그룹 → compileAsync(선컴파일과 겹침) → 붙이기                     // 대기 LUT 계산(await) + 고정 머티리얼 × {기본, HLOD} compileAsync
