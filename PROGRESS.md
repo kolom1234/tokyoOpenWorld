@@ -1,12 +1,13 @@
 # PROGRESS
 Updated: 2026-10-11 (session #21 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
 
-## Current Milestone: M09 — Weather, Night, Audio (⓪ 역 건물 ✅ → T01 진행) · M08은 다음 세션
-## Current Task: M09-T01 Weather service & rain rendering
+## Current Milestone: M09 — Weather, Night, Audio (⓪ 역 건물 ✅ · T01 ✅ → T02 진행) · M08은 다음 세션
+## Current Task: M09-T02 Clouds
 - Done in this session: ⓪ 역 건물 = 선로·승강장 구간 벽 잘라내기(사용자 결정 (a), ADR-0075 — `build/rail-walls.ts`, L0·L1, 낮은 승강장 지붕 렌더 제외 삭제). 실제 GPU 전후 `docs/screenshots/M09/pre/station-*`.
   MVP 재빌드 `20261011-08ecc26-aefbe9ff`(로컬만, validate 0 — publish 안 함).
-- 진행 중(M09-T01): sim `weather/{markov,wetness,live-mapper,service}.ts` + `content/sim/weather-climate.json` + 테스트(`test/weather.test.ts`) 작성, 다음 = render 빗줄기·파문·game `?weather=` 배선.
-- Next step (정확히 한 걸음): render `weather/rain.ts`(무상태 빗줄기 + 별도 패스 합성) → `post/pipeline.ts` 합성 → game `?weather=`·골든 날씨 고정 → 우산(crowd field).
+- M09-T01 ✅(0f8fde6, ADR-0076): sim 날씨(시각 순수 함수 마르코프·젖음 적분·live 매핑), render 빗줄기 = 깊이 인지 화면 공간 원통 4겹(TAAU 뒤 — 별도 장면 패스는 r186에서 안 그려져 폐기)·파문·구름 직사광·우산,
+  game `?weather=auto|live|<상태>`(골든 = 고정, `?time=` = 맑음), staging LIVE_WEATHER=true. e2e 13 통과. GPU 비용·night-rain 골든은 마지막 측정 회차에서.
+- Next step (정확히 한 걸음): T02 `post/weather-sky.ts`(2D 구름층·연무, 공중원근 뒤) 실제 GPU 확인 → 볼류메트릭(Ultra) 판단 → ADR-0077.
 - Blockers: 없음. 실제 GPU 스크립트 = 세션 scratchpad(`stshots.mjs`·`stscenes.json` — 역 승강장 장면, `rebuild.sh` — build→hlod→materials→validate).
 
 ## Recently Completed
