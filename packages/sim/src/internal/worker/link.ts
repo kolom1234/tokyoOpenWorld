@@ -8,7 +8,8 @@ import type {
   Vec3d,
   WorkerSupervisor,
 } from '@sanpo/core';
-import type { CrowdParams, SimDeps, SimWorkerStats, TrafficParams, WorldClock } from '../../api.ts';
+import type { CrowdParams, DayType, SimDeps, SimWorkerStats, TrafficParams, WorldClock } from '../../api.ts';
+import { dayRatio } from '../crowd/density.ts';
 import type { ClockSync } from './crowd-runtime.ts';
 import { type SimWorkerHost, startSimWorker } from './host.ts';
 
@@ -30,7 +31,8 @@ export interface WorkerLink {
   /** 물리 직결(M06-T06): 워커 시작 전이면 기억했다가 시작 때. */
   connectPhysics(link: (port: MessagePort) => void): void;
   /** 매 프레임(sim 시계 시스템): 플레이어·카메라 전방(스폰 시야 판정)·시계·밀도 배율 동기. */
-  frame(player: Readonly<PlayerState>, camera: Readonly<CameraState>, densityScale: number): void;
+  /** dayType = 운행일 요일 유형(M09-T05 — 토·휴일 군중 곡선 비를 밀도 배율에 곱한다). */
+  frame(player: Readonly<PlayerState>, camera: Readonly<CameraState>, densityScale: number, dayType?: DayType): void;
   stats(): SimWorkerStats | undefined;
 }
 
@@ -63,12 +65,14 @@ export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
   const early = new Map<CellKey, { nav?: ArrayBuffer | undefined; lanes?: ArrayBuffer | undefined }>();
   let lastPlayer = Number.NEGATIVE_INFINITY;
   let lastDensity = 1;
+  let crowdParams: CrowdParams | undefined;
   let synced: ClockSync | undefined;
   let physicsLink: ((port: MessagePort) => void) | undefined;
   const sync = (): ClockSync => ({ gameMs: clock.gameTimeMs, atAbs: absNow(), scale: clock.timeScale });
   return {
     start(o) {
       if (worker) return worker.pedestrians;
+      crowdParams = o.crowd;
       synced = sync();
       worker = startHost(o, deps, synced);
       if (worker) for (const [k, b] of early) worker.addCell(k, b.nav, b.lanes);
@@ -94,8 +98,9 @@ export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
       physicsLink = link;
       worker?.connectPhysics(link);
     },
-    frame(player, camera, densityScale) {
+    frame(player, camera, weatherScale, dayType = 'weekday') {
       if (!worker) return;
+      const densityScale = Math.round(weatherScale * dayRatio(crowdParams, clock.gameTimeMs, dayType) * 100) / 100;
       const now = absNow();
       if (now - lastPlayer >= PLAYER_INTERVAL_MS) {
         lastPlayer = now;

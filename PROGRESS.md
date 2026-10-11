@@ -1,16 +1,21 @@
 # PROGRESS
 Updated: 2026-10-11 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
 
-## Current Milestone: M09 — Weather, Night, Audio (⓪ ✅ · T01 ✅ · T02 ✅ · T03 ✅ · T04 다음) · M08은 다음 세션
-## Current Task: M09-T04 Audio core & ambience (시작 전)
-- Done in this session (#21, 2026-10-11, PR #21 draft): ⓪ 역 건물 벽 잘라내기(ADR-0075), T01 날씨·빗줄기(ADR-0076), T02 구름(ADR-0077, 볼류메트릭 ⚠️ 보류),
-  T03 야간 조명(ADR-0078 — 아래 수락 요약). MVP 재빌드 `20261011-a037427-aefbe9ff`(로컬 data/build, 294셀 269.5 MB·HLOD 177·validate 0, 9.3분 — lights.bin 포함, 아직 publish 안 함).
-- Next step (정확히 한 걸음): T04 오디오 — `docs/11-audio.md` 전체 + `docs/modules/audio.md`. 계획: 환경음 = Freesound CC0·CC BY 녹음(HQ 미리듣기 OGG, 검색 스크래퍼 scratchpad `tools/fsearch.py`,
-  역 안내방송·음악·신호음이 섞인 구간은 음조 검출로 피함), 신호 유도음·개찰구·차임·LCD음 = 자체 합성(WebAudio). 파이프라인 `audio` 단계(ffmpeg → Opus, R2 `shared/audio/*`, ATTRIBUTION 자동 기록) +
-  `derive/audio-zones.ts`(셀 audio.json) → 다시 MVP 재빌드. ffmpeg는 파이프라인 Dockerfile에 추가 필요. 그다음 T05, M07-T06, MVP 재빌드 → dev publish → staging.
-- Blockers: 없음. 남은 측정: 골든뷰 오모테산도 가을(T05).
+## Current Milestone: M09 — Weather, Night, Audio (⓪ ✅ · T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ · T05 ✅) → M07-T06 다음 · M08은 다음 세션
+## Current Task: M07-T06 Stations: gates, interactables, audio (시작 전)
+- Done in this session (#21–22, 2026-10-11~12, PR #21 draft): ⓪ 역 건물(ADR-0075), T01 비(0076), T02 구름(0077), T03 야간 조명(0078), T04 오디오(0079), T05 계절·요일(0080).
+  staging 1차 배포(T03 직후, 코드 64499bf·Worker 3387c404, 월드 `20261011-a037427-aefbe9ff` dev 버킷 current). 로컬 최신 빌드 `20261011-9b174ef-cba213ec`(audio.json + shared/audio, 아직 publish 안 함).
+- Next step (정확히 한 걸음): M07-T06 — `docs/roadmap/M07.md` `### M07-T06` + `docs/09-traversal.md §5` + `docs/11-audio.md §2(station)`. 개찰구 게이트(플랩 애니메이션, 합성음 audio `gateOpen/gateClose/gateDenied/cardTouch` 이미 있음),
+  역 출입구·플랫폼 동선(하라주쿠 출구→플랫폼→탑승 막힘 없음), 역 앰비언스(station 존·베드 이미 있음). 그다음 마지막: MVP 재빌드 → audio 설치 → dev publish(+ gc 7일 지난 것) → staging 배포 → PR 본문·인계.
+- Blockers: 없음.
 
 ## Recently Completed
+- M09-T05 Seasons & day types(2026-10-12) — 공휴일 표 `content/sim/holidays-jp.json`(법 규칙 생성 2026–2035, 대체·국민의 휴일) → 운행일 요일 유형, 계절 키프레임 `content/sim/season.json` → SeasonParams(매 프레임 — 날짜 변경 즉시),
+  토·휴일 군중 곡선 `diurnalHoliday`(메인이 비를 밀도 배율에 곱함), 군중 옷 계절 색조(피부 제외 색 판정 — 근사 ⚠️). **수락**: 단위 7(공휴일·경계·보간·주말 비·즉시 반영) + 실제 GPU 골든 `omotesando-zelkova-autumn`(docs/screenshots/M09/T05). ADR-0080
+- M09-T04 Audio core & ambience(2026-10-12) — Freesound **CC0 녹음 22개**(`content/audio/library.json`, sha256 lock, ATTRIBUTION `fs-*` 자동) → 파이프라인 `audio`(지속 음조 최소 구간 루프·등전력 이음·발소리 온셋 조각 → Opus,
+  5.04 MB → 빌드 `shared/audio/` R2 지연 로딩, 첫 로드 0 B), 셀 `audio.json`(32 m 격자 존 규칙·음향식 신호 발음체), `@sanpo/audio`(버스·압축·절차 잔향, 원반 표본 32점 존 가중, setTargetAtTime 램프만, HRTF 32 보이스,
+  가려짐 로우패스, 재질별 발소리, 합성 유도음·개찰구·차임·LCD·문·열차·엔진), 볼륨 `[`·`]`·`\` + `?vol=`·`?audio=0`. **수락**: 존 경계 가중 ≤ 0.1/m·20 m+ 교차·램프만(단위) ✅, ATTRIBUTION 누락 0(파이프라인 테스트) ✅,
+  실제 Chrome: 5개 존 판정·베드 지연 적재·아스팔트 발소리 7걸음/4 s·전방향 보행 유도음 6개, e2e 오디오 스모크(헤드리스 무음 허용). ADR-0079
 - M09-T03 Night lighting(2026-10-11) — lights.bin 규칙 배치(가로등·자판기·간판·상점 앞, 셀 ≤ 600) → ClusteredLighting 고정 풀 1024(티어별 켜는 수) + 발광 스프라이트(1.5 km),
   창 점등 스케줄(클래스 × JST 시 × 요일)을 L0 파사드·**HLOD**(`_FACADE.flags` 격자 발광)·**랜드마크**(커튼월 칸)에 공통 적용, 상점·간판 1차 감쇠(벽 흰 얼룩 제거), 밤 반구 산란광(상공 페이드),
   맑은 밤 지평선 광해, 밤 잎 투과광 끔(가로수가 빛나던 문제). LightProbeGrid 불채택. **수락(실제 GPU 2560×1440 High, rAF p50, 21–22 W·상한 34 W)**: 광원 처리 +1.6 ms ≤ 2 ✅

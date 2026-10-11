@@ -1,6 +1,6 @@
 // 군중 밀도(10 §4.1, M06-T03·T04): 목표 총수 = (maxA + maxB) × 시간대 곡선[JST 시] × 날씨(비 ×0.6), 스폰 위치 가중 = 핫스팟 배율(원 안 1 → 중심 mult, 선형).
 // 조정값 = content/sim/crowd.json(density). 핫스팟 배치·대기 공간 튜닝은 T07.
-import type { CrowdParams } from '../../api.ts';
+import type { CrowdParams, DayType } from '../../api.ts';
 
 /** 게임 시각 → JST 시(0–23). */
 export const hourJst = (ms: number): number => Math.floor((((ms / 3_600_000 + 9) % 24) + 24) % 24);
@@ -11,6 +11,18 @@ export function totalTarget(p: CrowdParams, gameMs: number, scale = 1): number {
   if (!a) return 0;
   const k = p.density?.diurnal[hourJst(gameMs)] ?? 1;
   return Math.max(0, Math.round((a.maxA + a.maxB) * k * scale));
+}
+
+/**
+ * 요일 유형 배율(M09-T05): 토·휴일 곡선 ÷ 평일 곡선(같은 JST 시) — 워커는 평일 곡선 × 배율을 쓰므로 메인이 이 비를 밀도 배율에 곱해 보낸다.
+ */
+export function dayRatio(p: CrowdParams | undefined, gameMs: number, day: DayType): number {
+  const d = p?.density;
+  if (!d || day === 'weekday' || !d.diurnalHoliday) return 1;
+  const h = hourJst(gameMs);
+  const base = d.diurnal[h] ?? 1;
+  const hol = d.diurnalHoliday[h] ?? base;
+  return base > 0 ? hol / base : 1;
 }
 
 /** 날씨 밀도 배율(10 §4.1): 비 ×0.6(0.5 mm/h부터). */

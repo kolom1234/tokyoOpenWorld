@@ -1,15 +1,17 @@
-// createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시) + 날씨(M09-T01 weather/service.ts). 계절은 M09-T05.
+// createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시) + 날씨(M09-T01 weather/service.ts) + 계절·공휴일(M09-T05 season.ts·clock/holidays.ts).
 // see docs/modules/sim.md, docs/10-simulation.md §2
 
 import type { EnvironmentState, GameSystem, SeasonParams, Vec3d, WeatherParams } from '@sanpo/core';
 import { wfToLonLat } from '@sanpo/geo';
-import type { SimDeps, SimService } from '../api.ts';
+import type { SeasonTableFile, SimDeps, SimService } from '../api.ts';
 import { clearSkyIlluminanceLux, moonPosition, sunPosition } from './clock/astronomy.ts';
+import { setHolidays } from './clock/holidays.ts';
 import { createWorldClock, dayTypeOf } from './clock/world-clock.ts';
 import { weatherScale } from './crowd/density.ts';
 import { createRailRt } from './rail/network.ts';
 import { createRailStations, type RailStations } from './rail/stations.ts';
 import { createTrainSim, type TrainSim } from './rail/trains.ts';
+import { DEFAULT_SEASON_TABLE, seasonFromTable } from './season.ts';
 import { signalState } from './signals/controller.ts';
 import { compilePlans } from './signals/plans.ts';
 import { CLEAR_WEATHER, createWeatherService, type WeatherCore } from './weather/service.ts';
@@ -29,8 +31,10 @@ function dayOfYearJst(ms: number): number {
   return Math.floor((Date.UTC(y, d.getUTCMonth(), d.getUTCDate()) - Date.UTC(y, 0, 1)) / 86_400_000) + 1;
 }
 
+let seasonTable: SeasonTableFile = DEFAULT_SEASON_TABLE;
+
 function seasonOf(ms: number): SeasonParams {
-  return { dayOfYear: dayOfYearJst(ms), foliageTint: 0, bloom: 0, leafDensity: 1, outfitPalette: 0 };
+  return seasonFromTable(dayOfYearJst(ms), seasonTable);
 }
 
 /** 바람 벡터(WF m/s, 부는 쪽) — windDirDeg = 불어오는 방위(북 0°, 시계 +). */
@@ -77,6 +81,8 @@ function envCache(clock: { readonly gameTimeMs: number }, weather: WeatherCore, 
 }
 
 export function createSim(deps: SimDeps): SimService {
+  if (deps.holidays) setHolidays(deps.holidays.holidays.map((h) => h.date));
+  seasonTable = deps.season ?? DEFAULT_SEASON_TABLE;
   const clock = createWorldClock(deps.now ?? Date.now, deps.initialClock);
   const weather = createWeatherService(deps.weatherClimate, () => clock.gameTimeMs);
   const observer: Vec3d = { x: 0, y: 0, z: 0 };
@@ -92,7 +98,7 @@ export function createSim(deps: SimDeps): SimService {
       observer.x = f.camera.posWF.x;
       observer.y = f.camera.posWF.y;
       observer.z = f.camera.posWF.z;
-      link.frame(f.player, f.camera, weatherScale(env().weather.rainMmH));
+      link.frame(f.player, f.camera, weatherScale(env().weather.rainMmH), clock.dayType);
       // 열차(M07-T03): 시계 뒤 같은 프레임 시각으로 — 탑승 카메라·render가 이번 프레임 값을 본다(ADR-0072).
       trains?.update(clock.gameTimeMs, observer);
       if (trains) stations?.update(trains.trains());

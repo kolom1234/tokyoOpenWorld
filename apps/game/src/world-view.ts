@@ -15,9 +15,19 @@ import {
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
-import { type ClockMode, createSim, type SignalPlansFile, type SimService, type WeatherClimateFile } from '@sanpo/sim';
+import {
+  type ClockMode,
+  createSim,
+  type HolidaysFile,
+  type SeasonTableFile,
+  type SignalPlansFile,
+  type SimService,
+  type WeatherClimateFile,
+} from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
+import HOLIDAYS from '../../../content/sim/holidays-jp.json';
+import SEASON from '../../../content/sim/season.json';
 import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
 import WEATHER_CLIMATE from '../../../content/sim/weather-climate.json';
 import { bootProgressText, precompileText } from './boot-progress.ts';
@@ -284,6 +294,8 @@ function simFor(deps: WorldViewDeps): SimService {
     initialClock: deps.clock ?? defaultClock(now()),
     signalPlans,
     weatherClimate,
+    holidays: HOLIDAYS as HolidaysFile,
+    season: SEASON as SeasonTableFile,
   });
   const spec = deps.weatherSpec ?? { mode: 'auto' };
   applyWeatherSpec(sim, spec, weatherClimate);

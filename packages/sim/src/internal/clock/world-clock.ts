@@ -1,14 +1,16 @@
 // 월드 시계(10 §2): realtime / custom(시작 시각 + 배속, 프레임 dtReal 누적) / frozen. 요일 유형은 04:00 JST 운행일 경계.
 import type { ClockMode, DayType, TimeScale, WorldClock } from '../../api.ts';
+import { isHolidayJst } from './holidays.ts';
 
 const JST_OFFSET_MS = 9 * 3600_000;
 /** 운행일 경계(10 §2): 04:00 JST 이전은 전날 운행일. */
 const SERVICE_DAY_START_MS = 4 * 3600_000;
 
-/** 운행일 기준 요일 유형. 공휴일 표(content/sim/holidays-jp.json)는 M06 — 지금은 일요일만 holiday. */
+/** 운행일 기준 요일 유형: 일요일·공휴일(holidays.ts 표 — M09-T05) = holiday, 토요일 = saturday. */
 export function dayTypeOf(ms: number): DayType {
-  const dow = new Date(ms + JST_OFFSET_MS - SERVICE_DAY_START_MS).getUTCDay();
-  if (dow === 0) return 'holiday';
+  const shifted = ms - SERVICE_DAY_START_MS;
+  const dow = new Date(shifted + JST_OFFSET_MS).getUTCDay();
+  if (dow === 0 || isHolidayJst(shifted)) return 'holiday';
   return dow === 6 ? 'saturday' : 'weekday';
 }
 

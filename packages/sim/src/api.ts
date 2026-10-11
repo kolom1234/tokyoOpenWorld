@@ -30,6 +30,8 @@ export interface CrowdParams {
   /** M06-T03 밀도(10 §4.1): 시간대 곡선(JST 0–23시, 0–1)·핫스팟. */
   density?: {
     diurnal: number[];
+    /** 토요일·휴일 시간대 곡선(M09-T05 — 출근 봉우리 낮고 낮·저녁 높음). 없으면 diurnal. */
+    diurnalHoliday?: number[];
     /** 핫스팟(M06-T04 스폰 가중 mult, M06-T07 crossShare = 원 안에서 목적지를 중심 건너편으로 고를 확률 — 횡단·대각 흐름). */
     hotspots: { name: string; centerWF: [number, number]; radiusM: number; mult: number; crossShare?: number }[];
   };
@@ -292,4 +294,18 @@ export interface SimDeps {
   signalPlans?: SignalPlansFile;
   /** 날씨 기후표(M09-T01, content/sim/weather-climate.json). 없으면 맑음 고정. */
   weatherClimate?: WeatherClimateFile;
+  /** 공휴일(M09-T05, content/sim/holidays-jp.json). 없으면 일요일만 휴일. */
+  holidays?: HolidaysFile;
+  /** 계절 키프레임(M09-T05, content/sim/season.json). 없으면 내장 기본표. */
+  season?: SeasonTableFile;
+}
+
+/** content/sim/holidays-jp.json(M09-T05). */
+export interface HolidaysFile {
+  holidays: { date: string; name: string }[];
+}
+
+/** content/sim/season.json(M09-T05): dayOfYear 키프레임 → SeasonParams(선형 보간, 연말→연초 이어짐). */
+export interface SeasonTableFile {
+  keys: { day: number; foliageTint: number; bloom: number; leafDensity: number; outfitPalette: number }[];
 }

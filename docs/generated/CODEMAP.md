@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 483개.
+> 파일 485개.
 
 ## apps/game
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
@@ -137,7 +137,7 @@
 - `packages/render/src/internal/crowd/assets.ts` — 군중 팩 적재(M06-T01, ADR-0057): crowd.json + crowd.bin(meshopt 덩어리) + crowd.ktx2(12층 배열) → 베이스별 정점 속성·LOD 인덱스, | exports: PALETTE_WIDTH, CrowdManifest, CrowdBase, CrowdAssets, loadCrowdAssets
 - `packages/render/src/internal/crowd/far.ts` — 원경 군중 tier C(10 §4.2, M06-T04 — ADR-0064): sim 밖(250 m+) 사람은 렌더 전용 스프라이트. L0 셀 roads.mesh의 보도 윗면(`_SURF` 1) 삼각형에서 | exports: FAR_PER_M2, FAR_CAPACITY, FarCrowdStats, FarCrowd, samplePoints, createFarCrowd
 - `packages/render/src/internal/crowd/field.ts` — 군중 필드(M06-T01): sim SAB 인스턴스(stride 8) → 프레임마다 외삽(30 Hz 틱 사이 — 속력·주기율) → 베이스(variant 가중 선택)·LOD(거리)·시야 원뿔 → | exports: CROWD_POOL_CAPACITY, CrowdFieldStats, CrowdField, createCrowdField
-- `packages/render/src/internal/crowd/material.ts` — 군중 머티리얼(07 §4 M_CHARACTER, M06-T01·ADR-0057): VAT 대신 **뼈 팔레트 텍스처 스키닝** — 정점 4영향 × (사원수 + 이동) 2텍셀 textureLoad, | exports: createCrowdMaterial
+- `packages/render/src/internal/crowd/material.ts` — 군중 머티리얼(07 §4 M_CHARACTER, M06-T01·ADR-0057): VAT 대신 **뼈 팔레트 텍스처 스키닝** — 정점 4영향 × (사원수 + 이동) 2텍셀 textureLoad, | exports: outfitU, createCrowdMaterial
 - `packages/render/src/internal/crowd/umbrella.ts` — 우산(M09-T01 "우산 확률 연동"): 비가 오면 근거리 군중(≤ UMBRELLA_MAX_M) 중 variant 해시 < 확률인 사람 머리 위에 우산(가상 무지 — 로고 없음). | exports: UMBRELLA_CAPACITY, UMBRELLA_MAX_M, umbrellaShare, variantHash, Umbrellas, createUmbrellas
 - `packages/render/src/internal/frame.ts` — 프레임 시스템: renderPrep(70: 캔버스 크기·원점 재설정·카메라·HLOD 페이드) / render(80). see docs/01-architecture.md §5, docs/07-rendering.md §1–3 | exports: RENDER_PREP_PHASE, RENDER_PHASE, createFrameSystems
 - `packages/render/src/internal/lighting/atmosphere.ts` — 대기(M03-T02, 07 §6): @takram/three-atmosphere WebGPU — AtmosphereContext(렌더러 contextNode) + AtmosphereLight(태양 직사·하늘 간접) + 하늘 배경. | exports: GEOID_HEIGHT_M, worldToEcef, AtmosphereRig, createAtmosphere
@@ -218,16 +218,17 @@
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06), 비 파문 노멀(M09-T01). | exports: EnvUniforms, createEnvUniforms, rainRipples, WetInput, WetOutput, applyWetness
 
 ## packages/sim
-- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, SimService, RailStaticLayout, SimDeps
+- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, SimService, RailStaticLayout, SimDeps, HolidaysFile, SeasonTableFile
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts', createSim
 - `packages/sim/src/internal/clock/astronomy.ts` — 천문(10 §2, 01 §7): suncalc 2.x(도 단위, 방위 = 진북 기준 시계방향, 고도 = 대기차 보정 겉보기) → 도북 방위(수렴각 보정) → WF 단위 벡터. | exports: BodyPosition, dirWFFromGrid, sunPosition, moonPosition, clearSkyIlluminanceLux
+- `packages/sim/src/internal/clock/holidays.ts` — 일본 공휴일 표(10 §2, M09-T05): content/sim/holidays-jp.json(법 규칙 생성 2026–2035)을 createSim이 등록 → 운행일 요일 유형(dayTypeOf)이 휴일로 본다. | exports: setHolidays, isHolidayJst
 - `packages/sim/src/internal/clock/world-clock.ts` — 월드 시계(10 §2): realtime / custom(시작 시각 + 배속, 프레임 dtReal 누적) / frozen. 요일 유형은 04:00 JST 운행일 경계. | exports: dayTypeOf, ClockCore, createWorldClock
 - `packages/sim/src/internal/crowd/agent-fsm.ts` — tier A 보행자 상태 기계(10 §4.2, M06-T03 — ADR-0063): 걷기(목적지) → 접근(횡단 대기점) → 대기(보행 신호 W 전) → 횡단(띠 → 건너편) → 다시 계획. | exports: STATE, FILTER, CROSS_SPEED, STUCK_S, Agent, PedLamp, FsmCtx, snapWalk, exitPoint, startCross, RouteLeg, decideRoute, plan, canMakeIt, stepAgent
 - `packages/sim/src/internal/crowd/agent-output.ts` — 군중 출력(M06-T03 tier A·T04 tier B): 보행자 → SAB 인스턴스 칸(stride 8 — ADR-0061 필드). yaw = 속도 방향(느리면 유지, 대기 중 = 건널 방향)을 초당 TURN_RAD_S로 돌린다, | exports: writeFlows, writeAgents
 - `packages/sim/src/internal/crowd/agents-detour.ts` — tier A 군중(10 §4.2, M06-T03 — ADR-0063): DetourCrowd(회피·분리) 에이전트 풀 + 상태 기계(agent-fsm). 스폰·tier 경계는 crowd-sim·lod-manager가 정하고 | exports: SPAWN_GAP_M, TierAPool, createTierAPool
 - `packages/sim/src/internal/crowd/appearance.ts` — 보행자 정체성(10 §4.2–4.3, M06-T04): 스폰 순번 seq → 결정론 난수 → 외형 씨앗(variant u16 — 베이스·밝기·키는 render가 고름)·걸음 속력·대기 클립·위상. | exports: STATE, PedIdentity, newIdentity, identityOf
 - `packages/sim/src/internal/crowd/crowd-sim.ts` — 군중 오케스트레이터(10 §4, M06-T03·T04 — ADR-0063·0064): 목표 총수 = (maxA + maxB) × 시간대 곡선 × 날씨 배율. 처음(또는 절반 아래로 줄면) 반경 radiusB 안 | exports: CrowdSimStats, CrowdSim, createCrowdSim
-- `packages/sim/src/internal/crowd/density.ts` — 군중 밀도(10 §4.1, M06-T03·T04): 목표 총수 = (maxA + maxB) × 시간대 곡선[JST 시] × 날씨(비 ×0.6), 스폰 위치 가중 = 핫스팟 배율(원 안 1 → 중심 mult, 선형). | exports: hourJst, totalTarget, weatherScale, hotspotWeight, maxHotspotWeight
+- `packages/sim/src/internal/crowd/density.ts` — 군중 밀도(10 §4.1, M06-T03·T04): 목표 총수 = (maxA + maxB) × 시간대 곡선[JST 시] × 날씨(비 ×0.6), 스폰 위치 가중 = 핫스팟 배율(원 안 1 → 중심 mult, 선형). | exports: hourJst, totalTarget, dayRatio, weatherScale, hotspotWeight, maxHotspotWeight
 - `packages/sim/src/internal/crowd/dummy.ts` — 더미 보행자(M06-T01 수락 장면): 중심 주위 원 궤도 걷기(반경·속력·방향 = 시드), 일부는 서서 대기·휴대폰. 결정론 = createRng(hash32(WORLD_SEED, 'dummy', i)). | exports: CLIP, CrowdParams, DummyAgent, createDummyAgents, stepDummy
 - `packages/sim/src/internal/crowd/flow.ts` — tier B 흐름 보행자(10 §4.2, M06-T04 — ADR-0064): 80–250 m. Detour 에이전트 없이 경로 꺾은선(computePath 모서리)을 일정 속력으로 따라간다 — 회피 없음, | exports: FlowAgent, sidePos, newFlow, planFlow, stepFlow
 - `packages/sim/src/internal/crowd/lod-manager.ts` — 군중 LOD(10 §4.2, M06-T04 — ADR-0064): tier A(DetourCrowd, radiusA 안) ↔ tier B(흐름) 승강격. 히스테리시스 ± lodBandM(80 m ± 5) — | exports: outputPos, LodMoves, lodStep
@@ -239,7 +240,8 @@
 - `packages/sim/src/internal/rail/stations.ts` — 역 정적 배치·홈도어 상태(M07-T04, ADR-0073): setRail 때 승강장 기하·홈도어 조각(WF) 한 번 → 프레임마다 문(gate) 열림 = 그 정차에 선 열차의 문. | exports: PSD_PIECE_STRIDE, RailStations, createRailStations
 - `packages/sim/src/internal/rail/timetable.ts` — 열차 시간표 색인(M07-T02, ADR-0071): global/timetables/<lineId>.json(파이프라인 컴파일) → 요일 유형별 트립(enterS 순) → | exports: serviceTimeOf, LineTimetable, ActiveTrip, isTimetableFile, indexTimetable, activeTrips
 - `packages/sim/src/internal/rail/trains.ts` — 열차(M07-T03, ADR-0072): 시간표(운행 중 트립) × 트립 운동(motion-profile) → 편성 칸 자세 → 인스턴스 버퍼(메인 스레드, 프레임마다 — | exports: TRAIN_STRIDE, CAR_KIND, CAR_TYPE, TrainState, TrainStats, TrainSim, carKind, createTrainSim
-- `packages/sim/src/internal/service.ts` — createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시) + 날씨(M09-T01 weather/service.ts). 계절은 M09-T05. | exports: SIM_CLOCK_PHASE, computeEnvironment, createSim
+- `packages/sim/src/internal/season.ts` — 계절 파라미터(10 §3, M09-T05): content/sim/season.json 키프레임(dayOfYear) → SeasonParams 선형 보간(연말 → 연초 이어짐). | exports: DEFAULT_SEASON_TABLE, seasonFromTable
+- `packages/sim/src/internal/service.ts` — createSim(M03-T03 최소): 월드 시계(phase 10) + environment()(카메라 위치의 태양·달, 캐시) + 날씨(M09-T01 weather/service.ts) + 계절·공휴일(M09-T05 season.ts·clock/holidays.ts). | exports: SIM_CLOCK_PHASE, computeEnvironment, createSim
 - `packages/sim/src/internal/signals/controller.ts` — 신호 제어기(10 §5.2, M06-T02 — ADR-0062·0065): 상태 = 게임 시각의 순수 함수(빨리감기·시각 점프 즉시 일관). 코드 = ((교차로 ID × 64 + 오프셋 칸) × 16) + 계획 × 4 + 그룹 | exports: decodeSignal, offsetOf, pedWalkLeftS, signalState
 - `packages/sim/src/internal/signals/plans.ts` — 신호 계획(10 §5.2, M06-T02 — ADR-0062): content/sim/signal-plans.json → 단계 경계 누적·주기. 그룹 = [차량 A, 차량 B, 보행 A, 보행 B]. | exports: VehicleLamp, PedLamp, CompiledPlan, compilePlans
 - `packages/sim/src/internal/traffic/idm.ts` — IDM(Intelligent Driver Model, 10 §5.1, M06-T05): a = a·[1 − (v/v0)^δ − (s*/s)²], s* = s0 + vT + v·Δv / (2√(ab)). | exports: IdmParams, IDM_DEFAULT, idmAccel

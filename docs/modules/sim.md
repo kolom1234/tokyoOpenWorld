@@ -30,7 +30,7 @@ Layer: L3 | Depends: core, geo, tile-format(lanes·nav 파서), @recast-navigati
 - 외형은 variant(u16)로만 넘긴다 — 베이스·밝기·키는 render가 고른다(에셋 무관).
 
 ## Files
-clock/(world-clock — 모드·운행일 요일, astronomy — suncalc → 도북 → WF 벡터·조도; holidays는 M06), service(createSim·computeEnvironment), weather/, worker/(sim.worker, spatial-hash), crowd/(density, agents-detour, flow, lod-manager, appearance), traffic/(lane-graph, idm, routing, spawner, yielding), signals/(controller, plans), rail/(network, timetable, motion-profile, trains, doors), poi/.
+clock/(world-clock — 모드·운행일 요일, astronomy — suncalc → 도북 → WF 벡터·조도, holidays — 공휴일 표 M09-T05), season(계절 키프레임 M09-T05), service(createSim·computeEnvironment), weather/, worker/(sim.worker, spatial-hash), crowd/(density, agents-detour, flow, lod-manager, appearance), traffic/(lane-graph, idm, routing, spawner, yielding), signals/(controller, plans), rail/(network, timetable, motion-profile, trains, doors), poi/.
 
 ## Gotchas
 - suncalc 2.x는 **도(degree) 단위, 방위각은 북 기준 시계방향**(1.x와 다름). 결과 방위는 `geo.trueToGridAzimuthDeg`로 도북 보정.
@@ -39,6 +39,7 @@ clock/(world-clock — 모드·운행일 요일, astronomy — suncalc → 도�
 IDM 단일 차로 수렴, 신호 사이클, 운동 프로파일(시간 점프 일관성), 시간표 컴파일, 날씨 전이 확률 합=1, 공휴일 판정, 밀도 곡선.
 
 ## Status
+M09-T05(ADR-0080): `SimDeps.holidays?: HolidaysFile { holidays: {date, name}[] }`(content/sim/holidays-jp.json — 법 규칙 생성 2026–2035) → `clock/holidays.ts` 표 → 운행일 `dayType` 휴일, `SimDeps.season?: SeasonTableFile { keys: {day, foliageTint, bloom, leafDensity, outfitPalette}[] }`(content/sim/season.json) → `season.ts` 보간 → environment().season, `CrowdParams.density.diurnalHoliday?[24]`(토·휴일 곡선 — 메인이 비(dayRatio)를 밀도 배율에 곱해 워커로).
 M09-T01(ADR-0076): `weather/{markov,wetness,live-mapper,service}.ts` — `SimService.weather: WeatherService{params, mode, stateId, setMode('auto'|'live'|'fixed', fixed?), setLive(LiveWeatherSample)}`, `SimDeps.weatherClimate`(content/sim/weather-climate.json — `WeatherClimateFile`), environment().weather·wind = 날씨(시각 순수 함수 — 다시 뽑기 마르코프 + 6 h 젖음 적분).
 M06-T07: `crowd/agent-fsm.ts` 늦은 출발 금지(`canMakeIt`)·대기 깊이 4.5 m, `crowd/crowd-sim.ts` 핫스팟 건너편 목적지(`acrossHotspot`)·`inspect()`(시험), `agents-detour` 분리 가중 1.5 — ADR-0067.
 M07-T04: `rail/{platforms,stations}.ts`(ADR-0073) — 승강장 귀 자르기 삼각화(윗면 +Y·옆면 바깥), 홈도어 배치(편성 문 = 2 m 문·사이 판 ≤ 2 m, 선로 중심 2.05 m)·열림 = 그 정차 열차 문, trains `bodiesNear`(편성 일련 id).

@@ -4,7 +4,7 @@ import { Group, type Object3D } from 'three/webgpu';
 import type { PrecompileProgress, RenderDebugLayer, RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
 import { loadCrowdAssets } from './crowd/assets.ts';
-import { createCrowdMaterial } from './crowd/material.ts';
+import { createCrowdMaterial, outfitU } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
 import { nightU, updateNight } from './lighting/night.ts';
 import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
@@ -223,6 +223,7 @@ function setEnvironment(ctx: RenderContext, e: Readonly<EnvironmentState>): void
   ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);
   applyWeather(ctx, e);
   ctx.treeUniforms?.setSeason(e.season.dayOfYear);
+  outfitU.value = Math.min(Math.max(e.season.outfitPalette, 0), 1);
   ctx.vehicleUniforms.night.value = nightFromSun(e.sunDirWF.y);
   updateNight(e.sunDirWF.y, e.gameTimeMs, e.dayType ?? 'weekday');
   setTreeWind(ctx, e.weather.windMs, e.weather.windDirDeg);
