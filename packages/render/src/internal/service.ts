@@ -65,6 +65,17 @@ function statsOf(ctx: RenderContext): RenderStats {
   };
 }
 
+/** 역 시설(M07-T06). */
+function stationApi(ctx: RenderContext): Pick<RenderService, 'setStationFixtures' | 'setGateFlaps'> {
+  return {
+    setStationFixtures(f) {
+      ctx.stations.set(f);
+      ctx.counters.sceneVersion++;
+    },
+    setGateFlaps: (open) => ctx.stations.setFlaps(open),
+  };
+}
+
 /** 선컴파일·지연 적재(아바타·나무) — 첫 표시 전후 비동기 작업. */
 /** 부팅 대기 셀(M06 사전 4): 장면 밖 그룹에 셀 슬롯 그룹을 모았다가 compileAsync(그룹, 카메라, 장면) → 원래 부모로. */
 function createStaging(ctx: RenderContext) {
@@ -253,6 +264,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     setSignalLamps: (lamp) => {
       ctx.signalLamp = lamp;
     },
+    ...stationApi(ctx),
     debugLayerVisible: (layer, visible) => debugLayerVisible(ctx, layer, visible),
     addCell: (p) => {
       cells.add(p, view.renderOriginWF);

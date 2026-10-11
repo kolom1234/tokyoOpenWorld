@@ -74,6 +74,7 @@ function syncWeather(ctx: RenderContext, dtS: number, rebased: boolean): void {
   ctx.atmosphere.light.color.setScalar(1 - 0.88 * occl);
   // 야간 광원(M09-T03): 가까운 켜진 광원 → 클러스터 풀, 1.5 km 안 → 발광 스프라이트.
   const cam = ctx.sky.camWF.value;
+  ctx.stations.sync(o);
   ctx.nightLights.update({
     camWF: { x: cam.x, y: cam.y, z: cam.z },
     origin: o,

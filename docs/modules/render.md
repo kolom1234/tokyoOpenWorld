@@ -19,6 +19,7 @@ RenderStats += shadows: { cascades, mapSize, maxFarM, updated } | null;  gpu.pas
 RenderStats += props: { instances, visible, pools, rebuilds, dropped }  // M05-T03 거리 소품: LOD당 InstancedMesh 1개(전 종류 합친 기하) → pools = 소품 드로우콜 ≤ 3, dropped = 고정 용량 초과, ADR-0051
 RenderStats += trees: { instances, visible, pools, dropped, ready }; RenderService += loadTrees(urls: TreeAssetUrls{manifest, glb, leaves, impostor}): Promise<void>  // M05-T04 ADR-0052 — 첫 표시 뒤
 RenderStats += weather: { rain: { count, density, snow }, wetness, direct }  // M09-T01 빗줄기 층·젖음·직사광 배율(구름), ADR-0076
+setStationFixtures(f: StationFixtures { boxes: f64 × 8(cx,cy,cz,hx,hy,hz,yaw,색 번호); flaps: f64 × 8(…, 접힘 쪽 ±1) } | null); setGateFlaps(open: Float32Array /* 통로별 0..1 */)  // M07-T06 역 시설(개찰구·울타리·계단 표식, WF — stations/fixtures.ts), ADR-0081
 RenderStats += night: { level, cells, lights, active, sprites }  // M09-T03 밤 정도·lights.bin 셀·광원 수·켠 클러스터 광원(풀 1024)·발광 스프라이트, ADR-0078
 RenderStats += signs: { instances, visible, pools, ready }; RenderService += loadSignage(urls: SignageAssetUrls{atlas}): Promise<void>  // M05-T06 ADR-0054 — 첫 표시 뒤, 파사드 간판 띠도 같은 아틀라스
 RenderService += setQuality(tier), detectQuality(): Promise<QualityTier>  // 버스 'quality/changed'도 적용(되먹임 없음), 자기 변경은 방출. 소프트웨어 래스터 = detect-gpu 생략 → low

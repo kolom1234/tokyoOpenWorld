@@ -41,7 +41,8 @@ import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
 import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
 import { createStreamingSimWiring } from './wiring/streaming-sim.ts';
-import { type AudioFlags, audioForWorld } from './world-audio.ts';
+import type { AudioFlags } from './world-audio.ts';
+import { startWorldExtras } from './world-extras.ts';
 import {
   type CrowdMode,
   crowdFarDensitySystem,
@@ -225,6 +226,7 @@ async function showWorldWith(
     /** createWorldView에서 렌더 생성 직후 시작한 선컴파일(world.json 조회와 겹침 — M06 사전 4). */
     precompiled: Promise<void>;
     sim: SimService;
+    input: InputService;
   },
   world: LoadedWorld,
 ): Promise<number> {
@@ -235,8 +237,7 @@ async function showWorldWith(
   const pre = v.precompiled;
   const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
   // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
-  if (late.wiring)
-    late.audio = audioForWorld(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, () => late.physics);
+  if (late.wiring) late.audio = startWorldExtras(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, late);
   late.boot.spawn = world.spawnCells;
   const centerWF = deps.start?.centerWF ?? world.spawnWF;
   // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
@@ -392,7 +393,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     get trainsSettled() {
       return late.trainsSettled;
     },
-    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim }, world),
+    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim, input }, world),
     bootProgress: () => bootProgressText(late.boot, late.streaming),
   };
 }

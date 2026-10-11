@@ -30,6 +30,7 @@ import { createHlodSwitch, type HlodSwitch } from './scene/hlod-switch.ts';
 import { createRenderView, type RenderView } from './scene/render-view.ts';
 import { createSceneGraph, type SceneGraph } from './scene/scene-graph.ts';
 import { createSignField, type SignField } from './signs/field.ts';
+import { createStationFixtures, type StationFixtureLayer } from './stations/fixtures.ts';
 import { createTrainField, type TrainField } from './trains/field.ts';
 import { createTreeField, type TreeField } from './trees/field.ts';
 import type { TreeUniforms } from './trees/materials.ts';
@@ -103,6 +104,8 @@ export interface RenderContext {
   };
   /** 야간 광원(M09-T03): ClusteredLighting 고정 풀 + 발광 스프라이트. */
   readonly nightLights: NightLights;
+  /** 역 시설(M07-T06). */
+  readonly stations: StationFixtureLayer;
   /** 구름층·연무(M09-T02) 유니폼 + 카메라 WF 위치. */
   readonly sky: { u: WeatherSkyUniforms; camWF: UniformNode<'vec3', Vector3> };
 }
@@ -221,6 +224,17 @@ function attachNightLights(renderer: WebGPURenderer, graph: SceneGraph, clustere
   return n;
 }
 
+/** 야간 광원(M09-T03) + 역 시설 레이어(M07-T06 — 소품 루트 아래). */
+function attachExtras(
+  renderer: WebGPURenderer,
+  graph: SceneGraph,
+  clustered: boolean,
+): Pick<RenderContext, 'nightLights' | 'stations'> {
+  const stations = createStationFixtures();
+  graph.roots.prop.add(stations.root);
+  return { nightLights: attachNightLights(renderer, graph, clustered), stations };
+}
+
 /** 날씨 렌더 상태(M09-T01·T02): 빗줄기 층·구름/연무 유니폼·마지막 환경 날씨. */
 function weatherState(): Pick<RenderContext, 'rain' | 'sky' | 'weather'> {
   return {
@@ -290,7 +304,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
     ...wx,
-    nightLights: attachNightLights(renderer, graph, backend === 'webgpu' && !software && cfg.nightLights),
+    ...attachExtras(renderer, graph, backend === 'webgpu' && !software && cfg.nightLights),
   };
   ctx.quality = attachQuality(ctx, deps, { post, software }, (tier) => {
     ctx.shadows?.setTier(tier);

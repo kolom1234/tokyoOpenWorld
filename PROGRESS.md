@@ -1,15 +1,19 @@
 # PROGRESS
 Updated: 2026-10-11 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
 
-## Current Milestone: M09 — Weather, Night, Audio (⓪ ✅ · T01 ✅ · T02 ✅ · T03 ✅ · T04 ✅ · T05 ✅) → M07-T06 다음 · M08은 다음 세션
-## Current Task: M07-T06 Stations: gates, interactables, audio (시작 전)
-- Done in this session (#21–22, 2026-10-11~12, PR #21 draft): ⓪ 역 건물(ADR-0075), T01 비(0076), T02 구름(0077), T03 야간 조명(0078), T04 오디오(0079), T05 계절·요일(0080).
-  staging 1차 배포(T03 직후, 코드 64499bf·Worker 3387c404, 월드 `20261011-a037427-aefbe9ff` dev 버킷 current). 로컬 최신 빌드 `20261011-9b174ef-cba213ec`(audio.json + shared/audio, 아직 publish 안 함).
-- Next step (정확히 한 걸음): M07-T06 — `docs/roadmap/M07.md` `### M07-T06` + `docs/09-traversal.md §5` + `docs/11-audio.md §2(station)`. 개찰구 게이트(플랩 애니메이션, 합성음 audio `gateOpen/gateClose/gateDenied/cardTouch` 이미 있음),
-  역 출입구·플랫폼 동선(하라주쿠 출구→플랫폼→탑승 막힘 없음), 역 앰비언스(station 존·베드 이미 있음). 그다음 마지막: MVP 재빌드 → audio 설치 → dev publish(+ gc 7일 지난 것) → staging 배포 → PR 본문·인계.
+## Current Milestone: M09 — Weather, Night, Audio ✅(T01–T05, 볼류메트릭 구름 ⚠️ 보류) + M07-T06 ✅ · 다음 = M08(다음 세션)
+## Current Task: 큐 마무리 — MVP 빌드 dev publish → staging 배포 → PR 정리 (M07-T06까지 커밋됨)
+- Done in this session (#21–22, 2026-10-11~12, PR #21 draft): ⓪ 역 건물(ADR-0075), M09 T01 비(0076)·T02 구름(0077)·T03 야간(0078)·T04 오디오(0079)·T05 계절(0080), M07-T06 역 동선(0081).
+  로컬 최신 빌드 `20261011-a095dfd-cba213ec`(294셀·HLOD 177·validate 0, audio.json·shared/audio 5.04 MB·승강장 레일 수평화 포함).
+- Next step (정확히 한 걸음): 위 빌드 `pnpm pipeline publish --build-id 20261011-a095dfd-cba213ec --env dev --set-current --verify-url https://tokyo-sanpo-staging.kolom1357.workers.dev/world`
+  → `pnpm pipeline gc --env dev`(7일 지난 것만 `--apply`) → 게임 빌드 + `apps/worker pnpm deploy:staging` → smoke → staging 실제 GPU(첫 로드 MB·첫 표시 s·소리) → PR 본문·인계.
 - Blockers: 없음.
 
 ## Recently Completed
+- M07-T06 Stations: gates, interactables, audio(2026-10-12) — `content/stations/access.json`(하라주쿠 다케시타 출구) → 실물 개찰구 4통로(캐비닛·울타리 물리, 0.75 m 통로, 플랩 애니메이션,
+  카드 접촉·날개 합성음), 계단 입구 ↔ 승강장 F 페이드 이동(계단 기하 ⚠️ 후속), 역 차임·문 차임·LCD 알림. **발견·수정**: 하라주쿠 선로가 승강장 구간에서 ≈ 1 % 기울어 칸 바닥이 승강장보다
+  최대 1.4 m 높았다 → 파이프라인 `rail-platform-align.ts`로 승강장 구간 레일 수평화(+ 120 m 복귀). **수락(실제 GPU 봇)**: 거리 → 개찰구 걷기 통과 → 계단 F → 승강장 → 열린 문으로 걸어 들어가 F 탑승 ✅
+  (docs/screenshots/M07/T06/harajuku-route.jpg). 단위 7 + 레일 2. ADR-0081
 - M09-T05 Seasons & day types(2026-10-12) — 공휴일 표 `content/sim/holidays-jp.json`(법 규칙 생성 2026–2035, 대체·국민의 휴일) → 운행일 요일 유형, 계절 키프레임 `content/sim/season.json` → SeasonParams(매 프레임 — 날짜 변경 즉시),
   토·휴일 군중 곡선 `diurnalHoliday`(메인이 비를 밀도 배율에 곱함), 군중 옷 계절 색조(피부 제외 색 판정 — 근사 ⚠️). **수락**: 단위 7(공휴일·경계·보간·주말 비·즉시 반영) + 실제 GPU 골든 `omotesando-zelkova-autumn`(docs/screenshots/M09/T05). ADR-0080
 - M09-T04 Audio core & ambience(2026-10-12) — Freesound **CC0 녹음 22개**(`content/audio/library.json`, sha256 lock, ATTRIBUTION `fs-*` 자동) → 파이프라인 `audio`(지속 음조 최소 구간 루프·등전력 이음·발소리 온셋 조각 → Opus,
@@ -64,6 +68,7 @@ Updated: 2026-10-11 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
+- [stations] 역 계단·콘코스 기하 없음 — 개찰구 안 계단 입구 ↔ 승강장은 F 페이드 이동(ADR-0081), 출구는 하라주쿠 다케시타 1곳, HUD 안내는 임시 DOM(M08 대체).
 - [rail] 역 건물 = 선로·승강장 구간 벽만 레일 띠에서 잘림(ADR-0075) — 잘린 가장자리 두께 없음, 회랑 밖 벽 유지(승강장 바깥쪽 시야 일부), 선로 위 건물 충돌 제외 유지(역 동선은 M07-T06).
 - [rail] 항공사진 대조 1 m 초과 15 %(T01 ⚠️ — 0.49 m/px 한계, 시부야 데크·고층 그늘), 역간 소요 = 곡선 그대로라 실제보다 짧다(시부야→하라주쿠 91 s vs ≈ 2분, 근사 — 노선별 여유 계수 후보).
 - [trains] LOD0 창 = 구멍(유리 반사 없음), 차내 벽 안쪽 = 스테인리스 색, 차내 안내 화면 면은 빈 발광(글자 = 화면 오버레이), 터널 입구에서 칸 통째 사라짐(긴자선 고가 끝), 차임·음성 없음(M09).

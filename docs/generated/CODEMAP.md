@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 485개.
+> 파일 490개.
 
 ## apps/game
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
@@ -21,6 +21,8 @@
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/start-view.ts` — 시작 시점: 기본 = walk(09 §1 — world.json 스폰에서 걷기 시작, M05 결정 1). 로딩 중·`?mode=freecam`·골든뷰 = freecam | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose, startWalkParams
+- `apps/game/src/station/layout.ts` — 역 개찰구·계단 표식 배치(M07-T06 — ADR-0081): content/stations/access.json 출구 → 렌더 상자(캐비닛·윗판·울타리·표식)·플랩·물리 상자·통과 판정 선. | exports: ExitSpec, StationSpec, AccessFile, FIXTURE_COLOR, StationLayout, rad, forwardOf, rightOf, stationLayout, crossedAisle
+- `apps/game/src/station/wiring.ts` — 역 배선(M07-T06 — ADR-0081): content/stations/access.json → 렌더 개찰구·표식 + 물리 캐비닛·울타리, 걷기로 통로를 지나면 카드 접촉·날개 열림/닫힘 합성음과 플랩 애니메이션, | exports: STAIRS_REACH_M, StationDeps, flapOpen, passageAt, stationSystem
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
 - `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainLcdSystem
@@ -33,6 +35,7 @@
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
 - `apps/game/src/wiring/streaming-sim.ts` — 배선: streaming live L0 셀(버스 `cell/ready`) → sim 반경(448 m — 군중 tier B 250 m + 차량 스폰 400 m) 안이면 nav.bin·lanes.bin을 따로 요청(requestSections)해 | exports: SIM_WIRING_PHASE, SIM_NAV_RADIUS_M, StreamingSimDeps, StreamingSimWiring, createStreamingSimWiring
 - `apps/game/src/world-audio.ts` — 오디오 배선(M09-T04 — ADR-0079): @sanpo/audio 생성 + 첫 제스처 unlock + 셀 audio.json + 프레임 입력(리스너·환경·발소리·신호·열차·가려짐) + 볼륨 키. | exports: AudioFlags, nightOfSun, crowdOfHour, nearestOnTrain, AudioWiringDeps, startAudio, audioForWorld
+- `apps/game/src/world-extras.ts` — 월드 표시 직후 붙는 부가 배선(world-view.ts 400줄 제한으로 분리): 오디오(M09-T04) + 역 시설·동선(M07-T06). | exports: startWorldExtras
 - `apps/game/src/world-late.ts` — 첫 표시 뒤 적재(world-view에서 분리 — 400줄 한도): 머티리얼·아바타·나무·간판·군중(sim.worker + 군중 팩)·신호 램프. 실패하면 그 요소 없이 계속. | exports: LateState, loadMaterialsLater, AVATAR_URLS, loadAvatarLater, TREE_URLS, SIGNAGE_URLS, CROWD_URLS, CrowdMode, startCrowdLater, crowdFarDensitySystem, signalLampsOf, loadSignageLater, loadTreesLater
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-rail.ts` — 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 → | exports: RailData, loadRail, startTrainsLater, sendRailStatics, trainPhysicsSystem
@@ -130,7 +133,7 @@
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, RenderDebugLayer, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, StationFixtures, RenderDebugLayer, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, NIGHT_LIGHT_POOL, NIGHT_LIGHTS_ACTIVE, createRenderContext
@@ -197,6 +200,7 @@
 - `packages/render/src/internal/signs/load.ts` — 간판 에셋 적재·연결(M05-T06): atlas.png(브랜드 색까지 구운 sRGB) → 공용 아틀라스 노드(signs/atlas) → 간판 머티리얼 → 필드 attach → | exports: loadSignageInto
 - `packages/render/src/internal/signs/material.ts` — 간판 머티리얼(M05-T06, 07 §4 M_SIGN): 인스턴스 `_ipos`(렌더 좌표·yaw)·`_isig`(브랜드, 배율 xyz) → 셰이더 배치(법선 회전), | exports: createSignMaterial
 - `packages/render/src/internal/signs/models.ts` — 가상 간판 단위 모델(M05-T06): 돌출 상자(袖看板, 세로 타일 양면)·입간판(A형, 세로 타일 앞뒤)·옥상 광고탑(가로 타일 앞면 + 다리). | exports: PROJECTING, BILLBOARD, projectingSign, standingSign, rooftopSign
+- `packages/render/src/internal/stations/fixtures.ts` — 역 시설(M07-T06 — ADR-0081): 개찰구 캐비닛·윗판·울타리·계단 표식(인스턴스 상자, 팔레트 색) + 개찰구 플랩(열림 0..1 — 캐비닛 쪽으로 접힘). | exports: StationFixtureLayer, createStationFixtures
 - `packages/render/src/internal/trains/body.ts` — 열차 차체(M07-T03, ADR-0072): LOD0 = 창이 뚫린 벽(얇은 상자 — 안팎 모두 보임)·미닫이 문짝(`_vpart.y` 방향·`.z` 쪽)·끝벽·운전실 칸막이 + 차내 | exports: wallSpans, carBody
 - `packages/render/src/internal/trains/field.ts` — 열차 필드(M07-T03, ADR-0072): sim 열차 칸 버퍼(메인 스레드 — 프레임마다 정확한 값, stride 8: x,y,z·yaw·pitch·속력·노선색·코드) → | exports: TRAIN_POOL_CAPACITY, TrainFieldStats, TrainField, decodeCarCode, createTrainField
 - `packages/render/src/internal/trains/material.ts` — 열차 머티리얼(07 §4 M_VEHICLE 계열, M07-T03 — ADR-0072): 스테인리스(금속)·어두운 유리·노선색 띠(인스턴스 24비트 색)·고정 부품(정점색), | exports: DOOR_SLIDE_M, createTrainMaterial
@@ -412,6 +416,7 @@
 - `tools/pipeline/src/stages/build/props-cell.ts` — 셀 소품(M05-T03)·나무(M05-T04): 성형 결과·지형 메시·도로 색인 → buildProps → props.inst(gzip) + 콜라이더 + 전선, 이어서 buildTrees(소품 자리 피함) | exports: PropCellInput, PropCellOutput, propsCell
 - `tools/pipeline/src/stages/build/rail-buildings.ts` — 선로 위 건물(M07-T04, ADR-0073): PLATEAU 역 상옥·역사·선로 위 빌딩은 땅에서 지붕까지 막힌 껍질이라 열차가 그 안을 지나간다. | exports: TrackBuildings, trackBuildings
 - `tools/pipeline/src/stages/build/rail-global.ts` — 철도 전역 빌드(M07-T01, ADR-0070): content/sim/rail-lines.json + data/normalized/rail(OSM) + N02(대조) + 지형(dem_1m, 밖은 원경 DEM) | exports: RailCatalog, readRailCatalog, RailTrackReport, RailBuildInput, buildRailGlobal, PLATFORM_TOP_M
+- `tools/pipeline/src/stages/build/rail-platform-align.ts` — 승강장 높이 맞춤(M07-T06 — ADR-0081): 섬식 승강장 하나를 두 선로가 쓰는데 DEM 표본 레일 높이가 선로마다 달라(하라주쿠 내회·외회 1.3 m) | exports: ALIGN_MARGIN_M, RAMP_M, AlignReport, alignPlatformRails
 - `tools/pipeline/src/stages/build/rail-walls.ts` — 역 건물 선로 구간 벽 잘라내기(⓪ M09 사전, ADR-0075): PLATEAU 역사·선로 위 빌딩의 벽 중 선로 회랑(중심선 ± CORRIDOR_HALF_M)·승강장과 겹치는 | exports: CORRIDOR_HALF_M, BAND_BELOW_M, BAND_ABOVE_M, LINTEL_TOP_M, ENVELOPE_M, RailCorridor, railCorridorOf, railCorridor, subtractRect, WallCutStats, cutRailWalls
 - `tools/pipeline/src/stages/build/roads-mesh.ts` — roads.mesh 섹션(M05-T01, 05 §4): 보도·교통섬 윗면(성형 윗면 + 6 mm, 2 m 격자 조각) + 연석 세로 면 + 바깥 가장자리 치마 → | exports: RoadsBuild, TerrainAt, buildRoads
 - `tools/pipeline/src/stages/build/surface-class.ts` — 지형 표면 분류(M03-T06, 05 §4 `_SURF`): PLATEAU 도로 폴리곤(TrafficArea) → 셀 1 m 격자(257²) 분류 래스터. | exports: SURF, rasterizeRings, surfaceGrid

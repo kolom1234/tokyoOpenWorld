@@ -290,6 +290,10 @@ export interface RenderService extends SystemProvider {
    * 배선이 sim.signalStateAt로 만든다. 매 renderPrep에 보이는 기둥만 묻는다. null = 램프 끔.
    */
   setSignalLamps(lamp: ((code: number) => number) | null): void;
+  /** 역 시설(M07-T06 — 개찰구·울타리·계단 표식 상자 + 플랩, WF). null = 제거. */
+  setStationFixtures(f: StationFixtures | null): void;
+  /** 개찰구 통로별 열림 0..1(통로 순서 = fixtures.flaps 2개씩). */
+  setGateFlaps(open: Float32Array): void;
   /**
    * 디버그(M07 사전 ⓪): 인스턴스 레이어 하나를 숨기거나 다시 보인다 — 게임 동작 없음. e2e·실제 GPU 진단이 보임/숨김 픽셀 차로
    * 같은 물체가 거리(LOD 띠)마다 끊김 없이 그려지는지 잰다.
@@ -303,6 +307,12 @@ export interface RenderService extends SystemProvider {
   readonly trains: TrainLayer;
   stats(): RenderStats;
   dispose(): void;
+}
+
+/** 역 시설 상자(M07-T06): boxes = cx,cy,cz,hx,hy,hz,yaw,색 번호(0 캐비닛·1 윗판·2 플랩·3 울타리·4 안내판·5 바닥 판·6 노란 테두리) × n, flaps = cx,cy,cz,hx,hy,hz,yaw,접힘 쪽(±1) × n. */
+export interface StationFixtures {
+  boxes: Float64Array;
+  flaps: Float64Array;
 }
 
 /** `debugLayerVisible` 대상(인스턴스 풀 레이어). */
