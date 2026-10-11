@@ -1,4 +1,4 @@
-// M07-T04 선로 위 건물: 바닥 다각형이 선로 표본 ≥ 3개(6 m)를 덮으면 충돌 제외, 낮은 운수·불명 용도(≤ 12 m) = 승강장 지붕 → 렌더 제외. 옆 건물은 그대로.
+// M07-T04 선로 위 건물: 바닥 다각형이 선로 표본 ≥ 3개(6 m)를 덮으면 충돌 제외. 옆 건물은 그대로(렌더는 rail-walls 벽 잘라내기 — ADR-0075).
 import type { RailNetwork } from '@sanpo/tile-format';
 import { describe, expect, it } from 'vitest';
 import type { BuildingRecord } from '../src/readers/plateau/types.ts';
@@ -39,7 +39,7 @@ const bldg = (
 });
 
 describe('track buildings', () => {
-  it('drops colliders over the track and hides low station canopies', () => {
+  it('drops colliders over the track', () => {
     const r = trackBuildings(
       [
         bldg('canopy', -5, 5, -150, -50, '431', 6),
@@ -50,7 +50,6 @@ describe('track buildings', () => {
       net,
     );
     expect([...r.colliderSkip].sort()).toEqual(['canopy', 'station']);
-    expect([...r.renderSkip]).toEqual(['canopy']);
     expect(trackBuildings([bldg('canopy', -5, 5, -150, -50, '431', 6)], undefined).colliderSkip.size).toBe(0);
   });
 });

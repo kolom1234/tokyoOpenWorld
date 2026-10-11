@@ -50,6 +50,7 @@ import { type NavCellOutput, navCell } from './nav-cell.ts';
 import { LANDMARK_MATERIAL, type OverrideCellOutput, type OverrideSet, overrideCell } from './overrides/index.ts';
 import { type PropCellOutput, propsCell } from './props-cell.ts';
 import { trackBuildings } from './rail-buildings.ts';
+import { cutRailWalls, railCorridorOf } from './rail-walls.ts';
 import { buildRoads } from './roads-mesh.ts';
 import { buildTerrainGeometry, encodeTerrainMesh, TERRAIN_MATERIAL } from './terrain-mesh.ts';
 
@@ -244,6 +245,14 @@ function navOf(
   });
 }
 
+/** 건물(M07-T04 선로 위 건물 = 충돌 제외 + 선로·승강장 구간 벽 잘라내기, ADR-0075). */
+function buildingsOf(input: CellBuildInput, originWF: Vec3Tuple, renderSkip: ReadonlySet<string> | undefined) {
+  const tb = trackBuildings(input.buildings, input.rail);
+  const cor = input.rail ? railCorridorOf(input.rail) : undefined;
+  const recs = cor ? input.buildings.map((b) => cutRailWalls(b, cor)) : input.buildings;
+  return buildBuildings(recs, originWF, new Set(renderSkip ?? []), tb.colliderSkip);
+}
+
 /** 셀 1개 → TKC 바이트 + 통계. 같은 입력 → 같은 바이트. */
 export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Array; stats: CellBuildStats }> {
   const { level, ix, iz } = unpackCellKey(input.key);
@@ -257,10 +266,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
         ...(input.rail ? { rail: input.rail } : {}),
       })
     : null;
-  // 선로 위 건물(M07-T04): 충돌 제외, 낮은 승강장 지붕은 렌더도 제외.
-  const tb = trackBuildings(input.buildings, input.rail);
-  const renderSkip = new Set([...(ov?.renderSkip ?? []), ...tb.renderSkip]);
-  const bld = await buildBuildings(input.buildings, originWF, renderSkip, tb.colliderSkip);
+  const bld = await buildingsOf(input, originWF, ov?.renderSkip);
   const own = input.cellRoads ?? [];
   const roads = await buildRoads(own, sc.index, originWF[0], originWF[2], sc.shaped, terrainAt);
   const props = await propCell(input, originWF, sc, terrainAt);
@@ -279,7 +285,6 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
           signalsAround: input.signalsAround,
           shaped: sc.shaped,
           ...(input.props?.signalSites ? { signalSites: input.props.signalSites } : {}),
-          ...(input.props?.signalRules ? { signalRules: input.props.signalRules } : {}),
           ...(input.props?.signalRules ? { signalRules: input.props.signalRules } : {}),
         })
       : null;
