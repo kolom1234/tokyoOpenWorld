@@ -225,7 +225,8 @@ async function showWorldWith(
   const pre = v.precompiled;
   const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
   // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
-  late.audio = audioForWorld(deps, { ...v, streaming: s }, world.baseUrl, () => late.physics);
+  if (late.wiring)
+    late.audio = audioForWorld(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, () => late.physics);
   late.boot.spawn = world.spawnCells;
   const centerWF = deps.start?.centerWF ?? world.spawnWF;
   // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).

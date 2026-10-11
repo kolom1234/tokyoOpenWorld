@@ -43,6 +43,11 @@ export interface StreamingRenderStats {
 
 export interface StreamingRenderWiring {
   readonly systems: readonly GameSystem[];
+  /**
+   * 셀 payload 구독(streaming.onReady는 소유권 단일 이전 — 렌더 배선이 받고 여기서 나눠 준다, M09-T04 오디오 존). 해제 함수 반환.
+   * 받는 쪽은 payload를 바꾸지 않는다(렌더가 같은 객체를 적용).
+   */
+  onCell(cb: (p: CellPayload) => void): () => void;
   stats(): StreamingRenderStats;
   dispose(): void;
 }
@@ -113,7 +118,11 @@ export function createStreamingRenderWiring(deps: StreamingRenderDeps): Streamin
     maxApplyMs: 0,
     maxApplyBytes: 0,
   };
-  const offReady = streaming.onReady((p) => queue.push(p));
+  const listeners = new Set<(p: CellPayload) => void>();
+  const offReady = streaming.onReady((p) => {
+    queue.push(p);
+    for (const cb of listeners) cb(p);
+  });
   const offEvicted = streaming.onEvicted((key) => {
     const qi = queue.findIndex((p) => p.key === key);
     if (qi >= 0) {
@@ -143,6 +152,10 @@ export function createStreamingRenderWiring(deps: StreamingRenderDeps): Streamin
   };
   return {
     systems: [interest, apply],
+    onCell(cb) {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
     stats: () => ({ ...st, queued: queue.length }),
     dispose: () => apply.dispose(),
   };

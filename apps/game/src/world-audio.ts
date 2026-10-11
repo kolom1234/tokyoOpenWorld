@@ -6,6 +6,7 @@ import type { PhysicsService } from '@sanpo/physics';
 import type { SimService } from '@sanpo/sim';
 import type { StreamingService } from '@sanpo/streaming';
 import type { TraversalService } from '@sanpo/traversal';
+import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
 
 const MIX_KEY = 'sanpo.audio.mix.v1';
 const VOL_STEP = 0.1;
@@ -148,6 +149,8 @@ export interface AudioWiringDeps {
   manifestUrl: string;
   scheduler: Pick<Scheduler, 'add'>;
   streaming: StreamingService;
+  /** 셀 payload(render 배선이 나눠 줌 — streaming.onReady는 단일 소유). */
+  cells: Pick<StreamingRenderWiring, 'onCell'>;
   sim: SimService;
   traversal: TraversalService;
   ground: GroundQuery;
@@ -210,7 +213,7 @@ export function startAudio(d: AudioWiringDeps): AudioService | undefined {
   const audio = createAudio({ log: d.log, manifestUrl: d.manifestUrl, initialMix });
   audio.setSignalSource((code) => d.sim.signalStateAt(code).ped);
   audio.setOccluder(occluderOf(d.physics));
-  d.streaming.onReady((p) => {
+  d.cells.onCell((p) => {
     if (p.audio) audio.addCell(p.key, p.audio);
   });
   d.streaming.onEvicted((key) => audio.removeCell(key));
@@ -224,7 +227,13 @@ export function startAudio(d: AudioWiringDeps): AudioService | undefined {
 /** world-view 배선용: 월드 baseUrl의 shared/audio/manifest.json. */
 export function audioForWorld(
   deps: { canvas: HTMLCanvasElement; log: Logger; audio?: AudioFlags; scheduler: Pick<Scheduler, 'add'> },
-  v: { traversal: TraversalService; ground: GroundQuery; sim: SimService; streaming: StreamingService },
+  v: {
+    traversal: TraversalService;
+    ground: GroundQuery;
+    sim: SimService;
+    streaming: StreamingService;
+    cells: Pick<StreamingRenderWiring, 'onCell'>;
+  },
   baseUrl: string,
   physics: () => PhysicsService | undefined,
 ): AudioService | undefined {
