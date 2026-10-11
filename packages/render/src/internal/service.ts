@@ -15,14 +15,22 @@ import { createVehicleMaterial, nightFromSun } from './vehicles/material.ts';
 
 export { RENDER_PHASE, RENDER_PREP_PHASE } from './frame.ts';
 
-/** 날씨(M09-T01): 입자·파문 입력 보관, 구름이 직사광을 가린다(직사 = 1 − 0.9 × 구름^1.5 — 흐림 날 그림자 대비↓, 간접 하늘빛 유지). */
+/** 날씨(M09-T01): 빗줄기·파문·우산·구름 입력 보관(직사광 감쇠 = 프레임 시스템 — 태양 방향 구름 덮임, M09-T02). */
 function applyWeather(ctx: RenderContext, e: Readonly<EnvironmentState>): void {
   const w = e.weather;
   const night = nightFromSun(e.sunDirWF.y);
-  Object.assign(ctx.weather, { rainMmH: w.rainMmH, snow: w.snow, windX: e.wind.x, windZ: e.wind.z, night });
+  Object.assign(ctx.weather, {
+    rainMmH: w.rainMmH,
+    snow: w.snow,
+    windX: e.wind.x,
+    windZ: e.wind.z,
+    night,
+    cover: w.cloudCover,
+    fog: w.fog,
+    sun: e.sunDirWF,
+  });
   ctx.envUniforms.rain.value = Math.min(w.rainMmH / 8, 1);
   ctx.crowd.setRain(w.rainMmH);
-  ctx.atmosphere.light.color.setScalar(1 - 0.9 * Math.min(Math.max(w.cloudCover, 0), 1) ** 1.5);
 }
 
 function statsOf(ctx: RenderContext): RenderStats {

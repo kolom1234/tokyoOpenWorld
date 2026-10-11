@@ -1,7 +1,8 @@
 // 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다.
 // see docs/modules/render.md
 import { type Logger, mergeConfig, type QualityTier } from '@sanpo/core';
-import type { Material, WebGPURenderer } from 'three/webgpu';
+import { uniform } from 'three/tsl';
+import { type Material, type UniformNode, Vector3, type WebGPURenderer } from 'three/webgpu';
 import type { DepthMode, PostEffects, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
 import { createFarCrowd, type FarCrowd } from './crowd/far.ts';
@@ -16,6 +17,7 @@ import { createPropMaterial } from './materials/prop.ts';
 import { createMaterialRegistry, type MaterialRegistry } from './materials/registry.ts';
 import { resolvePost } from './post/config.ts';
 import { createDirectRender, createPostPipeline, type PostPipeline } from './post/pipeline.ts';
+import { createWeatherSkyUniforms, type WeatherSkyUniforms } from './post/weather-sky.ts';
 import { createPropField, type PropField } from './props/pools.ts';
 import { createQualityManager, type QualityManager } from './quality.ts';
 import { createGpuTimer, type GpuTimer } from './renderer/gpu-timer.ts';
@@ -85,8 +87,19 @@ export interface RenderContext {
   signalLamp?: ((code: number) => number) | null;
   /** 빗줄기·눈(M09-T01) — 후처리 경로에서만 그린다(화면 공간 층). */
   readonly rain: RainField;
-  /** 마지막 setEnvironment 날씨(프레임 시스템이 입자·파문 갱신에 쓴다). */
-  weather: { rainMmH: number; snow: number; windX: number; windZ: number; night: number };
+  /** 마지막 setEnvironment 날씨(프레임 시스템이 빗줄기·파문·구름 갱신에 쓴다). */
+  weather: {
+    rainMmH: number;
+    snow: number;
+    windX: number;
+    windZ: number;
+    night: number;
+    cover: number;
+    fog: number;
+    sun: { x: number; y: number; z: number };
+  };
+  /** 구름층·연무(M09-T02) 유니폼 + 카메라 WF 위치. */
+  readonly sky: { u: WeatherSkyUniforms; camWF: UniformNode<'vec3', Vector3> };
 }
 
 /** WebGL2 고정 노출(WebGPU 자동 노출 골든뷰 배율 0.8–1.9의 기하 중간 ≈ 1.25). */
@@ -186,6 +199,15 @@ function casterMaterials(
   ];
 }
 
+/** 날씨 렌더 상태(M09-T01·T02): 빗줄기 층·구름/연무 유니폼·마지막 환경 날씨. */
+function weatherState(): Pick<RenderContext, 'rain' | 'sky' | 'weather'> {
+  return {
+    rain: createRainField(),
+    sky: { u: createWeatherSkyUniforms(), camWF: uniform(new Vector3()) },
+    weather: { rainMmH: 0, snow: 0, windX: 0, windZ: 0, night: 0, cover: 0, fog: 0, sun: { x: 0, y: 1, z: 0 } },
+  };
+}
+
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
   const cfg = mergeConfig(DEFAULT_RENDER_CONFIG, deps.config ?? {});
   const log = deps.log.child('render');
@@ -206,10 +228,12 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const actors = attachActors(graph);
   const late: LateMaterials = { treeMaterials: [], signMaterials: [], crowdMaterials: [], vehicleMaterials: [] };
   const casters = () => casterMaterials(materials, actors, late);
-  const rain = createRainField();
+  const wx = weatherState();
+  // 날씨 합성(빗줄기·구름·연무)은 하드웨어만 — 소프트웨어 래스터(CI) 픽셀 비교 결정론·비용.
+  const overlays = software ? {} : { rain: wx.rain.uniforms, sky: wx.sky };
   const makePost = (tier: QualityTier): PostPipeline =>
     post
-      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, software ? {} : { rain: rain.uniforms })
+      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, overlays)
       : createDirectRender(renderer, graph.scene, view.camera);
   const ctx: Omit<RenderContext, 'quality'> & { quality?: QualityManager } = {
     cfg,
@@ -233,8 +257,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     post: makePost(cfg.quality),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
-    rain,
-    weather: { rainMmH: 0, snow: 0, windX: 0, windZ: 0, night: 0 },
+    ...wx,
   };
   ctx.quality = attachQuality(ctx, deps, { post, software }, (tier) => {
     ctx.shadows?.setTier(tier);

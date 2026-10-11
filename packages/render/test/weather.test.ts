@@ -35,3 +35,29 @@ describe('umbrellas', () => {
     expect(Math.abs(under - 0.5)).toBeLessThan(0.05);
   });
 });
+
+describe('cloud layer CPU twin', () => {
+  it('tslHash is in [0, 1) and deterministic; sun occlusion grows with cover', async () => {
+    const { cloudAlphaCpu, createWeatherSkyUniforms, tslHash } = await import('../src/internal/post/weather-sky.ts');
+    for (const s of [0, 1, 2, 12345, 2 ** 23]) {
+      expect(tslHash(s)).toBeGreaterThanOrEqual(0);
+      expect(tslHash(s)).toBeLessThan(1);
+      expect(tslHash(s)).toBe(tslHash(s));
+    }
+    const u = createWeatherSkyUniforms();
+    const cam = { x: 0, y: 30, z: 0 };
+    const mean = (cover: number) => {
+      u.cover.value = cover;
+      let sum = 0;
+      for (let i = 0; i < 400; i++) {
+        const c = { ...cam, x: (i % 20) * 3100, z: Math.floor(i / 20) * 2900 };
+        sum += cloudAlphaCpu(u, { x: 0.36, y: 0.8, z: 0.48 }, c);
+      }
+      return sum / 400;
+    };
+    expect(mean(0)).toBe(0);
+    expect(mean(0.4)).toBeGreaterThan(0.05);
+    expect(mean(1)).toBeGreaterThan(0.9);
+    expect(mean(0.4)).toBeLessThan(mean(0.8));
+  });
+});
