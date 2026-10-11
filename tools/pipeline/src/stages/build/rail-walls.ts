@@ -10,6 +10,8 @@ export const CORRIDOR_HALF_M = 2.2;
 /** 띠 = 레일 윗면 아래 1.5 m(대차·도상이 보이게) ~ 위 6.5 m(전차선 5.2 m + 조가선). */
 export const BAND_BELOW_M = 1.5;
 export const BAND_ABOVE_M = 6.5;
+/** 벽 꼭대기가 레일 + 이 높이 이하면(승강장 차양·낮은 상옥) 꼭대기까지 잘라 낸다 — 띠 위에 얇은 상인방 띠가 남지 않게(ADR-0073 낮은 상옥 12 m). */
+export const LINTEL_TOP_M = 12;
 /** 차량 외형 높이(m) = 지붕 3.65(commuter20) + 내린 팬터그래프 ≈ 0.95 — 지붕 면을 뺄지 판정. */
 export const ENVELOPE_M = 4.6;
 /** 승강장 윗면 = 레일 윗면 + 1.1 m(ADR-0073). */
@@ -227,19 +229,21 @@ interface Cut {
 
 /** 벽 면(외곽 고리) 수평 u 구간별 회랑 판정 → 잘라 낼 사각형(u·v = 기저 좌표). */
 function wallCuts(pts: readonly P2[], b: Basis, cor: RailCorridor): Cut[] {
-  let [u0, u1] = [Infinity, -Infinity];
-  for (const p of pts) [u0, u1] = [Math.min(u0, p[0]), Math.max(u1, p[0])];
+  let [u0, u1, vTop] = [Infinity, -Infinity, -Infinity];
+  for (const p of pts) [u0, u1, vTop] = [Math.min(u0, p[0]), Math.max(u1, p[0]), Math.max(vTop, p[1])];
   const cuts: Cut[] = [];
   let cur: { ua: number; ub: number; y0: number; y1: number } | undefined;
   const flush = () => {
     if (!cur) return;
     const k = b.e2[1] || 1;
+    const vhi = (cur.y1 + BAND_ABOVE_M - b.c[1]) / k;
+    const low = vTop <= (cur.y1 + LINTEL_TOP_M - b.c[1]) / k;
     // 진짜 경계는 마지막 안쪽 표본과 다음 바깥 표본 사이 → 한 간격 + 여유만큼 넓힌다.
     cuts.push({
       ua: cur.ua - STEP_M - PAD_M,
       ub: cur.ub + STEP_M + PAD_M,
       vlo: (cur.y0 - BAND_BELOW_M - b.c[1]) / k,
-      vhi: (cur.y1 + BAND_ABOVE_M - b.c[1]) / k,
+      vhi: low ? vTop + 1 : vhi,
     });
     cur = undefined;
   };

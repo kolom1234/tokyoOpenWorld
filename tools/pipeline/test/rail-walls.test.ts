@@ -122,6 +122,10 @@ describe('rail wall cut', () => {
     const canopyOut = cutRailWalls(canopy, cor);
     expect(canopyOut.surfaces.filter((s) => s.kind === 'roof')).toHaveLength(1);
     expect(wallArea(canopyOut)).toBeLessThan(wallArea(canopy) * 0.05); // 승강장 띠 벽은 모두 잘림 → 떠 있는 지붕
+    // 낮은 상옥(레일 + 12 m 이하): 선로 가로 벽은 꼭대기까지 잘린다(상인방 띠 없음).
+    const shed2 = box('shed2', -15, 15, -80, -40, RAIL_Y, 9);
+    const cut2 = wallArea(shed2) - wallArea(cutRailWalls(shed2, cor));
+    expect(cut2).toBeGreaterThan(2 * 2 * (CORRIDOR_HALF_M + 0.25) * 9 * 0.97);
     const tunnel = box('tunnel', -15, 15, -380, -340, RAIL_Y, 20);
     expect(cutRailWalls(tunnel, cor)).toBe(tunnel);
     const far = box('far', 20, 40, -80, -40, RAIL_Y, 20);
