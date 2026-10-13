@@ -31,27 +31,53 @@ function landingQueries(
   };
 }
 
-/** 승강장 스폰(ADR-0084): walk 착지 + 철도(승강장 윗면) 적재 1 s 뒤 한 번 — 프리셋 xz 둘레 안전 자리로. */
-function platformSpawnSystem(
+/**
+ * 프리셋 착지 보정(ADR-0084): walk 착지 1 s 뒤 한 번 — platform = 철도(승강장 윗면) 적재 뒤 프리셋 xz 둘레 안전 자리,
+ * exact = 그 자리 아래 물리 레이(위 3 m → 8 m) 첫 면(차양·처마 아래 바닥 — 하늘 레이 착지는 지붕 아래를 피해 옆으로 비킨다). 레이가 빗나가면 0.5 s 뒤 다시(10 s까지).
+ */
+function presetSpawnSystem(
   p: SpawnPreset,
   v: { traversal: TraversalService },
   geometry: () => { tops: PlatformTops | undefined },
+  physics: () => PhysicsService | undefined,
 ): GameSystem {
   let readyAt = -1;
   let t = 0;
+  let next = 1;
+  let busy = false;
   let done = false;
+  const yaw = (p.yawDeg * Math.PI) / 180;
+  const [x, y, z] = p.posWF;
+  const exact = async (ph: PhysicsService): Promise<boolean> => {
+    const hit = await ph.raycast({ x, y: y + 3, z }, { x: 0, y: -1, z: 0 }, 8);
+    if (!hit || Math.abs(hit.posWF.y - y) > 1.5) return false;
+    void v.traversal.teleport({ x, y: hit.posWF.y + 0.02, z }, yaw);
+    return true;
+  };
   return {
-    id: 'wiring.platformSpawn',
+    id: 'wiring.presetSpawn',
     phase: 59,
     update(f) {
       t += f.dtReal;
-      const tops = geometry().tops;
-      if (done || v.traversal.mode !== 'walk' || !tops) return;
+      if (done || busy || v.traversal.mode !== 'walk') return;
       if (readyAt < 0) readyAt = t;
-      if (t - readyAt < 1) return;
-      done = true;
-      const dest = safeArrival(tops, { x: p.posWF[0], z: p.posWF[2] });
-      if (dest) void v.traversal.teleport(dest, (p.yawDeg * Math.PI) / 180);
+      if (t - readyAt < next) return;
+      if (p.surface === 'platform') {
+        const tops = geometry().tops;
+        if (!tops) return;
+        done = true;
+        const dest = safeArrival(tops, { x, z });
+        if (dest) void v.traversal.teleport(dest, yaw);
+        return;
+      }
+      const ph = physics();
+      if (!ph) return;
+      busy = true;
+      void exact(ph).then((ok) => {
+        busy = false;
+        done = ok || t - readyAt > 10;
+        next = t - readyAt + 0.5;
+      });
     },
     dispose() {},
   };
@@ -92,8 +118,13 @@ export function startWorldExtras(
     ...(deps.debug ? { debug: true } : {}),
   });
   deps.scheduler.add({ systems: () => [stations] });
-  if (deps.spawn?.surface === 'platform') {
-    const ps = platformSpawnSystem(deps.spawn, v, () => stations.geometry());
+  if (deps.spawn?.surface) {
+    const ps = presetSpawnSystem(
+      deps.spawn,
+      v,
+      () => stations.geometry(),
+      () => late.physics,
+    );
     deps.scheduler.add({ systems: () => [ps] });
   }
   // freecam G(ADR-0083): 물리 레이·구 캐스트 + 역 격자(승강장·선로) + 셀 차선(lanes.bin 지연 적재).

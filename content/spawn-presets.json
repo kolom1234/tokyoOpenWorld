@@ -1,5 +1,5 @@
 {
-  "$comment": "URL 스폰 프리셋(`?spawn=<id>` — M10 지도 전 임시, ADR-0084). posWF = WF m(y는 참고 — walk는 그 xz 아래 지면에 착지), yawDeg = 바라보는 방향(0 = 북 −Z, 90 = 서 −X), surface: platform = 철도 적재 뒤 승강장 윗면(가장자리 여유)으로 옮김. 위치는 실제 GPU로 확인한 가상 배치.",
+  "$comment": "URL 스폰 프리셋(`?spawn=<id>` — M10 지도 전 임시, ADR-0084). posWF = WF m(y는 참고 — walk는 그 xz 아래 지면에 착지), yawDeg = 바라보는 방향(0 = 북 −Z, 90 = 서 −X), surface: platform = 철도 적재 뒤 승강장 윗면(가장자리 여유)으로, exact = 그 자리 아래 바닥(처마 아래 — 하늘 레이 착지는 지붕 밑을 피한다)으로 옮김. 위치는 실제 GPU로 확인한 가상 배치.",
   "presets": [
     {
       "id": "harajuku-gate",
@@ -66,11 +66,12 @@
         "ko": "신주쿠역 서쪽 출구 개찰구 앞"
       },
       "posWF": [
-        -122,
+        -120,
         37.48,
-        -3401.5
+        -3405.525
       ],
-      "yawDeg": 307
+      "yawDeg": 270,
+      "surface": "exact"
     },
     {
       "id": "yoyogi-west",
@@ -94,9 +95,9 @@
         "ko": "오모테산도 느티나무 길"
       },
       "posWF": [
-        818,
-        31,
-        -757
+        813.4,
+        28.9,
+        -747.1
       ],
       "yawDeg": 244.8
     },

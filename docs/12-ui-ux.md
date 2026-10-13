@@ -29,9 +29,9 @@ URL 스폰 프리셋 `?spawn=<id>`(content/spawn-presets.json — 지도 전까�
 | `harajuku-platform` | 하라주쿠역 승강장(섬식) | 철도 적재 뒤 승강장 윗면 |
 | `shibuya-scramble` | 시부야 스크램블 교차로 북쪽 보도(기본 스폰과 같음) | 북쪽을 봄 |
 | `shibuya-hachiko-gate` | 시부야역 하치코 출구 개찰구 앞 | 개찰구 4 m 앞 |
-| `shinjuku-west` | 신주쿠역 서쪽 출구 개찰구 앞 광장 | 개찰구 8 m 앞 |
+| `shinjuku-west` | 신주쿠역 서쪽 출구 개찰구 앞(처마 아래) | 개찰구 4 m 앞 |
 | `yoyogi-west` | 요요기역 서쪽 출구 개찰구 앞 | 개찰구 4 m 앞 |
-| `omotesando` | 오모테산도 느티나무 길 | 동북동을 봄 |
+| `omotesando` | 오모테산도 느티나무 길 북쪽 보도 | 길 따라 동남동을 봄 |
 | `yoyogi-park` | 요요기 공원 | 북쪽을 봄 |
 예: `https://tokyo-sanpo-staging.kolom1357.workers.dev/?spawn=harajuku-gate`. 없는 id는 무시(기본 스폰, 콘솔 경고). 골든뷰 `?view=`가 우선.
 
