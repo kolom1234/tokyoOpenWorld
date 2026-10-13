@@ -1,0 +1,82 @@
+{
+ "$comment": "M09-T05 계절 키프레임(10 §3): day = dayOfYear(JST), 선형 보간·연말→연초 이어짐. foliageTint 0 여름 초록…1 단풍 절정(11/21 무렵), bloom 벚꽃(3/25–4/8 — 4/2 절정), leafDensity 낙엽수 잎(겨울 0.25), outfitPalette 0 여름 옷…1 겨울 코트. 도쿄 평년 근사(가상). 나무 수종별 색은 render trees/season.ts.",
+ "keys": [
+  {
+   "day": 1,
+   "foliageTint": 0,
+   "bloom": 0,
+   "leafDensity": 0.25,
+   "outfitPalette": 1
+  },
+  {
+   "day": 60,
+   "foliageTint": 0,
+   "bloom": 0,
+   "leafDensity": 0.25,
+   "outfitPalette": 0.85
+  },
+  {
+   "day": 84,
+   "foliageTint": 0,
+   "bloom": 0.6,
+   "leafDensity": 0.35,
+   "outfitPalette": 0.6
+  },
+  {
+   "day": 92,
+   "foliageTint": 0,
+   "bloom": 1,
+   "leafDensity": 0.45,
+   "outfitPalette": 0.5
+  },
+  {
+   "day": 105,
+   "foliageTint": 0,
+   "bloom": 0,
+   "leafDensity": 0.8,
+   "outfitPalette": 0.4
+  },
+  {
+   "day": 160,
+   "foliageTint": 0,
+   "bloom": 0,
+   "leafDensity": 1,
+   "outfitPalette": 0.1
+  },
+  {
+   "day": 200,
+   "foliageTint": 0,
+   "bloom": 0,
+   "leafDensity": 1,
+   "outfitPalette": 0
+  },
+  {
+   "day": 260,
+   "foliageTint": 0,
+   "bloom": 0,
+   "leafDensity": 1,
+   "outfitPalette": 0.1
+  },
+  {
+   "day": 300,
+   "foliageTint": 0.4,
+   "bloom": 0,
+   "leafDensity": 0.95,
+   "outfitPalette": 0.45
+  },
+  {
+   "day": 325,
+   "foliageTint": 1,
+   "bloom": 0,
+   "leafDensity": 0.8,
+   "outfitPalette": 0.7
+  },
+  {
+   "day": 345,
+   "foliageTint": 0.6,
+   "bloom": 0,
+   "leafDensity": 0.4,
+   "outfitPalette": 0.9
+  }
+ ]
+}

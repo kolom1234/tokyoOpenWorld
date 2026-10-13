@@ -50,6 +50,11 @@ quantizeHeightfield(heightsM: ArrayLike<number>, size, step = 0.01, minH = HEIGH
 writeProps(batches: PropBatch[]): Uint8Array;  parseProps(bytes): Result<PropBatch[], TkcError>
 // trees.inst (M05-T04 ADR-0052): {u32 count} + 24 B 레코드
 writeTrees(records: TreeRecord[]): Uint8Array;  parseTrees(bytes): Result<TreeBatch, TkcError>;  treeRecordAt(batch, i): TreeRecord;  TREE_RECORD_BYTES = 24
+// audio.json (M09-T04 ADR-0079, api-audio.ts 재수출 — json+gzip): AudioZones { zones: AudioZone { kind: AudioZoneKind; polygonLocal; y0; y1 }[]; emitters: AudioEmitter { kind; pos; code? }[] }
+//   AUDIO_ZONE_KINDS = street·crossing·station·shopping·alley·park·elevated, AUDIO_EMITTER.signalTone(code = 신호 코드)
+// 빌드 shared/audio/manifest.json: AudioManifest { schema 1; hash; files: Record<id, AudioManifestEntry { file; bytes; kind 'bed'|'steps'; durS; steps?: [s, len][]; source }>; credits: AudioCredit { id; title; author; license; url }[] }
+// lights.bin (M09-T03 ADR-0078, api-lights.ts 재수출): {u32 count} + 24 B {u8 kind, u8 schedule, u16 kelvin, f32 x,y,z, i8×2 dirOct, u16 lumen, f32 range}
+writeLights(lights: LightRecord[]): Uint8Array;  parseLights(bytes): Result<LightRecord[], TkcError>;  LIGHT_KIND{streetLamp 1, shopFront 2, sign 3, vending 4, platform 5};  LIGHT_SCHEDULE{night 0, shop 1, sign 2, always 3};  LIGHT_RECORD_BYTES = 24
 TREE_SPECIES = { ginkgo: 1, zelkova: 2, cherry: 3, camphor: 4, pine: 5, shrub: 6 }; TreeSpeciesName; TreeRecord { species, seed, x, y, z, height, crownR }
 PROP_TYPE = { utilityPole: 1, streetLamp: 2, signalVehicle: 3, signalPedestrian: 4, vendingMachine: 5, guardRail: 6, bollard: 7, signStop: 8, postBox: 9, bicycleRack: 10, busStop: 11, manhole: 12, bench: 13, phoneBooth: 14, wasteBasket: 15, signProjecting: 16, signStanding: 17, signRooftop: 18 }; PropTypeName  // 번호는 추가만, 16–18 = 가상 간판(M05-T06, render 간판 필드)
 // gzip (Compression/DecompressionStream)
@@ -85,7 +90,7 @@ cells-index.ts, jcol.ts, lanes.ts, heightfield.ts, props.ts(M05-T03), trees.ts(M
 test/tkc.test.ts(round-trip 바이트 동일·결정론·정렬·손상 거부·미지 섹션), schema.test.ts(ajv: cell-header·cell-meta), binary.test.ts(cells.idx·JCOL·lanes·heightfield·gzip), hash.test.ts(XXH64 골든), props.test.ts(props.inst 왕복·손상 거부), trees.test.ts(trees.inst 왕복·손상 거부). 픽스처는 합성(test/fixtures.ts).
 
 ## Status
-구현 완료 (M01-T04). M01-T05: terrain.height 공통 기준(ADR-0018). props.inst = M05-T03(ADR-0051). trees.inst·lights.bin 인코더는 해당 태스크에서 추가.
+구현 완료 (M01-T04). M01-T05: terrain.height 공통 기준(ADR-0018). props.inst = M05-T03(ADR-0051). trees.inst = M05-T04. lights.bin = M09-T03(ADR-0078, streaming 디코드 → CellPayload.lights).
 
 ## Gotchas
 - 섹션 추가 시 05 문서 §4 레지스트리 표와 `SECTION_REGISTRY`(api.ts) 동시 갱신.

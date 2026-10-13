@@ -1,7 +1,9 @@
 // 프레임 시스템: renderPrep(70: 캔버스 크기·원점 재설정·카메라·HLOD 페이드) / render(80). see docs/01-architecture.md §5, docs/07-rendering.md §1–3
 import type { GameSystem } from '@sanpo/core';
 import { type PerspectiveCamera, Quaternion, Vector2, Vector3, type WebGPURenderer } from 'three/webgpu';
-import type { RenderContext } from './context.ts';
+import { NIGHT_LIGHTS_ACTIVE, type RenderContext } from './context.ts';
+import { nightU } from './lighting/night.ts';
+import { cloudAlphaCpu, updateWeatherSky } from './post/weather-sky.ts';
 
 /** 01-architecture §5 phase 표. */
 export const RENDER_PREP_PHASE = 70;
@@ -59,6 +61,31 @@ function syncProps(ctx: RenderContext, rebased: boolean): boolean {
   return ctx.trees.update(scratchCam, o, rebased) || props || signs || crowd || vehicles;
 }
 
+/** 날씨(M09-T01·T02): 빗줄기 층·구름/연무 유니폼·태양 가림 직사광. */
+function syncWeather(ctx: RenderContext, dtS: number, rebased: boolean): void {
+  const { view } = ctx;
+  const pxAngle = (2 * Math.tan((view.camera.fov * Math.PI) / 360)) / Math.max(1, ctx.canvas.height);
+  ctx.rain.update({ ...ctx.weather, dtS: dtS, pxAngle });
+  const o = view.renderOriginWF;
+  ctx.sky.camWF.value.set(o.x + view.camera.position.x, o.y + view.camera.position.y, o.z + view.camera.position.z);
+  updateWeatherSky(ctx.sky.u, { ...ctx.weather, sceneLum: ctx.post.exposure()?.lum, dtS: dtS });
+  // 태양 가림(M09-T02): 태양 방향 구름 덮임(셰이더와 같은 잡음) + 흐림 정도 → 직사광(흐름에 따라 구름 그림자가 지나간다).
+  const occl = Math.max(cloudAlphaCpu(ctx.sky.u, ctx.weather.sun, ctx.sky.camWF.value), ctx.weather.cover ** 2);
+  ctx.atmosphere.light.color.setScalar(1 - 0.88 * occl);
+  // 야간 광원(M09-T03): 가까운 켜진 광원 → 클러스터 풀, 1.5 km 안 → 발광 스프라이트.
+  const cam = ctx.sky.camWF.value;
+  ctx.stations.sync(o);
+  ctx.nightLights.update({
+    camWF: { x: cam.x, y: cam.y, z: cam.z },
+    origin: o,
+    rebased,
+    night: nightU.value,
+    gameMs: ctx.weather.gameMs,
+    dtS,
+    maxActive: NIGHT_LIGHTS_ACTIVE[ctx.quality.tier],
+  });
+}
+
 export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw: GameSystem } {
   const { renderer, view, cells, library, hlod, counters } = ctx;
   const moved = createMotionProbe(view.camera);
@@ -77,6 +104,8 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
       library.setOrigin(view.renderOriginWF);
       if (syncProps(ctx, rebased)) counters.sceneVersion++;
       ctx.avatar.update(f.dtReal, view.renderOriginWF);
+      syncWeather(ctx, f.dtReal, rebased);
+      ctx.envUniforms.time.value = (ctx.envUniforms.time.value + f.dtReal) % 3600;
       counters.fading = hlod.update(f.dtReal);
       cells.syncHlodMaterials();
       const sceneChanged = counters.sceneVersion !== sceneVersion || counters.fading > 0;

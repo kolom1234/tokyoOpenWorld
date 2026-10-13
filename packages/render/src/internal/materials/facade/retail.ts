@@ -14,6 +14,8 @@ export interface RetailSample {
   paintMask: F;
   roughness: F;
   metal: F;
+  /** 밤 간판 띠 발광 색(M09-T03 — 밤 정도는 index.ts가 곱한다). */
+  glow: V3;
 }
 
 /** 간판·차양 색(선형) 6종 — 원색 광고가 아니라 무지 간판판·차양 천 느낌의 채도 낮은 색. */
@@ -75,5 +77,7 @@ export function facadeRetail(i: FacadeInputs, g: FacadeGrid): RetailSample {
     paintMask: select(active, paintMask, float(0)),
     roughness: mix(float(0.45), float(0.35), shutterMask),
     metal: mix(float(0), float(0.8), shutterMask),
+    // 밤 간판 띠 발광(M09-T03): 간판 띠만(셔터·차양 제외) — index.ts가 밤 정도를 곱한다.
+    glow: select(active, signPaint.mul(sign), vec3(0)),
   };
 }

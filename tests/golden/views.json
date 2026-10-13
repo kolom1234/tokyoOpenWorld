@@ -69,6 +69,20 @@
       "lookAglM": 18
     },
     {
+      "id": "shibuya-scramble-night",
+      "core": false,
+      "title": "스크램블 교차로 21:00 맑음",
+      "purpose": "야간 조명 — 창 점등 스케줄·간판·가로등·원거리 발광 스프라이트(M09-T03)",
+      "eyeWF": [-62, 22, -22],
+      "lookWF": [40, 30, 60],
+      "fovDeg": 60,
+      "time": "2026-05-15T21:00:00+09:00",
+      "weather": "clear",
+      "seed": 1,
+      "eyeAglM": 7,
+      "lookAglM": 18
+    },
+    {
       "id": "omotesando-zelkova-autumn",
       "core": false,
       "title": "오모테산도 느티나무길",

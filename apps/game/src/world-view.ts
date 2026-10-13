@@ -1,5 +1,6 @@
 // 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선.
 // 지면 질의는 streaming 높이장(월드 로드 전 = 미적재). see docs/modules/game.md §부트 시퀀스, docs/06-world-streaming.md §8
+import type { AudioService } from '@sanpo/audio';
 import {
   createWorkerSupervisor,
   type DeepPartial,
@@ -14,20 +15,34 @@ import {
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
-import { type ClockMode, createSim, type SignalPlansFile, type SimService } from '@sanpo/sim';
+import {
+  type ClockMode,
+  createSim,
+  type HolidaysFile,
+  type SeasonTableFile,
+  type SignalPlansFile,
+  type SimService,
+  type WeatherClimateFile,
+} from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
+import HOLIDAYS from '../../../content/sim/holidays-jp.json';
+import SEASON from '../../../content/sim/season.json';
 import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
+import WEATHER_CLIMATE from '../../../content/sim/weather-climate.json';
 import { bootProgressText, precompileText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
 import { trainLcdSystem } from './train-lcd.ts';
+import { applyWeatherSpec, startLiveWeather, type WeatherSpec } from './weather-mode.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring, defaultClock } from './wiring/env.ts';
 import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
 import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
 import { createStreamingSimWiring } from './wiring/streaming-sim.ts';
+import type { AudioFlags } from './world-audio.ts';
+import { startWorldExtras } from './world-extras.ts';
 import {
   type CrowdMode,
   crowdFarDensitySystem,
@@ -55,6 +70,8 @@ export interface WorldView {
   readonly frameSource: FrameSource;
   /** showWorld 뒤에만 있다. */
   readonly streaming: StreamingService | undefined;
+  /** 오디오(M09-T04) — showWorld 뒤, `?audio=0`이면 없음. */
+  readonly audio: AudioService | undefined;
   readonly wiring: StreamingRenderWiring | undefined;
   /** showWorld 뒤에만 있다(물리 워커 — M04-T02 셀 콜라이더). */
   readonly physics: PhysicsService | undefined;
@@ -83,6 +100,8 @@ export interface WorldViewDeps {
   log: Logger;
   scheduler: Pick<Scheduler, 'add'>;
   backend: 'auto' | 'webgl';
+  /** 오디오 플래그(`?audio=0`·`?vol=`, M09-T04). */
+  audio?: AudioFlags;
   /** render 설정 덮어쓰기(`?exposure=`·`?gpuTiming=1`). */
   renderConfig?: DeepPartial<RenderConfig>;
   now?: () => number;
@@ -94,6 +113,9 @@ export interface WorldViewDeps {
   clock?: ClockMode;
   /** 디버그 날씨 덮어쓰기(`?wet=`). */
   weather?: WeatherOverride;
+  /** 날씨 모드(M09-T01 — weather-mode.ts). 없으면 auto. live = /api/weather 폴링(onLiveWeather = 크레딧 표기). */
+  weatherSpec?: WeatherSpec;
+  onLiveWeather?: (on: boolean) => void;
   /** false = 나무 에셋 적재 안 함(`?trees=0`, GPU 비용 비교). */
   trees?: boolean;
   /** 군중(M06-T03 기본 agents — DetourCrowd tier A, `?crowd=0` off, dummy = 더미 1,000명(M06-T01), scramble = agents + 스크램블 시험 250명). */
@@ -204,6 +226,7 @@ async function showWorldWith(
     /** createWorldView에서 렌더 생성 직후 시작한 선컴파일(world.json 조회와 겹침 — M06 사전 4). */
     precompiled: Promise<void>;
     sim: SimService;
+    input: InputService;
   },
   world: LoadedWorld,
 ): Promise<number> {
@@ -213,6 +236,8 @@ async function showWorldWith(
   render.stageCells(true);
   const pre = v.precompiled;
   const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
+  // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
+  if (late.wiring) late.audio = startWorldExtras(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, late);
   late.boot.spawn = world.spawnCells;
   const centerWF = deps.start?.centerWF ?? world.spawnWF;
   // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
@@ -258,11 +283,25 @@ async function showWorldWith(
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
-/** sim(시계 + 신호 계획 content/sim/signal-plans.json — M06-T02). */
+/** sim(시계 + 신호 계획 content/sim/signal-plans.json — M06-T02 + 날씨 기후표 — M09-T01). */
 function simFor(deps: WorldViewDeps): SimService {
   const now = deps.now ?? Date.now;
   const signalPlans = SIGNAL_PLANS as unknown as SignalPlansFile;
-  return createSim({ bus: deps.bus, log: deps.log, now, initialClock: deps.clock ?? defaultClock(now()), signalPlans });
+  const weatherClimate = WEATHER_CLIMATE as unknown as WeatherClimateFile;
+  const sim = createSim({
+    bus: deps.bus,
+    log: deps.log,
+    now,
+    initialClock: deps.clock ?? defaultClock(now()),
+    signalPlans,
+    weatherClimate,
+    holidays: HOLIDAYS as HolidaysFile,
+    season: SEASON as SeasonTableFile,
+  });
+  const spec = deps.weatherSpec ?? { mode: 'auto' };
+  applyWeatherSpec(sim, spec, weatherClimate);
+  if (spec.mode === 'live') startLiveWeather(sim, deps.log.child('weather'), deps.onLiveWeather ?? (() => {}));
+  return sim;
 }
 
 function initialLate(): LateState {
@@ -298,8 +337,7 @@ function frameSourceOf(traversal: TraversalService, sim: SimService): FrameSourc
 
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
-  const config = { ...deps.renderConfig, backend: deps.backend };
-  const render = await createRender({ canvas, bus, log, config });
+  const render = await createRender({ canvas, bus, log, config: { ...deps.renderConfig, backend: deps.backend } });
   const late = initialLate();
   const precompiled = startPrecompile(render, late, log);
   const input = createInput({ target: canvas, bus, log });
@@ -324,6 +362,9 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     providers: [input, sim, traversal, { systems: () => wiringSystems }, render],
     get streaming() {
       return late.streaming;
+    },
+    get audio() {
+      return late.audio;
     },
     get wiring() {
       return late.wiring;
@@ -352,7 +393,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     get trainsSettled() {
       return late.trainsSettled;
     },
-    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim }, world),
+    showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim, input }, world),
     bootProgress: () => bootProgressText(late.boot, late.streaming),
   };
 }

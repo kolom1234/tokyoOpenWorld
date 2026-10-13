@@ -1,11 +1,9 @@
 // 선로 위 건물(M07-T04, ADR-0073): PLATEAU 역 상옥·역사·선로 위 빌딩은 땅에서 지붕까지 막힌 껍질이라 열차가 그 안을 지나간다.
 // - 바닥 다각형 안에 선로 표본(2 m 간격)이 3개 이상 = 선로 위 건물 → 충돌에서 뺀다(차내 캐릭터가 역 통과 중 건물 면에 밀리지 않게 — 렌더는 그대로).
-// - 그중 낮은 운수·불명 용도(431·461, 높이 ≤ CANOPY_MAX_M) = 승강장 지붕 → 렌더에서도 뺀다(열차·승강장이 보이게).
+// - 렌더는 선로 구간 벽만 잘라 낸다(rail-walls.ts, ADR-0075 — 옛 '낮은 승강장 지붕 렌더 제외'를 대체).
 import type { RailNetwork } from '@sanpo/tile-format';
 import type { BuildingRecord } from '../../readers/plateau/types.ts';
 
-export const CANOPY_MAX_M = 12;
-const CANOPY_USAGE = new Set(['431', '461']);
 const MIN_SAMPLES = 3;
 const STRIDE = 4;
 const GRID = 64;
@@ -38,12 +36,10 @@ function sampleGrid(net: RailNetwork): Map<string, number[]> {
 export interface TrackBuildings {
   /** 선로 위(충돌 제외). */
   colliderSkip: Set<string>;
-  /** 승강장 지붕(렌더·충돌 제외). */
-  renderSkip: Set<string>;
 }
 
 export function trackBuildings(records: readonly BuildingRecord[], net: RailNetwork | undefined): TrackBuildings {
-  const out: TrackBuildings = { colliderSkip: new Set(), renderSkip: new Set() };
+  const out: TrackBuildings = { colliderSkip: new Set() };
   if (!net) return out;
   const grid = sampleGrid(net);
   for (const b of records) {
@@ -66,8 +62,6 @@ export function trackBuildings(records: readonly BuildingRecord[], net: RailNetw
       }
     if (n < MIN_SAMPLES) continue;
     out.colliderSkip.add(b.gmlId);
-    if (CANOPY_USAGE.has(b.usage ?? '') && (b.measuredHeightM ?? Number.POSITIVE_INFINITY) <= CANOPY_MAX_M)
-      out.renderSkip.add(b.gmlId);
   }
   return out;
 }

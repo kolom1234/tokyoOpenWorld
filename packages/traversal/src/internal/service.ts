@@ -72,6 +72,7 @@ function applyAvatar(out: AvatarState & { seen?: boolean }, a: Readonly<AvatarSt
     out.speedMs = a.speedMs;
     out.grounded = a.grounded;
     out.opacity = a.opacity;
+    if (a.groundMaterial !== undefined) out.groundMaterial = a.groundMaterial;
     out.seen = true;
   } else {
     out.visible = out.seen === true;

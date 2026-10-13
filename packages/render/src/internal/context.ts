@@ -1,13 +1,16 @@
 // 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다.
 // see docs/modules/render.md
 import { type Logger, mergeConfig, type QualityTier } from '@sanpo/core';
-import type { Material, WebGPURenderer } from 'three/webgpu';
+import { ClusteredLighting } from 'three/examples/jsm/lighting/ClusteredLighting.js';
+import { uniform } from 'three/tsl';
+import { type Material, type UniformNode, Vector3, type WebGPURenderer } from 'three/webgpu';
 import type { DepthMode, PostEffects, RenderBackend, RenderConfig, RenderDeps } from '../api.ts';
 import { DEFAULT_RENDER_CONFIG } from './config.ts';
 import { createFarCrowd, type FarCrowd } from './crowd/far.ts';
 import { type CrowdField, createCrowdField } from './crowd/field.ts';
 import { type AtmosphereRig, createAtmosphere } from './lighting/atmosphere.ts';
 import { attachEnvProbe, type EnvProbe } from './lighting/env-probe.ts';
+import { createNightLights, type NightLights } from './lighting/night-lights.ts';
 import { enableSunShadows, type SunShadows } from './lighting/shadows.ts';
 import { DEFAULT_MOON_DIR_WF, DEFAULT_SUN_DIR_WF } from './lighting/sun.ts';
 import { glassRoughness } from './materials/glass.ts';
@@ -16,6 +19,7 @@ import { createPropMaterial } from './materials/prop.ts';
 import { createMaterialRegistry, type MaterialRegistry } from './materials/registry.ts';
 import { resolvePost } from './post/config.ts';
 import { createDirectRender, createPostPipeline, type PostPipeline } from './post/pipeline.ts';
+import { createWeatherSkyUniforms, type WeatherSkyUniforms } from './post/weather-sky.ts';
 import { createPropField, type PropField } from './props/pools.ts';
 import { createQualityManager, type QualityManager } from './quality.ts';
 import { createGpuTimer, type GpuTimer } from './renderer/gpu-timer.ts';
@@ -26,11 +30,13 @@ import { createHlodSwitch, type HlodSwitch } from './scene/hlod-switch.ts';
 import { createRenderView, type RenderView } from './scene/render-view.ts';
 import { createSceneGraph, type SceneGraph } from './scene/scene-graph.ts';
 import { createSignField, type SignField } from './signs/field.ts';
+import { createStationFixtures, type StationFixtureLayer } from './stations/fixtures.ts';
 import { createTrainField, type TrainField } from './trains/field.ts';
 import { createTreeField, type TreeField } from './trees/field.ts';
 import type { TreeUniforms } from './trees/materials.ts';
 import { createVehicleField, type VehicleField } from './vehicles/field.ts';
 import { createVehicleUniforms, type VehicleUniforms } from './vehicles/material.ts';
+import { createRainField, type RainField } from './weather/rain.ts';
 import { createEnvUniforms, type EnvUniforms } from './weather/wetness.ts';
 
 export interface RenderContext {
@@ -82,6 +88,26 @@ export interface RenderContext {
   readonly counters: { frames: number; fading: number; sceneVersion: number; shadowUpdates: number };
   /** 신호 램프 원천(M06-T02 — setSignalLamps). */
   signalLamp?: ((code: number) => number) | null;
+  /** 빗줄기·눈(M09-T01) — 후처리 경로에서만 그린다(화면 공간 층). */
+  readonly rain: RainField;
+  /** 마지막 setEnvironment 날씨(프레임 시스템이 빗줄기·파문·구름 갱신에 쓴다). */
+  weather: {
+    rainMmH: number;
+    snow: number;
+    windX: number;
+    windZ: number;
+    night: number;
+    cover: number;
+    fog: number;
+    sun: { x: number; y: number; z: number };
+    gameMs: number;
+  };
+  /** 야간 광원(M09-T03): ClusteredLighting 고정 풀 + 발광 스프라이트. */
+  readonly nightLights: NightLights;
+  /** 역 시설(M07-T06). */
+  readonly stations: StationFixtureLayer;
+  /** 구름층·연무(M09-T02) 유니폼 + 카메라 WF 위치. */
+  readonly sky: { u: WeatherSkyUniforms; camWF: UniformNode<'vec3', Vector3> };
 }
 
 /** WebGL2 고정 노출(WebGPU 자동 노출 골든뷰 배율 0.8–1.9의 기하 중간 ≈ 1.25). */
@@ -181,6 +207,53 @@ function casterMaterials(
   ];
 }
 
+/** 실제 야간 광원 풀 크기(07 §9 High 1024 — 풀은 부팅 때 고정, 티어는 켜는 수만 바꾼다). */
+export const NIGHT_LIGHT_POOL = 1024;
+export const NIGHT_LIGHTS_ACTIVE: Readonly<Record<QualityTier, number>> = {
+  low: 64,
+  medium: 256,
+  high: 1024,
+  ultra: 1024,
+};
+
+/** 야간 광원(M09-T03): WebGPU만 ClusteredLighting(컴퓨트 클러스터링) + 풀, 그 밖은 스프라이트만(07 §9 폴백). */
+function attachNightLights(renderer: WebGPURenderer, graph: SceneGraph, clustered: boolean): NightLights {
+  if (clustered) renderer.lighting = new ClusteredLighting(NIGHT_LIGHT_POOL) as unknown as WebGPURenderer['lighting'];
+  const n = createNightLights(clustered ? NIGHT_LIGHT_POOL : 0);
+  graph.roots.light.add(n.root);
+  return n;
+}
+
+/** 야간 광원(M09-T03) + 역 시설 레이어(M07-T06 — 소품 루트 아래). */
+function attachExtras(
+  renderer: WebGPURenderer,
+  graph: SceneGraph,
+  clustered: boolean,
+): Pick<RenderContext, 'nightLights' | 'stations'> {
+  const stations = createStationFixtures();
+  graph.roots.prop.add(stations.root);
+  return { nightLights: attachNightLights(renderer, graph, clustered), stations };
+}
+
+/** 날씨 렌더 상태(M09-T01·T02): 빗줄기 층·구름/연무 유니폼·마지막 환경 날씨. */
+function weatherState(): Pick<RenderContext, 'rain' | 'sky' | 'weather'> {
+  return {
+    rain: createRainField(),
+    sky: { u: createWeatherSkyUniforms(), camWF: uniform(new Vector3()) },
+    weather: {
+      rainMmH: 0,
+      snow: 0,
+      windX: 0,
+      windZ: 0,
+      night: 0,
+      cover: 0,
+      fog: 0,
+      sun: { x: 0, y: 1, z: 0 },
+      gameMs: 0,
+    },
+  };
+}
+
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
   const cfg = mergeConfig(DEFAULT_RENDER_CONFIG, deps.config ?? {});
   const log = deps.log.child('render');
@@ -201,9 +274,12 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const actors = attachActors(graph);
   const late: LateMaterials = { treeMaterials: [], signMaterials: [], crowdMaterials: [], vehicleMaterials: [] };
   const casters = () => casterMaterials(materials, actors, late);
+  const wx = weatherState();
+  // 날씨 합성(빗줄기·구름·연무)은 하드웨어만 — 소프트웨어 래스터(CI) 픽셀 비교 결정론·비용.
+  const overlays = software ? {} : { rain: wx.rain.uniforms, sky: wx.sky };
   const makePost = (tier: QualityTier): PostPipeline =>
     post
-      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad)
+      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, overlays)
       : createDirectRender(renderer, graph.scene, view.camera);
   const ctx: Omit<RenderContext, 'quality'> & { quality?: QualityManager } = {
     cfg,
@@ -227,6 +303,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     post: makePost(cfg.quality),
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
+    ...wx,
+    ...attachExtras(renderer, graph, backend === 'webgpu' && !software && cfg.nightLights),
   };
   ctx.quality = attachQuality(ctx, deps, { post, software }, (tier) => {
     ctx.shadows?.setTier(tier);

@@ -30,6 +30,7 @@ import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
 import { aroundReader, railNetworkFor, readLayer } from './area-reader.ts';
 import { crop, mergeStreams, outward, union, unionBounds, withOverrideCollider, yRange } from './assemble-util.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
+import { audioOf, encodeMeta, lightsOf } from './cell-extras.ts';
 import { type CellBuildStats, cellStats } from './cell-stats.ts';
 import { buildCollision } from './collision.ts';
 import { encodeDecals } from './decals-mesh.ts';
@@ -50,6 +51,7 @@ import { type NavCellOutput, navCell } from './nav-cell.ts';
 import { LANDMARK_MATERIAL, type OverrideCellOutput, type OverrideSet, overrideCell } from './overrides/index.ts';
 import { type PropCellOutput, propsCell } from './props-cell.ts';
 import { trackBuildings } from './rail-buildings.ts';
+import { cutRailWalls, railCorridorOf } from './rail-walls.ts';
 import { buildRoads } from './roads-mesh.ts';
 import { buildTerrainGeometry, encodeTerrainMesh, TERRAIN_MATERIAL } from './terrain-mesh.ts';
 
@@ -93,17 +95,6 @@ export interface CellBuildInput {
   groundAround?: (x: number, z: number) => number | undefined;
   /** 철도 망(M07-T01) — overrides.mesh 선로 메시. */
   rail?: RailNetwork;
-}
-
-async function encodeMeta(meta: CellMeta): Promise<Uint8Array> {
-  const ordered: CellMeta = {
-    buildings: meta.buildings,
-    pois: meta.pois,
-    placeNames: meta.placeNames,
-    signals: meta.signals,
-    interactables: meta.interactables,
-  };
-  return gzip(new TextEncoder().encode(JSON.stringify(ordered)));
 }
 
 /** 성형(M05-T01): 넓은 창 → 성형 높이(여유 1 창)·`_SURF`·RTIN 허용 오차(257²). */
@@ -203,6 +194,10 @@ async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSec
   const propSources = [...new Set([OSM_SOURCE, TERRAIN_SOURCE, ...roadSources(own), ...bld.sources])].sort();
   if (props?.inst) sections.push({ type: 'props.inst', sources: propSources, data: props.inst });
   if (props?.trees) sections.push({ type: 'trees.inst', sources: propSources, data: props.trees });
+  const lights = await lightsOf(input, p);
+  if (lights) sections.push({ type: 'lights.bin', sources: propSources, data: lights });
+  const audio = await audioOf(input, p);
+  if (audio) sections.push({ type: 'audio.json', sources: propSources, data: audio });
   if (p.nav?.bytes) sections.push({ type: 'nav.bin', sources: propSources, data: p.nav.bytes });
   if (p.lanes?.bytes) sections.push({ type: 'lanes.bin', sources: [OSM_SOURCE, TERRAIN_SOURCE], data: p.lanes.bytes });
   if (col.data) {
@@ -244,6 +239,14 @@ function navOf(
   });
 }
 
+/** 건물(M07-T04 선로 위 건물 = 충돌 제외 + 선로·승강장 구간 벽 잘라내기, ADR-0075). */
+function buildingsOf(input: CellBuildInput, originWF: Vec3Tuple, renderSkip: ReadonlySet<string> | undefined) {
+  const tb = trackBuildings(input.buildings, input.rail);
+  const cor = input.rail ? railCorridorOf(input.rail) : undefined;
+  const recs = cor ? input.buildings.map((b) => cutRailWalls(b, cor)) : input.buildings;
+  return buildBuildings(recs, originWF, new Set(renderSkip ?? []), tb.colliderSkip);
+}
+
 /** 셀 1개 → TKC 바이트 + 통계. 같은 입력 → 같은 바이트. */
 export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Array; stats: CellBuildStats }> {
   const { level, ix, iz } = unpackCellKey(input.key);
@@ -257,10 +260,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
         ...(input.rail ? { rail: input.rail } : {}),
       })
     : null;
-  // 선로 위 건물(M07-T04): 충돌 제외, 낮은 승강장 지붕은 렌더도 제외.
-  const tb = trackBuildings(input.buildings, input.rail);
-  const renderSkip = new Set([...(ov?.renderSkip ?? []), ...tb.renderSkip]);
-  const bld = await buildBuildings(input.buildings, originWF, renderSkip, tb.colliderSkip);
+  const bld = await buildingsOf(input, originWF, ov?.renderSkip);
   const own = input.cellRoads ?? [];
   const roads = await buildRoads(own, sc.index, originWF[0], originWF[2], sc.shaped, terrainAt);
   const props = await propCell(input, originWF, sc, terrainAt);
@@ -279,7 +279,6 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
           signalsAround: input.signalsAround,
           shaped: sc.shaped,
           ...(input.props?.signalSites ? { signalSites: input.props.signalSites } : {}),
-          ...(input.props?.signalRules ? { signalRules: input.props.signalRules } : {}),
           ...(input.props?.signalRules ? { signalRules: input.props.signalRules } : {}),
         })
       : null;

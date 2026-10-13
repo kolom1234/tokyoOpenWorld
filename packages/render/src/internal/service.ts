@@ -1,11 +1,12 @@
 // createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3
-import type { CellKey, SharedInstanceBuffer } from '@sanpo/core';
+import type { CellKey, EnvironmentState, SharedInstanceBuffer } from '@sanpo/core';
 import { Group, type Object3D } from 'three/webgpu';
 import type { PrecompileProgress, RenderDebugLayer, RenderDeps, RenderService, RenderStats } from '../api.ts';
 import { createRenderContext, type RenderContext } from './context.ts';
 import { loadCrowdAssets } from './crowd/assets.ts';
-import { createCrowdMaterial } from './crowd/material.ts';
+import { createCrowdMaterial, outfitU } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
+import { nightU, updateNight } from './lighting/night.ts';
 import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
@@ -14,6 +15,25 @@ import { loadTreesInto, setTreeWind } from './trees/load.ts';
 import { createVehicleMaterial, nightFromSun } from './vehicles/material.ts';
 
 export { RENDER_PHASE, RENDER_PREP_PHASE } from './frame.ts';
+
+/** 날씨(M09-T01): 빗줄기·파문·우산·구름 입력 보관(직사광 감쇠 = 프레임 시스템 — 태양 방향 구름 덮임, M09-T02). */
+function applyWeather(ctx: RenderContext, e: Readonly<EnvironmentState>): void {
+  const w = e.weather;
+  const night = nightFromSun(e.sunDirWF.y);
+  Object.assign(ctx.weather, {
+    rainMmH: w.rainMmH,
+    snow: w.snow,
+    windX: e.wind.x,
+    windZ: e.wind.z,
+    night,
+    cover: w.cloudCover,
+    fog: w.fog,
+    sun: e.sunDirWF,
+    gameMs: e.gameTimeMs,
+  });
+  ctx.envUniforms.rain.value = Math.min(w.rainMmH / 8, 1);
+  ctx.crowd.setRain(w.rainMmH);
+}
 
 function statsOf(ctx: RenderContext): RenderStats {
   const { renderer, view } = ctx;
@@ -40,6 +60,19 @@ function statsOf(ctx: RenderContext): RenderStats {
     crowd: { ...ctx.crowd.stats(), far: ctx.farCrowd.stats() },
     vehicles: ctx.vehicles.stats(),
     trains: ctx.trains.stats(),
+    weather: { rain: ctx.rain.stats(), wetness: ctx.envUniforms.wetness.value, direct: ctx.atmosphere.light.color.r },
+    night: { level: nightU.value, ...ctx.nightLights.stats() },
+  };
+}
+
+/** 역 시설(M07-T06). */
+function stationApi(ctx: RenderContext): Pick<RenderService, 'setStationFixtures' | 'setGateFlaps'> {
+  return {
+    setStationFixtures(f) {
+      ctx.stations.set(f);
+      ctx.counters.sceneVersion++;
+    },
+    setGateFlaps: (open) => ctx.stations.setFlaps(open),
   };
 }
 
@@ -90,7 +123,9 @@ function debugLayerVisible(ctx: RenderContext, layer: RenderDebugLayer, visible:
     vehicles: ctx.vehicles.root,
     trains: ctx.trains.root,
   };
-  roots[layer].visible = visible;
+  // 야간 광원은 풀 PointLight를 장면에서 빼면 조명 목록이 바뀌어 재컴파일된다 → 켠 수만 0으로(클러스터 컴퓨트는 그대로).
+  if (layer === 'nightLights') ctx.nightLights.setEnabled(visible);
+  else roots[layer].visible = visible;
   ctx.counters.sceneVersion++;
 }
 
@@ -193,6 +228,18 @@ function loaders(
   };
 }
 
+/** 환경(sim) → 대기 해·달·젖음·날씨·나무 계절·차량 밤·바람. */
+function setEnvironment(ctx: RenderContext, e: Readonly<EnvironmentState>): void {
+  ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF);
+  ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);
+  applyWeather(ctx, e);
+  ctx.treeUniforms?.setSeason(e.season.dayOfYear);
+  outfitU.value = Math.min(Math.max(e.season.outfitPalette, 0), 1);
+  ctx.vehicleUniforms.night.value = nightFromSun(e.sunDirWF.y);
+  updateNight(e.sunDirWF.y, e.gameTimeMs, e.dayType ?? 'weekday');
+  setTreeWind(ctx, e.weather.windMs, e.weather.windDirDeg);
+}
+
 export async function createRender(deps: RenderDeps): Promise<RenderService> {
   const ctx = await createRenderContext(deps);
   const { prep, draw } = createFrameSystems(ctx);
@@ -217,6 +264,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     setSignalLamps: (lamp) => {
       ctx.signalLamp = lamp;
     },
+    ...stationApi(ctx),
     debugLayerVisible: (layer, visible) => debugLayerVisible(ctx, layer, visible),
     addCell: (p) => {
       cells.add(p, view.renderOriginWF);
@@ -225,6 +273,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       ctx.trees.addCell(p.key, p.originWF, p.instances?.trees);
       ctx.signs.addCell(p.key, p.originWF, p.instances?.props);
       if (p.level === 0) ctx.farCrowd.addCell(p.key, p.originWF, p.meshes.roads);
+      if (p.level === 0) ctx.nightLights.addCell(p.key, p.originWF, p.lights);
       ctx.counters.sceneVersion++;
     },
     removeCell: (key) => {
@@ -233,6 +282,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
       ctx.trees.removeCell(key);
       ctx.signs.removeCell(key);
       ctx.farCrowd.removeCell(key);
+      ctx.nightLights.removeCell(key);
       ctx.counters.sceneVersion++;
     },
     setHlodChildVisible: (parent, child, visible) => {
@@ -243,13 +293,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     ...loaders(ctx),
     setCamera: (c) => view.setCamera(c),
     setAvatar: (a) => ctx.avatar.set(a),
-    setEnvironment: (e) => {
-      ctx.atmosphere.setBodies(e.sunDirWF, e.moonDirWF);
-      ctx.envUniforms.wetness.value = Math.min(Math.max(e.weather.wetness, 0), 1);
-      ctx.treeUniforms?.setSeason(e.season.dayOfYear);
-      ctx.vehicleUniforms.night.value = nightFromSun(e.sunDirWF.y);
-      setTreeWind(ctx, e.weather.windMs, e.weather.windDirDeg);
-    },
+    setEnvironment: (e) => setEnvironment(ctx, e),
     stats: () => statsOf(ctx),
     dispose: () => draw.dispose(),
     systems: () => [prep, draw],

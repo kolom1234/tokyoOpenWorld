@@ -2,6 +2,7 @@
   "buildings": 5,
   "roadPieces": 8,
   "sections": {
+    "audio.json": "xxh64:3c28c2aa86772057",
     "buildings.mesh": "xxh64:4ea4c820fd0f25a7",
     "collision.bin": "xxh64:026c0bfa9858ccda",
     "meta.json": "xxh64:d55b8a7027e2942b",

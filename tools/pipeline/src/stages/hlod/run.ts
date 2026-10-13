@@ -6,6 +6,9 @@ import { type CellKey, type CellLevel, cellIdString, type Logger, packCellKey, u
 import { CELL_SIZES, cellBoundsWF, cellOf, parentOf } from '@sanpo/geo';
 import {
   type CellsIndexEntry,
+  gunzip,
+  parseRail,
+  type RailNetwork,
   readCellsIndex,
   tkcHash32,
   type Vec3Tuple,
@@ -17,6 +20,7 @@ import type { BuildingRecord } from '../../readers/plateau/types.ts';
 import { readDemWindow } from '../build/dem-window.ts';
 import type { AreaDef } from '../build/manifest.ts';
 import type { OverrideSet } from '../build/overrides/index.ts';
+import { cutRailWalls, railCorridorOf } from '../build/rail-walls.ts';
 import { type ChildGeometry, encodeHlod, type HlodEncoded } from './child-split.ts';
 import { type FarDem, readFarDem } from './dem-far.ts';
 import type { FarBuilding } from './far-buildings.ts';
@@ -145,11 +149,25 @@ interface Ctx {
   farDem: FarDem;
   far: FarCache;
   inArea: Set<CellKey>;
+  /** L0 build의 global/rail.bin — L1도 선로 구간 벽을 잘라 낸다(ADR-0075). */
+  rail: RailNetwork | undefined;
 }
 
-function readL0Buildings(normalizedDir: string, key: CellKey): BuildingRecord[] {
+function readL0Buildings(normalizedDir: string, key: CellKey, rail: RailNetwork | undefined): BuildingRecord[] {
   const f = join(normalizedDir, 'buildings', `${cellIdString(key)}.ndjson.gz`);
-  return existsSync(f) ? readNdjsonGz<BuildingRecord>(f) : [];
+  const recs = existsSync(f) ? readNdjsonGz<BuildingRecord>(f) : [];
+  if (!rail) return recs;
+  const cor = railCorridorOf(rail);
+  return recs.map((b) => cutRailWalls(b, cor));
+}
+
+async function readRail(outDir: string): Promise<RailNetwork | undefined> {
+  const f = join(outDir, 'global/rail.bin');
+  if (!existsSync(f)) return undefined;
+  const raw = await gunzip(new Uint8Array(readFileSync(f)));
+  if (!raw.ok) return undefined;
+  const net = parseRail(raw.value);
+  return net.ok ? net.value : undefined;
 }
 
 async function l1Cell(c: Ctx, key: CellKey): Promise<Built & { attempts: number; over: boolean }> {
@@ -169,7 +187,7 @@ async function l1Cell(c: Ctx, key: CellKey): Promise<Built & { attempts: number;
       if (!c.inArea.has(k)) return undefined;
       let v = l0.get(k);
       if (!v) {
-        v = readL0Buildings(input.normalizedDir, k);
+        v = readL0Buildings(input.normalizedDir, k, c.rail);
         l0.set(k, v);
       }
       return v;
@@ -220,6 +238,7 @@ export async function runHlod(input: HlodInput): Promise<HlodCellStats[]> {
     farDem: readFarDem(join(input.derivedDir, 'terrain-far')),
     far: new FarCache(input.derivedDir),
     inArea: areaCells(area),
+    rail: await readRail(input.outDir),
   };
   const targets: CellKey[] = [];
   if (input.levels.includes(1)) {

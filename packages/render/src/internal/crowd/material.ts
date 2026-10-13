@@ -13,13 +13,16 @@ import {
   int,
   ivec2,
   max,
+  mix,
   normalLocal,
   positionLocal,
   positionPrevious,
   round,
   sin,
+  step,
   texture,
   textureLoad,
+  uniform,
   uv,
   vec3,
   vec4,
@@ -41,6 +44,25 @@ const rotate = (q: V4, v: V3): V3 => {
   const u = q.xyz;
   return v.add(cross(u, cross(u, v).add(v.mul(q.w))).mul(2));
 };
+
+/** 계절 옷차림(M09-T05): 0 = 여름 … 1 = 겨울(sim SeasonParams.outfitPalette — service setEnvironment). */
+export const outfitU = uniform(0);
+
+/**
+ * 옷 색조 계절 변화: 피부(r > g > b·적당한 비율)로 보이는 화소는 그대로, 나머지(옷·머리털)는 겨울일수록 어둡고 채도 낮게(코트·짙은 색),
+ * 여름일수록 조금 밝게. 텍스처 마스크가 없어 색으로 가른다 — 근사(ADR-0080).
+ */
+function seasonalOutfit(c: V3): V3 {
+  const lum = c.dot(vec3(0.2126, 0.7152, 0.0722));
+  const skin = step(c.b.mul(1.05), c.g)
+    .mul(step(c.g.mul(1.1), c.r))
+    .mul(float(1).sub(step(c.g.mul(1.9), c.r)))
+    .mul(step(0.03, lum));
+  const winter = mix(c, vec3(lum), 0.35).mul(0.72);
+  const summer = c.mul(1.08);
+  const cloth = mix(summer, winter, outfitU);
+  return mix(cloth, c, skin);
+}
 
 export function createCrowdMaterial(a: CrowdAssets): MeshStandardNodeMaterial {
   const bones = int(a.bones);
@@ -73,7 +95,7 @@ export function createCrowdMaterial(a: CrowdAssets): MeshStandardNodeMaterial {
     return placed;
   })();
   const tex = texture(a.atlas, uv()).depth(int(ivar.x));
-  material.colorNode = vec4(tex.rgb.mul(ivar.y), float(1));
+  material.colorNode = vec4(seasonalOutfit(tex.rgb).mul(ivar.y), float(1));
   material.opacityNode = tex.a;
   material.alphaTest = 0.5;
   return material;

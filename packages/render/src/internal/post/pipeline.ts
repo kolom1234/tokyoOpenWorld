@@ -46,14 +46,18 @@ import {
   type Scene,
   type TextureNode,
   type Node as TslNode,
+  type UniformNode,
   UnsignedByteType,
+  type Vector3,
   type WebGPURenderer,
 } from 'three/webgpu';
 import type { PostEffects } from '../../api.ts';
+import { type RainUniforms, rainLayers } from '../weather/rain.ts';
 import { composeAerial, LowResAerialNode } from './aerial.ts';
 import { filterAo } from './ao-filter.ts';
 import { type AutoExposure, createAutoExposure } from './exposure.ts';
 import { createGradeLut, LUT_SIZE } from './lut.ts';
+import { type WeatherSkyUniforms, weatherSky } from './weather-sky.ts';
 
 type V4 = TslNode<'vec4'>;
 
@@ -226,19 +230,30 @@ function sanitize(c: V4): V4 {
   return select(bad(c.x).or(bad(c.y)).or(bad(c.z)).or(bad(c.w)), vec4(0, 0, 0, 1), c) as unknown as V4;
 }
 
+/** 후처리에 얹는 날씨(M09-T01): 빗줄기 = TAAU 뒤 가산(얇고 빠른 줄기를 TAA 이력이 지우지 않게, weather/rain.ts 화면 공간 층). */
+export interface PostOverlays {
+  rain?: RainUniforms;
+  /** 구름층·연무(M09-T02) — 공중원근 뒤·노출 전. camWF = 카메라 WF 위치(렌더 원점 + 카메라). */
+  sky?: { u: WeatherSkyUniforms; camWF: UniformNode<'vec3', Vector3> };
+}
+
 export function createPostPipeline(
   renderer: WebGPURenderer,
   scene: Scene,
   camera: PerspectiveCamera,
   fx: PostEffects,
   debugGpuLoad = 0,
+  overlays: PostOverlays = {},
 ): PostPipeline {
   const scenePass = scenePassOf(scene, camera, fx);
   const depth = scenePass.getTextureNode('depth');
   const pipeline = new RenderPipeline(renderer);
   const sc: Scalables = { rtts: [] };
   const { color, nodes } = lightingComposite(scenePass, camera, fx, sc, debugGpuLoad);
-  const ap = aerialOf(renderer, color, depth, camera, fx, sc, nodes);
+  const aerial = aerialOf(renderer, color, depth, camera, fx, sc, nodes);
+  const ap = overlays.sky
+    ? weatherSky(aerial, depth, camera, overlays.sky.u, overlays.sky.camWF, renderer.reversedDepthBuffer)
+    : aerial;
   const exposure: AutoExposure | undefined = fx.autoExposure
     ? createAutoExposure(scenePass.getTexture('output'))
     : undefined;
@@ -258,6 +273,7 @@ export function createPostPipeline(
     nodes.push(t);
     hdr = t as unknown as V4;
   }
+  if (overlays.rain) hdr = vec4(hdr.rgb.add(rainLayers(overlays.rain, depth, camera)), hdr.a);
   pipeline.outputColorTransform = false;
   let out: V4 = renderOutput(hdr);
   const lut = fx.lut ? createGradeLut() : undefined;

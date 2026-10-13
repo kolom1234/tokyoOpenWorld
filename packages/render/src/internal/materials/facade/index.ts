@@ -1,7 +1,8 @@
 // 절차 파사드 머티리얼(M_FACADE, 07 §5): 격자(grid) → 벽 재질(walls) + 창(windows) + 1층 상점(retail) + 디테일(details) + 맨션 발코니(balcony, 시차 격자) → PBR.
-// 유리 = 반사 유전체 + 실내 매핑(interior.ts) + 블라인드(glass.ts, M03-T05). 야간 점등은 M09.
+// 유리 = 반사 유전체 + 실내 매핑(interior.ts) + 블라인드(glass.ts, M03-T05). 야간 점등 = lighting/night.ts(M09-T03 — 클래스·시각·창 시드).
 import { float, mix, normalWorld, vec3 } from 'three/tsl';
 import { type Material, MeshStandardNodeMaterial } from 'three/webgpu';
+import { nightU, windowNightGain } from '../../lighting/night.ts';
 import { glassShading } from '../glass.ts';
 import type { MaterialLibrary } from '../library.ts';
 import { perturbWorld } from '../textured.ts';
@@ -13,6 +14,8 @@ import { facadeRetail } from './retail.ts';
 import { facadeWall, wallFloor } from './walls.ts';
 import { facadeWindows } from './windows.ts';
 
+/** 밤 1층 간판 띠 발광 배율(장면 단위 — 실제 GPU에서 조정). */
+const FASCIA_NIGHT_GLOW = 0.7;
 /** 창 프레임(알루미늄 새시) 선형 색·거칠기. */
 const FRAME_COLOR = vec3(0.32, 0.33, 0.34);
 
@@ -33,9 +36,10 @@ export function createFacadeMaterial(lib: MaterialLibrary): Material {
   const glass = w.glass.add(r.glass).min(1).mul(open);
   const frame = w.frame.add(r.frame).min(1).mul(open);
   const interior = facadeInterior(lib, i, gIn, wall.t, normalWorld, w.cell, glass);
+  // 야간 점등(M09-T03): 창마다 시드 결정론으로 켜짐/꺼짐 — 밤에 모든 창이 켜지던 문제(07 §5-5).
   const gs = glassShading({
     glass,
-    interior: interior.color,
+    interior: interior.color.mul(windowNightGain(float(i.cls), w.cell)),
     blind: w.blindMask.mul(w.glass),
     y: gIn.ly,
     curtain: i.curtain,
@@ -54,7 +58,7 @@ export function createFacadeMaterial(lib: MaterialLibrary): Material {
   const metal = mix(mix(wall.orm.z, float(0.7), frame), r.metal, r.paintMask).mul(float(1).sub(glass));
   const opaque = float(1).sub(glass).sub(frame).sub(r.paintMask).max(0);
   m.colorNode = albedo;
-  m.emissiveNode = gs.emissive;
+  m.emissiveNode = gs.emissive.add(r.glow.mul(nightU.mul(FASCIA_NIGHT_GLOW)));
   m.roughnessNode = rough;
   m.metalnessNode = metal;
   m.aoNode = mix(float(1), wall.orm.x, opaque)

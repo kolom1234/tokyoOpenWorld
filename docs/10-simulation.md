@@ -10,14 +10,15 @@
 ## 2. 월드 시계
 - 내부 시각 `gameTimeMs`(Unix ms). 표시 시간대 Asia/Tokyo(UTC+9, 서머타임 없음).
 - 모드: `realtime`(현실 JST 동기) / `custom`(시작 시각 + 배속 1·2·10·60) / `frozen`(포토모드·골든뷰·`?time=`). 부팅 기본 = 오늘 12:00 JST부터 custom 1배속(설정 UI M08 전, ADR-0029).
-- 요일 유형: 평일 / 토요일 / 휴일(일요일 + 일본 공휴일 내장 테이블 `content/sim/holidays-jp.json`, 내각부 공개 CSV 기반 2026–2035).
+- 요일 유형: 평일 / 토요일 / 휴일(일요일 + 일본 공휴일 내장 테이블 `content/sim/holidays-jp.json` 2026–2035 — 「国民の祝日に関する法律」 규칙 생성 `tools/pipeline/scripts/holidays-jp.py`, 춘·추분은 근사식(관보 공표와 대조), M09-T05). 토·휴일 군중 곡선 `crowd.json density.diurnalHoliday`.
 - 운행일 경계: 04:00 JST (열차·교통 시간표 기준).
 
 ## 3. 날씨·계절
 - 상태 파라미터(`WeatherParams`, core): `cloudCover 0–1, rainMmH, fog 0–1, windMs, windDirDeg, snow 0–1, temperatureC?`(실시간 모드 = API 값, 자체 모드 = 월·시각별 기후 평년값 테이블).
-- 자체 모드: 30분(게임시간) 단위 마르코프 전이, 월별 확률표 `content/sim/weather-climate.yaml`(도쿄 기후 경향: 6–7월 장마 강수↑, 겨울 맑음↑). 전이 보간 10분.
+- 자체 모드: 30분(게임시간) 단위 마르코프 전이, 월별 확률표 `content/sim/weather-climate.json`(도쿄 기후 경향: 6–7월 장마 강수↑, 겨울 맑음↑). 전이 보간 10분.
+  구현(M09-T01, ADR-0076): 칸마다 확률 1 − stay로 달 분포에서 다시 뽑기 → 시각 순수 함수(뒤로 찾은 마지막 다시 뽑기), 젖음 = 과거 6 h 적분. `?time=` 고정 시각은 맑음 고정(골든·e2e 결정론).
 - 실시간 모드(`liveWeather` 플래그): Worker `/api/weather`(Open-Meteo 프록시, 10분 캐시) → WMO 코드 매핑표로 상태 변환.
-- 계절: 날짜 → `SeasonParams { foliageTint, bloom, leafDensity, outfitPalette }` (테이블 `content/sim/season.yaml`).
+- 계절: 날짜 → `SeasonParams { foliageTint, bloom, leafDensity, outfitPalette }` (테이블 `content/sim/season.json` — M09-T05 키프레임 선형 보간, ADR-0080). 군중 옷 색조 = outfitPalette(render crowd 셰이더 — 겨울 짙고 채도 낮게), 나무는 render 수종표(dayOfYear).
 
 ## 4. 군중 (보행자)
 ### 4.1 밀도 모델

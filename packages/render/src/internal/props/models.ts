@@ -193,6 +193,9 @@ function lampOf(t: number, r: number, g: number, b: number): number {
   };
   if (t === PROP_TYPE.signalVehicle) return is(C.red) ? 1 : is(C.amber) ? 2 : is(C.green) ? 3 : 0;
   if (t === PROP_TYPE.signalPedestrian) return is(C.red) ? 4 : is(C.green) ? 5 : 0;
+  // 야간 발광(M09-T03): 가로등 등기구 6, 자판기 앞면 7.
+  if (t === PROP_TYPE.streetLamp) return is(C.lamp) ? 6 : 0;
+  if (t === PROP_TYPE.vendingMachine) return is(C.panel) ? 7 : 0;
   return 0;
 }
 

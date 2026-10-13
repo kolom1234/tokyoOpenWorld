@@ -49,6 +49,7 @@ import {
   Vector3,
   Vector4,
 } from 'three/webgpu';
+import { nightU } from '../lighting/night.ts';
 import { BARK_COLORS, SPECIES_SLOTS, seasonTable } from './season.ts';
 
 export interface TreeUniforms {
@@ -129,8 +130,9 @@ function placeNode(u: TreeUniforms, flutter: boolean) {
 
 const leafRow = (u: TreeUniforms) => vec4(u.season.element(int(iext.z)));
 const tintOf = () => iext.y.mul(0.3).add(0.85);
-/** 잎 자체발광 비율(투과광 근사). */
+/** 잎 자체발광 비율(투과광 근사) — 밤에는 투과할 햇빛이 없다(M09-T03: 밤 정도로 줄인다 — 줄이지 않으면 밤 가로수가 연두색으로 빛난다). */
 const LEAF_TRANSLUCENCY = 0.22;
+const translucency = () => float(1).sub(nightU.mul(0.97)).mul(LEAF_TRANSLUCENCY);
 
 export function createBarkMaterial(u: TreeUniforms): Material {
   const m = new MeshStandardNodeMaterial({ roughness: 0.9, metalness: 0 });
@@ -169,7 +171,7 @@ export function createLeafMaterial(u: TreeUniforms, leaves: Texture, l: FoliageL
   const leafColor = tex.rgb.mul(row.xyz).mul(tintOf()).mul(1.25);
   m.colorNode = leafColor;
   // 투과광·수관 안 산란 근사: 잎 색의 일부를 자체발광(그늘·뒷면 잎이 검게 죽지 않게 — 실제 GPU 확인).
-  emissiveOf(m).emissiveNode = leafColor.mul(LEAF_TRANSLUCENCY);
+  emissiveOf(m).emissiveNode = leafColor.mul(translucency());
   m.opacityNode = tex.a.mul(step(patch, row.w));
   m.alphaTest = 0.5;
   return m;
@@ -256,7 +258,7 @@ export function createImpostorMaterial(
   // 굽기 명암(수피 ≈ 0.4, 잎 ≈ 0.6)을 상세 LOD 밝기에 맞춘다 — 수피는 ×1.5(하늘 간접광과 함께 상세 LOD 줄기 밝기), 잎은 ×1.6.
   const impColor = mix(barkOf().mul(smp.r.mul(1.5)), row.xyz.mul(smp.r.mul(1.6)), smp.g).mul(tintOf());
   m.colorNode = impColor;
-  emissiveOf(m).emissiveNode = impColor.mul(smp.g).mul(LEAF_TRANSLUCENCY);
+  emissiveOf(m).emissiveNode = impColor.mul(smp.g).mul(translucency());
   m.opacityNode = smp.a.mul(mix(float(1), step(patch, row.w), smp.g));
   m.alphaTest = 0.5;
   const q = local.mul(2).sub(1);

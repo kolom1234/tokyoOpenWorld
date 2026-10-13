@@ -31,7 +31,7 @@ test('dummy crowd: sim worker publishes 1,000 pedestrians and the crowd pack ren
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
   });
-  await page.goto('/?world=mini&debug=1&crowd=dummy');
+  await page.goto('/?world=mini&debug=1&crowd=dummy&weather=clear');
   await waitSettled(page);
   const crowd = () => page.evaluate(() => (globalThis as unknown as Handle).__SANPO_DEBUG__.world.render.stats().crowd);
   await expect.poll(async () => (await crowd()).ready, { timeout: STATE_TIMEOUT_MS }).toBe(true);
@@ -53,7 +53,7 @@ test('agents (M06-T03): world-mini navmesh tiles reach the worker, 250 scramble 
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
   });
-  await page.goto('/?world=mini&debug=1&crowd=scramble');
+  await page.goto('/?world=mini&debug=1&crowd=scramble&weather=clear');
   await waitSettled(page);
   // 스크램블 계획(주기 120 s, 사이트 오프셋 0): 86–112 s 전방향 보행 W. 부팅 시간(SwiftShader 수십 s)과 무관하게 시계를 직접 옮긴다 —
   // 차량 현시(주기 50 s 지점)로 → 대기 무리 → 85 s 지점으로(1 s 뒤 W).

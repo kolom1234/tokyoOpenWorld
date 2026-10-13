@@ -9,6 +9,7 @@ import {
   floor,
   fract,
   fwidth,
+  hash,
   int,
   max,
   mix,
@@ -23,6 +24,7 @@ import {
   vec3,
 } from 'three/tsl';
 import { type Material, MeshStandardNodeMaterial, type Node as TslNode, Vector2, Vector3 } from 'three/webgpu';
+import { litA, nightU } from '../lighting/night.ts';
 import { glassRoughness } from './glass.ts';
 import { lattice } from './noise.ts';
 
@@ -120,6 +122,26 @@ function screenColor(p: V2): V3 {
   return col.mul(float(1).sub(led.mul(0.5)));
 }
 
+/** 랜드마크 야간 창 밝기(M09-T03 — 사무 점등 비율, 실제 GPU 21:00 스크램블에서 HLOD·파사드 켜진 창과 맞춤). */
+const LANDMARK_NIGHT_GAIN = 0.05;
+
+/** 커튼월·핀·화강암 창: 칸(1.5 × 4.2 m — 핀 1.2 × 4.5, 화강암 1.6 × 3.9)마다 hash < 사무 점등 비율이면 켜짐. 칸이 화소보다 작으면 기대값. */
+function landmarkNight(p: V2, id: F, glass: F): V3 {
+  const fins = is(id, ID.fins);
+  const granite = is(id, ID.granite);
+  const cw = select(fins, float(1.2), select(granite, float(1.6), float(1.5)));
+  const ch = select(fins, float(4.5), select(granite, float(3.9), float(4.2)));
+  const cu = p.x.div(cw);
+  const cv = p.y.div(ch);
+  const cell = floor(cu).add(floor(cv).mul(4099));
+  const lit = select(hash(cell.add(0.53)).lessThan(litA.x), float(1), float(0));
+  const blur = smoothstep(0.35, 1, max(fwidth(cu), fwidth(cv)));
+  const on = mix(lit, litA.x, blur);
+  const tint = select(hash(cell.add(0.29)).lessThan(0.6), vec3(0.92, 0.97, 1), vec3(1, 0.9, 0.74));
+  const glassy = is(id, ID.curtain).or(fins).or(granite);
+  return tint.mul(on.mul(glass).mul(nightU).mul(LANDMARK_NIGHT_GAIN)).mul(select(glassy, float(1), float(0)));
+}
+
 export function createLandmarkMaterial(): Material {
   const m = new MeshStandardNodeMaterial({ roughness: 0.8, metalness: 0 });
   m.name = 'landmark';
@@ -176,6 +198,7 @@ export function createLandmarkMaterial(): Material {
   m.colorNode = albedo;
   m.roughnessNode = rough;
   m.metalnessNode = metal;
-  m.emissiveNode = select(isScreen, screenColor(p).mul(screenExposure), vec3(0));
+  const glass = select(isGranite, win, float(1).sub(frame));
+  m.emissiveNode = select(isScreen, screenColor(p).mul(screenExposure), landmarkNight(p, id, glass));
   return m;
 }

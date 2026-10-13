@@ -11,6 +11,7 @@ import {
   Vector3,
 } from 'three/webgpu';
 import type { CrowdAssets, CrowdBase } from './assets.ts';
+import { createUmbrellas, type Umbrellas, umbrellaShare } from './umbrella.ts';
 
 /** LOD별 풀 용량(베이스마다). 넘치면 버리고 stats.dropped. */
 export const CROWD_POOL_CAPACITY = [48, 128, 320, 640] as const;
@@ -42,6 +43,8 @@ export interface CrowdField {
   readonly root: Group;
   attach(assets: CrowdAssets, material: Material): void;
   bind(src: SharedInstanceBuffer): void;
+  /** 비(mm/h) → 우산 비율(M09-T01). */
+  setRain(rainMmH: number): void;
   /** 카메라(렌더 좌표)·렌더 원점 → 풀 채우기. 반환 = 그림자 드리우는 인스턴스가 있는지(그림자 캐시 무효화). */
   update(camera: PerspectiveCamera, renderOriginWF: Readonly<Vec3d>): boolean;
   primeForCompile(): () => void;
@@ -129,6 +132,7 @@ interface FillCtx {
   fwd: Vector3;
   /** 지난 채우기 시각(ms) — 프레임 변위(모션 벡터). */
   lastMs: number;
+  umbrellas: Umbrellas;
 }
 
 /** SAB 인스턴스 → 외삽 → LOD·시야 → 풀. */
@@ -183,59 +187,87 @@ function fillPools(c: FillCtx, src: SharedInstanceBuffer, camera: PerspectiveCam
       [base.row0 + cl.start, cl.frames, phase * cl.frames, scale],
       [b, 0.92 + 0.16 * (((v >> 4) & 15) / 15), -Math.sin(yaw) * speed * dt, -Math.cos(yaw) * speed * dt],
     );
+    c.umbrellas.add(x, y, z, yaw, scale, v, d);
     st.visible++;
     st.lods[lod] = (st.lods[lod] ?? 0) + 1;
     if (lod === 0) st.casters++;
   }
 }
 
+/** 선컴파일 priming: 풀마다 보이지 않는 인스턴스 1개 + 우산 1개 → 복원 함수. */
+function primeAll(pools: Pool[][], umbrellas: Umbrellas): () => void {
+  for (const [b, row] of pools.entries())
+    for (const p of row) {
+      p.n = 0;
+      writeInstance(p, 0, -1000, 0, 0, [0, 1, 0, 1], [b, 1, 0, 0]);
+    }
+  flushPools(pools);
+  umbrellas.begin(1);
+  umbrellas.add(0, -1000, 0, 0, 1, 0, 0);
+  umbrellas.end();
+  return () => {
+    for (const row of pools) for (const p of row) p.n = 0;
+    flushPools(pools);
+    umbrellas.begin(0);
+    umbrellas.end();
+  };
+}
+
+const emptyStats = (): CrowdFieldStats => ({
+  instances: 0,
+  visible: 0,
+  pools: 0,
+  dropped: 0,
+  casters: 0,
+  lods: [0, 0, 0, 0],
+  ready: false,
+});
+
 export function createCrowdField(): CrowdField {
   const root = new Group();
   root.name = 'crowd';
   let fill: FillCtx | undefined;
   let src: SharedInstanceBuffer | undefined;
-  const st: CrowdFieldStats = {
-    instances: 0,
-    visible: 0,
-    pools: 0,
-    dropped: 0,
-    casters: 0,
-    lods: [0, 0, 0, 0],
-    ready: false,
-  };
+  const umbrellas = createUmbrellas();
+  root.add(umbrellas.mesh);
+  let share = 0;
+  const st = emptyStats();
   const pools = (): Pool[][] => fill?.pools ?? [];
   return {
     root,
     attach(a, material) {
       const ps = a.bases.map((b, i) => b.lods.map((_, l) => createPool(b, l, material, i)));
       for (const row of ps) for (const p of row) root.add(p.mesh);
-      fill = { assets: a, pools: ps, pick: basePicker(a.bases), st, fwd: new Vector3(), lastMs: performance.now() };
+      fill = {
+        assets: a,
+        pools: ps,
+        pick: basePicker(a.bases),
+        st,
+        fwd: new Vector3(),
+        lastMs: performance.now(),
+        umbrellas,
+      };
       st.ready = true;
     },
     bind(s) {
       src = s;
     },
+    setRain(mmH) {
+      share = umbrellaShare(mmH);
+    },
     update(camera, o) {
       if (!fill || !src) return false;
+      umbrellas.begin(share);
       fillPools(fill, src, camera, o);
+      umbrellas.end();
       st.pools = flushPools(fill.pools);
-      return st.casters > 0;
+      return st.casters > 0 || umbrellas.count > 0;
     },
-    primeForCompile() {
-      for (const [b, row] of pools().entries())
-        for (const p of row) {
-          p.n = 0;
-          writeInstance(p, 0, -1000, 0, 0, [0, 1, 0, 1], [b, 1, 0, 0]);
-        }
-      flushPools(pools());
-      return () => {
-        for (const row of pools()) for (const p of row) p.n = 0;
-        flushPools(pools());
-      };
-    },
+    primeForCompile: () => primeAll(pools(), umbrellas),
     stats: () => ({ ...st, lods: [...st.lods] }),
     dispose() {
       for (const row of pools()) for (const p of row) p.geo.dispose();
+      umbrellas.dispose();
       fill = undefined;
     },
   };

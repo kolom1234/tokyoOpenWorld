@@ -73,6 +73,8 @@ export interface RenderConfig {
   gpuTiming: boolean;
   /** 태양 CSM 그림자(WebGPU만, 품질 티어 T08이 조정). */
   shadows: boolean;
+  /** 야간 실제 광원(M09-T03 ClusteredLighting 풀 1024, WebGPU만) — false = 발광 스프라이트만(`?nightLights=0`, 비용 A/B). */
+  nightLights: boolean;
   /** 'flat' = 파사드를 단색 PBR로(셰이더 비용 A/B 측정·최저 품질). */
   facade: 'procedural' | 'flat';
   /** 품질 티어(`?quality=`). 후처리 효과 기본값을 정한다(07 §9). */
@@ -155,6 +157,10 @@ export interface RenderStats {
   };
   /** 열차(M07-T03): sim 칸 수·그린 수·쓰는 풀·용량 초과·LOD별 수(45/300/1600 m)·준비. */
   trains: { cars: number; visible: number; pools: number; dropped: number; lods: number[]; ready: boolean };
+  /** 날씨(M09-T01): 빗줄기·눈 입자(그리는 수·밀도·눈)·노면 젖음·직사광 배율(구름). */
+  weather: { rain: { count: number; density: number; snow: boolean }; wetness: number; direct: number };
+  /** 야간 조명(M09-T03): 밤 정도·적재 광원 셀·광원 수·켠 실제 광원(클러스터 풀)·발광 스프라이트. */
+  night: { level: number; cells: number; lights: number; active: number; sprites: number };
 }
 
 /** 플레이어 아바타 에셋 URL(파이프라인 `characters` — Rocketbox 스킨 GLB + KTX2 아틀라스, ADR-0057). */
@@ -284,6 +290,10 @@ export interface RenderService extends SystemProvider {
    * 배선이 sim.signalStateAt로 만든다. 매 renderPrep에 보이는 기둥만 묻는다. null = 램프 끔.
    */
   setSignalLamps(lamp: ((code: number) => number) | null): void;
+  /** 역 시설(M07-T06 — 개찰구·울타리·계단 표식 상자 + 플랩, WF). null = 제거. */
+  setStationFixtures(f: StationFixtures | null): void;
+  /** 개찰구 통로별 열림 0..1(통로 순서 = fixtures.flaps 2개씩). */
+  setGateFlaps(open: Float32Array): void;
   /**
    * 디버그(M07 사전 ⓪): 인스턴스 레이어 하나를 숨기거나 다시 보인다 — 게임 동작 없음. e2e·실제 GPU 진단이 보임/숨김 픽셀 차로
    * 같은 물체가 거리(LOD 띠)마다 끊김 없이 그려지는지 잰다.
@@ -299,8 +309,22 @@ export interface RenderService extends SystemProvider {
   dispose(): void;
 }
 
+/** 역 시설 상자(M07-T06): boxes = cx,cy,cz,hx,hy,hz,yaw,색 번호(0 캐비닛·1 윗판·2 플랩·3 울타리·4 안내판·5 바닥 판·6 노란 테두리) × n, flaps = cx,cy,cz,hx,hy,hz,yaw,접힘 쪽(±1) × n. */
+export interface StationFixtures {
+  boxes: Float64Array;
+  flaps: Float64Array;
+}
+
 /** `debugLayerVisible` 대상(인스턴스 풀 레이어). */
-export type RenderDebugLayer = 'props' | 'signs' | 'trees' | 'crowd' | 'farCrowd' | 'vehicles' | 'trains';
+export type RenderDebugLayer =
+  | 'props'
+  | 'signs'
+  | 'trees'
+  | 'crowd'
+  | 'farCrowd'
+  | 'vehicles'
+  | 'trains'
+  | 'nightLights';
 
 export interface RenderDeps {
   canvas: HTMLCanvasElement;

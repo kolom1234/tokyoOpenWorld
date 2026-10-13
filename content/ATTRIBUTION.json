@@ -713,6 +713,328 @@
         "tests/fixtures/gtfs-mini/**"
       ],
       "modified": false
+    },
+    {
+      "id": "open-meteo",
+      "kind": "data",
+      "title": "Open-Meteo Weather Forecast API (current weather)",
+      "url": "https://open-meteo.com/",
+      "license": "CC-BY-4.0",
+      "attribution": {
+        "ja": "気象データ：Open-Meteo.com（CC BY 4.0）",
+        "en": "Weather data by Open-Meteo.com (CC BY 4.0)",
+        "ko": "날씨 데이터: Open-Meteo.com (CC BY 4.0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-75271",
+      "kind": "sound",
+      "title": "busy_tokyo_street_evening_rush_3waves_120.wav — Freesound #75271 (게임 사용: street-day — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/markystar/sounds/75271/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「busy_tokyo_street_evening_rush_3waves_120.wav」 by markystar（Freesound, CC0）",
+        "en": "Sound: \"busy_tokyo_street_evening_rush_3waves_120.wav\" by markystar (Freesound, CC0)",
+        "ko": "음원: 「busy_tokyo_street_evening_rush_3waves_120.wav」 by markystar (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-42195",
+      "kind": "sound",
+      "title": "TokyoStreetAtNight_120.wav — Freesound #42195 (게임 사용: street-night — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/markystar/sounds/42195/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「TokyoStreetAtNight_120.wav」 by markystar（Freesound, CC0）",
+        "en": "Sound: \"TokyoStreetAtNight_120.wav\" by markystar (Freesound, CC0)",
+        "ko": "음원: 「TokyoStreetAtNight_120.wav」 by markystar (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-31791",
+      "kind": "sound",
+      "title": "cross_road_shibuya.mp3 — Freesound #31791 (게임 사용: crowd — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/Heigh-hoo/sounds/31791/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「cross_road_shibuya.mp3」 by Heigh-hoo（Freesound, CC0）",
+        "en": "Sound: \"cross_road_shibuya.mp3\" by Heigh-hoo (Freesound, CC0)",
+        "ko": "음원: 「cross_road_shibuya.mp3」 by Heigh-hoo (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-789672",
+      "kind": "sound",
+      "title": "Ambient sound of shops in Japan — Freesound #789672 (게임 사용: shopping — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/jrussell_tm/sounds/789672/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Ambient sound of shops in Japan」 by jrussell_tm（Freesound, CC0）",
+        "en": "Sound: \"Ambient sound of shops in Japan\" by jrussell_tm (Freesound, CC0)",
+        "ko": "음원: 「Ambient sound of shops in Japan」 by jrussell_tm (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-244645",
+      "kind": "sound",
+      "title": "20140813hachimanyama_residential.mp3 — Freesound #244645 (게임 사용: residential-day — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/Tasshi/sounds/244645/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「20140813hachimanyama_residential.mp3」 by Tasshi（Freesound, CC0）",
+        "en": "Sound: \"20140813hachimanyama_residential.mp3\" by Tasshi (Freesound, CC0)",
+        "ko": "음원: 「20140813hachimanyama_residential.mp3」 by Tasshi (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-42211",
+      "kind": "sound",
+      "title": "ShinNakanoAutumnNightScape120.wav — Freesound #42211 (게임 사용: residential-night — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/markystar/sounds/42211/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「ShinNakanoAutumnNightScape120.wav」 by markystar（Freesound, CC0）",
+        "en": "Sound: \"ShinNakanoAutumnNightScape120.wav\" by markystar (Freesound, CC0)",
+        "ko": "음원: 「ShinNakanoAutumnNightScape120.wav」 by markystar (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-75273",
+      "kind": "sound",
+      "title": "tokyo_park_at_dusk.wav — Freesound #75273 (게임 사용: park — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/markystar/sounds/75273/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「tokyo_park_at_dusk.wav」 by markystar（Freesound, CC0）",
+        "en": "Sound: \"tokyo_park_at_dusk.wav\" by markystar (Freesound, CC0)",
+        "ko": "음원: 「tokyo_park_at_dusk.wav」 by markystar (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-364808",
+      "kind": "sound",
+      "title": "Japan_Matsudo_Yabashira_Crazy_Bird_Sounds.wav — Freesound #364808 (게임 사용: birds — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/RutgerMuller/sounds/364808/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Japan_Matsudo_Yabashira_Crazy_Bird_Sounds.wav」 by RutgerMuller（Freesound, CC0）",
+        "en": "Sound: \"Japan_Matsudo_Yabashira_Crazy_Bird_Sounds.wav\" by RutgerMuller (Freesound, CC0)",
+        "ko": "음원: 「Japan_Matsudo_Yabashira_Crazy_Bird_Sounds.wav」 by RutgerMuller (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-365257",
+      "kind": "sound",
+      "title": "Japan_Kashiwa_Insects_Far_and_Upclose.wav — Freesound #365257 (게임 사용: insects-night — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/RutgerMuller/sounds/365257/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Japan_Kashiwa_Insects_Far_and_Upclose.wav」 by RutgerMuller（Freesound, CC0）",
+        "en": "Sound: \"Japan_Kashiwa_Insects_Far_and_Upclose.wav\" by RutgerMuller (Freesound, CC0)",
+        "ko": "음원: 「Japan_Kashiwa_Insects_Far_and_Upclose.wav」 by RutgerMuller (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-44681",
+      "kind": "sound",
+      "title": "museum1.wav — Freesound #44681 (게임 사용: station — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/moxobna/sounds/44681/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「museum1.wav」 by moxobna（Freesound, CC0）",
+        "en": "Sound: \"museum1.wav\" by moxobna (Freesound, CC0)",
+        "ko": "음원: 「museum1.wav」 by moxobna (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-454143",
+      "kind": "sound",
+      "title": "rain medium on street pavement.flac — Freesound #454143 (게임 사용: rain-street — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/kyles/sounds/454143/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「rain medium on street pavement.flac」 by kyles（Freesound, CC0）",
+        "en": "Sound: \"rain medium on street pavement.flac\" by kyles (Freesound, CC0)",
+        "ko": "음원: 「rain medium on street pavement.flac」 by kyles (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-171980",
+      "kind": "sound",
+      "title": "AMB_M_City_Rain_Light.wav — Freesound #171980 (게임 사용: rain-light — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/conleec/sounds/171980/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「AMB_M_City_Rain_Light.wav」 by conleec（Freesound, CC0）",
+        "en": "Sound: \"AMB_M_City_Rain_Light.wav\" by conleec (Freesound, CC0)",
+        "ko": "음원: 「AMB_M_City_Rain_Light.wav」 by conleec (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-534929",
+      "kind": "sound",
+      "title": "Rain From Under An Umbrella — Freesound #534929 (게임 사용: rain-umbrella — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/jordanrainer325/sounds/534929/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Rain From Under An Umbrella」 by jordanrainer325（Freesound, CC0）",
+        "en": "Sound: \"Rain From Under An Umbrella\" by jordanrainer325 (Freesound, CC0)",
+        "ko": "음원: 「Rain From Under An Umbrella」 by jordanrainer325 (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-390740",
+      "kind": "sound",
+      "title": "Wind 2.mp3 — Freesound #390740 (게임 사용: wind — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/FunWithSound/sounds/390740/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Wind 2.mp3」 by FunWithSound（Freesound, CC0）",
+        "en": "Sound: \"Wind 2.mp3\" by FunWithSound (Freesound, CC0)",
+        "ko": "음원: 「Wind 2.mp3」 by FunWithSound (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-330427",
+      "kind": "sound",
+      "title": "Downtown LA, Little Tokyo, late night semi distant traffic.wav — Freesound #330427 (게임 사용: traffic-far — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/janbezouska/sounds/330427/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Downtown LA, Little Tokyo, late night semi distant traffic.wav」 by janbezouska（Freesound, CC0）",
+        "en": "Sound: \"Downtown LA, Little Tokyo, late night semi distant traffic.wav\" by janbezouska (Freesound, CC0)",
+        "ko": "음원: 「Downtown LA, Little Tokyo, late night semi distant traffic.wav」 by janbezouska (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-459964",
+      "kind": "sound",
+      "title": "Footsteps on concrete — Freesound #459964 (게임 사용: step-concrete — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/florianreichelt/sounds/459964/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Footsteps on concrete」 by florianreichelt（Freesound, CC0）",
+        "en": "Sound: \"Footsteps on concrete\" by florianreichelt (Freesound, CC0)",
+        "ko": "음원: 「Footsteps on concrete」 by florianreichelt (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-637556",
+      "kind": "sound",
+      "title": "footsteps shoes walk road asphalt hard.flac — Freesound #637556 (게임 사용: step-asphalt — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/kyles/sounds/637556/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「footsteps shoes walk road asphalt hard.flac」 by kyles（Freesound, CC0）",
+        "en": "Sound: \"footsteps shoes walk road asphalt hard.flac\" by kyles (Freesound, CC0)",
+        "ko": "음원: 「footsteps shoes walk road asphalt hard.flac」 by kyles (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-256904",
+      "kind": "sound",
+      "title": "Walking on Tile with Shoes — Freesound #256904 (게임 사용: step-tile — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/PandaKub/sounds/256904/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Walking on Tile with Shoes」 by PandaKub（Freesound, CC0）",
+        "en": "Sound: \"Walking on Tile with Shoes\" by PandaKub (Freesound, CC0)",
+        "ko": "음원: 「Walking on Tile with Shoes」 by PandaKub (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-206030",
+      "kind": "sound",
+      "title": "footsteps grass.wav — Freesound #206030 (게임 사용: step-grass — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/Yuval/sounds/206030/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「footsteps grass.wav」 by Yuval（Freesound, CC0）",
+        "en": "Sound: \"footsteps grass.wav\" by Yuval (Freesound, CC0)",
+        "ko": "음원: 「footsteps grass.wav」 by Yuval (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-352870",
+      "kind": "sound",
+      "title": "Footsteps Dirt Gravel — Freesound #352870 (게임 사용: step-soil — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/PotatokingXII/sounds/352870/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Footsteps Dirt Gravel」 by PotatokingXII（Freesound, CC0）",
+        "en": "Sound: \"Footsteps Dirt Gravel\" by PotatokingXII (Freesound, CC0)",
+        "ko": "음원: 「Footsteps Dirt Gravel」 by PotatokingXII (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-235718",
+      "kind": "sound",
+      "title": "Footsteps_sneakers on wood.wav — Freesound #235718 (게임 사용: step-wood — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/speedygonzo/sounds/235718/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「Footsteps_sneakers on wood.wav」 by speedygonzo（Freesound, CC0）",
+        "en": "Sound: \"Footsteps_sneakers on wood.wav\" by speedygonzo (Freesound, CC0)",
+        "ko": "음원: 「Footsteps_sneakers on wood.wav」 by speedygonzo (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "fs-148462",
+      "kind": "sound",
+      "title": "FOLEY_Footsteps_Metal_001.wav — Freesound #148462 (게임 사용: step-metal — 구간 루프·발소리 조각, 음량 정규화, Opus 재인코딩)",
+      "url": "https://freesound.org/people/conleec/sounds/148462/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "音源: 「FOLEY_Footsteps_Metal_001.wav」 by conleec（Freesound, CC0）",
+        "en": "Sound: \"FOLEY_Footsteps_Metal_001.wav\" by conleec (Freesound, CC0)",
+        "ko": "음원: 「FOLEY_Footsteps_Metal_001.wav」 by conleec (Freesound, CC0)"
+      },
+      "files": [],
+      "modified": true
     }
   ]
 }

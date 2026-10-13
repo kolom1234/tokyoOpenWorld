@@ -1,7 +1,7 @@
 // 셀 소품(M05-T03)·나무(M05-T04): 성형 결과·지형 메시·도로 색인 → buildProps → props.inst(gzip) + 콜라이더 + 전선, 이어서 buildTrees(소품 자리 피함)
 // → trees.inst(gzip) + 줄기 콜라이더. 04 §4.3, 05 §4, ADR-0051·0052
 import { type CellKey, cellIdString } from '@sanpo/core';
-import { gzip, type JcolShape, writeProps, writeTrees } from '@sanpo/tile-format';
+import { gzip, type JcolShape, type PropBatch, writeProps, writeTrees } from '@sanpo/tile-format';
 import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { type FootprintSource, footprintRingTest } from '../derive/footprints.ts';
 import { bilinear, type LocalGrid } from '../derive/grid.ts';
@@ -39,6 +39,8 @@ export interface PropCellInput {
 
 export interface PropCellOutput {
   inst: Uint8Array | null;
+  /** 배치(셀 로컬) — 광원(lights.bin, M09-T03)이 가로등·자판기·간판 위치를 쓴다. */
+  batches: readonly PropBatch[];
   /** 소품 + 나무 콜라이더. */
   colliders: JcolShape[];
   wires: WireBuf;
@@ -97,6 +99,7 @@ export async function propsCell(i: PropCellInput): Promise<PropCellOutput> {
   const trees = tr.records.length > 0 ? await gzip(writeTrees(tr.records)) : null;
   return {
     inst,
+    batches: out.batches,
     colliders: [...out.colliders, ...tr.colliders],
     wires: out.wires,
     stats: out.stats,

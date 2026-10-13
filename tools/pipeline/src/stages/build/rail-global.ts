@@ -26,6 +26,7 @@ import type { OsmRecord } from '../normalize-osm.ts';
 import { RAIL_FILE } from '../rail/normalize.ts';
 import type { GtfsLineMap } from '../timetables/gtfs.ts';
 import { readDemWindow } from './dem-window.ts';
+import { alignPlatformRails } from './rail-platform-align.ts';
 
 interface LineDef extends RailLineMeta {
   osmNames: string[];
@@ -232,7 +233,9 @@ function collectTracks(ctx: TrackCtx, raw: readonly { l: LineDef; tracks: RawTra
       report.push(d.report);
     }
   }
-  return { pts, speed, flags, tracks, report, platforms };
+  // 섬식 승강장을 쓰는 선로들의 레일 높이를 승강장 기준으로 맞춘다(M07-T06).
+  const align = alignPlatformRails(tracks, pts, platforms, PLATFORM_TOP_M);
+  return { pts, speed, flags, tracks, report, platforms, align };
 }
 
 /** global/rail.bin 쓰기 + 선로별 보고(정차·N02 대조). */
@@ -251,7 +254,8 @@ export async function buildRailGlobal(i: RailBuildInput): Promise<{ network: Rai
       join(i.derivedDir, 'rail', 'dem'),
     ),
   };
-  const { pts, speed, flags, tracks, report, platforms } = collectTracks(ctx, raw);
+  const { pts, speed, flags, tracks, report, platforms, align } = collectTracks(ctx, raw);
+  i.log.info(`rail: platforms aligned ${align.platforms}, max rail shift ${align.maxShiftM} m`);
   const network: RailNetwork = {
     lines: cat.lines.map(({ osmNames: _o, n02: _n, headings: _h, stations: _s, gtfs: _g, ...m }) => m),
     tracks,

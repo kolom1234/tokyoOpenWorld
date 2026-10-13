@@ -1,6 +1,6 @@
 // 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 // 구현된 단계: normalize(--layer plateau: 건물·도로, terrain: dem_1m.tif), build(L0: 지형·건물·meta → TKC),
-// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열)·characters(Rocketbox → 플레이어 아바타·군중 팩)·trees(수종 에셋 — cli-assets.ts), validate, publish·gc(R2 + KV).
+// hlod-prep(23구 원경 건물·원경 DEM 타일), hlod(L1–L3 → TKC, cells.idx 병합), materials(KTX2 배열)·characters(Rocketbox → 플레이어 아바타·군중 팩)·trees(수종 에셋)·audio(앰비언스·발소리 Opus — cli-assets.ts), validate, publish·gc(R2 + KV).
 // TODO: fetch | derive.
 import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -368,6 +368,7 @@ const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   characters: (args) => assetStages.characters(assets, args),
   trees: () => assetStages.trees(assets),
   signage: () => assetStages.signage(assets),
+  audio: (args) => assetStages.audio(assets, args),
   validate,
   publish,
   gc,

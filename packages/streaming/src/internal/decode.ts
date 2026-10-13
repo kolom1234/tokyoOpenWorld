@@ -1,12 +1,14 @@
 // TKC 파일 → CellPayload(워커 전용): hash32·헤더(셀·buildId) 검사 → 섹션별 디코드(glb=meshopt, gzip 해제). see docs/05-tile-format.md §3–4, docs/06-world-streaming.md §9
 import { ok, packCellKey, type Result } from '@sanpo/core';
 import {
+  type AudioZones,
   type CellMeta,
   type CellPayload,
   type DecodedMesh,
   gunzip,
   type MeshSlot,
   parseHeightfield,
+  parseLights,
   parseProps,
   parseTrees,
   readTkc,
@@ -39,9 +41,11 @@ export const DEFAULT_SECTIONS: readonly SectionType[] = [
   'terrain.height',
   'props.inst',
   'trees.inst',
+  'lights.bin',
+  'audio.json',
 ];
 
-/** 이 디코더가 아는 섹션. 나머지(lights/audio)는 해당 태스크에서 추가 — 지금은 건너뛴다. */
+/** 이 디코더가 아는 섹션. lights.bin = M09-T03, audio.json = M09-T04. */
 export const DECODABLE: ReadonlySet<SectionType> = new Set([
   ...DEFAULT_SECTIONS,
   'collision.bin',
@@ -95,6 +99,14 @@ async function decodeSection(tkc: TkcReader, type: SectionType, out: CellPayload
     const trees = parseTrees(raw.value);
     if (!trees.ok) return fail(trees.error.code, `${type}: ${trees.error.message}`);
     out.instances = { ...out.instances, trees: trees.value };
+  } else if (type === 'lights.bin') {
+    const lights = parseLights(raw.value);
+    if (!lights.ok) return fail(lights.error.code, `${type}: ${lights.error.message}`);
+    out.lights = lights.value;
+  } else if (type === 'audio.json') {
+    const a = parseAudioZones(raw.value);
+    if (!a) return fail('corrupt', 'audio.json: shape');
+    out.audio = a;
   } else if (type === 'meta.json') {
     try {
       out.meta = JSON.parse(new TextDecoder().decode(raw.value)) as CellMeta;
@@ -147,4 +159,18 @@ export async function decodeCell(
     if (!r.ok) return r;
   }
   return ok(out);
+}
+
+/** audio.json(gzip 해제) → AudioZones. 모양이 틀리면 null(셀 실패 — 손상). */
+function parseAudioZones(bytes: Uint8Array): AudioZones | null {
+  try {
+    const v = JSON.parse(new TextDecoder().decode(bytes)) as AudioZones;
+    if (!Array.isArray(v.zones) || !Array.isArray(v.emitters)) return null;
+    for (const z of v.zones) if (typeof z.kind !== 'string' || !Array.isArray(z.polygonLocal)) return null;
+    for (const e of v.emitters)
+      if (typeof e.kind !== 'string' || !Array.isArray(e.pos) || e.pos.length !== 3) return null;
+    return v;
+  } catch {
+    return null;
+  }
 }

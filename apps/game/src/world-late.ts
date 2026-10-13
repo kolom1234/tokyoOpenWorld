@@ -1,5 +1,7 @@
 // 첫 표시 뒤 적재(world-view에서 분리 — 400줄 한도): 머티리얼·아바타·나무·간판·군중(sim.worker + 군중 팩)·신호 램프. 실패하면 그 요소 없이 계속.
 // see docs/modules/game.md §부트 시퀀스
+
+import type { AudioService } from '@sanpo/audio';
 import type { GameSystem, GroundQuery, Logger, WorkerSupervisor } from '@sanpo/core';
 import type { PhysicsService } from '@sanpo/physics';
 import type { AvatarAssetUrls, CrowdAssetUrls, RenderService, SignageAssetUrls, TreeAssetUrls } from '@sanpo/render';
@@ -19,6 +21,8 @@ import type { LoadedWorld } from './world-load.ts';
 export interface LateState {
   streaming?: StreamingService;
   wiring?: StreamingRenderWiring;
+  /** 오디오(M09-T04, world-audio.ts). */
+  audio?: AudioService | undefined;
   physics?: PhysicsService;
   physicsWiring?: StreamingPhysicsWiring;
   materialsSettled: boolean;
