@@ -5,9 +5,9 @@ Updated: 2026-10-13 (session #23 — M09·M07 사람 확인 후속, 브랜치 `c
 ## Current Task: staging 사람 확인 후속 ①–⑤ (PR #21 뒤)
 - Done: ① 계단 F 도착·선로 구덩이(c3b1070, ADR-0082) — 원인 = 하라주쿠 외회가 옛 승강장 1에 정차해 섬식 승강장 6 서쪽 가장자리에 홈도어 없음 + 도착점이 그 가장자리 1.2 m + 물리에 승강장 윗면만(구덩이에서 승강장 밑으로 걸어 들어감).
   수정 = 정차 승강장 우선(`preferPlatforms`, 재빌드 필요) · 도착 = 승강장 윗면 메시 + 여유 1.2 m · 구덩이 구조 · 승강장 옆면 물리 · 출구 4역 · `pnpm pipeline validate` stations + 실제 GPU `pnpm stations` 통과(현재 빌드).
-  ② freecam G 카메라 아래 내리기 + 조작 도움말 HUD(7f14f37, ADR-0083).
-- In progress: ③ 역 표지·HUD 안내·URL 스폰 프리셋 → ④ 하라주쿠→신주쿠 봇·안내 → ⑤ CI e2e 시간·첫 표시.
-- Next step (정확히 한 걸음): ③ `content/stations/access.json` 출구마다 가상 표지 + 근접 HUD, `?spawn=` 프리셋(content/spawn-presets.json).
+  ② freecam G 카메라 아래 내리기 + 조작 도움말 HUD(7f14f37, ADR-0083). ③ 역 가상 안내판·근접 안내·`?spawn=` 프리셋 8개(ADR-0084, docs/12 §2.1).
+- In progress: ④ 하라주쿠→신주쿠 봇·안내 → ⑤ CI e2e 시간·첫 표시.
+- Next step (정확히 한 걸음): ④ `tests/golden/route.spec.ts` — ?spawn=harajuku-gate → 개찰구 → F → 승강장 → 문 앞 F → V·T → 신주쿠 하차, 단계별 스크린샷.
 - Blockers: ⚠️ Docker Desktop 시작 실패(Inference manager 소켓 오류) 뒤 2026-10-13 22:06 "Reset to factory defaults" 실행됨 → 파이프라인 이미지·볼륨 소실 추정. 사용자가 Docker 복구 예정 — 복구되면 `tools/pipeline/docker/run.sh --install`(이미지 재빌드 필요할 수 있음) → MVP 재빌드(① 하라주쿠 승강장 재배정 반영).
 
 ## Recently Completed
