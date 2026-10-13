@@ -73,6 +73,10 @@ class StationRuntime {
     });
   }
 
+  geometry() {
+    return this.stairsRt.geometry();
+  }
+
   update(dtS: number): void {
     this.t += dtS;
     const ph = this.d.physics();
@@ -146,12 +150,14 @@ class StationRuntime {
   }
 }
 
-export function stationSystem(d: StationDeps): GameSystem {
+/** 역 시스템 + 승강장·선로 격자(카메라 아래 내리기 — ADR-0083). */
+export function stationSystem(d: StationDeps): GameSystem & { geometry: StairsRuntime['geometry'] } {
   const rt = new StationRuntime(d);
   return {
     id: 'wiring.stations',
     phase: 58,
     update: (f) => rt.update(f.dtReal),
     dispose: () => d.render.setStationFixtures(null),
+    geometry: () => rt.geometry(),
   };
 }

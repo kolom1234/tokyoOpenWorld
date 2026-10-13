@@ -2,11 +2,12 @@
 // see docs/modules/game.md §부트 시퀀스
 
 import type { AudioService } from '@sanpo/audio';
-import type { GameSystem, GroundQuery, Logger, WorkerSupervisor } from '@sanpo/core';
+import type { GameSystem, GroundQuery, Logger, Vec3d, WorkerSupervisor } from '@sanpo/core';
 import type { PhysicsService } from '@sanpo/physics';
 import type { AvatarAssetUrls, CrowdAssetUrls, RenderService, SignageAssetUrls, TreeAssetUrls } from '@sanpo/render';
 import type { CrowdParams, SimService, TrafficParams } from '@sanpo/sim';
 import type { StreamingService } from '@sanpo/streaming';
+import type { LandingResult } from '@sanpo/traversal';
 import CROWD_PARAMS from '../../../content/sim/crowd.json';
 import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
 import TRAFFIC_PARAMS from '../../../content/sim/traffic.json';
@@ -41,6 +42,8 @@ export interface LateState {
   supervisor?: WorkerSupervisor;
   /** 부팅 준비 단계(bootProgress): 선컴파일 글·스폰 셀 목록·끝남. */
   boot: BootStage;
+  /** freecam G 카메라 아래 내리기(ADR-0083 — world-extras가 물리·역 격자·차선으로). */
+  landing?: (cameraWF: Readonly<Vec3d>) => Promise<LandingResult>;
 }
 
 /** 텍스처는 첫 표시 뒤(초기 다운로드 예산 밖, 14 §2). 실패하면 평균색으로 계속. */

@@ -128,11 +128,15 @@ function spiral(searchM: number): readonly (readonly [number, number])[] {
   return out;
 }
 
-/** 선로 표본(레일 윗면 중심선) 격자 — 승강장 근처 구덩이 판정용. */
+/** 선로 표본(레일 윗면 중심선) 격자 — 승강장 근처 구덩이 판정·선로 위 판정. */
 export interface TrackPits {
   /** 발이 승강장 근처(≤ nearM) 선로 회랑(중심 ±lateralM) 안 레일 높이 아래(구덩이)이거나 승강장 윗면 아래(밑)인가. */
   inPit(feet: Vec3d): boolean;
+  /** 점이 어느 선로든 회랑(중심 ±ON_TRACK_LATERAL_M) 안이고 레일 높이 ±ON_TRACK_DY_M인가(카메라 아래 내리기 — 승강장 윗면 제외는 호출 측). */
+  onTrack(p: Vec3d): boolean;
 }
+const ON_TRACK_LATERAL_M = 2.2;
+const ON_TRACK_DY_M = 1.6;
 
 /** 승강장 옆(이 거리 m 안) 선로 표본만 — 그 밖 선로(고가 아래 길·평면 건널목)에선 구조하지 않는다. */
 const PIT_NEAR_M = 8;
@@ -144,7 +148,7 @@ const UNDER_DEPTH_M: readonly [number, number] = [0.6, 4];
 
 /** 구덩이 격자 점진 생성(메인 스레드 4 ms — 프레임마다 표본 일부). step(n) = 표본 n개 더 넣고 다 넣었으면 결과. */
 export function trackPitsBuilder(tops: PlatformTops, points: Float32Array): { step(n: number): TrackPits | undefined } {
-  // 윗면 칸을 PIT_NEAR_M만큼 넓힌 칸 집합(표본마다 조회 1회).
+  // 윗면 칸을 PIT_NEAR_M만큼 넓힌 칸 집합(구덩이는 이 칸에서만). 표본은 모두 칸별로(선로 위 판정).
   const reach = Math.ceil(PIT_NEAR_M / CELL);
   const near = new Set<number>();
   for (const [ci, cj] of tops.cells())
@@ -156,12 +160,11 @@ export function trackPitsBuilder(tops: PlatformTops, points: Float32Array): { st
     step(n) {
       for (const end = Math.min(total, k + n); k < end; k++) {
         const kk = key(Math.floor((points[k * 3] as number) / CELL), Math.floor((points[k * 3 + 2] as number) / CELL));
-        if (!near.has(kk)) continue;
         const list = buckets.get(kk) ?? [];
         list.push(k);
         buckets.set(kk, list);
       }
-      return k < total ? undefined : pitsOf(tops, points, buckets);
+      return k < total ? undefined : pitsOf(tops, points, buckets, near);
     },
   };
 }
@@ -171,22 +174,41 @@ export function trackPits(tops: PlatformTops, points: Float32Array): TrackPits {
   return trackPitsBuilder(tops, points).step(Number.POSITIVE_INFINITY) as TrackPits;
 }
 
-function pitsOf(tops: PlatformTops, points: Float32Array, buckets: Map<number, number[]>): TrackPits {
+function pitsOf(
+  tops: PlatformTops,
+  points: Float32Array,
+  buckets: Map<number, number[]>,
+  near: Set<number>,
+): TrackPits {
+  const around = function* (x: number, z: number): Iterable<number> {
+    const i0 = Math.floor(x / CELL);
+    const j0 = Math.floor(z / CELL);
+    for (let i = i0 - 1; i <= i0 + 1; i++) for (let j = j0 - 1; j <= j0 + 1; j++) yield* buckets.get(key(i, j)) ?? [];
+  };
   return {
     inPit(f) {
       const top = tops.topAt(f.x, f.z);
       if (top !== undefined && f.y < top - UNDER_DEPTH_M[0] && f.y > top - UNDER_DEPTH_M[1]) return true;
-      const i0 = Math.floor(f.x / CELL);
-      const j0 = Math.floor(f.z / CELL);
-      for (let i = i0 - 1; i <= i0 + 1; i++)
-        for (let j = j0 - 1; j <= j0 + 1; j++)
-          for (const k of buckets.get(key(i, j)) ?? []) {
-            const dx = (points[k * 3] as number) - f.x;
-            const dz = (points[k * 3 + 2] as number) - f.z;
-            if (dx * dx + dz * dz > PIT_LATERAL_M ** 2) continue;
-            const below = (points[k * 3 + 1] as number) - f.y;
-            if (below > PIT_DEPTH_M[0] && below < PIT_DEPTH_M[1] && besideTop(tops, points, k)) return true;
-          }
+      if (!near.has(key(Math.floor(f.x / CELL), Math.floor(f.z / CELL)))) return false;
+      for (const k of around(f.x, f.z)) {
+        const dx = (points[k * 3] as number) - f.x;
+        const dz = (points[k * 3 + 2] as number) - f.z;
+        if (dx * dx + dz * dz > PIT_LATERAL_M ** 2) continue;
+        const below = (points[k * 3 + 1] as number) - f.y;
+        if (below > PIT_DEPTH_M[0] && below < PIT_DEPTH_M[1] && besideTop(tops, points, k)) return true;
+      }
+      return false;
+    },
+    onTrack(p) {
+      for (const k of around(p.x, p.z)) {
+        const dx = (points[k * 3] as number) - p.x;
+        const dz = (points[k * 3 + 2] as number) - p.z;
+        if (
+          dx * dx + dz * dz <= ON_TRACK_LATERAL_M ** 2 &&
+          Math.abs((points[k * 3 + 1] as number) - p.y) <= ON_TRACK_DY_M
+        )
+          return true;
+      }
       return false;
     },
   };

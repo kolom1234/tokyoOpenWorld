@@ -68,6 +68,7 @@ export const DEFAULT_BINDINGS: BindingMap = {
     ...MOVE,
     fly: [keyAxis('KeyQ', 'KeyE'), { device: 'padButtonAxis', negative: PAD.LB, positive: PAD.RB }],
     sprint: [key('ShiftLeft'), key('ShiftRight'), pad(PAD.L3)],
+    land: [key('KeyG'), pad(PAD.A)],
   },
   ui: { pause: [key('Escape')], map: [key('KeyM')] },
 };

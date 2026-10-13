@@ -6,6 +6,7 @@ import {
   type DeepPartial,
   type EventBus,
   type FrameSource,
+  type GameSystem,
   type GroundQuery,
   type Logger,
   type Scheduler,
@@ -20,6 +21,7 @@ import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
 import { bootProgressText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
+import { helpHudSystem } from './help-hud.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
 import { trainLcdSystem } from './train-lcd.ts';
 import type { WeatherSpec } from './weather-mode.ts';
@@ -195,6 +197,8 @@ function createTraversalFor(
       trainCar: (id, k) => sim.trainCar(id, k),
       trainRide: (id) => sim.trainRide(id),
       jumpClock: (ms) => sim.clock.jumpTo(ms),
+      // freecam G(ADR-0083): 월드 표시 뒤 world-extras가 채운다.
+      landing: (p) => late.landing?.(p) ?? Promise.resolve({ ok: false, reason: 'not-ready' }),
     },
     { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
   );
@@ -274,6 +278,21 @@ async function showWorldWith(
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
+/** 상시 배선: 카메라·환경·지면 대기 표시·차내 안내·조작 도움말. */
+function wiringSystemsFor(
+  deps: WorldViewDeps,
+  v: { render: RenderService; traversal: TraversalService; sim: SimService; late: LateState },
+): GameSystem[] {
+  const doc = deps.canvas.ownerDocument;
+  return [
+    createCameraWiring(v.traversal, v.render),
+    createEnvWiring(v.sim, v.render, deps.weather),
+    createGroundLoadingIndicator(doc, v.traversal),
+    trainLcdSystem(doc, v.traversal, () => v.late.rail),
+    helpHudSystem(doc, v.traversal),
+  ];
+}
+
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
   const render = await createRender({ canvas, bus, log, config: { ...deps.renderConfig, backend: deps.backend } });
@@ -284,12 +303,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const sim = simFor(deps);
   const traversal = createTraversalFor(deps, input, ground, late, sim);
   const frameSource = frameSourceOf(traversal, sim);
-  const wiringSystems = [
-    createCameraWiring(traversal, render),
-    createEnvWiring(sim, render, deps.weather),
-    createGroundLoadingIndicator(canvas.ownerDocument, traversal),
-    trainLcdSystem(canvas.ownerDocument, traversal, () => late.rail),
-  ];
+  const wiringSystems = wiringSystemsFor(deps, { render, traversal, sim, late });
 
   return {
     render,

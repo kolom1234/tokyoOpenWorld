@@ -29,6 +29,8 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 **M07-T05**(ADR-0074): `TraversalContext += trainCar(tripId, car): TrainCarPose | undefined; trainRide(tripId): TrainRideInfo | undefined; jumpClock(gameMs)`(core 타입),
 `TrainParams { tripId; car?; view?: TrainView('standing'|'seated'|'frontView') }`, `HudHints += train?: TrainHud { tripId, lineId, routeId, heading, view, car, stoppedAtStationId, nextStationId, doorSide, arrivalInS, notice('mvpEdge'|null), skipping }; fade?: 0..1`,
 `ModeOutput += next?: { mode, params? }`(모드가 스스로 전환 — 서비스가 출력 뒤 요청), `WalkParams += exact?`(지면 탐색 없이 그 자리 — 열차 하차).
+**ADR-0083**: `TraversalContext += landing?(cameraWF): Promise<LandingResult>`, `LandingResult = { ok: true; posWF } | { ok: false; reason: LandingFailReason }`(not-ready·no-ground·building·track·road·blocked·steep),
+`HudHints += landing?: LandingHud { seq; state: 'searching'|'failed'; reason? }` — freecam G(input `land`) → 성공이면 다음 프레임 `next: walk { exact, yaw = 카메라 }`, 실패면 hud.landing. 판정은 게임(apps/game `landing.ts`).
 미구현: `interactables`(M08), drive/cycle/transition 모드, phase 35(traversalPost).
 
 ## Invariants
@@ -54,7 +56,7 @@ test/free-rig.test.ts(방향 규약·쿼터니언 = forwardOf·롤 잠금, lookA
 test/service.test.ts(시작 포즈·fly 컨텍스트·phase, W 이동·km/h, teleport, physics 필요 모드 거부·C 토글·중복 등록),
 test/free-guard.test.ts(벽 접촉 멈춤·법선 속도 제거, 닿은 채 떨어지기, 닫힌 판 안 → 가까운 뒷면 너머, 바깥 시작 유지·늦은 결과 버림),
 test/train.test.ts(M07-T05: 붙은 카메라 오프셋·yaw, 시점 순환·다음 역·4 s 앞 관심점, T 빨리감기 = 페이드 → 도착 8 s 전 점프, F 하차 = 승강장 쪽 문 앞 exact, 마지막 정차 안내 뒤 자동 하차, 칸 안 판정),
-test/walk.test.ts(가짜 physics: C → 지붕 아닌 지면 착지·대기 중 카메라 유지, 걸음 단계·달리기·대각선, FP 눈높이, V 3인칭 어깨·뒤·붐 풀림·벽 1 m → 0.95 m 안·아바타 페이드, C 복귀 = 바디, 멀면 다시 놓기).
+test/freecam-land.test.ts(G: 성공 → walk exact·카메라 yaw, 실패 → 이유·seq 증가, 훅 없음 → not-ready, 모드 나간 뒤 늦은 결과 버림), test/walk.test.ts(가짜 physics: C → 지붕 아닌 지면 착지·대기 중 카메라 유지, 걸음 단계·달리기·대각선, FP 눈높이, V 3인칭 어깨·뒤·붐 풀림·벽 1 m → 0.95 m 안·아바타 페이드, C 복귀 = 바디, 멀면 다시 놓기).
 
 ## Status
 M01-T06 freecam(physics 없음), M04-T03 walk(ADR-0043), T04 발 높이 스프링(ADR-0044, 공중 연속 M05-T08 ADR-0056), T05 3인칭 충돌·아바타(ADR-0045), T06 발밑 보호(ADR-0046), M06 사전 3 freecam 진입 방지(ADR-0059) → M07(train), M08(transition·상호작용).

@@ -121,6 +121,11 @@ export class StairsRuntime {
     this.pitSince = -1;
   }
 
+  /** 승강장 윗면·선로 격자(카메라 아래 내리기 — 구덩이 격자는 만드는 중이면 undefined). */
+  geometry(): { tops: PlatformTops | undefined; pits: TrackPits | undefined } {
+    return { tops: this.tops(), pits: this.geo?.pits };
+  }
+
   /** 디버그·실제 GPU 검사 핸들(`?debug=1` — `__SANPO_STATIONS__`). */
   probe() {
     return {

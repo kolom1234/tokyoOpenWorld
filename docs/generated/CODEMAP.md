@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 495개.
+> 파일 497개.
 
 ## apps/game
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
@@ -18,6 +18,8 @@
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
 - `apps/game/src/debug/sun-override.ts` — `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다. | exports: parseSunFlag, dirFromAzEl, overrideEnvironment, createSunOverride
 - `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
+- `apps/game/src/help-hud.ts` — 조작 도움말 + 카메라 아래 내리기 알림(임시 DOM HUD — M08 @sanpo/ui가 대체, ADR-0083). 왼쪽 아래 모드별 키 목록(H로 접기·펴기, 접으면 "H 도움말"), | exports: HELP_LINES, LANDING_TEXT, helpHudSystem
+- `apps/game/src/landing.ts` — freecam G 카메라 아래 내리기(ADR-0083): 카메라 바로 아래(+ 2·4·7 m 링 × 8방위) 후보마다 물리 레이로 판정 → 가장 가까운 안전한 자리(발 WF) 또는 가운데 후보의 이유. | exports: LandingQueries, landingOffsets, evaluateSpot, findLanding, roadIndex, onLane
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/start-view.ts` — 시작 시점: 기본 = walk(09 §1 — world.json 스폰에서 걷기 시작, M05 결정 1). 로딩 중·`?mode=freecam`·골든뷰 = freecam | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose, startWalkParams
@@ -38,7 +40,7 @@
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
 - `apps/game/src/wiring/streaming-sim.ts` — 배선: streaming live L0 셀(버스 `cell/ready`) → sim 반경(448 m — 군중 tier B 250 m + 차량 스폰 400 m) 안이면 nav.bin·lanes.bin을 따로 요청(requestSections)해 | exports: SIM_WIRING_PHASE, SIM_NAV_RADIUS_M, StreamingSimDeps, StreamingSimWiring, createStreamingSimWiring
 - `apps/game/src/world-audio.ts` — 오디오 배선(M09-T04 — ADR-0079): @sanpo/audio 생성 + 첫 제스처 unlock + 셀 audio.json + 프레임 입력(리스너·환경·발소리·신호·열차·가려짐) + 볼륨 키. | exports: AudioFlags, nightOfSun, crowdOfHour, nearestOnTrain, AudioWiringDeps, startAudio, audioForWorld
-- `apps/game/src/world-extras.ts` — 월드 표시 직후 붙는 부가 배선(world-view.ts 400줄 제한으로 분리): 오디오(M09-T04) + 역 시설·동선(M07-T06). | exports: startWorldExtras
+- `apps/game/src/world-extras.ts` — 월드 표시 직후 붙는 부가 배선(world-view.ts 400줄 제한으로 분리): 오디오(M09-T04) + 역 시설·동선(M07-T06) + freecam G 카메라 아래 내리기(ADR-0083). | exports: startWorldExtras
 - `apps/game/src/world-late.ts` — 첫 표시 뒤 적재(world-view에서 분리 — 400줄 한도): 머티리얼·아바타·나무·간판·군중(sim.worker + 군중 팩)·신호 램프. 실패하면 그 요소 없이 계속. | exports: LateState, loadMaterialsLater, AVATAR_URLS, loadAvatarLater, TREE_URLS, SIGNAGE_URLS, CROWD_URLS, CrowdMode, startCrowdLater, crowdFarDensitySystem, signalLampsOf, loadSignageLater, loadTreesLater
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-parts.ts` — world-view.ts 보조(400줄 제한으로 분리): sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스. | exports: SimForDeps, simFor, initialLate, startPrecompile, frameSourceOf
@@ -319,7 +321,7 @@
 - `packages/tile-format/src/internal/xxh64.ts` — XXH64(seed 0) — 섹션 해시·cells.idx hash32. BigInt 없이 u32 hi/lo 쌍 연산(파이프라인 처리량). see docs/05-tile-format.md §3, §5 | exports: xxh64Hex, xxh64Low32
 
 ## packages/traversal
-- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, TrainView, TrainParams, TrainHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
+- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, LandingFailReason, LandingResult, LandingHud, TrainView, TrainParams, TrainHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
 - `packages/traversal/src/index.ts` — @sanpo/traversal 공개 엔트리(L3): 이동 모드 상태기계·카메라 리그. api.ts 재수출 + create* 팩토리만. see docs/modules/traversal.md | exports: * from './api.ts', forwardOf, lookAtAngles, createTraversal, DEFAULT_TRAVERSAL_SETTINGS
 - `packages/traversal/src/internal/camera/attached-rig.ts` — AttachedRig(09 §3, M07-T05): 부모(열차 칸) 로컬 오프셋 + 부모 기준 시선(yaw·pitch) + 미세 진동(속력 비례 — 레일 이음매 상하·좌우 흔들림). | exports: ParentPose, localToWorld, worldToLocal, vibration, attachedCamera
 - `packages/traversal/src/internal/camera/boom.ts` — 3인칭 카메라 붐 충돌(09 §3 ThirdPersonRig, M04-T05, ADR-0045): 피벗 → 카메라 방향 sphereCast(반경 0.2 m, 워커 — 비동기 ≈ 1프레임). | exports: CAMERA_RADIUS_M, MAX_STEP_RAD, BoomState, createBoomState, resetBoom, stepToward, requestBoom, boomLength
