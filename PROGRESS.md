@@ -1,13 +1,14 @@
 # PROGRESS
-Updated: 2026-10-12 (session #21–22 — 큐 모드 ⓪ 역 건물 → ① M09 T01–T05 → ② M07-T06, 브랜치 `claude/m09-weather-night-audio`, draft PR)
+Updated: 2026-10-13 (session #23 — M09·M07 사람 확인 후속, 브랜치 `claude/m09-m07-followups`, draft PR)
 
-## Current Milestone: M09 ✅ (T01–T05, 볼류메트릭 구름 ⚠️ 보류) + M07-T06 ✅ → 다음 = M08 UI(다음 세션)
-## Current Task: (없음 — 세션 #21–22 큐 완료) 다음 세션 = M08
-- Done in this session (#21–22, 2026-10-11~12, PR #21 draft): ⓪ 역 건물(ADR-0075), M09 T01 비(0076)·T02 구름(0077)·T03 야간(0078)·T04 오디오(0079)·T05 계절(0080), M07-T06 역 동선(0081).
-  staging = 코드 d942e68(Worker 80c70e87) + 월드 `20261011-a095dfd-cba213ec`(dev 버킷 current, 505파일 392.9 MB). 첫 로드 26.4 MB ✅ · 첫 표시 10.2–11.9 s ⚠️.
-- In progress: 없음. dev 버킷 gc(7일 규칙) 완료 2026-10-12 — 2026-10-04 이전 13개 빌드 삭제(R2 REST 429로 5분 간격 5회 나눠 실행), 현재·직전·7일 이내 보존.
-- Next step (정확히 한 걸음): 사용자 staging 청취·육안 확인 결과 반영(PR #21 "How to listen") → PR 머지 → M08 시작(`docs/roadmap/M08.md` 첫 태스크). M08에서 첫 표시 회귀(대기 LUT 선컴파일 4.9 s) 함께 볼 것.
-- Blockers: 없음. 사용자 확인 대기: 녹음 베드에 안내방송·발차 멜로디·가게 음악·브랜드 음이 섞였는지(귀 검수), 존 경계 클릭 여부, 음량.
+## Current Milestone: M09 ✅ + M07-T06 ✅ → 사람 확인 후속 수정 중 (M08은 다음 세션)
+## Current Task: staging 사람 확인 후속 ①–⑤ (PR #21 뒤)
+- Done: ① 계단 F 도착·선로 구덩이(c3b1070, ADR-0082) — 원인 = 하라주쿠 외회가 옛 승강장 1에 정차해 섬식 승강장 6 서쪽 가장자리에 홈도어 없음 + 도착점이 그 가장자리 1.2 m + 물리에 승강장 윗면만(구덩이에서 승강장 밑으로 걸어 들어감).
+  수정 = 정차 승강장 우선(`preferPlatforms`, 재빌드 필요) · 도착 = 승강장 윗면 메시 + 여유 1.2 m · 구덩이 구조 · 승강장 옆면 물리 · 출구 4역 · `pnpm pipeline validate` stations + 실제 GPU `pnpm stations` 통과(현재 빌드).
+  ② freecam G 카메라 아래 내리기 + 조작 도움말 HUD(7f14f37, ADR-0083).
+- In progress: ③ 역 표지·HUD 안내·URL 스폰 프리셋 → ④ 하라주쿠→신주쿠 봇·안내 → ⑤ CI e2e 시간·첫 표시.
+- Next step (정확히 한 걸음): ③ `content/stations/access.json` 출구마다 가상 표지 + 근접 HUD, `?spawn=` 프리셋(content/spawn-presets.json).
+- Blockers: ⚠️ Docker Desktop 시작 실패(Inference manager 소켓 오류) 뒤 2026-10-13 22:06 "Reset to factory defaults" 실행됨 → 파이프라인 이미지·볼륨 소실 추정. 사용자가 Docker 복구 예정 — 복구되면 `tools/pipeline/docker/run.sh --install`(이미지 재빌드 필요할 수 있음) → MVP 재빌드(① 하라주쿠 승강장 재배정 반영).
 
 ## Recently Completed
 - M07-T06 Stations: gates, interactables, audio(2026-10-12) — `content/stations/access.json`(하라주쿠 다케시타 출구) → 실물 개찰구 4통로(캐비닛·울타리 물리, 0.75 m 통로, 플랩 애니메이션,
