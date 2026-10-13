@@ -2,7 +2,9 @@
 // 적재·그려지는지. M06-T03(ADR-0063): `?crowd=scramble` — world-mini nav.bin → 워커 Recast(WASM)·DetourCrowd에 250명이 스크램블 대기점에 서고
 // 보행 녹색에 건너는지(신호 계획 시각을 녹색 직전으로). 시간 창이 아니라 상태(군중 ready·visible·워커 통계)로 기다린다.
 import { expect, test } from '@playwright/test';
-import { STATE_TIMEOUT_MS, waitFrames, waitSettled } from './game.ts';
+import { STATE_TIMEOUT_MS, STATE_VIEW, waitFrames, waitSettled } from './game.ts';
+
+test.use({ viewport: STATE_VIEW });
 
 type ClockHandle = {
   __SANPO_DEBUG__: { world: { sim: { clock: { gameTimeMs: number; jumpTo(ms: number): void } } } };
@@ -26,6 +28,8 @@ type Handle = {
 };
 
 test('dummy crowd: sim worker publishes 1,000 pedestrians and the crowd pack renders', async ({ page }) => {
+  // 느린 러너(4 vCPU SwiftShader)에서 1,000명 첫 그리기가 90 s를 넘겨 재시도(+1.5 분)가 났다 — 상한만 올린다(판정은 상태).
+  test.setTimeout(150_000);
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => {

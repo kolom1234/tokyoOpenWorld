@@ -2,6 +2,12 @@
 // 시간 창이 아니라 게임 상태로 판정한다 — SwiftShader 병렬 러너는 프레임이 수 초까지 늘어난다(M05 결정 0). see docs/14-testing-perf.md §1
 import { expect, type Page } from '@playwright/test';
 
+/**
+ * 상태만 보는 스펙(부트·오디오·군중·디코드·물리·걷기)의 화면 — SwiftShader 프레임 비용 ∝ 픽셀(1280×720의 1/4). 픽셀 비교 스펙(render·flicker·lod)은 각자 크기.
+ * CI 러너 편차(같은 잡 6–15분)에서 15분 상한 여유 확보(ADR-0085).
+ */
+export const STATE_VIEW = { width: 640, height: 360 } as const;
+
 /** 안전망 상한(ms). 판정은 상태(프레임 수·플래그)이고, 이 값은 멈춤(교착)을 실패로 끝내기 위한 것. */
 export const STATE_TIMEOUT_MS = 120_000;
 

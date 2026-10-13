@@ -46,6 +46,8 @@ export interface RenderContext {
   readonly renderer: WebGPURenderer;
   readonly backend: RenderBackend;
   readonly depth: DepthMode;
+  /** 소프트웨어 래스터(SwiftShader — CI): 후처리·날씨 합성·늦은 머티리얼 선컴파일 생략. */
+  readonly software: boolean;
   readonly graph: SceneGraph;
   readonly library: MaterialLibrary;
   readonly materials: MaterialRegistry;
@@ -288,6 +290,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     renderer,
     backend,
     depth,
+    software,
     graph,
     library,
     materials,

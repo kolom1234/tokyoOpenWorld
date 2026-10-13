@@ -1,6 +1,9 @@
 // 물리 워커 e2e(M04-T01): `?probe=physics` — 실제 모듈 워커(Vite 청크)에서 Jolt 초기화 → 상자 낙하 → 보간 포즈. 격리(SAB)와 폴백(postMessage) 모두.
 // preview 서버는 COOP/COEP로 격리된다 → 폴백은 `&physicsIsolation=degraded`로 강제. see docs/08-physics.md §1·§9
 import { expect, test } from '@playwright/test';
+import { STATE_VIEW } from './game.ts';
+
+test.use({ viewport: STATE_VIEW });
 
 interface Report {
   isolation: 'shared' | 'degraded';

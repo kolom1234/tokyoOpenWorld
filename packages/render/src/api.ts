@@ -256,10 +256,15 @@ export interface RenderService extends SystemProvider {
   /** 환경(태양·달 방향 등, sim 계산값) — 대기·조명이 소비한다. 07 §6: render는 천문 계산을 하지 않는다. */
   setEnvironment(e: Readonly<EnvironmentState>): void;
   /**
-   * 고정 머티리얼(+ HLOD 변형) 셰이더 선컴파일(06 §6) — 스트리밍 중 컴파일 끊김 방지. 대기 LUT → 머티리얼 ID 묶음마다 한 프레임 양보 → 아바타,
-   * 단계마다 onProgress(부팅 로딩 표시 — M06).
+   * 첫 표시 전 선컴파일(06 §6): 대기 LUT + 장면에 있는 것(소품 풀·역 시설 — 첫 조명 셰이더 파이프라인) → 아바타, 단계마다 onProgress(부팅 로딩 표시 — M06).
+   * 스폰 셀 머티리얼은 compileStaged가 실제 셀로 만든다.
    */
   precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;
+  /**
+   * 첫 표시 뒤 선컴파일(ADR-0085): 고정 머티리얼 ID별 기본·HLOD 변형(더미 메시, 묶음마다 한 프레임 양보) — 아직 스트리밍되지 않은 셀의 첫 사용 끊김 방지.
+   * 첫 표시 전에 하면 compileStaged와 GPU 컴파일을 다퉈 첫 표시가 ≈ 3–4 s 늦었다. 소프트웨어 래스터(CI)는 생략(즉시 끝).
+   */
+  precompileLate(onProgress?: (p: PrecompileProgress) => void): Promise<void>;
   /**
    * 부팅 첫 표시(M06 사전 4): on이면 이후 addCell의 셀 메시를 장면 밖 대기 그룹에 둔다(그리지 않음 → 첫 렌더 동기 컴파일 없음).
    * `compileStaged`로 선컴파일과 겹쳐 파이프라인을 만들고 `commitStaged`로 장면에 붙인다(대기 모드 끝). 소품·나무·간판 풀은 대상 아님.

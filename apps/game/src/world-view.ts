@@ -250,6 +250,8 @@ async function showWorldWith(
   await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
   render.commitStaged();
   late.boot.done = true;
+  // 머티리얼 ID별 선컴파일은 첫 표시 뒤(ADR-0085 — 첫 표시 전엔 compileStaged와 다퉈 ≈ 3–4 s 늦었다).
+  void render.precompileLate().catch((e: unknown) => wlog.warn('precompile late', e));
   if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
     traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
   else traversal.request('freecam', startPoseOf(deps)(ground));

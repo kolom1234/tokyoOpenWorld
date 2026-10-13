@@ -32,7 +32,8 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   removeCell(key: CellKey): void;
   setHlodChildVisible(parent: CellKey, child: number /*0..15*/, visible: boolean): void;  // false = 0.3 s 디더 페이드, true = 즉시(M02-T05)
   loadMaterials(manifestUrl): Promise<MaterialLibraryStats>;  // M03-T01: manifest → 평균색 → KTX2 배열 3장 교체(재컴파일 없음), 첫 표시 뒤 호출
-  precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;   // 대기 LUT → 머티리얼 ID 묶음마다 1프레임 양보 → 아바타 (M06, PrecompileProgress{stage,done,total})
+  precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;   // 첫 표시 전: 대기 LUT(+ 장면 컴파일) → 아바타 (M06, PrecompileProgress{stage,done,total})
+  precompileLate(onProgress?): Promise<void>;   // 첫 표시 뒤: 머티리얼 ID 묶음마다 1프레임 양보(소품 풀 priming), 소프트웨어 래스터는 생략(ADR-0085)
   stageCells(on); compileStaged(): Promise<void>; commitStaged();
   setSignalLamps(lamp: ((code) => number) | null): void;   // M06-T02(ADR-0062): props 신호 기둥 현시 코드 → 램프 값(차량 1–3 + 4 × 보행 1–2), 보이는 슬롯만·바뀐 범위만 업로드. 소품 풀 정점 버퍼 ≤ 8(_ptype·_itype = vec2). 램프 범위는 같은 프레임 풀 재작성 범위와 **합친다**(지우면 다른 소품 `_itype`가 GPU에 안 가 사라짐 — ADR-0068)
   debugLayerVisible(layer: RenderDebugLayer /* 'props'|'signs'|'trees'|'crowd'|'farCrowd'|'vehicles'|'trains'|'nightLights'(M09-T03: 켠 광원 0·스프라이트 숨김) */, visible): void;   // 디버그(ADR-0068): 인스턴스 레이어 숨김/보임 — e2e lod-continuity·실제 GPU 진단의 보임/숨김 픽셀 차
