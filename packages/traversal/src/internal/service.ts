@@ -145,6 +145,8 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
       const mode = fsm.current;
       if (mode === undefined) return;
       const o = mode.update(frame, ctx);
+      // walk: 지금 F면 탈 수 있는 열차(칸 안·열린 문 앞)가 있나 — HUD "F 열차 타기"(ADR-0084).
+      if (mode.id === 'walk' && ctx.trainCar) o.hud.boardable = boardingTarget(ctx, out.player.posWF) !== undefined;
       out.apply(o, mode.id);
       // 모드가 스스로 다른 모드로(열차 하차 → walk, M07-T05).
       if (o.next) fsm.request(o.next.mode, o.next.params);

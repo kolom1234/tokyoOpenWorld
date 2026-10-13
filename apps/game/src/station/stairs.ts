@@ -145,7 +145,7 @@ export class StairsRuntime {
   private stairs(p: Vec3d): void {
     const ps = passageAt(this.d.access, p);
     if (!ps || this.moving) {
-      prompt(this.d.doc, null);
+      prompt(this.d.doc, !this.moving && this.d.traversal.hud.boardable ? 'F  열차 타기' : null);
       return;
     }
     const n = ps.exit.name;

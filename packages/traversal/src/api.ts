@@ -93,6 +93,8 @@ export interface HudHints {
   fade?: number;
   /** freecam G 카메라 아래 내리기(ADR-0083). 성공하면 walk로 바뀌어 사라진다. */
   landing?: LandingHud;
+  /** walk: 지금 F로 탈 수 있는 열차(칸 안 또는 문 열린 칸의 문 앞 1.3 m)가 있다(ADR-0084). */
+  boardable?: boolean;
 }
 /** 플레이어 바디가 있는 모드(walk…)의 출력. 없으면 카메라 위치·방위를 플레이어로 본다(freecam). */
 export interface ModePlayer {

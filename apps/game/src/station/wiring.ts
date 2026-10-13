@@ -71,6 +71,7 @@ class StationRuntime {
   private lastStop: string | null = null;
   private t = 0;
   private guideAt = -1;
+  private lastMode = '';
 
   constructor(d: StationDeps) {
     this.d = d;
@@ -108,11 +109,13 @@ class StationRuntime {
         const onPlatform = top !== undefined && Math.abs(top - p.y) < 0.4;
         guide(this.d.doc, guideText(this.d.access, p, yawOf(tr.camera.quat), onPlatform));
       }
-    } else {
+    } else if (this.lastMode === 'walk') {
+      // walk를 나갈 때 한 번만(freecam G 안내 등 다른 배선의 prompt를 매 프레임 지우지 않게).
       prompt(this.d.doc, null);
       guide(this.d.doc, null);
       this.stairsRt.idle();
     }
+    this.lastMode = tr.mode;
     this.prev = { ...p };
     for (let i = 0; i < this.flaps.length; i++) this.flaps[i] = flapOpen(this.t - (this.openAt[i] as number));
     this.d.render.setGateFlaps(this.flaps);

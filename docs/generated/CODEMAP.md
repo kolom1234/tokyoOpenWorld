@@ -336,7 +336,7 @@
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
 - `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → (physics 있으면) 지오메트리 진입 방지(free-guard.ts) → CameraState. | exports: FreecamMode, createFreecamMode
-- `packages/traversal/src/internal/modes/train.ts` — train 모드(09 §2 train, M07-T05): 탑승 중 카메라(AttachedRig) — 서기(문 옆)·좌석·전면 전망(선두 운전실), V 순환, 마우스 시선(칸 기준). | exports: isTrainParams, viewOffset, insideCar, boardingTarget, alightSpot, createTrainMode
+- `packages/traversal/src/internal/modes/train.ts` — train 모드(09 §2 train, M07-T05): 탑승 중 카메라(AttachedRig) — 서기(문 옆)·좌석·전면 전망(선두 운전실), V 순환, 마우스 시선(칸 기준). | exports: isTrainParams, viewOffset, insideCar, DOOR_REACH_M, nearDoor, boardingTarget, alightSpot, createTrainMode
 - `packages/traversal/src/internal/modes/walk.ts` — walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도 | exports: isWalkParams, moveVelocity, WalkMode, createWalkMode
 - `packages/traversal/src/internal/service.ts` — createTraversal: FSM + 기본 모드(freecam·walk) 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD·플레이어). see docs/modules/traversal.md | exports: TRAVERSAL_PHASE, createTraversal
 - `packages/traversal/src/internal/settings.ts` — traversal 기본 설정(09 §2 freecam, §3 리그). 오버라이드는 createTraversal 옵션 → mergeConfig. see docs/09-traversal.md | exports: DEFAULT_TRAVERSAL_SETTINGS

@@ -16,7 +16,9 @@ staging 확인: 개찰구가 어디 있는지 찾을 수 없다. 개찰구·계�
 3. **스폰 프리셋**(`content/spawn-presets.json`, `?spawn=<id>`, game `spawn-presets.ts`): boot가 LoadedWorld 스폰(위치·방위·3×3 셀)을 바꿔 showWorld에 넘긴다 → 부팅 대기 중심·물리 앵커·첫 walk 착지가 그 자리.
    로딩 중 freecam 시점도 프리셋 위 30 m(스트리밍 관심점이 처음부터 스폰 둘레 — 기본 시점(스크램블)에 두면 스폰 셀이 ready에서 live가 안 됨). `surface: 'platform'` = 철도 적재 1 s 뒤 승강장 윗면 안전 자리로.
    골든뷰(`?view=`)가 있으면 무시. 목록: harajuku-gate, harajuku-platform, shibuya-scramble, shibuya-hachiko-gate, shinjuku-west, yoyogi-west, omotesando, yoyogi-park(docs/12 §임시 안내).
-4. 함께 고친 것: walk 착지 탐색 중 플레이어(물리 셀 반경·관심점) = 도착 기준점(전에는 원점·옛 바디 → 먼 스폰에서 착지 레이가 영영 빗나감).
+4. **문 앞 탑승**(traversal `boardingTarget` += `nearDoor`): 칸 안뿐 아니라 문이 열린 칸의 문 바깥 1.3 m(문 폭 ±0.9 m·바닥 ±0.8 m)에서도 F 탑승, walk HUD `boardable` → 게임 안내 "F 열차 타기".
+   하라주쿠 → 신주쿠 실제 GPU 봇 `tests/golden/route.spec.ts`(`pnpm stations`) = PR 안내와 같은 순서(docs/screenshots/followups/route-harajuku-shinjuku.jpg).
+5. 함께 고친 것: walk 착지 탐색 중 플레이어(물리 셀 반경·관심점) = 도착 기준점(전에는 원점·옛 바디 → 먼 스폰에서 착지 레이가 영영 빗나감).
 
 ## Consequences
 - 출구는 역마다 1곳(가상 배치) — 실제 출구 수·위치와 다르다. 안내판 글은 한·일·영 혼합 고정(언어 설정은 M08 i18n).
