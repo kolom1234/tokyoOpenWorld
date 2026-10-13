@@ -88,6 +88,7 @@ export interface InputService extends SystemProvider { readonly state: ActionSta
 - 소유: **traversal의 `InteractableRegistry`**(`internal/interactables.ts`). 출처: 셀 meta `interactables[]`(파이프라인 생성: 카셰어·자전거 독·개찰구·전망 포인트) → wiring이 `traversal.interactables.addCell(key, originWF, list)`; 열차 좌석/문은 sim `trainsNear()` 결과로 traversal이 매 프레임 동적 갱신. 공간 해시(32 m 버킷).
 - 개찰구: 통과 시 IC 카드 효과음(자체 합성)과 게이트 플랩 애니메이션만. 요금 시스템 없음.
 - 구현(M07-T06, ADR-0081): `content/stations/access.json` 출구 → apps/game `station/{layout,wiring}.ts`(개찰구 렌더·물리·통과 판정, 계단 입구 ↔ 승강장 F 페이드 이동 — 계단 기하는 후속). 레지스트리(`InteractableRegistry`)·HUD 안내는 M08.
+- 후속(ADR-0082): 출구 4역(하라주쿠·요요기·신주쿠·시부야), 승강장 도착 = sim 승강장 윗면 메시 위 가장자리 여유 1.2 m 점(`station/{platform-geo,stairs}.ts`), walk 중 선로 구덩이·승강장 밑 → 0.4 s 뒤 가까운 승강장으로 구조, 물리 승강장 옆면. 검사 = `pnpm pipeline validate`(stations) + 실제 GPU `pnpm stations`.
 
 ## 6. 공개 API (`packages/traversal/src/api.ts`)
 ```ts

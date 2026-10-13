@@ -22,3 +22,7 @@ GOLDEN_BASE_URL=https://tokyo-sanpo-staging.kolom1357.workers.dev GOLDEN_WORLD=a
 - `test-results/golden/baseline/<id>.png`가 있으면 metrics.json에 `ssimVsBaseline`을 기록한다(기준 교체는 파일 복사).
 - 로컬 dev 서버 전송량은 번들 안 된 JS 모듈이 섞인다 → 예산(60 MB) 판정은 staging `GOLDEN_BOOT=1` 값으로.
 - SSIM: `ssim.ts`(8×8 창·보폭 4, Rec.709 휘도). 단위 테스트 `ssim.test.ts`(vitest 프로젝트 `golden`).
+
+## 역 동선 (ADR-0082)
+`pnpm stations` = `stations.spec.ts`(content/stations/access.json 모든 출구: 계단 F → 승강장 윗면 위·여유 ≥ 1 m → W 2 s → 승강장 F → 거리) + `route.spec.ts`(하라주쿠 → 신주쿠 열차 동선).
+실제 GPU Chrome 1600×900, 스크린샷 `test-results/golden/{stations,route}/`. staging은 `GOLDEN_BASE_URL=… GOLDEN_WORLD=api pnpm stations`.

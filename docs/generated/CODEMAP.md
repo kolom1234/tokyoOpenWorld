@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 490개.
+> 파일 495개.
 
 ## apps/game
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
@@ -21,8 +21,11 @@
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/start-view.ts` — 시작 시점: 기본 = walk(09 §1 — world.json 스폰에서 걷기 시작, M05 결정 1). 로딩 중·`?mode=freecam`·골든뷰 = freecam | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose, startWalkParams
+- `apps/game/src/station/hud.ts` — 역·탐방 임시 HUD(M07-T06·후속 — M08 @sanpo/ui가 대체): 상호작용 안내 줄(F …), 화면 페이드, 몇 초 뜨는 알림(구조·내리기 실패 이유 등). | exports: prompt, fade, FADE_MS, notice
 - `apps/game/src/station/layout.ts` — 역 개찰구·계단 표식 배치(M07-T06 — ADR-0081): content/stations/access.json 출구 → 렌더 상자(캐비닛·윗판·울타리·표식)·플랩·물리 상자·통과 판정 선. | exports: ExitSpec, StationSpec, AccessFile, FIXTURE_COLOR, StationLayout, rad, forwardOf, rightOf, stationLayout, crossedAisle
-- `apps/game/src/station/wiring.ts` — 역 배선(M07-T06 — ADR-0081): content/stations/access.json → 렌더 개찰구·표식 + 물리 캐비닛·울타리, 걷기로 통로를 지나면 카드 접촉·날개 열림/닫힘 합성음과 플랩 애니메이션, | exports: STAIRS_REACH_M, StationDeps, flapOpen, passageAt, stationSystem
+- `apps/game/src/station/platform-geo.ts` — 승강장 윗면 질의(M07-T06 후속 — ADR-0082): sim 승강장 메시(railStatic().platforms 윗면 삼각형) → 8 m 격자 버킷. | exports: PlatformMesh, PlatformTops, platformTops, clearTopAt, ARRIVAL_CLEARANCE_M, safeArrival, TrackPits, trackPitsBuilder, trackPits
+- `apps/game/src/station/stairs.ts` — 역 계단 F 이동 + 선로 구덩이 구조(M07-T06 후속 — ADR-0082). | exports: STAIRS_REACH_M, ARRIVAL_STEP_M, StairsDeps, Passage, passageAt, passageTarget, StairsRuntime
+- `apps/game/src/station/wiring.ts` — 역 배선(M07-T06 — ADR-0081): content/stations/access.json → 렌더 개찰구·표식 + 물리 캐비닛·울타리, 걷기로 통로를 지나면 카드 접촉·날개 열림/닫힘 합성음과 플랩 애니메이션, | exports: StationDeps, flapOpen, stationSystem
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
 - `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainLcdSystem
@@ -38,6 +41,7 @@
 - `apps/game/src/world-extras.ts` — 월드 표시 직후 붙는 부가 배선(world-view.ts 400줄 제한으로 분리): 오디오(M09-T04) + 역 시설·동선(M07-T06). | exports: startWorldExtras
 - `apps/game/src/world-late.ts` — 첫 표시 뒤 적재(world-view에서 분리 — 400줄 한도): 머티리얼·아바타·나무·간판·군중(sim.worker + 군중 팩)·신호 램프. 실패하면 그 요소 없이 계속. | exports: LateState, loadMaterialsLater, AVATAR_URLS, loadAvatarLater, TREE_URLS, SIGNAGE_URLS, CROWD_URLS, CrowdMode, startCrowdLater, crowdFarDensitySystem, signalLampsOf, loadSignageLater, loadTreesLater
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
+- `apps/game/src/world-parts.ts` — world-view.ts 보조(400줄 제한으로 분리): sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스. | exports: SimForDeps, simFor, initialLate, startPrecompile, frameSourceOf
 - `apps/game/src/world-rail.ts` — 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 → | exports: RailData, loadRail, startTrainsLater, sendRailStatics, trainPhysicsSystem
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
 - `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
@@ -524,5 +528,6 @@
 - `tools/pipeline/src/stages/validate-props.ts` — 소품 차도 검사(M07 사전 ⓪): L0 셀 props.inst의 지상 소품이 PLATEAU 차도 폴리곤(carriageway·crosswalk·other — 보행면 우선, 건물 발자국 제외) 위면 오류. | exports: CURB_POLES, PropRoadSample, PropRoadReport, checkPropsOnRoad
 - `tools/pipeline/src/stages/validate-roads.ts` — M05-T01 수락 검사: 무작위 교차로 50곳(PLATEAU 車道交差部 TrafficArea:1020 중심을 25 m 격자로 묶은 대표점, 시드 결정론) 반경 30 m 안에서 | exports: GAP_LIMIT_M, RoadGapReport, verticalEdges, pickIntersections, checkRoadGaps
 - `tools/pipeline/src/stages/validate-seams.ts` — validate: 이웃 셀 지형 경계 완전 일치 검사(terrain.height u16 행·열, terrain.mesh 경계 정점). see docs/04-data-pipeline.md §4.6, §6 | exports: CellTerrain, SeamReport, edgeVertices, checkSeams
+- `tools/pipeline/src/stages/validate-stations.ts` — validate: 역 동선(M07-T06 후속 — ADR-0082). rail.bin이 있으면 content/stations/access.json을 빌드 승강장과 대조: | exports: ARRIVAL_CLEARANCE_M, ARRIVAL_STEP_M, AccessLike, StationExitCheck, ringClearance, checkStationAccess, checkStations
 - `tools/pipeline/src/stages/validate-timetables.ts` — validate: 시간표(M07-T02) — rail.bin이 있으면 global/timetables/index.json·노선 파일 스키마, 같은 선로 간격 ≥ 90 s, 운행일(04:00–28:00) 안. | exports: TimetablesSummary, checkTimetables
 - `tools/pipeline/src/stages/validate.ts` — validate 단계: 스키마(world.json·셀 헤더·meta.json, ajv) + cells.idx 일치 + 섹션 해시 + 예산 + 경계 이음새 → report. see docs/04-data-pipeline.md §4.6 | exports: BUDGET, CellReport, ValidateReport, createValidators, validateBuild, reportMarkdown, writeReport

@@ -1,6 +1,6 @@
 // validate 단계: 스키마(world.json·셀 헤더·meta.json, ajv) + cells.idx 일치 + 섹션 해시 + 예산 + 경계 이음새 → report. see docs/04-data-pipeline.md §4.6
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { cellIdString, unpackCellKey } from '@sanpo/core';
 import {
   type CellsIndex,
@@ -17,6 +17,7 @@ import { decodeGlb } from '../lib/gltf.ts';
 import { type HlodCellReport, hlodSummary, inspectHlodCell } from './validate-hlod.ts';
 import { checkMaterials, type MaterialsReport } from './validate-materials.ts';
 import { type CellTerrain, checkSeams, type SeamReport } from './validate-seams.ts';
+import { checkStations, type StationExitCheck } from './validate-stations.ts';
 import { checkTimetables, type TimetablesSummary } from './validate-timetables.ts';
 
 /** docs/04 §4.6 예산(L0). 크기는 10진 MB. */
@@ -47,6 +48,8 @@ export interface ValidateReport {
   materials: MaterialsReport | null;
   /** global/timetables(M07-T02, rail.bin 없으면 null). */
   timetables?: TimetablesSummary | null;
+  /** 역 동선(content/stations/access.json ↔ 승강장, ADR-0082 — rail.bin 없으면 null). */
+  stations?: { exits: StationExitCheck[] } | null;
   errors: string[];
 }
 
@@ -212,7 +215,9 @@ export async function validateBuild(
   errors.push(...seamErrors);
   const materials = checkMaterials(dir, ctx.v.materials, errors);
   const timetables = checkTimetables(dir, schemasDir, errors);
-  return { buildId: world.buildId, cells, hlod, seams, materials, timetables, errors };
+  // 저장소 루트 = schemas 상위(content/stations/access.json).
+  const stations = await checkStations(dir, dirname(schemasDir), errors);
+  return { buildId: world.buildId, cells, hlod, seams, materials, timetables, stations, errors };
 }
 
 /** 셀 표(Markdown): PR 본문·인계용. */
@@ -238,6 +243,9 @@ export function reportMarkdown(r: ValidateReport): string {
     r.timetables
       ? `timetables: ${r.timetables.lines.map((l) => `${l.line} ${l.trips} trips (${l.source}, min gap ${l.minGapS} s)`).join(', ')}`
       : 'timetables: none',
+    r.stations
+      ? `stations: ${r.stations.exits.map((e) => `${e.station}/${e.exit} 도착 여유 ${e.clearanceM} m`).join(', ')}`
+      : 'stations: none',
     `errors: ${r.errors.length}`,
     ...r.errors.map((e) => `- ${e}`),
     '',

@@ -36,6 +36,8 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | src/assets/characters/crowd.{json,bin,ktx2} | 군중 팩(파이프라인 `characters` 군중, ADR-0057·0061). `world-late.ts` `CROWD_URLS`, 첫 표시 뒤 `sim.startWorker`(`?crowd=` agents 기본·dummy·scramble(시험 250명)·0 끔 — M06-T03) → `render.pedestrians.bindShared` → `render.loadCrowd`(조정값 = content/sim/crowd.json) |
 | src/world-late.ts | 첫 표시 뒤 적재(world-view에서 분리): 머티리얼·아바타·나무·간판·군중·신호 램프, `LateState`, `CrowdMode`, `crowdFarDensitySystem`(1 s마다 sim 군중 수 ÷ 1,000 → `render.pedestrians.setFarDensity`, M06-T04). 차량(M06-T06): `sim.outputs().traffic` → `render.vehicles.bindShared`, `sim.connectPhysics(port → physics.connectKinematicSource)`, `?traffic=0` = 교통 없음(비용 비교). 골든뷰 준비 조건 `crowdSettled`(군중 팩 + `crowd.filled`, M06-T07) |
 | src/world-rail.ts | 철도(M07-T03, ADR-0072): 첫 표시 뒤 `global/rail.bin`(gzip)·`global/timetables/index.json`·노선 파일(노선 사이 1프레임 양보 — 파싱 1–2 ms) → `sim.setRail` → `render.trains.bindShared(sim.outputs().trains)`. 없으면(world-mini 404) 열차 없이. `?trains=0` 끔, 골든뷰 준비 조건 `trainsSettled` |
+| src/world-extras.ts, src/world-parts.ts | 첫 표시 직후 부가 배선(오디오 + 역 — world-view 400줄 분리), world-view 보조(simFor·initialLate·startPrecompile·frameSourceOf) |
+| src/station/{layout,wiring,stairs,platform-geo,hud}.ts | 역(M07-T06 ADR-0081·0082): access.json 출구 4역 → 개찰구 상자·플랩·물리·통과음(layout·wiring), 계단 F 이동(승강장 윗면 메시 + 가장자리 여유 `safeArrival`)·선로 구덩이 구조(`trackPits`, 격자 점진 생성)(stairs·platform-geo), 임시 HUD 안내·페이드·알림(hud — M08 대체). `?debug=1` → `__SANPO_STATIONS__`(topAt·clearTopAt·inPit·targets — `pnpm stations`) |
 | src/train-lcd.ts | 차내 안내 화면(M07-T05, ADR-0074): train 모드 중 LCD 풍 DOM 패널(노선색 띠·방향·다음/정차 역·도착까지 분·문 쪽·경계역 안내, 일·영·한 4 s 순환, 자체 문구) + 빨리감기 검은 막(hud.fade). traversal 컨텍스트에 `trains`(300 m)·`trainCar`·`trainRide`·`jumpClock` 연결은 world-view `createTraversalFor` |
 | src/boot-progress.ts | 로딩 패널 "준비" 행(M06 — 선컴파일 단계·스폰 셀 live 수·경과 s, ADR-0060 보충) |
 | src/assets/characters/avatar-rb.{glb,ktx2} | 플레이어 아바타(파이프라인 `characters` 산출물, Microsoft Rocketbox MIT — ADR-0057). `world-view.ts` `AVATAR_URLS`(`new URL(…, import.meta.url)` → Vite 해시 에셋), 첫 표시 뒤 `render.loadAvatar({glb, texture})` → `avatarSettled` |
@@ -73,7 +75,8 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 ## Tests
 test/caps.test.ts(WebGPU 3상태·격리·워커 수), test/boot.test.ts(루프·훅, 월드 상태 분류, 상태 문구, 플래그), test/world-load.test.ts(커밋된 world-mini를 가짜 fetch로: 4셀 로드, SPA 폴백·원점·포맷·크기 불일치 거부, `?world=mini`는 API 미호출),
 test/start-view.test.ts(시작 시점 = 지면 + 60 m·Scramble Square 조준), test/walk-physics.test.ts(실제 Jolt 같은 스레드 + traversal walk: 연석 0.15 m·계단 0.18 m 카메라 프레임당 < 3 cm), test/streaming-render.test.ts(적용 순서·바이트 예산·해제 순서·적용 전 해제·L3), test/overlay.test.ts(오버레이 문구), test/bookmarks.test.ts(뷰 조회·AGL 포즈·안정 판정).
-골든뷰(`pnpm golden`, 실제 GPU, CI 제외): `tests/golden/golden.spec.ts` — README 참조.
+골든뷰(`pnpm golden`, 실제 GPU, CI 제외): `tests/golden/golden.spec.ts` — README 참조. 역 동선(`pnpm stations`, 실제 GPU, CI 제외): `tests/golden/stations.spec.ts`(모든 출구 계단 F 도착 = 승강장 윗면·여유·구덩이 아님·올라가기 거리).
+test/station.test.ts(개찰구 배치·통과·플랩·계단 닿음), test/platform-geo.test.ts(윗면 높이·여유·안전 도착·구덩이/승강장 밑).
 E2E(Playwright, `pnpm test:e2e` — 빌드 + vite preview, Chromium은 `--enable-unsafe-swiftshader`, 로컬 다른 Chromium은 `PW_CHROMIUM_PATH`):
 `tests/e2e/boot.spec.ts`(`?world=mini` → `data-world=loaded`·셀 4·격리·콘솔 오류 없음),
 `tests/e2e/render.spec.ts`(`?world=mini&debug=1&backend=webgl` → 셀 4 렌더, 중앙 타워·하단 건물 픽셀 비율, O 테스트 전후 픽셀 차 0; 스크린샷 `test-results/screenshots/` → CI 아티팩트 `e2e-screenshots`).

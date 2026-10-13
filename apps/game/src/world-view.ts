@@ -15,28 +15,16 @@ import {
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
-import {
-  type ClockMode,
-  createSim,
-  type HolidaysFile,
-  type SeasonTableFile,
-  type SignalPlansFile,
-  type SimService,
-  type WeatherClimateFile,
-} from '@sanpo/sim';
+import type { ClockMode, SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
-import HOLIDAYS from '../../../content/sim/holidays-jp.json';
-import SEASON from '../../../content/sim/season.json';
-import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
-import WEATHER_CLIMATE from '../../../content/sim/weather-climate.json';
-import { bootProgressText, precompileText } from './boot-progress.ts';
+import { bootProgressText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { startFreecamPose, startWalkParams } from './start-view.ts';
 import { trainLcdSystem } from './train-lcd.ts';
-import { applyWeatherSpec, startLiveWeather, type WeatherSpec } from './weather-mode.ts';
+import type { WeatherSpec } from './weather-mode.ts';
 import { createCameraWiring } from './wiring/camera.ts';
-import { createEnvWiring, defaultClock } from './wiring/env.ts';
+import { createEnvWiring } from './wiring/env.ts';
 import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
 import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
@@ -55,6 +43,7 @@ import {
   startCrowdLater,
 } from './world-late.ts';
 import type { LoadedWorld } from './world-load.ts';
+import { frameSourceOf, initialLate, simFor, startPrecompile } from './world-parts.ts';
 import { startTrainsLater, trainPhysicsSystem } from './world-rail.ts';
 
 /** 부팅 대기 영역: 스폰 수평 384 m 안 L0 — 스폰 셀 안 어디서든 3×3 모서리 셀(≤ 362 m)까지 포함(06 §8 스폰 3×3). 상위 레벨은 우선순위상 먼저 온다. */
@@ -124,6 +113,8 @@ export interface WorldViewDeps {
   traffic?: boolean;
   /** false = 열차 없음(`?trains=0`, M07-T03). */
   trains?: boolean;
+  /** `?debug=1` — 디버그 핸들(역 질의 `__SANPO_STATIONS__`). */
+  debug?: boolean;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -281,58 +272,6 @@ async function showWorldWith(
     deps.scheduler.add({ systems: () => [rail] });
   }
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
-}
-
-/** sim(시계 + 신호 계획 content/sim/signal-plans.json — M06-T02 + 날씨 기후표 — M09-T01). */
-function simFor(deps: WorldViewDeps): SimService {
-  const now = deps.now ?? Date.now;
-  const signalPlans = SIGNAL_PLANS as unknown as SignalPlansFile;
-  const weatherClimate = WEATHER_CLIMATE as unknown as WeatherClimateFile;
-  const sim = createSim({
-    bus: deps.bus,
-    log: deps.log,
-    now,
-    initialClock: deps.clock ?? defaultClock(now()),
-    signalPlans,
-    weatherClimate,
-    holidays: HOLIDAYS as HolidaysFile,
-    season: SEASON as SeasonTableFile,
-  });
-  const spec = deps.weatherSpec ?? { mode: 'auto' };
-  applyWeatherSpec(sim, spec, weatherClimate);
-  if (spec.mode === 'live') startLiveWeather(sim, deps.log.child('weather'), deps.onLiveWeather ?? (() => {}));
-  return sim;
-}
-
-function initialLate(): LateState {
-  return {
-    materialsSettled: false,
-    avatarSettled: false,
-    treesSettled: false,
-    signsSettled: false,
-    crowdSettled: false,
-    trainsSettled: false,
-    boot: { precompile: '대기 LUT…', done: false },
-  };
-}
-
-/** 선컴파일은 월드와 무관 → 렌더 생성 직후 시작(world.json·cells.idx 조회와 겹침). 진행은 로딩 패널 준비 행으로. */
-function startPrecompile(render: RenderService, late: LateState, log: Logger): Promise<void> {
-  return render
-    .precompile((p) => {
-      late.boot.precompile = precompileText(p);
-    })
-    .catch((e: unknown) => log.child('world').warn('precompile', e));
-}
-
-/** 스케줄러 프레임 소스: 카메라·플레이어 = traversal, 시각 = sim 시계. */
-function frameSourceOf(traversal: TraversalService, sim: SimService): FrameSource {
-  return {
-    camera: () => traversal.camera,
-    player: () => traversal.player,
-    gameTimeMs: () => sim.clock.gameTimeMs,
-    timeScale: () => sim.clock.timeScale,
-  };
 }
 
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {

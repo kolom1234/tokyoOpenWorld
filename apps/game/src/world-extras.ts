@@ -14,7 +14,13 @@ import { type AudioFlags, audioForWorld } from './world-audio.ts';
 import type { LateState } from './world-late.ts';
 
 export function startWorldExtras(
-  deps: { canvas: HTMLCanvasElement; log: Logger; audio?: AudioFlags; scheduler: Pick<Scheduler, 'add'> },
+  deps: {
+    canvas: HTMLCanvasElement;
+    log: Logger;
+    audio?: AudioFlags;
+    scheduler: Pick<Scheduler, 'add'>;
+    debug?: boolean;
+  },
   v: {
     render: RenderService;
     input: InputService;
@@ -37,6 +43,8 @@ export function startWorldExtras(
     sim: v.sim,
     physics: () => late.physics,
     audio: () => late.audio,
+    rail: () => late.rail?.network,
+    ...(deps.debug ? { debug: true } : {}),
   });
   deps.scheduler.add({ systems: () => [stations] });
   return audio;

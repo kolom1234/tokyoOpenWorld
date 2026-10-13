@@ -273,6 +273,7 @@ function worldViewDeps(
     ...(flags.noTraffic ? { traffic: false } : {}),
     ...(flags.noTrains ? { trains: false } : {}),
     ...(flags.audio ? { audio: flags.audio } : {}),
+    ...(flags.debug ? { debug: true } : {}),
     ...(golden
       ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
       : {}),

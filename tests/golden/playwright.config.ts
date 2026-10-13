@@ -7,7 +7,8 @@ const BASE = process.env.GOLDEN_BASE_URL;
 
 export default defineConfig({
   testDir: '.',
-  testMatch: 'golden.spec.ts',
+  // golden.spec.ts(`pnpm golden`) + 역 동선 stations.spec.ts·하라주쿠→신주쿠 route.spec.ts(`pnpm stations` — ADR-0082).
+  testMatch: ['golden.spec.ts', 'stations.spec.ts', 'route.spec.ts'],
   timeout: 600_000,
   workers: 1,
   reporter: 'list',

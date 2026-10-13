@@ -2,19 +2,21 @@
 import { describe, expect, it } from 'vitest';
 import ACCESS from '../../../content/stations/access.json';
 import { type AccessFile, crossedAisle, forwardOf, rad, stationLayout } from '../src/station/layout.ts';
-import { flapOpen, passageAt, STAIRS_REACH_M } from '../src/station/wiring.ts';
+import { passageAt, STAIRS_REACH_M } from '../src/station/stairs.ts';
+import { flapOpen } from '../src/station/wiring.ts';
 import { crowdOfHour, nearestOnTrain, nightOfSun } from '../src/world-audio.ts';
 
 const access = ACCESS as unknown as AccessFile;
 
 describe('station layout', () => {
   const l = stationLayout(access);
-  const exit = access.stations[0]?.exits[0];
-  it('n aisles → n+1 cabinets (+ tops), 2 flaps per aisle, physics = cabinets + 2 fences', () => {
-    const n = exit?.gate.aisles ?? 0;
+  it('n aisles → n+1 cabinets (+ tops), 2 flaps per aisle, physics = cabinets + 2 fences (per exit)', () => {
+    const exits = access.stations.flatMap((s) => s.exits);
+    const n = exits.reduce((k, e) => k + e.gate.aisles, 0);
+    expect(exits.length).toBeGreaterThanOrEqual(4);
     expect(l.aisles).toHaveLength(n);
     expect(l.flaps.length / 8).toBe(2 * n);
-    expect(l.physics.length / 8).toBe(n + 1 + 2);
+    expect(l.physics.length / 8).toBe(n + exits.length * 3);
     expect(l.boxes.length % 8).toBe(0);
   });
   it('aisle clear width fits the 0.5 m character capsule with margin', () => {
