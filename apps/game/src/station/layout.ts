@@ -1,6 +1,7 @@
 // 역 개찰구·계단 표식 배치(M07-T06 — ADR-0081): content/stations/access.json 출구 → 렌더 상자(캐비닛·윗판·울타리·표식)·플랩·물리 상자·통과 판정 선.
 // 순수 함수(단위 테스트). 방위 규약 = 프로젝트 공통(yaw 0 = 앞 −Z, 앞 = (−sin, 0, −cos)). 가상 배치 — 실제 기기 모양·로고 없음.
 import type { Vec3d } from '@sanpo/core';
+import type { StationSign } from '@sanpo/render';
 
 export interface ExitSpec {
   id: string;
@@ -11,6 +12,7 @@ export interface ExitSpec {
 }
 export interface StationSpec {
   id: string;
+  name: { ja: string; en: string; ko: string };
   exits: ExitSpec[];
 }
 export interface AccessFile {
@@ -36,6 +38,8 @@ export interface StationLayout {
   physics: number[];
   /** 통로(개찰구 통과 판정): 출구 id·통로 번호·중심 WF·앞 방향. */
   aisles: { exit: string; index: number; center: Vec3d; forward: Vec3d }[];
+  /** 글자 안내판(가상 디자인 — render signs.ts): 개찰구 위·바깥 역 기둥·계단 표식·승강장 출구 표식. */
+  signs: StationSign[];
 }
 
 export const rad = (deg: number) => (deg * Math.PI) / 180;
@@ -89,8 +93,13 @@ function gateOf(e: ExitSpec, out: StationLayout): void {
   }
 }
 
-/** 계단 입구 표식: 바닥 판(어두운 1.4 × 2 m) + 노란 테두리 + 기둥·파란 안내판(글자 없음 — 아래 화살표 무늬는 렌더). */
-function stairsMarker(pos: readonly number[], yawDeg: number, out: StationLayout): void {
+/** 계단 입구 표식: 바닥 판(어두운 1.4 × 2 m) + 노란 테두리 + 기둥·안내판(글 = text — 다가오는 쪽 −앞을 본다). */
+function stairsMarker(
+  pos: readonly number[],
+  yawDeg: number,
+  text: Pick<StationSign, 'icon' | 'title' | 'sub'>,
+  out: StationLayout,
+): void {
   const yaw = rad(yawDeg);
   const f = forwardOf(yaw);
   const r = rightOf(yaw);
@@ -102,17 +111,67 @@ function stairsMarker(pos: readonly number[], yawDeg: number, out: StationLayout
   }
   const post = at(pos, r, 0.9, f, -1.1, 1.1);
   out.boxes.push(post.x, post.y, post.z, 0.04, 1.1, 0.04, yaw, FIXTURE_COLOR.cabinet);
-  const board = at(pos, r, 0.9, f, -1.1, 2.0);
-  out.boxes.push(board.x, board.y, board.z, 0.45, 0.2, 0.02, yaw, FIXTURE_COLOR.sign);
+  const board = at(pos, r, 0.9, f, -1.1, 2.4);
+  sign(out, board, yaw + Math.PI, 1.6, 0.4, text);
+}
+
+/** 안내판 = 뒤판 상자(어두운 파랑) + 앞뒤 글 면(render). 판 앞면 법선 = (−sin, 0, −cos)(yaw). */
+function sign(
+  out: StationLayout,
+  c: Vec3d,
+  yaw: number,
+  w: number,
+  h: number,
+  text: Pick<StationSign, 'icon' | 'title' | 'sub'>,
+): void {
+  out.boxes.push(c.x, c.y, c.z, w / 2 + 0.02, h / 2 + 0.02, 0.02, yaw, FIXTURE_COLOR.sign);
+  out.signs.push({ posWF: [c.x, c.y, c.z], yawRad: yaw, widthM: w, heightM: h, ...text });
+}
+
+/** 개찰구 위 안내판(기둥 둘) + 거리 쪽 7 m 역 이름 기둥 — 둘 다 다가오는 쪽(−들어가는 방향)을 본다. */
+function gateSigns(s: StationSpec, e: ExitSpec, out: StationLayout): void {
+  const yaw = rad(e.gate.yawDeg);
+  const f = forwardOf(yaw);
+  const r = rightOf(yaw);
+  const p = e.gate.posWF;
+  const half = (e.gate.aisles * (CAB_W + AISLE_W) + CAB_W) / 2;
+  for (const side of [-1, 1]) {
+    const post = at(p, r, side * (half + 0.15), f, 0, 1.6);
+    out.boxes.push(post.x, post.y, post.z, 0.05, 1.6, 0.05, yaw, FIXTURE_COLOR.cabinet);
+  }
+  const ex = `${e.name.ja} ${e.name.en}`;
+  sign(out, at(p, r, 0, f, 0, 2.75), yaw + Math.PI, Math.min(4, 2 * half), Math.min(4, 2 * half) / 4, {
+    icon: 'gate',
+    title: '改札 Ticket Gates · 개찰구',
+    sub: `${s.name.ja}駅 ${ex} · ${s.name.ko}역 ${e.name.ko}`,
+  });
+  const totem = at(p, r, half + FENCE_M + 0.8, f, -7, 1.5);
+  out.boxes.push(totem.x, totem.y, totem.z, 0.06, 1.5, 0.06, yaw, FIXTURE_COLOR.cabinet);
+  sign(out, { ...totem, y: totem.y + 1.75 }, yaw + Math.PI, 2.4, 0.6, {
+    icon: 'station',
+    title: `${s.name.ja}駅 ${s.name.en} Sta.`,
+    sub: `${s.name.ko}역 · 改札 ${e.name.ja} → 7 m`,
+  });
 }
 
 export function stationLayout(file: AccessFile): StationLayout {
-  const out: StationLayout = { boxes: [], flaps: [], physics: [], aisles: [] };
+  const out: StationLayout = { boxes: [], flaps: [], physics: [], aisles: [], signs: [] };
   for (const s of file.stations)
     for (const e of s.exits) {
       gateOf(e, out);
-      stairsMarker(e.stairs.posWF, e.stairs.yawDeg, out);
-      stairsMarker(e.platform.posWF, e.platform.yawDeg + 180, out);
+      gateSigns(s, e, out);
+      stairsMarker(
+        e.stairs.posWF,
+        e.stairs.yawDeg,
+        { icon: 'stairs', title: 'ホーム Platforms', sub: 'F · 승강장으로' },
+        out,
+      );
+      stairsMarker(
+        e.platform.posWF,
+        e.platform.yawDeg + 180,
+        { icon: 'exit', title: `出口 Exit · ${e.name.ja}`, sub: `F · ${e.name.en} · ${e.name.ko}` },
+        out,
+      );
     }
   return out;
 }

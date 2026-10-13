@@ -1,0 +1,118 @@
+{
+  "$comment": "URL 스폰 프리셋(`?spawn=<id>` — M10 지도 전 임시, ADR-0084). posWF = WF m(y는 참고 — walk는 그 xz 아래 지면에 착지), yawDeg = 바라보는 방향(0 = 북 −Z, 90 = 서 −X), surface: platform = 철도 적재 뒤 승강장 윗면(가장자리 여유)으로 옮김. 위치는 실제 GPU로 확인한 가상 배치.",
+  "presets": [
+    {
+      "id": "harajuku-gate",
+      "name": {
+        "ja": "原宿駅 竹下口 改札前",
+        "en": "Harajuku Sta. Takeshita gates",
+        "ko": "하라주쿠역 다케시타 출구 개찰구 앞"
+      },
+      "posWF": [
+        190,
+        32.6,
+        -1200.475
+      ],
+      "yawDeg": 90
+    },
+    {
+      "id": "harajuku-platform",
+      "name": {
+        "ja": "原宿駅 ホーム",
+        "en": "Harajuku Sta. platform",
+        "ko": "하라주쿠역 승강장"
+      },
+      "posWF": [
+        152.9,
+        30.44,
+        -1205.2
+      ],
+      "yawDeg": 351.5,
+      "surface": "platform"
+    },
+    {
+      "id": "shibuya-scramble",
+      "name": {
+        "ja": "渋谷スクランブル交差点",
+        "en": "Shibuya Scramble Crossing",
+        "ko": "시부야 스크램블 교차로"
+      },
+      "posWF": [
+        -22.3,
+        15,
+        8.6
+      ],
+      "yawDeg": 0
+    },
+    {
+      "id": "shibuya-hachiko-gate",
+      "name": {
+        "ja": "渋谷駅 ハチ公口 改札前",
+        "en": "Shibuya Sta. Hachiko gates",
+        "ko": "시부야역 하치코 출구 개찰구 앞"
+      },
+      "posWF": [
+        29.525,
+        14.88,
+        58
+      ],
+      "yawDeg": 180
+    },
+    {
+      "id": "shinjuku-west",
+      "name": {
+        "ja": "新宿駅 西口 改札前",
+        "en": "Shinjuku Sta. West gates",
+        "ko": "신주쿠역 서쪽 출구 개찰구 앞"
+      },
+      "posWF": [
+        -122,
+        37.48,
+        -3401.5
+      ],
+      "yawDeg": 307
+    },
+    {
+      "id": "yoyogi-west",
+      "name": {
+        "ja": "代々木駅 西口 改札前",
+        "en": "Yoyogi Sta. West gates",
+        "ko": "요요기역 서쪽 출구 개찰구 앞"
+      },
+      "posWF": [
+        77.475,
+        36.05,
+        -2690
+      ],
+      "yawDeg": 0
+    },
+    {
+      "id": "omotesando",
+      "name": {
+        "ja": "表参道 けやき並木",
+        "en": "Omotesando zelkova avenue",
+        "ko": "오모테산도 느티나무 길"
+      },
+      "posWF": [
+        818,
+        31,
+        -757
+      ],
+      "yawDeg": 244.8
+    },
+    {
+      "id": "yoyogi-park",
+      "name": {
+        "ja": "代々木公園",
+        "en": "Yoyogi Park",
+        "ko": "요요기 공원"
+      },
+      "posWF": [
+        -250,
+        35,
+        -1150
+      ],
+      "yawDeg": 0
+    }
+  ]
+}

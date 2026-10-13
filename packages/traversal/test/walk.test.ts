@@ -143,6 +143,17 @@ async function setup() {
 }
 
 describe('walk mode', () => {
+  it('while the landing spot is being searched, the player (physics / streaming focus) is the arrival point, not the origin', async () => {
+    const s = await setup();
+    await s.t.teleport({ x: 500, y: 80, z: -700 }, 0);
+    s.tick();
+    s.hits.add('freeCam');
+    s.tick();
+    expect(s.t.mode).toBe('walk');
+    expect(s.t.player.posWF.x).toBeCloseTo(500, 6);
+    expect(s.t.player.posWF.z).toBeCloseTo(-700, 6);
+  });
+
   it('moveVelocity: yaw-relative, diagonal clamped to 1', () => {
     const v = moveVelocity(0, 1, 0, 1.35);
     expect(v.x).toBeCloseTo(0, 12);

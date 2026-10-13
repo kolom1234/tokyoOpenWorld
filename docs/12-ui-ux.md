@@ -19,6 +19,22 @@
 | Credits | `world/<buildId>/credits.json`(데이터·에셋 출처), ODbL 파생 DB 링크, `oss-licenses.json`(코드 라이선스) |
 | Pause (Esc) | 재개, 지도, 도감, 설정, 타이틀로 |
 
+## 2.1 임시 안내 HUD·스폰 프리셋 (M08·M10 전 — ADR-0082·0083·0084)
+apps/game 임시 DOM(M08 @sanpo/ui가 대체): 왼쪽 아래 조작 도움말(모드별, H 접기), 화면 위 역 근접 안내(개찰구·계단·출구 방향·거리), 아래 상호작용 안내(F …), 알림(구조·G 실패 이유).
+
+URL 스폰 프리셋 `?spawn=<id>`(content/spawn-presets.json — 지도 전까지 빠른 이동):
+| id | 장소 | 시작 |
+|---|---|---|
+| `harajuku-gate` | 하라주쿠역 다케시타 출구 개찰구 앞(거리) | 개찰구를 보고 4 m 앞 |
+| `harajuku-platform` | 하라주쿠역 승강장(섬식) | 철도 적재 뒤 승강장 윗면 |
+| `shibuya-scramble` | 시부야 스크램블 교차로 북쪽 보도(기본 스폰과 같음) | 북쪽을 봄 |
+| `shibuya-hachiko-gate` | 시부야역 하치코 출구 개찰구 앞 | 개찰구 4 m 앞 |
+| `shinjuku-west` | 신주쿠역 서쪽 출구 개찰구 앞 광장 | 개찰구 8 m 앞 |
+| `yoyogi-west` | 요요기역 서쪽 출구 개찰구 앞 | 개찰구 4 m 앞 |
+| `omotesando` | 오모테산도 느티나무 길 | 동북동을 봄 |
+| `yoyogi-park` | 요요기 공원 | 북쪽을 봄 |
+예: `https://tokyo-sanpo-staging.kolom1357.workers.dev/?spawn=harajuku-gate`. 없는 id는 무시(기본 스폰, 콘솔 경고). 골든뷰 `?view=`가 우선.
+
 ## 3. 미니맵/지도 렌더러
 - PMTiles(vector) → 자체 Canvas2D 렌더러(`src/internal/map/`): 레이어 순서 = 수면 → 공원 → 건물 풋프린트 → 도로(등급별 폭) → 철도 → 역 → 라벨 → POI.
 - WF ↔ 지도 좌표 변환은 `UiBridge.worldToMap()` 사용(ui가 geo를 직접 import하지 않음).

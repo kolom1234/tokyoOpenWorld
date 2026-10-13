@@ -96,6 +96,8 @@ describe('status rows', () => {
   });
 
   it('parses the debug and backend flags', () => {
+    expect(parseFlags('?spawn=harajuku-gate').spawn).toBe('harajuku-gate');
+    expect(parseFlags('?spawn=../x').spawn).toBeUndefined();
     expect(parseFlags('?debug=1').debug).toBe(true);
     expect(parseFlags('?debug=0').debug).toBe(false);
     expect(parseFlags('').debug).toBe(false);

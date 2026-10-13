@@ -313,6 +313,19 @@ export interface RenderService extends SystemProvider {
 export interface StationFixtures {
   boxes: Float64Array;
   flaps: Float64Array;
+  /** 글자 안내판(M07-T06 후속 — 가상 디자인: 남색 판·주황 그림 기호·시스템 글꼴, 실제 철도사 로고·서체 없음). 앞뒤 같은 글. */
+  signs?: StationSign[];
+}
+
+/** 안내판 하나: 중심 WF·앞 방향 yaw(판 앞면 법선 = (−sin, 0, −cos)), 크기 m(가로:세로 4:1 권장), 그림 기호·큰 글·작은 글. */
+export interface StationSign {
+  posWF: [number, number, number];
+  yawRad: number;
+  widthM: number;
+  heightM: number;
+  icon: 'gate' | 'stairs' | 'exit' | 'station';
+  title: string;
+  sub: string;
 }
 
 /** `debugLayerVisible` 대상(인스턴스 풀 레이어). */

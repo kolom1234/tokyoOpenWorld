@@ -17,7 +17,7 @@ export const HELP_LINES: Record<string, readonly string[]> = {
   ],
   train: ['V 시점(서기·좌석·전면 전망) · T 다음 역까지 빨리감기 · F 내리기(정차 중) · C 자유 비행'],
 };
-const COMMON = '[ ] 볼륨 · \\ 소리 끔/켬 · H 도움말 접기';
+const COMMON = '[ ] 볼륨 · 백슬래시(\\) 소리 끔/켬 · H 도움말 접기';
 
 export const LANDING_TEXT: Record<LandingFailReason, string> = {
   'not-ready': '아직 준비 중이에요 — 잠시 뒤 다시 G',

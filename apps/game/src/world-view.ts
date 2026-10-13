@@ -22,7 +22,8 @@ import { createTraversal, type FreecamParams, type TraversalService } from '@san
 import { bootProgressText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
 import { helpHudSystem } from './help-hud.ts';
-import { startFreecamPose, startWalkParams } from './start-view.ts';
+import type { SpawnPreset } from './spawn-presets.ts';
+import { presetFreecamPose, startFreecamPose, startWalkParams } from './start-view.ts';
 import { trainLcdSystem } from './train-lcd.ts';
 import type { WeatherSpec } from './weather-mode.ts';
 import { createCameraWiring } from './wiring/camera.ts';
@@ -117,6 +118,8 @@ export interface WorldViewDeps {
   trains?: boolean;
   /** `?debug=1` — 디버그 핸들(역 질의 `__SANPO_STATIONS__`). */
   debug?: boolean;
+  /** `?spawn=<id>` 프리셋(boot가 월드 스폰을 바꿔 넘긴다 — surface 'platform'이면 world-extras가 승강장 윗면으로). */
+  spawn?: SpawnPreset;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -172,6 +175,12 @@ async function startStreaming(
   return s;
 }
 
+/** freecam 시작 시점: 골든뷰 > 스폰 프리셋 위 > 기본(스크램블 북서 상공). */
+function startPoseOf(deps: WorldViewDeps): (g: GroundQuery) => FreecamParams {
+  const sp = deps.spawn;
+  return deps.start?.pose ?? (sp ? (g: GroundQuery) => presetFreecamPose(sp, g) : startFreecamPose);
+}
+
 /** traversal: 로딩 중 = freecam(시작 시점). physics는 월드 로드 뒤 생긴다 → getter(전환 요청 때마다 요구조건을 본다 — walk는 그때부터). */
 function createTraversalFor(
   deps: WorldViewDeps,
@@ -180,7 +189,7 @@ function createTraversalFor(
   late: LateState,
   sim: SimService,
 ): TraversalService {
-  const startPose = deps.start?.pose ?? startFreecamPose;
+  const startPose = startPoseOf(deps);
   const fov = deps.start?.fovDeg;
   const player = { posWF: { x: 0, y: 0, z: 0 } };
   const t = createTraversal(
@@ -243,7 +252,7 @@ async function showWorldWith(
   late.boot.done = true;
   if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
     traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
-  else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
+  else traversal.request('freecam', startPoseOf(deps)(ground));
   loadMaterialsLater(render, world.materialsUrl, late, wlog);
   loadAvatarLater(render, late, wlog);
   if (deps.trees === false) late.treesSettled = true;

@@ -3,6 +3,11 @@
   "stations": [
     {
       "id": "harajuku",
+      "name": {
+        "ja": "原宿",
+        "en": "Harajuku",
+        "ko": "하라주쿠"
+      },
       "exits": [
         {
           "id": "takeshita",
@@ -29,6 +34,11 @@
     },
     {
       "id": "yoyogi",
+      "name": {
+        "ja": "代々木",
+        "en": "Yoyogi",
+        "ko": "요요기"
+      },
       "exits": [
         {
           "id": "west",
@@ -55,6 +65,11 @@
     },
     {
       "id": "shinjuku",
+      "name": {
+        "ja": "新宿",
+        "en": "Shinjuku",
+        "ko": "신주쿠"
+      },
       "exits": [
         {
           "id": "west",
@@ -81,6 +96,11 @@
     },
     {
       "id": "shibuya",
+      "name": {
+        "ja": "渋谷",
+        "en": "Shibuya",
+        "ko": "시부야"
+      },
       "exits": [
         {
           "id": "hachiko",

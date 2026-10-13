@@ -9,7 +9,8 @@ import type { SimService } from '@sanpo/sim';
 import type { RailNetwork } from '@sanpo/tile-format';
 import type { TraversalService } from '@sanpo/traversal';
 import { nearestOnTrain } from '../world-audio.ts';
-import { prompt } from './hud.ts';
+import { guideText } from './guide.ts';
+import { guide, prompt } from './hud.ts';
 import { type AccessFile, crossedAisle, type StationLayout, stationLayout } from './layout.ts';
 import { StairsRuntime } from './stairs.ts';
 
@@ -18,6 +19,16 @@ const FLAP_HOLD_S = 1.1;
 const FLAP_CLOSE_S = 0.4;
 const CHIME_R = 160;
 const DOOR_R = 70;
+/** 근접 안내 갱신 간격(s). */
+const GUIDE_S = 0.2;
+
+/** 카메라 쿼터니언 → 수평 시선 yaw(0 = −Z, 반시계 +). */
+function yawOf(q: { x: number; y: number; z: number; w: number }): number {
+  // 앞(0, 0, −1)을 회전: fx = −2(xz + wy), fz = −(1 − 2(x² + y²)).
+  const fx = -2 * (q.x * q.z + q.w * q.y);
+  const fz = -(1 - 2 * (q.x * q.x + q.y * q.y));
+  return Math.atan2(-fx, -fz);
+}
 
 export interface StationDeps {
   doc: Document;
@@ -59,6 +70,7 @@ class StationRuntime {
   private lastNext: string | null = null;
   private lastStop: string | null = null;
   private t = 0;
+  private guideAt = -1;
 
   constructor(d: StationDeps) {
     this.d = d;
@@ -70,6 +82,7 @@ class StationRuntime {
     d.render.setStationFixtures({
       boxes: Float64Array.from(this.layout.boxes),
       flaps: Float64Array.from(this.layout.flaps),
+      signs: this.layout.signs,
     });
   }
 
@@ -89,8 +102,15 @@ class StationRuntime {
     if (tr.mode === 'walk') {
       this.gates(p);
       this.stairsRt.update(this.t, p);
+      if (this.t - this.guideAt >= GUIDE_S) {
+        this.guideAt = this.t;
+        const top = this.stairsRt.geometry().tops?.topAt(p.x, p.z);
+        const onPlatform = top !== undefined && Math.abs(top - p.y) < 0.4;
+        guide(this.d.doc, guideText(this.d.access, p, yawOf(tr.camera.quat), onPlatform));
+      }
     } else {
       prompt(this.d.doc, null);
+      guide(this.d.doc, null);
       this.stairsRt.idle();
     }
     this.prev = { ...p };

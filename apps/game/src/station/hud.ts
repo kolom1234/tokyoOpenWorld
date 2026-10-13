@@ -59,3 +59,20 @@ export function notice(doc: Document, text: string, ms = 4000): void {
     }, ms),
   );
 }
+
+/** 역 근접 안내(화면 위 가운데, null = 숨김 — station/guide.ts). */
+export function guide(doc: Document, text: string | null): void {
+  let el = doc.getElementById('station-guide');
+  if (!el && text === null) return;
+  if (!el) {
+    el = doc.createElement('div');
+    el.id = 'station-guide';
+    el.setAttribute('role', 'status');
+    el.style.cssText =
+      'position:fixed;left:50%;top:14px;transform:translateX(-50%);padding:5px 14px;border-radius:6px;' +
+      'background:rgba(20,50,79,.85);border-bottom:3px solid #f08a24;color:#fff;font:14px system-ui,sans-serif;pointer-events:none;z-index:50';
+    doc.body.append(el);
+  }
+  el.style.display = text === null ? 'none' : 'block';
+  if (text !== null && el.textContent !== text) el.textContent = text;
+}
