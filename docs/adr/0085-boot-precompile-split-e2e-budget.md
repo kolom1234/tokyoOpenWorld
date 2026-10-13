@@ -12,10 +12,13 @@
 ## Decision
 1. render `precompile()` = 대기 LUT + 장면 컴파일 + 아바타(첫 표시 전), 새 `precompileLate()` = 머티리얼 ID별 기본·HLOD 변형(소품 풀 priming 포함, 묶음마다 한 프레임 양보) — 게임이 `commitStaged` 직후 비동기 호출.
    소프트웨어 래스터(SwiftShader)는 precompileLate 생략. 스폰 셀(보이는 것)은 compileStaged가 이미 만든다 → 첫 표시 뒤 새로 스트리밍되는 셀만 precompileLate 완료 전(≈ 7.5 s)이면 첫 사용 컴파일.
-2. e2e: 상태만 보는 스펙(boot·audio·crowd·decode·physics·walk) 화면 640×360(`STATE_VIEW` — 픽셀 ¼). lod-continuity 거리 100·34·16 m(60 m = 100 m와 같은 LOD1 띠 — 뺌), 안정 뒤 대기 프레임 3·2·2 → 2·1.
+2. 첫 표시 경로 보충: 스트리밍 exclusive를 선컴파일 끝이 아니라 **첫 표시(commitStaged)까지** 붙잡는다(선컴파일이 짧아지자 첫 표시 전 몇 초에 이웃·HLOD 선적재가 쌓여 첫 로드 26 → 75–94 MB였다).
+   스폰 셀이 오는 동안 대기 그룹을 0.5 s마다 미리 compileStaged(`world-parts.ts warmStaged` — 다운로드·디코드와 셀 셰이더 컴파일을 겹침, 준비되면 간격 대기 즉시 끝).
+3. e2e: 상태만 보는 스펙(boot·audio·crowd·decode·physics·walk) 화면 640×360(`STATE_VIEW` — 픽셀 ¼). lod-continuity 거리 100·34·16 m(60 m = 100 m와 같은 LOD1 띠 — 뺌), 안정 뒤 대기 프레임 3·2·2 → 2·1.
    군중 dummy 상한 150 s(판정은 상태). 잡 이름·분할(shard)·워커 수(2)는 그대로.
 
 ## Consequences
-- 로컬 실제 GPU(world-mini, preview): 첫 표시 9.2–9.8 s → 6.1–6.7 s. 첫 표시 뒤 precompileLate 7.3–7.6 s 동안 새 긴 프레임 없음(첫 프레임 render ≈ 0.6 s는 전과 같음 — 후처리 파이프라인, 별도).
+- 로컬 실제 GPU(world-mini, preview): 첫 표시 9.2–9.8 s → 6.1–6.7 s. staging(MVP, 2560×1440, 전력 상한 22–39 W): walk 시작 7.3–8.2 s, 골든 부트 지표(data-rendered-cells) 8.3–9.0 s(전 10.2–11.9 s), 첫 로드 26.4 MB ✅.
+  ⚠️ 골든 지표는 M06(7.2–7.9 s)보다 ≈ 0.6–1 s 느리다 — 남은 임계 경로 = 첫 조명 셰이더 ≈ 3.3 s(선컴파일)와 스폰 셀 75묶음 ≈ 2.8 s(compileStaged)가 GPU 프로세스 컴파일을 나눠 쓴다. 첫 표시 뒤 precompileLate 7.3–7.6 s 동안 새 긴 프레임 없음(첫 프레임 render ≈ 0.6 s는 전과 같음 — 후처리 파이프라인, 별도).
 - 로컬 e2e(SwiftShader 헤드리스, 워커 2, 16코어): 5.0분 → 3.0·3.3분(연속 2회). CI(4 vCPU)는 같은 비율이면 느린 러너 11.5분 → ≈ 7분.
 - 첫 조명 셰이더 3.3 s는 남는다(셰이더 크기 — 조명 노드 정리·병렬 파이프라인 생성은 후속).

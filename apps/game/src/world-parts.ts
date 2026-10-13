@@ -1,4 +1,4 @@
-// world-view.ts 보조(400줄 제한으로 분리): sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스.
+// world-view.ts 보조(400줄 제한으로 분리): sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스, 스폰 셀 미리 컴파일(ADR-0085).
 import type { EventBus, FrameSource, Logger } from '@sanpo/core';
 import type { RenderService } from '@sanpo/render';
 import {
@@ -80,4 +80,16 @@ export function frameSourceOf(traversal: TraversalService, sim: SimService): Fra
     gameTimeMs: () => sim.clock.gameTimeMs,
     timeScale: () => sim.clock.timeScale,
   };
+}
+
+/** 대기 그룹 반복 컴파일(on이 false가 될 때까지, 0.5 s 간격 — stop()이면 간격 대기를 바로 끝낸다). */
+export async function warmStaged(render: RenderService, warm: { on: boolean; stop: () => void }): Promise<void> {
+  while (warm.on) {
+    await render.compileStaged().catch(() => undefined);
+    if (!warm.on) break;
+    await new Promise<void>((r) => {
+      warm.stop = r;
+      setTimeout(r, 500);
+    });
+  }
 }

@@ -46,7 +46,7 @@ import {
   startCrowdLater,
 } from './world-late.ts';
 import type { LoadedWorld } from './world-load.ts';
-import { frameSourceOf, initialLate, simFor, startPrecompile } from './world-parts.ts';
+import { frameSourceOf, initialLate, simFor, startPrecompile, warmStaged } from './world-parts.ts';
 import { startTrainsLater, trainPhysicsSystem } from './world-rail.ts';
 
 /** 부팅 대기 영역: 스폰 수평 384 m 안 L0 — 스폰 셀 안 어디서든 3×3 모서리 셀(≤ 362 m)까지 포함(06 §8 스폰 3×3). 상위 레벨은 우선순위상 먼저 온다. */
@@ -215,46 +215,14 @@ function createTraversalFor(
   return t;
 }
 
-/**
- * 첫 표시: 선컴파일 ∥ (streaming 시작 → 스폰 영역 다운로드·디코드·적용(대기 그룹) → 셀 compileStaged) → 붙이기 → 시작 모드 → 머티리얼·아바타(비동기).
- * 선컴파일(≈ 5 s)과 셀 준비·컴파일을 겹친다(M06 사전 4). 반환 = 스폰 영역 live L0 셀 수.
- * 지면 높이를 알게 된 뒤 시작 포즈를 다시 잡는다(freecam "지면 위 60 m" 또는 스폰에서 걷기 — 착지점은 walk가 콜라이더로 찾는다).
- */
-async function showWorldWith(
+/** 첫 표시 뒤 적재(머티리얼·아바타·나무·간판·군중·신호 램프·열차 + 열차 물리). */
+function startLateLayers(
   deps: WorldViewDeps,
-  v: {
-    render: RenderService;
-    traversal: TraversalService;
-    ground: GroundQuery;
-    late: LateState;
-    /** createWorldView에서 렌더 생성 직후 시작한 선컴파일(world.json 조회와 겹침 — M06 사전 4). */
-    precompiled: Promise<void>;
-    sim: SimService;
-    input: InputService;
-  },
+  v: { render: RenderService; sim: SimService; ground: GroundQuery; late: LateState },
   world: LoadedWorld,
-): Promise<number> {
-  const { render, traversal, ground, late } = v;
-  const wlog = deps.log.child('world');
-  // 스폰 셀은 대기 그룹에(그리지 않음) → 선컴파일과 겹쳐 셀 파이프라인을 만든 뒤 붙인다(첫 렌더 동기 컴파일 1.4 s 제거).
-  render.stageCells(true);
-  const pre = v.precompiled;
-  const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
-  // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
-  if (late.wiring) late.audio = startWorldExtras(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, late);
-  late.boot.spawn = world.spawnCells;
-  const centerWF = deps.start?.centerWF ?? world.spawnWF;
-  // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
-  await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true, holdExclusiveUntil: pre });
-  late.boot.precompile = '셀 셰이더…';
-  await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
-  render.commitStaged();
-  late.boot.done = true;
-  // 머티리얼 ID별 선컴파일은 첫 표시 뒤(ADR-0085 — 첫 표시 전엔 compileStaged와 다퉈 ≈ 3–4 s 늦었다).
-  void render.precompileLate().catch((e: unknown) => wlog.warn('precompile late', e));
-  if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
-    traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
-  else traversal.request('freecam', startPoseOf(deps)(ground));
+  wlog: Logger,
+): void {
+  const { render, late } = v;
   loadMaterialsLater(render, world.materialsUrl, late, wlog);
   loadAvatarLater(render, late, wlog);
   if (deps.trees === false) late.treesSettled = true;
@@ -286,6 +254,67 @@ async function showWorldWith(
     const rail = trainPhysicsSystem(v.sim, () => late.physics);
     deps.scheduler.add({ systems: () => [rail] });
   }
+}
+
+/**
+ * 첫 표시: 선컴파일 ∥ (streaming 시작 → 스폰 영역 다운로드·디코드·적용(대기 그룹) → 셀 compileStaged) → 붙이기 → 시작 모드 → 머티리얼·아바타(비동기).
+ * 선컴파일(≈ 5 s)과 셀 준비·컴파일을 겹친다(M06 사전 4). 반환 = 스폰 영역 live L0 셀 수.
+ * 지면 높이를 알게 된 뒤 시작 포즈를 다시 잡는다(freecam "지면 위 60 m" 또는 스폰에서 걷기 — 착지점은 walk가 콜라이더로 찾는다).
+ */
+async function showWorldWith(
+  deps: WorldViewDeps,
+  v: {
+    render: RenderService;
+    traversal: TraversalService;
+    ground: GroundQuery;
+    late: LateState;
+    /** createWorldView에서 렌더 생성 직후 시작한 선컴파일(world.json 조회와 겹침 — M06 사전 4). */
+    precompiled: Promise<void>;
+    sim: SimService;
+    input: InputService;
+  },
+  world: LoadedWorld,
+): Promise<number> {
+  const { render, traversal, ground, late } = v;
+  const wlog = deps.log.child('world');
+  // 스폰 셀은 대기 그룹에(그리지 않음) → 선컴파일과 겹쳐 셀 파이프라인을 만든 뒤 붙인다(첫 렌더 동기 컴파일 1.4 s 제거).
+  render.stageCells(true);
+  const pre = v.precompiled;
+  const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
+  // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
+  if (late.wiring) late.audio = startWorldExtras(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, late);
+  late.boot.spawn = world.spawnCells;
+  const centerWF = deps.start?.centerWF ?? world.spawnWF;
+  // exclusive: 첫 표시(commitStaged)까지 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일 끝 기준이면 선컴파일이 짧아진 뒤(ADR-0085)
+  // 첫 표시 전 남은 몇 초에 이웃·HLOD 선적재가 쌓여 첫 로드가 26 → 75–94 MB였다).
+  let markShown: () => void = () => {};
+  const shown = new Promise<void>((r) => {
+    markShown = r;
+  });
+  // 스폰 셀이 오는 동안 대기 그룹을 미리 컴파일(0.5 s마다 — 이미 만든 파이프라인은 캐시): 다운로드·디코드와 셀 셰이더 컴파일을 겹친다(ADR-0085).
+  const warm = { on: true, stop: () => {} };
+  const warming = warmStaged(render, warm);
+  await s.whenReady({
+    centerWF,
+    radius: SPAWN_READY_RADIUS_M,
+    levels: [0],
+    exclusive: true,
+    holdExclusiveUntil: shown,
+  });
+  warm.on = false;
+  warm.stop();
+  await warming;
+  late.boot.precompile = '셀 셰이더…';
+  await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
+  render.commitStaged();
+  markShown();
+  late.boot.done = true;
+  // 머티리얼 ID별 선컴파일은 첫 표시 뒤(ADR-0085 — 첫 표시 전엔 compileStaged와 다퉈 ≈ 3–4 s 늦었다).
+  void render.precompileLate().catch((e: unknown) => wlog.warn('precompile late', e));
+  if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
+    traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
+  else traversal.request('freecam', startPoseOf(deps)(ground));
+  startLateLayers(deps, v, world, wlog);
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
