@@ -19,7 +19,7 @@ RenderStats += shadows: { cascades, mapSize, maxFarM, updated } | null;  gpu.pas
 RenderStats += props: { instances, visible, pools, rebuilds, dropped }  // M05-T03 거리 소품: LOD당 InstancedMesh 1개(전 종류 합친 기하) → pools = 소품 드로우콜 ≤ 3, dropped = 고정 용량 초과, ADR-0051
 RenderStats += trees: { instances, visible, pools, dropped, ready }; RenderService += loadTrees(urls: TreeAssetUrls{manifest, glb, leaves, impostor}): Promise<void>  // M05-T04 ADR-0052 — 첫 표시 뒤
 RenderStats += weather: { rain: { count, density, snow }, wetness, direct }  // M09-T01 빗줄기 층·젖음·직사광 배율(구름), ADR-0076
-setStationFixtures(f: StationFixtures { boxes: f64 × 8(cx,cy,cz,hx,hy,hz,yaw,색 번호); flaps: f64 × 8(…, 접힘 쪽 ±1) } | null); setGateFlaps(open: Float32Array /* 통로별 0..1 */)  // M07-T06 역 시설(개찰구·울타리·계단 표식, WF — stations/fixtures.ts), ADR-0081
+setStationFixtures(f: StationFixtures { boxes: f64 × 8(cx,cy,cz,hx,hy,hz,yaw,색 번호); flaps: f64 × 8(…, 접힘 쪽 ±1); signs?: StationSign[] { posWF, yawRad, widthM, heightM, icon: gate|stairs|exit|station, title, sub } — 가상 디자인 글자 판(stations/signs.ts 아틀라스 1장·메시 1개, ADR-0084) } | null); setGateFlaps(open: Float32Array /* 통로별 0..1 */)  // M07-T06 역 시설(개찰구·울타리·계단 표식, WF — stations/fixtures.ts), ADR-0081
 RenderStats += night: { level, cells, lights, active, sprites }  // M09-T03 밤 정도·lights.bin 셀·광원 수·켠 클러스터 광원(풀 1024)·발광 스프라이트, ADR-0078
 RenderStats += signs: { instances, visible, pools, ready }; RenderService += loadSignage(urls: SignageAssetUrls{atlas}): Promise<void>  // M05-T06 ADR-0054 — 첫 표시 뒤, 파사드 간판 띠도 같은 아틀라스
 RenderService += setQuality(tier), detectQuality(): Promise<QualityTier>  // 버스 'quality/changed'도 적용(되먹임 없음), 자기 변경은 방출. 소프트웨어 래스터 = detect-gpu 생략 → low
@@ -32,7 +32,8 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   removeCell(key: CellKey): void;
   setHlodChildVisible(parent: CellKey, child: number /*0..15*/, visible: boolean): void;  // false = 0.3 s 디더 페이드, true = 즉시(M02-T05)
   loadMaterials(manifestUrl): Promise<MaterialLibraryStats>;  // M03-T01: manifest → 평균색 → KTX2 배열 3장 교체(재컴파일 없음), 첫 표시 뒤 호출
-  precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;   // 대기 LUT → 머티리얼 ID 묶음마다 1프레임 양보 → 아바타 (M06, PrecompileProgress{stage,done,total})
+  precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;   // 첫 표시 전: 대기 LUT(+ 장면 컴파일) → 아바타 (M06, PrecompileProgress{stage,done,total})
+  precompileLate(onProgress?): Promise<void>;   // 첫 표시 뒤: 머티리얼 ID 묶음마다 1프레임 양보(소품 풀 priming), 소프트웨어 래스터는 생략(ADR-0085)
   stageCells(on); compileStaged(): Promise<void>; commitStaged();
   setSignalLamps(lamp: ((code) => number) | null): void;   // M06-T02(ADR-0062): props 신호 기둥 현시 코드 → 램프 값(차량 1–3 + 4 × 보행 1–2), 보이는 슬롯만·바뀐 범위만 업로드. 소품 풀 정점 버퍼 ≤ 8(_ptype·_itype = vec2). 램프 범위는 같은 프레임 풀 재작성 범위와 **합친다**(지우면 다른 소품 `_itype`가 GPU에 안 가 사라짐 — ADR-0068)
   debugLayerVisible(layer: RenderDebugLayer /* 'props'|'signs'|'trees'|'crowd'|'farCrowd'|'vehicles'|'trains'|'nightLights'(M09-T03: 켠 광원 0·스프라이트 숨김) */, visible): void;   // 디버그(ADR-0068): 인스턴스 레이어 숨김/보임 — e2e lod-continuity·실제 GPU 진단의 보임/숨김 픽셀 차

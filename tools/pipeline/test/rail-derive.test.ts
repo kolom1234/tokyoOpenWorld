@@ -118,6 +118,13 @@ describe('platform stops', () => {
     // 승강장 고리(M07-T04): 면 = 그대로 닫힘.
     expect(stops[0]?.platform.id).toBe('p1');
     expect(stops[0]?.platform.ringXZ).toHaveLength(10);
+    // 우선 승강장(하라주쿠 섬식 — ADR-0082): 더 멀어도 우선 목록에 있으면 그것.
+    const island: OsmRecord = { ...platform, id: 'p2', rings: [[2.6, -250, 9, -250, 9, -470, 2.6, -470, 2.6, -250]] };
+    const all = [platform, island, station];
+    expect(trackStops(smp.xyz, 0.5, all, st, ['harajuku'])[0]?.platform.id).toBe('p1');
+    const pref = trackStops(smp.xyz, 0.5, all, st, ['harajuku'], new Map([['harajuku', ['p2']]]));
+    expect(pref[0]?.platform.id).toBe('p2');
+    expect(pref[0]?.side).toBe('R');
   });
 
   it('thickens a line platform away from the track', () => {

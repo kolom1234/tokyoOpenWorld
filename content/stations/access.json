@@ -1,15 +1,127 @@
 {
-  "$comment": "M07-T06 역 접근(ADR-0081): 출구별 개찰구 줄(gate — 거리 쪽 WF 중심, yawDeg = 들어가는 방향(0 = 북 −Z, 90 = 서 −X), aisles = 통로 수)과 개찰구 안 계단 입구(stairs) ↔ 승강장 계단 발치(platform). 계단 실기하는 아직 없어 F로 페이드 이동(⚠️ 후속). 위치는 실제 GPU 높이 격자로 확인한 값(가상 배치 — 실제 개찰구 위치·개수와 다를 수 있음).",
+  "$comment": "M07-T06 역 접근(ADR-0081·0082): 출구별 개찰구 줄(gate — 거리 쪽 WF 중심, yawDeg = 들어가는 방향(0 = 북 −Z, 90 = 서 −X), aisles = 통로 수)과 개찰구 안 계단 입구(stairs) ↔ 승강장 계단 표식(platform). 계단 실기하는 아직 없어 F로 페이드 이동(⚠️ 후속). 승강장 도착 = platform 표식 + yaw 방향 2.2 m — 그 점이 탑승 정차 승강장 고리 안·가장자리 ≥ 1.2 m여야 한다(pipeline validate stations). 위치는 실제 GPU 물리 레이로 확인한 거리 바닥·승강장 중심선(가상 배치 — 실제 개찰구 위치·개수와 다를 수 있음).",
   "stations": [
     {
       "id": "harajuku",
+      "name": {
+        "ja": "原宿",
+        "en": "Harajuku",
+        "ko": "하라주쿠"
+      },
       "exits": [
         {
           "id": "takeshita",
-          "name": { "ja": "竹下口", "en": "Takeshita Exit", "ko": "다케시타 출구" },
-          "gate": { "posWF": [186, 32.6, -1200], "yawDeg": 90, "aisles": 4 },
-          "stairs": { "posWF": [175.5, 32.6, -1200], "yawDeg": 90 },
-          "platform": { "posWF": [150.5, 30.5, -1203], "yawDeg": 180 }
+          "name": {
+            "ja": "竹下口",
+            "en": "Takeshita Exit",
+            "ko": "다케시타 출구"
+          },
+          "gate": {
+            "posWF": [186, 32.6, -1200],
+            "yawDeg": 90,
+            "aisles": 4
+          },
+          "stairs": {
+            "posWF": [175.5, 32.6, -1200],
+            "yawDeg": 90
+          },
+          "platform": {
+            "posWF": [152.6, 30.44, -1203],
+            "yawDeg": 351.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "yoyogi",
+      "name": {
+        "ja": "代々木",
+        "en": "Yoyogi",
+        "ko": "요요기"
+      },
+      "exits": [
+        {
+          "id": "west",
+          "name": {
+            "ja": "西口",
+            "en": "West Exit",
+            "ko": "서쪽 출구"
+          },
+          "gate": {
+            "posWF": [77, 36.05, -2694],
+            "yawDeg": 0,
+            "aisles": 4
+          },
+          "stairs": {
+            "posWF": [77, 36.05, -2703],
+            "yawDeg": 0
+          },
+          "platform": {
+            "posWF": [123.5, 40.2, -2622],
+            "yawDeg": 348.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "shinjuku",
+      "name": {
+        "ja": "新宿",
+        "en": "Shinjuku",
+        "ko": "신주쿠"
+      },
+      "exits": [
+        {
+          "id": "west",
+          "name": {
+            "ja": "西口",
+            "en": "West Exit",
+            "ko": "서쪽 출구"
+          },
+          "gate": {
+            "posWF": [-116, 37.48, -3406],
+            "yawDeg": 270,
+            "aisles": 4
+          },
+          "stairs": {
+            "posWF": [-108, 37.48, -3406],
+            "yawDeg": 270
+          },
+          "platform": {
+            "posWF": [-72.2, 39.08, -3410],
+            "yawDeg": 353.5
+          }
+        }
+      ]
+    },
+    {
+      "id": "shibuya",
+      "name": {
+        "ja": "渋谷",
+        "en": "Shibuya",
+        "ko": "시부야"
+      },
+      "exits": [
+        {
+          "id": "hachiko",
+          "name": {
+            "ja": "ハチ公口",
+            "en": "Hachiko Exit",
+            "ko": "하치코 출구"
+          },
+          "gate": {
+            "posWF": [30, 14.88, 62],
+            "yawDeg": 180,
+            "aisles": 4
+          },
+          "stairs": {
+            "posWF": [30, 14.88, 69],
+            "yawDeg": 180
+          },
+          "platform": {
+            "posWF": [47.8, 16.48, 80],
+            "yawDeg": 193.4
+          }
         }
       ]
     }

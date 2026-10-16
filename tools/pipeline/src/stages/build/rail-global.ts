@@ -41,6 +41,7 @@ interface StationDef {
   name: { ja: string; en: string };
   osmNames: string[];
   mvpEdge?: boolean;
+  preferPlatforms?: string[];
 }
 export interface RailCatalog {
   lines: LineDef[];
@@ -156,6 +157,8 @@ export interface RailBuildInput {
 interface TrackCtx {
   recs: readonly OsmRecord[];
   stations: ReturnType<typeof stationPoints>;
+  /** 역 id → 우선 승강장(content rail-lines.json stations[].preferPlatforms). */
+  prefer: Map<string, string[]>;
   n02: Map<string, V2[][]>;
   groundAt: (x: number, z: number) => number | undefined;
 }
@@ -164,7 +167,7 @@ interface TrackCtx {
 function deriveTrack(c: TrackCtx, l: LineDef, t: RawTrack, id: string) {
   const smp = trackSamples(t.pts, t.flags, c.groundAt);
   const lim = speedLimits(smp.xyz, RAIL_STEP_M, l.maxSpeedKmh / 3.6);
-  const stops = trackStops(smp.xyz, RAIL_STEP_M, c.recs, c.stations, l.stations);
+  const stops = trackStops(smp.xyz, RAIL_STEP_M, c.recs, c.stations, l.stations, c.prefer);
   const f = Array.from(smp.flags);
   for (const s of stops) {
     const a = Math.max(0, Math.floor((s.s - s.platformLengthM / 2) / RAIL_STEP_M));
@@ -246,6 +249,9 @@ export async function buildRailGlobal(i: RailBuildInput): Promise<{ network: Rai
   const ctx: TrackCtx = {
     recs,
     stations: stationPoints(recs, cat.stations),
+    prefer: new Map(
+      cat.stations.flatMap((d) => (d.preferPlatforms ? [[d.id, d.preferPlatforms] as [string, string[]]] : [])),
+    ),
     n02: readN02(join(i.repoRoot, 'data/raw/ksj-n02')),
     groundAt: await groundSampler(
       i.normalizedDir,

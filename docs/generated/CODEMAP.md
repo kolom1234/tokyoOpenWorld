@@ -3,9 +3,10 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 490개.
+> 파일 501개.
 
 ## apps/game
+- `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
 - `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
 - `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
@@ -18,11 +19,18 @@
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
 - `apps/game/src/debug/sun-override.ts` — `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다. | exports: parseSunFlag, dirFromAzEl, overrideEnvironment, createSunOverride
 - `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
+- `apps/game/src/help-hud.ts` — 조작 도움말 + 카메라 아래 내리기 알림(임시 DOM HUD — M08 @sanpo/ui가 대체, ADR-0083). 왼쪽 아래 모드별 키 목록(H로 접기·펴기, 접으면 "H 도움말"), | exports: HELP_LINES, LANDING_TEXT, helpHudSystem
+- `apps/game/src/landing.ts` — freecam G 카메라 아래 내리기(ADR-0083): 카메라 바로 아래(+ 2·4·7 m 링 × 8방위) 후보마다 물리 레이로 판정 → 가장 가까운 안전한 자리(발 WF) 또는 가운데 후보의 이유. | exports: LandingQueries, landingOffsets, evaluateSpot, findLanding, roadIndex, onLane
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
-- `apps/game/src/start-view.ts` — 시작 시점: 기본 = walk(09 §1 — world.json 스폰에서 걷기 시작, M05 결정 1). 로딩 중·`?mode=freecam`·골든뷰 = freecam | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose, startWalkParams
+- `apps/game/src/spawn-presets.ts` — URL 스폰 프리셋(ADR-0084 — M10 지도 전 임시): `?spawn=<id>` → content/spawn-presets.json의 위치·방위로 월드 스폰을 바꾼다 | exports: SpawnPreset, SPAWN_PRESETS, spawnPreset, withSpawn
+- `apps/game/src/start-view.ts` — 시작 시점: 기본 = walk(09 §1 — world.json 스폰에서 걷기 시작, M05 결정 1). 로딩 중·`?mode=freecam`·골든뷰 = freecam | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose, startWalkParams, presetFreecamPose
+- `apps/game/src/station/guide.ts` — 역 근접 안내(M07-T06 후속 — 임시 HUD, M08 지도·HUD가 대체): 걷는 중 가까운 출구를 찾아 화면 위 안내 글(방향 화살표 = 시선 기준, 거리 m). | exports: arrowTo, guideText
+- `apps/game/src/station/hud.ts` — 역·탐방 임시 HUD(M07-T06·후속 — M08 @sanpo/ui가 대체): 상호작용 안내 줄(F …), 화면 페이드, 몇 초 뜨는 알림(구조·내리기 실패 이유 등). | exports: prompt, fade, FADE_MS, notice, guide
 - `apps/game/src/station/layout.ts` — 역 개찰구·계단 표식 배치(M07-T06 — ADR-0081): content/stations/access.json 출구 → 렌더 상자(캐비닛·윗판·울타리·표식)·플랩·물리 상자·통과 판정 선. | exports: ExitSpec, StationSpec, AccessFile, FIXTURE_COLOR, StationLayout, rad, forwardOf, rightOf, stationLayout, crossedAisle
-- `apps/game/src/station/wiring.ts` — 역 배선(M07-T06 — ADR-0081): content/stations/access.json → 렌더 개찰구·표식 + 물리 캐비닛·울타리, 걷기로 통로를 지나면 카드 접촉·날개 열림/닫힘 합성음과 플랩 애니메이션, | exports: STAIRS_REACH_M, StationDeps, flapOpen, passageAt, stationSystem
+- `apps/game/src/station/platform-geo.ts` — 승강장 윗면 질의(M07-T06 후속 — ADR-0082): sim 승강장 메시(railStatic().platforms 윗면 삼각형) → 8 m 격자 버킷. | exports: PlatformMesh, PlatformTops, platformTops, clearTopAt, ARRIVAL_CLEARANCE_M, safeArrival, TrackPits, trackPitsBuilder, trackPits
+- `apps/game/src/station/stairs.ts` — 역 계단 F 이동 + 선로 구덩이 구조(M07-T06 후속 — ADR-0082). | exports: STAIRS_REACH_M, ARRIVAL_STEP_M, StairsDeps, Passage, passageAt, passageTarget, StairsRuntime
+- `apps/game/src/station/wiring.ts` — 역 배선(M07-T06 — ADR-0081): content/stations/access.json → 렌더 개찰구·표식 + 물리 캐비닛·울타리, 걷기로 통로를 지나면 카드 접촉·날개 열림/닫힘 합성음과 플랩 애니메이션, | exports: StationDeps, flapOpen, stationSystem
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
 - `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainLcdSystem
@@ -35,9 +43,10 @@
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
 - `apps/game/src/wiring/streaming-sim.ts` — 배선: streaming live L0 셀(버스 `cell/ready`) → sim 반경(448 m — 군중 tier B 250 m + 차량 스폰 400 m) 안이면 nav.bin·lanes.bin을 따로 요청(requestSections)해 | exports: SIM_WIRING_PHASE, SIM_NAV_RADIUS_M, StreamingSimDeps, StreamingSimWiring, createStreamingSimWiring
 - `apps/game/src/world-audio.ts` — 오디오 배선(M09-T04 — ADR-0079): @sanpo/audio 생성 + 첫 제스처 unlock + 셀 audio.json + 프레임 입력(리스너·환경·발소리·신호·열차·가려짐) + 볼륨 키. | exports: AudioFlags, nightOfSun, crowdOfHour, nearestOnTrain, AudioWiringDeps, startAudio, audioForWorld
-- `apps/game/src/world-extras.ts` — 월드 표시 직후 붙는 부가 배선(world-view.ts 400줄 제한으로 분리): 오디오(M09-T04) + 역 시설·동선(M07-T06). | exports: startWorldExtras
+- `apps/game/src/world-extras.ts` — 월드 표시 직후 붙는 부가 배선(world-view.ts 400줄 제한으로 분리): 오디오(M09-T04) + 역 시설·동선(M07-T06) + freecam G 카메라 아래 내리기(ADR-0083). | exports: startWorldExtras
 - `apps/game/src/world-late.ts` — 첫 표시 뒤 적재(world-view에서 분리 — 400줄 한도): 머티리얼·아바타·나무·간판·군중(sim.worker + 군중 팩)·신호 램프. 실패하면 그 요소 없이 계속. | exports: LateState, loadMaterialsLater, AVATAR_URLS, loadAvatarLater, TREE_URLS, SIGNAGE_URLS, CROWD_URLS, CrowdMode, startCrowdLater, crowdFarDensitySystem, signalLampsOf, loadSignageLater, loadTreesLater
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
+- `apps/game/src/world-parts.ts` — world-view.ts 보조(400줄 제한으로 분리): sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스, 스폰 셀 미리 컴파일(ADR-0085). | exports: SimForDeps, simFor, initialLate, startPrecompile, frameSourceOf, warmStaged
 - `apps/game/src/world-rail.ts` — 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 → | exports: RailData, loadRail, startTrainsLater, sendRailStatics, trainPhysicsSystem
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
 - `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
@@ -133,7 +142,7 @@
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, StationFixtures, RenderDebugLayer, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, StationFixtures, StationSign, RenderDebugLayer, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, NIGHT_LIGHT_POOL, NIGHT_LIGHTS_ACTIVE, createRenderContext
@@ -201,6 +210,7 @@
 - `packages/render/src/internal/signs/material.ts` — 간판 머티리얼(M05-T06, 07 §4 M_SIGN): 인스턴스 `_ipos`(렌더 좌표·yaw)·`_isig`(브랜드, 배율 xyz) → 셰이더 배치(법선 회전), | exports: createSignMaterial
 - `packages/render/src/internal/signs/models.ts` — 가상 간판 단위 모델(M05-T06): 돌출 상자(袖看板, 세로 타일 양면)·입간판(A형, 세로 타일 앞뒤)·옥상 광고탑(가로 타일 앞면 + 다리). | exports: PROJECTING, BILLBOARD, projectingSign, standingSign, rooftopSign
 - `packages/render/src/internal/stations/fixtures.ts` — 역 시설(M07-T06 — ADR-0081): 개찰구 캐비닛·윗판·울타리·계단 표식(인스턴스 상자, 팔레트 색) + 개찰구 플랩(열림 0..1 — 캐비닛 쪽으로 접힘). | exports: StationFixtureLayer, createStationFixtures
+- `packages/render/src/internal/stations/signs.ts` — 역 안내판(M07-T06 후속): StationSign[] → 글자 아틀라스 1장(OffscreenCanvas, 판당 1024×256) + 앞뒤 사각형 묶음 메시 1개(머티리얼 1개 — 선컴파일 부담 없음). | exports: buildSignMesh
 - `packages/render/src/internal/trains/body.ts` — 열차 차체(M07-T03, ADR-0072): LOD0 = 창이 뚫린 벽(얇은 상자 — 안팎 모두 보임)·미닫이 문짝(`_vpart.y` 방향·`.z` 쪽)·끝벽·운전실 칸막이 + 차내 | exports: wallSpans, carBody
 - `packages/render/src/internal/trains/field.ts` — 열차 필드(M07-T03, ADR-0072): sim 열차 칸 버퍼(메인 스레드 — 프레임마다 정확한 값, stride 8: x,y,z·yaw·pitch·속력·노선색·코드) → | exports: TRAIN_POOL_CAPACITY, TrainFieldStats, TrainField, decodeCarCode, createTrainField
 - `packages/render/src/internal/trains/material.ts` — 열차 머티리얼(07 §4 M_VEHICLE 계열, M07-T03 — ADR-0072): 스테인리스(금속)·어두운 유리·노선색 띠(인스턴스 24비트 색)·고정 부품(정점색), | exports: DOOR_SLIDE_M, createTrainMaterial
@@ -315,7 +325,7 @@
 - `packages/tile-format/src/internal/xxh64.ts` — XXH64(seed 0) — 섹션 해시·cells.idx hash32. BigInt 없이 u32 hi/lo 쌍 연산(파이프라인 처리량). see docs/05-tile-format.md §3, §5 | exports: xxh64Hex, xxh64Low32
 
 ## packages/traversal
-- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, TrainView, TrainParams, TrainHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
+- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, LandingFailReason, LandingResult, LandingHud, TrainView, TrainParams, TrainHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
 - `packages/traversal/src/index.ts` — @sanpo/traversal 공개 엔트리(L3): 이동 모드 상태기계·카메라 리그. api.ts 재수출 + create* 팩토리만. see docs/modules/traversal.md | exports: * from './api.ts', forwardOf, lookAtAngles, createTraversal, DEFAULT_TRAVERSAL_SETTINGS
 - `packages/traversal/src/internal/camera/attached-rig.ts` — AttachedRig(09 §3, M07-T05): 부모(열차 칸) 로컬 오프셋 + 부모 기준 시선(yaw·pitch) + 미세 진동(속력 비례 — 레일 이음매 상하·좌우 흔들림). | exports: ParentPose, localToWorld, worldToLocal, vibration, attachedCamera
 - `packages/traversal/src/internal/camera/boom.ts` — 3인칭 카메라 붐 충돌(09 §3 ThirdPersonRig, M04-T05, ADR-0045): 피벗 → 카메라 방향 sphereCast(반경 0.2 m, 워커 — 비동기 ≈ 1프레임). | exports: CAMERA_RADIUS_M, MAX_STEP_RAD, BoomState, createBoomState, resetBoom, stepToward, requestBoom, boomLength
@@ -326,7 +336,7 @@
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
 - `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → (physics 있으면) 지오메트리 진입 방지(free-guard.ts) → CameraState. | exports: FreecamMode, createFreecamMode
-- `packages/traversal/src/internal/modes/train.ts` — train 모드(09 §2 train, M07-T05): 탑승 중 카메라(AttachedRig) — 서기(문 옆)·좌석·전면 전망(선두 운전실), V 순환, 마우스 시선(칸 기준). | exports: isTrainParams, viewOffset, insideCar, boardingTarget, alightSpot, createTrainMode
+- `packages/traversal/src/internal/modes/train.ts` — train 모드(09 §2 train, M07-T05): 탑승 중 카메라(AttachedRig) — 서기(문 옆)·좌석·전면 전망(선두 운전실), V 순환, 마우스 시선(칸 기준). | exports: isTrainParams, viewOffset, insideCar, DOOR_REACH_M, nearDoor, boardingTarget, alightSpot, createTrainMode
 - `packages/traversal/src/internal/modes/walk.ts` — walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도 | exports: isWalkParams, moveVelocity, WalkMode, createWalkMode
 - `packages/traversal/src/internal/service.ts` — createTraversal: FSM + 기본 모드(freecam·walk) 등록 + phase 20 시스템(C키 freecam 토글 → 활성 모드 update → 카메라·관심점·HUD·플레이어). see docs/modules/traversal.md | exports: TRAVERSAL_PHASE, createTraversal
 - `packages/traversal/src/internal/settings.ts` — traversal 기본 설정(09 §2 freecam, §3 리그). 오버라이드는 createTraversal 옵션 → mergeConfig. see docs/09-traversal.md | exports: DEFAULT_TRAVERSAL_SETTINGS
@@ -524,5 +534,6 @@
 - `tools/pipeline/src/stages/validate-props.ts` — 소품 차도 검사(M07 사전 ⓪): L0 셀 props.inst의 지상 소품이 PLATEAU 차도 폴리곤(carriageway·crosswalk·other — 보행면 우선, 건물 발자국 제외) 위면 오류. | exports: CURB_POLES, PropRoadSample, PropRoadReport, checkPropsOnRoad
 - `tools/pipeline/src/stages/validate-roads.ts` — M05-T01 수락 검사: 무작위 교차로 50곳(PLATEAU 車道交差部 TrafficArea:1020 중심을 25 m 격자로 묶은 대표점, 시드 결정론) 반경 30 m 안에서 | exports: GAP_LIMIT_M, RoadGapReport, verticalEdges, pickIntersections, checkRoadGaps
 - `tools/pipeline/src/stages/validate-seams.ts` — validate: 이웃 셀 지형 경계 완전 일치 검사(terrain.height u16 행·열, terrain.mesh 경계 정점). see docs/04-data-pipeline.md §4.6, §6 | exports: CellTerrain, SeamReport, edgeVertices, checkSeams
+- `tools/pipeline/src/stages/validate-stations.ts` — validate: 역 동선(M07-T06 후속 — ADR-0082). rail.bin이 있으면 content/stations/access.json을 빌드 승강장과 대조: | exports: ARRIVAL_CLEARANCE_M, ARRIVAL_STEP_M, AccessLike, StationExitCheck, ringClearance, checkStationAccess, checkStations
 - `tools/pipeline/src/stages/validate-timetables.ts` — validate: 시간표(M07-T02) — rail.bin이 있으면 global/timetables/index.json·노선 파일 스키마, 같은 선로 간격 ≥ 90 s, 운행일(04:00–28:00) 안. | exports: TimetablesSummary, checkTimetables
 - `tools/pipeline/src/stages/validate.ts` — validate 단계: 스키마(world.json·셀 헤더·meta.json, ajv) + cells.idx 일치 + 섹션 해시 + 예산 + 경계 이음새 → report. see docs/04-data-pipeline.md §4.6 | exports: BUDGET, CellReport, ValidateReport, createValidators, validateBuild, reportMarkdown, writeReport

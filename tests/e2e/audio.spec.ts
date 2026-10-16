@@ -2,7 +2,9 @@
 // 넘어가며, world-mini 셀 audio.json 존이 리스너 위치 가중으로 잡히고, 볼륨 키가 믹스를 바꾸고, 콘솔 오류가 없다. 소리 자체는 검사하지 않는다(헤드리스 무음).
 // 대기는 시간 창이 아니라 상태(audio.state·stats)로.
 import { expect, test } from '@playwright/test';
-import { STATE_TIMEOUT_MS, waitSettled } from './game.ts';
+import { STATE_TIMEOUT_MS, STATE_VIEW, waitSettled } from './game.ts';
+
+test.use({ viewport: STATE_VIEW });
 
 type Handle = {
   __SANPO_DEBUG__: {

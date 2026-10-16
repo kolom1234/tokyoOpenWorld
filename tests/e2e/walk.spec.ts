@@ -2,7 +2,9 @@
 // 실제 입력 경로(키보드 이벤트 → input → traversal → physics 워커). SwiftShader는 프레임이 느려 이동 거리 대신 물리 속도로 판정.
 // 대기는 시간 창이 아니라 상태: 키 탭 = 2프레임 처리 뒤 바로 확인, 속도 = 연속 프레임 표본, 착지·붐 = 조건 poll(game.ts).
 import { expect, type Page, test } from '@playwright/test';
-import { press, STATE_TIMEOUT_MS, waitSettled } from './game.ts';
+import { press, STATE_TIMEOUT_MS, STATE_VIEW, waitSettled } from './game.ts';
+
+test.use({ viewport: STATE_VIEW });
 
 type Dbg = {
   world: {

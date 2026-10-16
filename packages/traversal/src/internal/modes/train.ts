@@ -64,7 +64,19 @@ export function insideCar(pose: TrainCarPose, feet: Readonly<Vec3d>): boolean {
   );
 }
 
-/** 근처 열차 중 발이 칸 안인 트립·칸(없으면 undefined). */
+/** 문 앞 탑승 반경(m — 승강장에서 문 바깥면까지 수평). */
+export const DOOR_REACH_M = 1.3;
+
+/** 발이 이 칸 어느 문(양옆) 바깥 DOOR_REACH_M 안·바닥 높이 ±0.8 m인가(문이 열린 정차 열차 — 승강장에서 F, ADR-0084). */
+export function nearDoor(pose: TrainCarPose, feet: Readonly<Vec3d>): boolean {
+  const t = carType(pose);
+  const l = worldToLocal({ posWF: pose.posWF, yawRad: pose.yawRad, pitchRad: pose.pitchRad }, feet);
+  if (Math.abs(l.y - t.floorM) > 0.8) return false;
+  const side = Math.abs(l.x) - t.widthM / 2;
+  return side > -0.3 && side < DOOR_REACH_M && t.doorsZ.some((z) => Math.abs(l.z - z) < 0.9);
+}
+
+/** 근처 열차 중 발이 칸 안이거나 문이 열린 칸의 문 앞인 트립·칸(없으면 undefined). */
 export function boardingTarget(
   ctx: TraversalContext,
   feet: Readonly<Vec3d>,
@@ -72,7 +84,7 @@ export function boardingTarget(
   for (const t of ctx.trains?.() ?? [])
     for (let k = 0; k < t.cars; k++) {
       const pose = ctx.trainCar?.(t.tripId, k);
-      if (pose && insideCar(pose, feet)) return { tripId: t.tripId, car: k };
+      if (pose && (insideCar(pose, feet) || (t.doorsOpen && nearDoor(pose, feet)))) return { tripId: t.tripId, car: k };
     }
   return undefined;
 }

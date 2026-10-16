@@ -214,6 +214,8 @@ function arriveAt(rt: Rt, physics: PhysicsService, p: WalkParams): void {
   const body = st.handle !== undefined ? physics.pose(st.handle) : undefined;
   if (body && horiz(body.posWF, p.posWF) <= rt.w.returnToBodyM) return;
   Object.assign(st.arrive, p.posWF);
+  // 착지 탐색 중 플레이어(물리 셀 반경·스트리밍 관심점) = 도착 기준점 — 옛 바디·원점에 두면 그곳 셀만 적재돼 착지 레이가 영영 빗나간다(스폰 프리셋, ADR-0084).
+  Object.assign(st.feet, p.posWF);
   const pitch = Math.max(-ARRIVE_PITCH_LIMIT, Math.min(ARRIVE_PITCH_LIMIT, p.pitchRad ?? 0));
   Object.assign(rt.look, createLookState(p.yawRad, pitch));
   holdCamera(rt);

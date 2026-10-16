@@ -6,6 +6,7 @@ import {
   type DeepPartial,
   type EventBus,
   type FrameSource,
+  type GameSystem,
   type GroundQuery,
   type Logger,
   type Scheduler,
@@ -15,28 +16,18 @@ import {
 import { createInput, type InputService } from '@sanpo/input';
 import { createPhysics, type PhysicsService } from '@sanpo/physics';
 import { createRender, type RenderConfig, type RenderService } from '@sanpo/render';
-import {
-  type ClockMode,
-  createSim,
-  type HolidaysFile,
-  type SeasonTableFile,
-  type SignalPlansFile,
-  type SimService,
-  type WeatherClimateFile,
-} from '@sanpo/sim';
+import type { ClockMode, SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
-import HOLIDAYS from '../../../content/sim/holidays-jp.json';
-import SEASON from '../../../content/sim/season.json';
-import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
-import WEATHER_CLIMATE from '../../../content/sim/weather-climate.json';
-import { bootProgressText, precompileText } from './boot-progress.ts';
+import { bootProgressText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
-import { startFreecamPose, startWalkParams } from './start-view.ts';
+import { helpHudSystem } from './help-hud.ts';
+import type { SpawnPreset } from './spawn-presets.ts';
+import { presetFreecamPose, startFreecamPose, startWalkParams } from './start-view.ts';
 import { trainLcdSystem } from './train-lcd.ts';
-import { applyWeatherSpec, startLiveWeather, type WeatherSpec } from './weather-mode.ts';
+import type { WeatherSpec } from './weather-mode.ts';
 import { createCameraWiring } from './wiring/camera.ts';
-import { createEnvWiring, defaultClock } from './wiring/env.ts';
+import { createEnvWiring } from './wiring/env.ts';
 import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
 import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
@@ -55,6 +46,7 @@ import {
   startCrowdLater,
 } from './world-late.ts';
 import type { LoadedWorld } from './world-load.ts';
+import { frameSourceOf, initialLate, simFor, startPrecompile, warmStaged } from './world-parts.ts';
 import { startTrainsLater, trainPhysicsSystem } from './world-rail.ts';
 
 /** 부팅 대기 영역: 스폰 수평 384 m 안 L0 — 스폰 셀 안 어디서든 3×3 모서리 셀(≤ 362 m)까지 포함(06 §8 스폰 3×3). 상위 레벨은 우선순위상 먼저 온다. */
@@ -124,6 +116,10 @@ export interface WorldViewDeps {
   traffic?: boolean;
   /** false = 열차 없음(`?trains=0`, M07-T03). */
   trains?: boolean;
+  /** `?debug=1` — 디버그 핸들(역 질의 `__SANPO_STATIONS__`). */
+  debug?: boolean;
+  /** `?spawn=<id>` 프리셋(boot가 월드 스폰을 바꿔 넘긴다 — surface 'platform'이면 world-extras가 승강장 윗면으로). */
+  spawn?: SpawnPreset;
 }
 
 /** streaming(디코드 워커) + streaming→render 배선을 만들어 스케줄러에 붙인다(init은 직접 — 스케줄러 init은 이미 지남). */
@@ -179,6 +175,12 @@ async function startStreaming(
   return s;
 }
 
+/** freecam 시작 시점: 골든뷰 > 스폰 프리셋 위 > 기본(스크램블 북서 상공). */
+function startPoseOf(deps: WorldViewDeps): (g: GroundQuery) => FreecamParams {
+  const sp = deps.spawn;
+  return deps.start?.pose ?? (sp ? (g: GroundQuery) => presetFreecamPose(sp, g) : startFreecamPose);
+}
+
 /** traversal: 로딩 중 = freecam(시작 시점). physics는 월드 로드 뒤 생긴다 → getter(전환 요청 때마다 요구조건을 본다 — walk는 그때부터). */
 function createTraversalFor(
   deps: WorldViewDeps,
@@ -187,7 +189,7 @@ function createTraversalFor(
   late: LateState,
   sim: SimService,
 ): TraversalService {
-  const startPose = deps.start?.pose ?? startFreecamPose;
+  const startPose = startPoseOf(deps);
   const fov = deps.start?.fovDeg;
   const player = { posWF: { x: 0, y: 0, z: 0 } };
   const t = createTraversal(
@@ -204,6 +206,8 @@ function createTraversalFor(
       trainCar: (id, k) => sim.trainCar(id, k),
       trainRide: (id) => sim.trainRide(id),
       jumpClock: (ms) => sim.clock.jumpTo(ms),
+      // freecam G(ADR-0083): 월드 표시 뒤 world-extras가 채운다.
+      landing: (p) => late.landing?.(p) ?? Promise.resolve({ ok: false, reason: 'not-ready' }),
     },
     { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
   );
@@ -211,44 +215,14 @@ function createTraversalFor(
   return t;
 }
 
-/**
- * 첫 표시: 선컴파일 ∥ (streaming 시작 → 스폰 영역 다운로드·디코드·적용(대기 그룹) → 셀 compileStaged) → 붙이기 → 시작 모드 → 머티리얼·아바타(비동기).
- * 선컴파일(≈ 5 s)과 셀 준비·컴파일을 겹친다(M06 사전 4). 반환 = 스폰 영역 live L0 셀 수.
- * 지면 높이를 알게 된 뒤 시작 포즈를 다시 잡는다(freecam "지면 위 60 m" 또는 스폰에서 걷기 — 착지점은 walk가 콜라이더로 찾는다).
- */
-async function showWorldWith(
+/** 첫 표시 뒤 적재(머티리얼·아바타·나무·간판·군중·신호 램프·열차 + 열차 물리). */
+function startLateLayers(
   deps: WorldViewDeps,
-  v: {
-    render: RenderService;
-    traversal: TraversalService;
-    ground: GroundQuery;
-    late: LateState;
-    /** createWorldView에서 렌더 생성 직후 시작한 선컴파일(world.json 조회와 겹침 — M06 사전 4). */
-    precompiled: Promise<void>;
-    sim: SimService;
-    input: InputService;
-  },
+  v: { render: RenderService; sim: SimService; ground: GroundQuery; late: LateState },
   world: LoadedWorld,
-): Promise<number> {
-  const { render, traversal, ground, late } = v;
-  const wlog = deps.log.child('world');
-  // 스폰 셀은 대기 그룹에(그리지 않음) → 선컴파일과 겹쳐 셀 파이프라인을 만든 뒤 붙인다(첫 렌더 동기 컴파일 1.4 s 제거).
-  render.stageCells(true);
-  const pre = v.precompiled;
-  const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
-  // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
-  if (late.wiring) late.audio = startWorldExtras(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, late);
-  late.boot.spawn = world.spawnCells;
-  const centerWF = deps.start?.centerWF ?? world.spawnWF;
-  // exclusive: 첫 표시 전엔 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일·대기 준비로 첫 표시가 늦어도 선적재가 쌓이지 않게).
-  await s.whenReady({ centerWF, radius: SPAWN_READY_RADIUS_M, levels: [0], exclusive: true, holdExclusiveUntil: pre });
-  late.boot.precompile = '셀 셰이더…';
-  await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
-  render.commitStaged();
-  late.boot.done = true;
-  if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
-    traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
-  else traversal.request('freecam', (deps.start?.pose ?? startFreecamPose)(ground));
+  wlog: Logger,
+): void {
+  const { render, late } = v;
   loadMaterialsLater(render, world.materialsUrl, late, wlog);
   loadAvatarLater(render, late, wlog);
   if (deps.trees === false) late.treesSettled = true;
@@ -280,59 +254,83 @@ async function showWorldWith(
     const rail = trainPhysicsSystem(v.sim, () => late.physics);
     deps.scheduler.add({ systems: () => [rail] });
   }
+}
+
+/**
+ * 첫 표시: 선컴파일 ∥ (streaming 시작 → 스폰 영역 다운로드·디코드·적용(대기 그룹) → 셀 compileStaged) → 붙이기 → 시작 모드 → 머티리얼·아바타(비동기).
+ * 선컴파일(≈ 5 s)과 셀 준비·컴파일을 겹친다(M06 사전 4). 반환 = 스폰 영역 live L0 셀 수.
+ * 지면 높이를 알게 된 뒤 시작 포즈를 다시 잡는다(freecam "지면 위 60 m" 또는 스폰에서 걷기 — 착지점은 walk가 콜라이더로 찾는다).
+ */
+async function showWorldWith(
+  deps: WorldViewDeps,
+  v: {
+    render: RenderService;
+    traversal: TraversalService;
+    ground: GroundQuery;
+    late: LateState;
+    /** createWorldView에서 렌더 생성 직후 시작한 선컴파일(world.json 조회와 겹침 — M06 사전 4). */
+    precompiled: Promise<void>;
+    sim: SimService;
+    input: InputService;
+  },
+  world: LoadedWorld,
+): Promise<number> {
+  const { render, traversal, ground, late } = v;
+  const wlog = deps.log.child('world');
+  // 스폰 셀은 대기 그룹에(그리지 않음) → 선컴파일과 겹쳐 셀 파이프라인을 만든 뒤 붙인다(첫 렌더 동기 컴파일 1.4 s 제거).
+  render.stageCells(true);
+  const pre = v.precompiled;
+  const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
+  // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
+  if (late.wiring) late.audio = startWorldExtras(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, late);
+  late.boot.spawn = world.spawnCells;
+  const centerWF = deps.start?.centerWF ?? world.spawnWF;
+  // exclusive: 첫 표시(commitStaged)까지 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일 끝 기준이면 선컴파일이 짧아진 뒤(ADR-0085)
+  // 첫 표시 전 남은 몇 초에 이웃·HLOD 선적재가 쌓여 첫 로드가 26 → 75–94 MB였다).
+  let markShown: () => void = () => {};
+  const shown = new Promise<void>((r) => {
+    markShown = r;
+  });
+  // 스폰 셀이 오는 동안 대기 그룹을 미리 컴파일(0.5 s마다 — 이미 만든 파이프라인은 캐시): 다운로드·디코드와 셀 셰이더 컴파일을 겹친다(ADR-0085).
+  const warm = { on: true, stop: () => {} };
+  const warming = warmStaged(render, warm);
+  await s.whenReady({
+    centerWF,
+    radius: SPAWN_READY_RADIUS_M,
+    levels: [0],
+    exclusive: true,
+    holdExclusiveUntil: shown,
+  });
+  warm.on = false;
+  warm.stop();
+  await warming;
+  late.boot.precompile = '셀 셰이더…';
+  await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
+  render.commitStaged();
+  markShown();
+  late.boot.done = true;
+  // 머티리얼 ID별 선컴파일은 첫 표시 뒤(ADR-0085 — 첫 표시 전엔 compileStaged와 다퉈 ≈ 3–4 s 늦었다).
+  void render.precompileLate().catch((e: unknown) => wlog.warn('precompile late', e));
+  if (deps.start === undefined && (deps.startMode ?? 'walk') === 'walk')
+    traversal.request('walk', startWalkParams(world.spawnWF, world.spawnYawRad, ground));
+  else traversal.request('freecam', startPoseOf(deps)(ground));
+  startLateLayers(deps, v, world, wlog);
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
-/** sim(시계 + 신호 계획 content/sim/signal-plans.json — M06-T02 + 날씨 기후표 — M09-T01). */
-function simFor(deps: WorldViewDeps): SimService {
-  const now = deps.now ?? Date.now;
-  const signalPlans = SIGNAL_PLANS as unknown as SignalPlansFile;
-  const weatherClimate = WEATHER_CLIMATE as unknown as WeatherClimateFile;
-  const sim = createSim({
-    bus: deps.bus,
-    log: deps.log,
-    now,
-    initialClock: deps.clock ?? defaultClock(now()),
-    signalPlans,
-    weatherClimate,
-    holidays: HOLIDAYS as HolidaysFile,
-    season: SEASON as SeasonTableFile,
-  });
-  const spec = deps.weatherSpec ?? { mode: 'auto' };
-  applyWeatherSpec(sim, spec, weatherClimate);
-  if (spec.mode === 'live') startLiveWeather(sim, deps.log.child('weather'), deps.onLiveWeather ?? (() => {}));
-  return sim;
-}
-
-function initialLate(): LateState {
-  return {
-    materialsSettled: false,
-    avatarSettled: false,
-    treesSettled: false,
-    signsSettled: false,
-    crowdSettled: false,
-    trainsSettled: false,
-    boot: { precompile: '대기 LUT…', done: false },
-  };
-}
-
-/** 선컴파일은 월드와 무관 → 렌더 생성 직후 시작(world.json·cells.idx 조회와 겹침). 진행은 로딩 패널 준비 행으로. */
-function startPrecompile(render: RenderService, late: LateState, log: Logger): Promise<void> {
-  return render
-    .precompile((p) => {
-      late.boot.precompile = precompileText(p);
-    })
-    .catch((e: unknown) => log.child('world').warn('precompile', e));
-}
-
-/** 스케줄러 프레임 소스: 카메라·플레이어 = traversal, 시각 = sim 시계. */
-function frameSourceOf(traversal: TraversalService, sim: SimService): FrameSource {
-  return {
-    camera: () => traversal.camera,
-    player: () => traversal.player,
-    gameTimeMs: () => sim.clock.gameTimeMs,
-    timeScale: () => sim.clock.timeScale,
-  };
+/** 상시 배선: 카메라·환경·지면 대기 표시·차내 안내·조작 도움말. */
+function wiringSystemsFor(
+  deps: WorldViewDeps,
+  v: { render: RenderService; traversal: TraversalService; sim: SimService; late: LateState },
+): GameSystem[] {
+  const doc = deps.canvas.ownerDocument;
+  return [
+    createCameraWiring(v.traversal, v.render),
+    createEnvWiring(v.sim, v.render, deps.weather),
+    createGroundLoadingIndicator(doc, v.traversal),
+    trainLcdSystem(doc, v.traversal, () => v.late.rail),
+    helpHudSystem(doc, v.traversal),
+  ];
 }
 
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
@@ -345,12 +343,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const sim = simFor(deps);
   const traversal = createTraversalFor(deps, input, ground, late, sim);
   const frameSource = frameSourceOf(traversal, sim);
-  const wiringSystems = [
-    createCameraWiring(traversal, render),
-    createEnvWiring(sim, render, deps.weather),
-    createGroundLoadingIndicator(canvas.ownerDocument, traversal),
-    trainLcdSystem(canvas.ownerDocument, traversal, () => late.rail),
-  ];
+  const wiringSystems = wiringSystemsFor(deps, { render, traversal, sim, late });
 
   return {
     render,

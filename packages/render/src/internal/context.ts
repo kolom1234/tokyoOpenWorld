@@ -46,6 +46,8 @@ export interface RenderContext {
   readonly renderer: WebGPURenderer;
   readonly backend: RenderBackend;
   readonly depth: DepthMode;
+  /** 소프트웨어 래스터(SwiftShader — CI): 후처리·날씨 합성·늦은 머티리얼 선컴파일 생략. */
+  readonly software: boolean;
   readonly graph: SceneGraph;
   readonly library: MaterialLibrary;
   readonly materials: MaterialRegistry;
@@ -262,8 +264,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const library = createMaterialLibrary(cfg.basisPath);
   const envUniforms = createEnvUniforms();
   const materials = createMaterialRegistry(library, envUniforms, cfg.facade);
-  const hlod = createHlodSwitch();
-  const view = createRenderView(cfg, deps.bus, log);
+  const [hlod, view] = [createHlodSwitch(), createRenderView(cfg, deps.bus, log)];
   renderer.toneMappingExposure = cfg.exposure;
   // 하드웨어(WebGPU·WebGL2) = 후처리(공중원근이 하늘까지) + 환경 프로브 + 그림자, 소프트웨어 WebGL2(SwiftShader — CI) = 직접 렌더 + 하늘 배경(ADR-0028, M03-T09).
   // `debugForcePost` = CI 정지 떨림 e2e(SwiftShader에서 후처리 체인 검증).
@@ -288,6 +289,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     renderer,
     backend,
     depth,
+    software,
     graph,
     library,
     materials,

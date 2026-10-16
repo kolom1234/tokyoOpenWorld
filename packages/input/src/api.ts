@@ -17,7 +17,9 @@ export type ButtonAction =
   | 'handbrake'
   | 'lights'
   /** 열차: 다음 역까지 빨리감기(T, M07-T05). */
-  | 'skip';
+  | 'skip'
+  /** freecam: 카메라 바로 아래 걸을 수 있는 곳에 내려 걷기(G — ADR-0083). */
+  | 'land';
 
 /**
  * 축 액션. 단위는 디바이스 원값 — 감도(픽셀→라디안 등)는 소비자(traversal) 설정.

@@ -13,6 +13,8 @@ const STATION_REACH_M = 450;
 export interface StationDef {
   id: string;
   osmNames: string[];
+  /** 우선 승강장(OSM area id, 예: `a288861390`) — 후보 중 있으면 선로에 더 붙은 다른 승강장보다 먼저(하라주쿠 섬식 = 내·외회 공용, 옛 외회 승강장 제외). */
+  preferPlatforms?: string[];
 }
 
 export interface TrackStop {
@@ -116,13 +118,14 @@ export function stationPoints(recs: readonly OsmRecord[], defs: readonly Station
   return out;
 }
 
-/** 선로 하나의 정차 위치들(s 순). wanted = 이 노선 정차역 id. */
+/** 선로 하나의 정차 위치들(s 순). wanted = 이 노선 정차역 id, prefer = 역 id → 우선 승강장 id(StationDef.preferPlatforms). */
 export function trackStops(
   xyz: Float32Array,
   step: number,
   recs: readonly OsmRecord[],
   stations: ReadonlyMap<string, V2[]>,
   wanted: readonly string[],
+  prefer: ReadonlyMap<string, readonly string[]> = new Map(),
 ): TrackStop[] {
   const proj = projector(xyz, step);
   const cands: (TrackStop & { edge: number })[] = [];
@@ -153,11 +156,13 @@ export function trackStops(
     const platform = { id: pf.id, ringXZ: platformRing(pf.pts, proj) };
     cands.push({ station, s: (s0 + s1) / 2, side, platformLengthM: s1 - s0, centroidS: proj(c).s, edge, platform });
   }
-  // 역마다 선로에 가장 붙은 승강장 하나.
+  // 역마다 선로에 가장 붙은 승강장 하나(우선 승강장이 후보에 있으면 그것 중에서).
   const best = new Map<string, TrackStop & { edge: number }>();
+  const preferred = (c: TrackStop) => prefer.get(c.station)?.includes(c.platform.id) === true;
   for (const c of cands) {
     const b = best.get(c.station);
-    if (!b || c.edge < b.edge) best.set(c.station, c);
+    const better = !b || (preferred(c) !== preferred(b) ? preferred(c) : c.edge < b.edge);
+    if (better) best.set(c.station, c);
   }
   return [...best.values()].map(({ edge: _, ...t }) => t).sort((a, b) => a.s - b.s);
 }

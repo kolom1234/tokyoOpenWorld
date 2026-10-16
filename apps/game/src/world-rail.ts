@@ -111,11 +111,11 @@ function psdBoxes(pieces: Float64Array, which: (k: number) => boolean): Float64A
   return Float64Array.from(out);
 }
 
-/** 승강장 바닥(윗면 삼각형)·홈도어 고정 판 → physics 정적 묶음. */
+/** 승강장 바닥(윗면 + 옆면 — 옆면이 있어야 선로 구덩이에서 승강장 밑으로 걸어 들어가지 못한다, ADR-0082)·홈도어 고정 판 → physics 정적 묶음. */
 export function sendRailStatics(physics: PhysicsService, layout: RailStaticLayout): void {
   const pf = layout.platforms;
   physics.setStaticGroup('rail-platforms', {
-    mesh: { positions: pf.positions, indices: pf.indices.slice(0, pf.topIndexCount), material: JCOL_MATERIAL.tile },
+    mesh: { positions: pf.positions, indices: pf.indices, material: JCOL_MATERIAL.tile },
   });
   physics.setStaticGroup('rail-psd-panels', { boxes: psdBoxes(layout.panels, () => true) });
 }

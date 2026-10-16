@@ -129,7 +129,7 @@ function debugLayerVisible(ctx: RenderContext, layer: RenderDebugLayer, visible:
   ctx.counters.sceneVersion++;
 }
 
-/** 선컴파일(06 §6): 대기 LUT → 머티리얼 묶음(소품 풀 priming 포함) → 아바타, 단계마다 진행 보고·프레임 양보(ADR-0060 보충). */
+/** 첫 표시 전 선컴파일(06 §6): 대기 LUT(+ 장면 컴파일) → 아바타, 단계마다 진행 보고·프레임 양보(ADR-0060 보충). 머티리얼 묶음 = precompileLate(ADR-0085). */
 async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProgress) => void): Promise<void> {
   const { renderer, view, graph, log } = ctx;
   const t0 = performance.now();
@@ -137,16 +137,6 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
   await ctx.atmosphere.prepare(yieldFrame);
   onProgress?.({ stage: 'atmosphere', done: 1, total: 1 });
   await yieldFrame();
-  const t1 = performance.now();
-  // 소품 풀(한 머티리얼 × 인스턴싱): 종류별 LOD0 풀에 1개씩 잠깐 채워 같은 compileAsync로.
-  const restore = ctx.props.primeForCompile();
-  try {
-    await precompileMaterials(renderer, graph.scene, view.camera, ctx.materials, log, (done, total) =>
-      onProgress?.({ stage: 'materials', done, total }),
-    );
-  } finally {
-    restore();
-  }
   const t2 = performance.now();
   // 아바타(3인칭 첫 표시 끊김 방지): 잠깐 보이게 해 파이프라인만 만든다.
   ctx.avatar.group.visible = true;
@@ -156,9 +146,23 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
   ctx.avatar.group.visible = false;
   onProgress?.({ stage: 'avatar', done: 1, total: 1 });
   const ms = (a: number, b: number) => Math.round(b - a);
-  log.info(
-    `precompile atmosphere ${ms(t0, t1)} ms, materials ${ms(t1, t2)} ms, avatar ${ms(t2, performance.now())} ms`,
-  );
+  log.info(`precompile atmosphere ${ms(t0, t2)} ms, avatar ${ms(t2, performance.now())} ms`);
+}
+
+/** 첫 표시 뒤(ADR-0085): 머티리얼 묶음(소품 풀 priming 포함). 소프트웨어 래스터는 생략. */
+async function precompileLate(ctx: RenderContext, onProgress?: (p: PrecompileProgress) => void): Promise<void> {
+  if (ctx.software) return;
+  const t0 = performance.now();
+  // 소품 풀(한 머티리얼 × 인스턴싱): 종류별 LOD0 풀에 1개씩 잠깐 채워 같은 compileAsync로.
+  const restore = ctx.props.primeForCompile();
+  try {
+    await precompileMaterials(ctx.renderer, ctx.graph.scene, ctx.view.camera, ctx.materials, ctx.log, (done, total) =>
+      onProgress?.({ stage: 'materials', done, total }),
+    );
+  } finally {
+    restore();
+  }
+  ctx.log.info(`precompile (late) materials ${Math.round(performance.now() - t0)} ms`);
 }
 
 /** 차량 레이어(M06-T06): 처음 bind 때 머티리얼·풀 → 선컴파일(보이지 않는 인스턴스) → 그리기 시작. */
@@ -193,10 +197,11 @@ async function bindTrains(ctx: RenderContext, buf: SharedInstanceBuffer): Promis
 
 function loaders(
   ctx: RenderContext,
-): Pick<RenderService, 'precompile' | 'loadAvatar' | 'loadTrees' | 'loadSignage' | 'loadCrowd'> {
+): Pick<RenderService, 'precompile' | 'precompileLate' | 'loadAvatar' | 'loadTrees' | 'loadSignage' | 'loadCrowd'> {
   const { renderer, view, graph, log } = ctx;
   return {
     precompile: (onProgress) => precompileAll(ctx, onProgress),
+    precompileLate: (onProgress) => precompileLate(ctx, onProgress),
     async loadAvatar(urls) {
       const model = await loadAvatarModel(urls, ctx.avatar.opacity, ctx.library.ktx2(renderer));
       // 붙이기 전에 파이프라인을 만든다(3인칭 전환 첫 프레임 끊김 방지) — 보이지 않는 그룹으로 컴파일.

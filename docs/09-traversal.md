@@ -45,6 +45,7 @@
 ### freecam (드론/포토)
 - 6DOF 관성 이동, 속도 휠 조절(0.5–60 m/s), 상승/하강(E/Q), 롤 잠금, 고도 상한 1,000 m.
 - 충돌: 기본 soft(sphereCast로 밀어냄), 설정에서 끄기 가능. **구현(M06 사전 3, ADR-0059)** `camera/free-guard.ts`: 마지막 안전 위치 → 이번 위치를 반경 0.3 m 구 캐스트로 쓸어 접촉 5 cm 앞에서 멈춤(장애물 쪽 속도 제거 — 벽 따라 미끄러짐), 진입·순간이동 때 6방향 레이(120 m) 뒷면 ≥ 3이면 닫힌 부피 안 → 가장 가까운 뒷면 너머로 밀어냄. physics 없으면 생략(끄기 설정은 M08).
+- G(ADR-0083): 카메라 아래에 내리기 — 게임 `landing.ts`가 바로 아래(+ 2·4·7 m 링) 걸을 수 있는 안전한 자리(지면·승강장 윗면, 차양·데크 아래로 통과, 선로·차도·건물 안·물체 안·급경사 제외)를 찾으면 그 자리 walk(exact), 없으면 HUD에 이유. C는 그대로 몸으로 복귀.
 - P: 포토모드 UI(12-ui-ux.md §5)로 전환 — 시간 정지·스크럽 가능.
 
 ## 3. 카메라 리그 (`src/internal/camera/`)
@@ -78,6 +79,7 @@
 | Handbrake | Space | A |
 | Lights / Indicators | L / Q·E | D-pad |
 | Fly up / down | E / Q | RB / LB |
+| Land(freecam — 카메라 아래에 내리기) | G | A |
 ```ts
 export interface ActionState { axis(name: AxisAction): number; pressed(a: ButtonAction): boolean; justPressed(a: ButtonAction): boolean; }
 export interface InputService extends SystemProvider { readonly state: ActionState; setContext(c: InputContext): void; rebind(a: Action, b: Binding): void; bindings(): BindingMap; }
@@ -88,6 +90,7 @@ export interface InputService extends SystemProvider { readonly state: ActionSta
 - 소유: **traversal의 `InteractableRegistry`**(`internal/interactables.ts`). 출처: 셀 meta `interactables[]`(파이프라인 생성: 카셰어·자전거 독·개찰구·전망 포인트) → wiring이 `traversal.interactables.addCell(key, originWF, list)`; 열차 좌석/문은 sim `trainsNear()` 결과로 traversal이 매 프레임 동적 갱신. 공간 해시(32 m 버킷).
 - 개찰구: 통과 시 IC 카드 효과음(자체 합성)과 게이트 플랩 애니메이션만. 요금 시스템 없음.
 - 구현(M07-T06, ADR-0081): `content/stations/access.json` 출구 → apps/game `station/{layout,wiring}.ts`(개찰구 렌더·물리·통과 판정, 계단 입구 ↔ 승강장 F 페이드 이동 — 계단 기하는 후속). 레지스트리(`InteractableRegistry`)·HUD 안내는 M08.
+- 후속(ADR-0082): 출구 4역(하라주쿠·요요기·신주쿠·시부야), 승강장 도착 = sim 승강장 윗면 메시 위 가장자리 여유 1.2 m 점(`station/{platform-geo,stairs}.ts`), walk 중 선로 구덩이·승강장 밑 → 0.4 s 뒤 가까운 승강장으로 구조, 물리 승강장 옆면. 검사 = `pnpm pipeline validate`(stations) + 실제 GPU `pnpm stations`.
 
 ## 6. 공개 API (`packages/traversal/src/api.ts`)
 ```ts

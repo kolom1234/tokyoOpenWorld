@@ -38,6 +38,21 @@ export interface TraversalContext {
   trainRide?: (tripId: string) => TrainRideInfo | undefined;
   /** 게임 시계 점프(빨리감기 — 열차는 시각의 순수 함수라 바로 재배치된다). */
   jumpClock?: (gameMs: number) => void;
+  /**
+   * freecam G(ADR-0083): 카메라 위치 아래 걸을 수 있는 안전한 자리(발 WF) 또는 못 내리는 이유. 게임이 물리 레이·승강장·선로·차선·건물 판정으로 구현.
+   * 없으면 G = 'not-ready'.
+   */
+  landing?: (cameraWF: Readonly<Vec3d>) => Promise<LandingResult>;
+}
+
+/** 카메라 아래 내리기 실패 이유(HUD 문구는 게임). */
+export type LandingFailReason = 'not-ready' | 'no-ground' | 'building' | 'track' | 'road' | 'blocked' | 'steep';
+export type LandingResult = { ok: true; posWF: Vec3d } | { ok: false; reason: LandingFailReason };
+/** HUD: 내리기 진행(seq = 시도 번호 — 배선이 바뀔 때만 알림). */
+export interface LandingHud {
+  seq: number;
+  state: 'searching' | 'failed';
+  reason?: LandingFailReason;
 }
 
 /** 열차 탑승 시점(09 §2 train): 서기(문 옆)·좌석·전면 전망(선두 운전실). */
@@ -76,6 +91,10 @@ export interface HudHints {
   train?: TrainHud;
   /** 화면 페이드 0..1(빨리감기 등 — 게임 배선이 검은 막으로). */
   fade?: number;
+  /** freecam G 카메라 아래 내리기(ADR-0083). 성공하면 walk로 바뀌어 사라진다. */
+  landing?: LandingHud;
+  /** walk: 지금 F로 탈 수 있는 열차(칸 안 또는 문 열린 칸의 문 앞 1.3 m)가 있다(ADR-0084). */
+  boardable?: boolean;
 }
 /** 플레이어 바디가 있는 모드(walk…)의 출력. 없으면 카메라 위치·방위를 플레이어로 본다(freecam). */
 export interface ModePlayer {

@@ -29,3 +29,16 @@ export function startWalkParams(spawnWF: Readonly<Vec3d>, yawRad: number, ground
   const y = (ground.groundHeightAt(spawnWF.x, spawnWF.z) ?? FALLBACK_GROUND_M) + START_EYE_M;
   return { posWF: { x: spawnWF.x, y, z: spawnWF.z }, yawRad, pitchRad: 0 };
 }
+
+/** 스폰 프리셋(ADR-0084) 로딩·freecam 시점: 스폰 위 30 m에서 프리셋 방위로 조금 내려다본다(스트리밍 관심점이 처음부터 스폰 둘레). */
+export function presetFreecamPose(
+  p: { posWF: readonly [number, number, number]; yawDeg: number },
+  ground: GroundQuery,
+): FreecamParams {
+  const [x, y0, z] = p.posWF;
+  return {
+    posWF: { x, y: (ground.groundHeightAt(x, z) ?? y0) + 30, z },
+    yawRad: (p.yawDeg * Math.PI) / 180,
+    pitchRad: -0.35,
+  };
+}

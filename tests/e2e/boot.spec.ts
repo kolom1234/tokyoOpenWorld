@@ -1,6 +1,8 @@
 // 부트 스모크: `?world=mini`로 월드 픽스처를 로드해 부트 화면이 loaded 상태가 되는지, 격리·콘솔 오류 확인. see docs/14-testing-perf.md §1, docs/modules/game.md
 import { expect, test } from '@playwright/test';
-import { STATE_TIMEOUT_MS } from './game.ts';
+import { STATE_TIMEOUT_MS, STATE_VIEW } from './game.ts';
+
+test.use({ viewport: STATE_VIEW });
 
 test('boots with world-mini (fixture) and loads the 4 cells around the Scramble spawn', async ({ page }) => {
   const errors: string[] = [];

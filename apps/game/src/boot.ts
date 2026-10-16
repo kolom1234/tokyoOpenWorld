@@ -13,6 +13,7 @@ import {
 } from '@sanpo/core';
 import type { PostEffects, QualityTier, RenderConfig } from '@sanpo/render';
 import type { ClockMode } from '@sanpo/sim';
+import { audioFlagsOf, crowdFlag, sunFlag } from './boot-flags.ts';
 import { bootProgressSystem } from './boot-progress.ts';
 import { detectCaps } from './caps.ts';
 import { mountCredits, setLiveCredit } from './credits.ts';
@@ -20,9 +21,10 @@ import { createGoldenWatch, type GoldenView, loadGoldenView, viewCenterWF, viewP
 import { createDebugOverlay } from './debug/overlay.ts';
 import { parsePostFlag, parseQualityFlag } from './debug/post-flags.ts';
 import { createStatsHook } from './debug/stats.ts';
-import { createSunOverride, parseSunFlag } from './debug/sun-override.ts';
+import { createSunOverride } from './debug/sun-override.ts';
 import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-override.ts';
 import { createLoop, type Loop } from './loop.ts';
+import { type SpawnPreset, spawnPreset, withSpawn } from './spawn-presets.ts';
 import type { StatusView } from './status-view.ts';
 import { parseWeatherFlag, type WeatherSpec, weatherSpecOf } from './weather-mode.ts';
 import { loadTier, type QualityWiring, startQualityWiring } from './wiring/quality.ts';
@@ -95,6 +97,8 @@ export interface BootFlags {
   noTrains?: boolean;
   /** `?weather=auto|live|<상태 id>`(M09-T01 — weather-mode.ts). */
   weather?: WeatherSpec;
+  /** `?spawn=<id>` → content/spawn-presets.json 스폰(ADR-0084). */
+  spawn?: string;
 }
 
 const VIEW_ID = /^[a-z0-9-]{1,64}$/;
@@ -104,11 +108,6 @@ function clockOf(flags: BootFlags, golden: GoldenView | undefined): { clock?: Cl
   const ms = flags.timeMs ?? (golden ? Date.parse(golden.time) : undefined);
   if (ms === undefined) return {};
   return { clock: flags.clockRun ? { kind: 'custom', startMs: ms, scale: 1 } : { kind: 'frozen', atMs: ms } };
-}
-
-function sunFlag(v: string | null): Pick<BootFlags, 'sun'> {
-  const sun = parseSunFlag(v);
-  return sun ? { sun } : {};
 }
 
 export function parseFlags(search: string): BootFlags {
@@ -122,6 +121,7 @@ export function parseFlags(search: string): BootFlags {
       : {}),
     ...(q.get('physicsIsolation') === 'degraded' ? { physicsIsolation: 'degraded' as const } : {}),
     ...(VIEW_ID.test(q.get('view') ?? '') ? { view: q.get('view') as string } : {}),
+    ...(VIEW_ID.test(q.get('spawn') ?? '') ? { spawn: q.get('spawn') as string } : {}),
     ...(Number(q.get('exposure')) > 0 ? { exposure: Number(q.get('exposure')) } : {}),
     ...sunFlag(q.get('sun')),
     ...(q.get('gpuTiming') === '1' ? { gpuTiming: true } : {}),
@@ -144,11 +144,6 @@ export function parseFlags(search: string): BootFlags {
     ...(q.get('trains') === '0' ? { noTrains: true } : {}),
     ...(parseWeatherFlag(q.get('weather')) ? { weather: parseWeatherFlag(q.get('weather')) as WeatherSpec } : {}),
   };
-}
-
-function crowdFlag(v: string | null): { crowd?: CrowdMode } {
-  if (v === '0' || v === 'off') return { crowd: 'off' };
-  return v === 'dummy' || v === 'scramble' || v === 'agents' ? { crowd: v } : {};
 }
 
 /** 젖음 덮어쓰기: `?wet=`만(골든뷰 비는 sim 날씨 고정 — M09-T01). */
@@ -238,16 +233,6 @@ interface LateReady {
 }
 
 /** 플래그·골든뷰 → createWorldView 입력. */
-/** `?audio=0`·`?vol=`(0–1.5). */
-function audioFlagsOf(q: URLSearchParams): { audio?: { off?: boolean; vol?: number } } {
-  const vol = Number(q.get('vol'));
-  const a = {
-    ...(q.get('audio') === '0' ? { off: true } : {}),
-    ...(q.has('vol') && Number.isFinite(vol) ? { vol: Math.min(1.5, Math.max(0, vol)) } : {}),
-  };
-  return Object.keys(a).length > 0 ? { audio: a } : {};
-}
-
 function worldViewDeps(
   flags: BootFlags,
   scheduler: Scheduler,
@@ -273,6 +258,8 @@ function worldViewDeps(
     ...(flags.noTraffic ? { traffic: false } : {}),
     ...(flags.noTrains ? { trains: false } : {}),
     ...(flags.audio ? { audio: flags.audio } : {}),
+    ...(flags.debug ? { debug: true } : {}),
+    ...(spawnPreset(flags.spawn) ? { spawn: spawnPreset(flags.spawn) as SpawnPreset } : {}),
     ...(golden
       ? { start: { centerWF: viewCenterWF(golden), pose: (g) => viewPose(golden, g), fovDeg: golden.fovDeg } }
       : {}),
@@ -375,7 +362,9 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
     log.child('boot').info('world', w);
   }).then(async (loaded) => {
     if (loaded === undefined || world === undefined) return;
-    const shown = await world.showWorld(loaded);
+    const preset = spawnPreset(flags.spawn);
+    if (flags.spawn !== undefined && !preset) log.child('boot').warn(`spawn preset 없음: ${flags.spawn}`);
+    const shown = await world.showWorld(preset && !golden ? withSpawn(loaded, preset) : loaded);
     view.setRendered(shown);
     watch?.start();
     late.quality = startQualityWiring({

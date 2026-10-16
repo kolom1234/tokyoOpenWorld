@@ -165,4 +165,18 @@ describe('train mode', () => {
     expect(boardingTarget(s.ctx, { x: c.x + 0.5, y: c.y + CAR.floorM, z: c.z + 3 })).toEqual({ tripId: 't', car: 0 });
     expect(boardingTarget(s.ctx, { x: c.x + 3, y: c.y + 1.1, z: c.z })).toBeUndefined();
   });
+
+  it('door-front boarding: on the platform in front of a door counts only while the doors are open (ADR-0084)', () => {
+    const s = scene();
+    const c = s.pose().posWF;
+    const door = CAR.doorsZ[0] as number;
+    const front = { x: c.x + CAR.widthM / 2 + 0.6, y: c.y + CAR.floorM, z: c.z + door };
+    expect(boardingTarget(s.ctx, front)).toBeUndefined();
+    const info = s.ctx.trains?.()[0] as { doorsOpen: boolean };
+    info.doorsOpen = true;
+    expect(boardingTarget(s.ctx, front)).toEqual({ tripId: 't', car: 0 });
+    // 문 사이 벽 앞·2 m 떨어진 곳은 아님.
+    expect(boardingTarget(s.ctx, { ...front, z: c.z + door + 2.5 })).toBeUndefined();
+    expect(boardingTarget(s.ctx, { ...front, x: front.x + 1.5 })).toBeUndefined();
+  });
 });

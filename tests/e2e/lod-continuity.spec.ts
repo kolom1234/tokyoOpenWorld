@@ -10,13 +10,13 @@ const QUERY =
   '/?world=mini&debug=1&backend=webgl&time=2026-05-15T12:00:00%2B09:00&mode=freecam&dynres=0&shadows=0&trees=0&crowd=0&traffic=0';
 /** 내려다보는 각(rad) — 높을수록 주변 건물에 덜 가린다. */
 const PITCH = 0.9;
-/** 카메라–대상 거리(m): LOD1(40–150 m) → LOD0(40 m 안) — 띠가 바뀔 때 풀을 다시 채운다. */
-const DISTANCES = [100, 60, 34, 16];
+/** 카메라–대상 거리(m): LOD1(40–150 m) → LOD0(40 m 안) — 띠가 바뀔 때 풀을 다시 채운다. 60 m(100 m와 같은 LOD1 띠)는 CI 시간 때문에 뺐다(ADR-0085). */
+const DISTANCES = [100, 34, 16];
 /**
  * 거리별 최소 변화 픽셀(480×270) ≈ 수정 뒤 SwiftShader 실측(대상 0: 9·29·77·321, 1: 8·22·56·240)의 40 %.
  * 회귀(범위 덮어쓰기) 재현 값: 1·5·17·32 / 0·2·34·135 → 실패.
  */
-const MIN_PIXELS: Readonly<Record<number, number>> = { 100: 4, 60: 10, 34: 25, 16: 110 };
+const MIN_PIXELS: Readonly<Record<number, number>> = { 100: 4, 34: 25, 16: 110 };
 /** world-mini 자판기 [x, y(바닥), z, yaw(정면)] — 실제 GPU 스캔에서 네 거리 모두 앞이 트인 것(주변 풀에 신호기). */
 const TARGETS: readonly (readonly [number, number, number, number])[] = [
   [-14.49, 17.49, -153.73, 2.371],
@@ -84,15 +84,15 @@ test('the same prop stays drawn from 100 m down to 16 m across LOD bands', async
   for (const [ti, t] of TARGETS.entries()) {
     for (const d of DISTANCES) {
       await look(page, t, d);
-      // 요청은 다음 프레임에 반영 → 그 뒤 스트리밍·LOD 재작성이 끝난 안정 상태.
-      await waitFrames(page, 3);
-      await waitSettled(page, 3);
+      // 요청은 다음 프레임에 반영 → 그 뒤 스트리밍·LOD 재작성이 끝난 안정 상태(안정 뒤 2프레임).
+      await waitFrames(page, 2);
+      await waitSettled(page, 2);
       const shown = decodePng(await captureCanvas(page));
       await setProps(page, false);
-      await waitFrames(page, 2);
+      // 숨김은 다음 프레임에 그려진다(captureCanvas = 그 다음 게임 루프 직후).
+      await waitFrames(page, 1);
       const hidden = decodePng(await captureCanvas(page));
       await setProps(page, true);
-      await waitFrames(page, 2);
       // 창 반지름 ∝ 1/거리(자판기 ≈ 1.1 × 1.9 m), 최소 8 px.
       rows.push({ target: ti, d, px: changedPixels(shown, hidden, Math.max(8, Math.round(700 / d))) });
     }
