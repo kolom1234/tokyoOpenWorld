@@ -117,7 +117,14 @@ function wireVehicles(deps: ExtrasDeps, v: ExtrasServices, late: LateState): voi
   void shown.then(() => {
     on = true;
   });
-  deps.scheduler.add({ systems: () => (on ? cars.systems : []) });
+  // 스케줄러는 systems()를 등록 때 한 번 읽는다 — 목록은 그대로 두고 update만 막는다.
+  const gated = cars.systems.map((sys) => ({
+    ...sys,
+    update: (f: Parameters<typeof sys.update>[0]) => {
+      if (on) sys.update(f);
+    },
+  }));
+  deps.scheduler.add({ systems: () => gated });
 }
 
 export function startWorldExtras(
