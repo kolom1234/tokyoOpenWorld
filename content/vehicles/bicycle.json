@@ -1,0 +1,22 @@
+{
+  "$comment": "가상 생활형 자전거(마마차리 — 실존 제품 아님) + 탄 사람. physics spawnVehicle('bicycle') 파라미터(08 §7). 페달 토크 = pedal × clamp(1 − v / vmaxMs) × maxTorqueNm(뒷바퀴). M08-T03.",
+  "massKg": 83,
+  "dimensionsM": { "length": 1.8, "width": 0.6, "height": 1.7 },
+  "wheelbaseM": 1.12,
+  "comHeightM": 0.95,
+  "maxPitchRollDeg": 35,
+  "wheel": { "radiusM": 0.33, "widthM": 0.05 },
+  "pedal": { "maxTorqueNm": 60, "vmaxMs": 7.4 },
+  "suspension": { "minLengthM": 0.02, "maxLengthM": 0.08, "frequencyHz": 3, "damping": 0.7 },
+  "tire": {
+    "longitudinalFriction": [[0, 0], [0.1, 0.9], [1, 0.7]],
+    "lateralFriction": [[0, 0], [4, 0.9], [20, 0.7]],
+    "wetFrictionScale": 0.7
+  },
+  "steering": { "maxSteerDeg": 30, "highSpeedFactor": 0.35, "highSpeedKmh": 25 },
+  "brakes": { "frontTorqueNm": 160, "rearTorqueNm": 120 },
+  "lean": { "maxLeanDeg": 30, "springConstant": 5000, "springDamping": 1000, "smoothing": 0.8 },
+  "lowSpeed": { "assistBelowMs": 2.2, "uprightStiffness": 2500, "uprightDamping": 400, "standStillMs": 0.4, "footDownStiffness": 8000 },
+  "aero": { "dragAreaM2": 0.5, "airDensity": 1.2, "rollingCoeff": 0.008 },
+  "speedLimitKmh": 32
+}

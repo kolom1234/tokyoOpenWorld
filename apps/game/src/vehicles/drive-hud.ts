@@ -20,9 +20,9 @@ function panel(doc: Document): HTMLElement {
   return el;
 }
 
-function enterPrompt(doc: Document, show: boolean): void {
+function enterPrompt(doc: Document, kind: 'sedan' | 'bicycle' | undefined): void {
   let el = doc.getElementById('vehicle-prompt');
-  if (!el && !show) return;
+  if (!el && !kind) return;
   if (!el) {
     el = doc.createElement('div');
     el.id = 'vehicle-prompt';
@@ -30,10 +30,13 @@ function enterPrompt(doc: Document, show: boolean): void {
     el.style.cssText =
       'position:fixed;left:50%;bottom:110px;transform:translateX(-50%);padding:6px 14px;border-radius:6px;' +
       'background:rgba(10,90,95,.85);color:#fff;font:14px system-ui,sans-serif;pointer-events:none;z-index:50';
-    el.textContent = 'F (패드 X) 운전하기 — 카셰어 차';
     doc.body.append(el);
   }
-  el.style.display = show ? 'block' : 'none';
+  // 가상 브랜드(실제 운영사 아님): 카셰어 SANPO Car · 공유자전거 SANPO Cycle.
+  if (kind)
+    el.textContent =
+      kind === 'bicycle' ? 'F (패드 X) 타기 — 공유자전거 SANPO Cycle' : 'F (패드 X) 운전하기 — 카셰어 SANPO Car';
+  el.style.display = kind ? 'block' : 'none';
 }
 
 /** 계기판 HTML(숫자·막대 — innerHTML은 우리 값만). */
@@ -85,13 +88,13 @@ export function driveHudSystem(
     id: 'wiring.driveHud',
     phase: 67,
     update(f) {
-      const d = traversal.mode === 'drive' ? traversal.hud.drive : undefined;
+      const d = traversal.mode === 'drive' || traversal.mode === 'cycle' ? traversal.hud.drive : undefined;
       const el = panel(doc);
       el.style.display = d ? 'block' : 'none';
       const g = d ? guide?.update(traversal.player.posWF, traversal.player.yawRad, f.dtReal) : undefined;
       if (d) el.innerHTML = gaugeHtml(d) + guideHtml(d, g);
       if (g?.ranRed) notice(doc, '적신호에 정지선을 넘었어요 — 안내만 해요(벌점 없음). 다음엔 정지선 앞에서 멈춰요');
-      enterPrompt(doc, traversal.mode === 'walk' && traversal.hud.enterable !== undefined);
+      enterPrompt(doc, traversal.mode === 'walk' ? traversal.hud.enterable : undefined);
       const exit = d?.exit ?? 'ready';
       if (exit !== lastExit) {
         if (exit === 'moving') notice(doc, '차를 멈춘 뒤 F로 내릴 수 있어요');

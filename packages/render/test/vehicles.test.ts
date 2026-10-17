@@ -65,8 +65,12 @@ describe('vehicle models', () => {
       const codes = new Set<number>();
       const part = buildVehicleGeometry(t, 0).getAttribute('_vpart');
       for (let v = 0; v < part.count; v++) codes.add(Math.round(part.getX(v)));
-      for (const c of [VPART.head, VPART.tail, VPART.blinkL, VPART.blinkR, VPART.wheel, VPART.glass])
-        expect(codes.has(c), `${info.name} part ${c}`).toBe(true);
+      // 자전거(M08-T03)는 전조등·후미등·바퀴만(깜빡이·유리 없음).
+      const want =
+        info.name === 'bicycle'
+          ? [VPART.head, VPART.tail, VPART.wheel]
+          : [VPART.head, VPART.tail, VPART.blinkL, VPART.blinkR, VPART.wheel, VPART.glass];
+      for (const c of want) expect(codes.has(c), `${info.name} part ${c}`).toBe(true);
       expect(codes.has(VPART.roofLamp), info.name).toBe(info.name === 'taxi');
     }
   });

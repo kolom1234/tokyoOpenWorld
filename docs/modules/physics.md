@@ -27,6 +27,7 @@ PhysicsService extends SystemProvider {   // system 'physics', phase 30 — 프�
   setVehicleInput(h, VehicleInput { throttle 0..1; brake 0..1; steer −1(왼)..1(오른); handbrake; reverse });   // 같은 프레임 마지막 것만. 보조(ABS·TCS·속도 감응 조향·속도 제한·공기/구름 저항)는 워커 스텝마다
   vehicleState(h): VehicleState | undefined;   // 최신 스냅샷(보간 없음): speedMs(전방 +)·rpm·gear(−1 R·0 N·1..)·throttle(실제)·abs·tcs·shifting·wheels[{rotationRad, steerRad, suspensionM, slipLong, slipLatDeg, contactMaterial(−1 없음)}]
   setSurfaceWetness(w 0..1);                // 타이어–노면 마찰 = 곡선 × lerp(1, wetFrictionScale, w)
+  spawnVehicle('bicycle', posWF, yawRad, params: BicycleParams): BodyHandle;   // M08-T03(ADR-0089): MotorcycleController 2륜(앞 조향·뒤 구동), 페달 = 단일 기어 엔진 스로틀 × clamp(1 − v/vmax), 저속(< 2.2 m/s) 기울기 제어기 끄고 롤 스프링·정지(< 0.4 m/s) 발 딛기, 기울기 상한 35°. 차량 칸 최대 8(MAX_VEHICLES)
   SedanParams = content/vehicles/sedan.json(질량·치수·기울기 상한 35°·엔진 곡선·변속·서스펜션·타이어 곡선·조향·제동 앞/뒤·ABS/TCS·aero·속도 제한)
   stats(): PhysicsStats;                    // ready, isolation, build, steps, simTimeS, bodies, initMs, tickMs, anchorWF, rebases, colliderCells, colliderPending, loadTickMaxMs, loadTicksOver8Ms, kinematicBodies, kinematicFrames(M06-T06)
   dispose();
@@ -35,7 +36,7 @@ PhysicsTransport { post; onMessage; terminate }   // 워커 대신 주입
 createInlineTransport(): PhysicsTransport & { flush() }   // 같은 스레드 워커 코어(Node 테스트·도구 — 브라우저 게임은 쓰지 않음, ADR-0044)
 anchorOf(posWF, gridM) → 앵커(x·z 격자, y 0); PHYSICS_PHASE = 30; DEFAULT_PHYSICS_CONFIG
 ```
-예정: 자전거(M08-T03 MotorcycleController).
+BicycleParams = content/vehicles/bicycle.json(질량 83 kg·휠베이스 1.12·페달 60 Nm/7.4 m/s·기울기·저속 보조·aero).
 
 ## Invariants
 - Jolt 객체는 워커 밖으로 나가지 않는다. 메인↔워커 좌표는 WF float64, 워커 안에서만 PHYS = WF − 앵커(float32).
@@ -56,7 +57,7 @@ anchorOf(posWF, gridM) → 앵커(x·z 격자, y 0); PHYSICS_PHASE = 30; DEFAULT
 ## Files
 api.ts, internal/protocol.ts(메시지·스냅샷 배치·isIsolated), internal/service.ts(createPhysics·핸들·연결), internal/inline-transport.ts,
 internal/host/(command-queue, snapshot-reader — 기록·보간·readSab, vehicle-reader — 차량 칸 → VehicleState), internal/worker/(physics.worker — 엔트리, core — 메시지·고정 스텝, jolt-init — single 빌드,
-jolt-mem — using·스크래치, layers — 레이어·행렬·필터, world — JoltInterface, bodies — 슬롯(강체·캐릭터)·명령·기록, character — CharacterVirtual·가감속·ExtendedUpdate·에스컬레이터 운반·램프 프록시 위 수평 속력 유지(M05-T08), escalators — SENSOR 박스 OBB 구간, primitives — JCOL 박스·캡슐·원기둥, snapshot-writer — SAB·post 싱크, vehicle-sedan — 세단 VehicleConstraint·보조·마찰 콜백(M08-T01), vehicles — 차량 목록·스냅샷 차량 칸,
+jolt-mem — using·스크래치, layers — 레이어·행렬·필터, world — JoltInterface, bodies — 슬롯(강체·캐릭터)·명령·기록, character — CharacterVirtual·가감속·ExtendedUpdate·에스컬레이터 운반·램프 프록시 위 수평 속력 유지(M05-T08), escalators — SENSOR 박스 OBB 구간, primitives — JCOL 박스·캡슐·원기둥, snapshot-writer — SAB·post 싱크, vehicle-common — 탈것 몸체·강체·제약 붙이기·마찰 콜백·저항·바퀴 읽기, vehicle-sedan — 세단 WheeledVehicleController·보조(M08-T01), vehicle-bicycle — 자전거 MotorcycleController·저속 보조(M08-T03), vehicles — 탈것 목록·스냅샷 차량 칸,
 cell-colliders — 셀 적재 큐·정적 바디, heightfield — 높이장·메시 셰이프(힙 직접 채움)·워밍업, queries — 레이캐스트·구 캐스트, kinematics — sim 직결 키네마틱 차량(M06-T06), train-bodies — 열차 칸 합성 바디·문·보간(M07-T04), static-groups — 이름 붙인 정적 묶음(M07-T04)).
 예정: worker/vehicle-bicycle(M08-T03).
 
@@ -69,6 +70,7 @@ test/rebase-hold.test.ts(4096 m 넘는 걷기 중 재설정 — 프레임 이동
 test/kinematic-vehicles.test.ts(M06-T06 수락: 포트 프레임 차량 8 m/s가 선 캐릭터를 밀어냄 — 같은 시각 침투 ≤ 0(최소 간격 0.136 m), 정지 차에 걸어 들어가면 옆에서 멈춤(0.020 m), 빠진 차·조용한 소스 제거),
 test/train-bodies.test.ts(M07-T04 수락: 가속·곡선 주행 중 선 승객 미끄러짐 1.75 cm < 5 cm, 닫힌 문·끝벽 관통 0(간격 0.020·0.117 m), 열린 문으로 승강장 → 차내 승차·닫힌 문 차단),
 test/vehicle-sedan.test.ts(M08-T01 수락: 평지 0→100 km/h 12.4 s(10–13), 60 km/h 급제동 건조 18.8 m(14–20)·젖음 27.4 m, 조향 +1 = 오른쪽·후진 기어 −1),
+test/vehicle-bicycle.test.ts(M08-T03 수락: 평지 최고 23.5 km/h(22–26)·롤 ≤ 0.1°, 1 m/s 20 s 조향 흔들기 롤 ≤ 0.2°·정지 롤 0°),
 test/cell-colliders.test.ts(world-mini 4셀 적재 — 8 ms 초과 틱 ≤ 1(Node GC), 지면 레이 = 높이장 ±5 cm, 벽 레이 = JCOL CPU 교차 ±5 cm, 제거 후 미스).
 E2E tests/e2e/physics.spec.ts(`?probe=physics`, 프로덕션 preview 격리: shared·degraded; world-mini 부트 → 셀 콜라이더 적재·지면/벽 레이).
 

@@ -1,6 +1,6 @@
 // 카셰어·공유자전거 거점(M08-T02·T03 — cell meta `interactables`): 위치만 OSM에서(브랜드는 게임의 가상 이름 — 실제 운영사·로고 없음).
 // 카셰어 = amenity=car_sharing 점(셀 소유) → 건물 안이면 가까운 열린 땅(차도·보도·건물 아님 — 주차장·광장)으로, 없으면 그대로(런타임이 연석으로 옮김);
-//          점이 셀에 없으면 amenity=parking 노면 주차장 면(공용·150–20,000 m²)의 중심(면 안·건물 아님).
+//          (면이면 중심) 셀에 없으면 amenity=parking 노면 주차장 면(공용·150–20,000 m²) 하나의 중심(면 안·건물 아님).
 // 공유자전거 = amenity=bicycle_rental 점(보도·광장 위면 그대로, 차도면 가까운 비차도로). yaw = 가장 가까운 차도 쪽을 바라봄(게임 규약: 전방 = (−sin, −cos)).
 // 셀당 상한·서로 띄우기(결정론 — OSM id 순). see docs/roadmap/M08.md M08-T02·T03
 import type { InteractableRecord } from '@sanpo/tile-format';
@@ -23,6 +23,8 @@ export interface ShareSpotCtx {
 
 /** 셀당 상한·같은 종류 사이 최소 거리(m). */
 const MAX_CAR = 2;
+/** car_sharing가 없는 셀의 노면 주차장 대체 상한. */
+const MAX_LOT = 1;
 const MAX_BIKE = 3;
 const MIN_GAP_M = 60;
 /** 열린 땅 찾기 반경(m)·주차장 면 면적 범위(m²). */
@@ -45,7 +47,7 @@ export function yawTowardRoad(c: ShareSpotCtx, p: V2): number {
 }
 
 /** 조건을 만족하는 가장 가까운 점(링 1 m 걸음, 16방위). */
-function nearest(c: ShareSpotCtx, p: V2, ok: (x: number, z: number) => boolean, maxM: number): V2 | undefined {
+function nearest(_c: ShareSpotCtx, p: V2, ok: (x: number, z: number) => boolean, maxM: number): V2 | undefined {
   if (ok(p[0], p[1])) return p;
   for (let d = 1; d <= maxM; d++)
     for (let k = 0; k < 16; k++) {
@@ -85,12 +87,15 @@ const isLot = (t: Record<string, string>): boolean =>
   !['underground', 'multi-storey', 'rooftop'].includes(t.parking ?? '') &&
   !['private', 'no'].includes(t.access ?? '');
 
-/** 카셰어 후보(WF 점): car_sharing 점, 없으면 노면 주차장 면 중심. */
+/** 카셰어 후보(WF 점): car_sharing 점·면(중심), 없으면 노면 주차장 면 중심(셀당 1). */
 function carCandidates(c: ShareSpotCtx, osm: readonly OsmRecord[]): { id: string; p: V2 }[] {
   const open = (x: number, z: number) => c.classify(x, z) === 'none' && !c.inBuilding(x, z);
   const pts = osm
-    .filter((r) => r.geom === 'point' && r.tags.amenity === 'car_sharing' && r.rings[0])
-    .map((r) => ({ id: r.id, p: [r.rings[0]?.[0] ?? 0, r.rings[0]?.[1] ?? 0] as V2 }))
+    .filter((r) => (r.geom === 'point' || r.geom === 'polygon') && r.tags.amenity === 'car_sharing' && r.rings[0])
+    .map((r) => {
+      const ring = r.rings[0] as number[];
+      return { id: r.id, p: (r.geom === 'point' ? [ring[0] ?? 0, ring[1] ?? 0] : ringCentroidArea(ring).c) as V2 };
+    })
     .filter((s) => owns(c, s.p))
     .map((s) => ({ id: s.id, p: nearest(c, s.p, open, OPEN_SEARCH_M) ?? s.p }));
   if (pts.length > 0) return pts;
@@ -100,7 +105,9 @@ function carCandidates(c: ShareSpotCtx, osm: readonly OsmRecord[]): { id: string
     .map(({ id, ring }) => ({ id, ring, ...ringCentroidArea(ring) }))
     .filter((l) => l.area >= LOT_MIN_M2 && l.area <= LOT_MAX_M2 && owns(c, l.c))
     .map((l) => ({ id: l.id, p: nearest(c, l.c, (x, z) => inRing(l.ring, x, z) && !c.inBuilding(x, z), 15) }))
-    .filter((l): l is { id: string; p: V2 } => l.p !== undefined);
+    .filter((l): l is { id: string; p: V2 } => l.p !== undefined)
+    .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .slice(0, MAX_LOT);
 }
 
 /** 공유자전거 후보: bicycle_rental 점(차도면 가까운 비차도로). */

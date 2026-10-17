@@ -24,7 +24,11 @@ export type ButtonAction =
   | 'indicatorLeft'
   | 'indicatorRight'
   /** 걷기: 차 부르기(R — 가까운 차도 연석, M08-T01·T02). */
-  | 'summon';
+  | 'summon'
+  /** 걷기: 자전거 부르기(B·패드 D-pad →, M08-T03). */
+  | 'summonBike'
+  /** 자전거 벨(B·패드 Y, vehicle — M08-T03). */
+  | 'bell';
 
 /**
  * 축 액션. 단위는 디바이스 원값 — 감도(픽셀→라디안 등)는 소비자(traversal) 설정.

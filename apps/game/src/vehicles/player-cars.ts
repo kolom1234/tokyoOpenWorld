@@ -1,20 +1,30 @@
-// 플레이어 차(M08-T01): 세워 둔 차(스폰 프리셋·카셰어)와 부른 차 — 물리 차체(physics.spawnVehicle, content/vehicles/sedan.json)를 콜라이더 적재 뒤 지면에 맞춰 만들고,
-// 프레임마다 포즈·바퀴·등화(운전 중 = traversal hud.drive)를 렌더 플레이어 차 레이어로, 노면 젖음을 물리로. 부른 차는 플레이어가 멀어지면(걷기 중 200 m) 치운다.
-// 차는 가상 카셰어 도장(흰 차체 + 청록 띠 — 실제 브랜드·로고·번호판 없음).
+// 플레이어 탈것(M08-T01·T03): 세워 둔 차·자전거(스폰 프리셋·카셰어·공유자전거 거점)와 부른 것 — 물리 차체(physics.spawnVehicle, content/vehicles/*.json)를
+// 콜라이더 적재 뒤 지면에 맞춰 만들고, 프레임마다 포즈·바퀴·등화(타는 중 = traversal hud.drive)를 렌더 플레이어 차 레이어로, 노면 젖음을 물리로.
+// 부른 것은 걷는 플레이어가 멀어지면(200 m) 치운다. 도장 = 가상 카셰어(흰 차체 + 청록 띠)·가상 공유자전거(청록 프레임) — 실제 브랜드·로고·번호판 없음.
 import type { GameSystem, Vec3d } from '@sanpo/core';
 import { packCellKey } from '@sanpo/core';
-import type { BodyHandle, PhysicsService, SedanParams } from '@sanpo/physics';
+import type { BicycleParams, BodyHandle, PhysicsService, SedanParams } from '@sanpo/physics';
 import type { PlayerVehicleDraw, RenderService } from '@sanpo/render';
 import type { EnterableVehicle, HazardCircle, TraversalService } from '@sanpo/traversal';
+import BICYCLE from '../../../../content/vehicles/bicycle.json';
 import SEDAN from '../../../../content/vehicles/sedan.json';
 import { carCircles } from './hazards.ts';
 
 export const SEDAN_PARAMS = SEDAN as unknown as SedanParams;
-/** 가상 카셰어 도장(sRGB 24비트). */
-export const SHARE_PAINT = 0xf1f1ec;
-export const SHARE_ACCENT = 0x13a3a8;
-/** 동시에 둘 플레이어 차(물리 상한 4 — 자전거 몫 1). */
-const MAX_CARS = 3;
+export const BICYCLE_PARAMS = BICYCLE as unknown as BicycleParams;
+export type RideKind = 'sedan' | 'bicycle';
+/** 렌더 차종 번호(core VEHICLE_TYPES — sedan 0, bicycle 7)·도장·바퀴 반경·바닥 치수·하차 쪽. */
+export const KIND_LOOK: Readonly<
+  Record<
+    RideKind,
+    { type: number; paint: number; accent: number; radius: number; len: number; wid: number; side: 'right' | 'left' }
+  >
+> = {
+  sedan: { type: 0, paint: 0xf1f1ec, accent: 0x13a3a8, radius: 0.32, len: 4.5, wid: 1.75, side: 'right' },
+  bicycle: { type: 7, paint: 0x13a3a8, accent: 0xc8ccd0, radius: 0.33, len: 1.8, wid: 0.6, side: 'left' },
+};
+/** 동시에 둘 플레이어 탈것(물리 상한 8): 종류별. */
+const MAX_OF: Readonly<Record<RideKind, number>> = { sedan: 3, bicycle: 4 };
 /** 부른 차: 걷는 플레이어가 이보다 멀면 치운다(m). */
 const SUMMON_KEEP_M = 200;
 /** 차 바닥 높이 맞추기: 위 → 아래 레이(m). */
@@ -26,6 +36,7 @@ export type CarOrigin = 'preset' | 'summon' | 'share';
 
 interface Car {
   id: number;
+  kind: RideKind;
   origin: CarOrigin;
   spawnWF: Vec3d;
   yawRad: number;
@@ -39,7 +50,11 @@ interface Car {
 export interface PlayerCars {
   readonly system: GameSystem;
   /** 그 자리(차체 바닥 중심 WF)에 세워 둔다 — 콜라이더가 오면 만든다. 반환 = 차 ID. */
-  park(posWF: Vec3d, yawRad: number, origin: CarOrigin): number;
+  park(posWF: Vec3d, yawRad: number, origin: CarOrigin, kind?: RideKind): number;
+  /** 차를 치운다(타는 중이면 무시). */
+  remove(id: number): void;
+  /** 거점에서 떼어 부른 것처럼(걷는 플레이어가 멀어지면 치움) — 타고 간 공유 탈것. */
+  release(id: number): void;
   /** traversal 컨텍스트: walk에서 F로 탈 수 있는 차. */
   enterables(): EnterableVehicle[];
   /** 운전 중이 아닌 차(세워 둔·부른)의 차체 원 — AEB 위험물. */
@@ -47,20 +62,21 @@ export interface PlayerCars {
   /** 물리 핸들이 있는 차 수. */
   readonly live: number;
   /** 디버그·봇: 차 목록(ID·핸들·출처). */
-  list(): { id: number; handle: BodyHandle | undefined; origin: CarOrigin }[];
+  list(): { id: number; kind: RideKind; handle: BodyHandle | undefined; origin: CarOrigin; posWF: Vec3d }[];
   dispose(): void;
 }
 
 const cellOf = (p: Readonly<Vec3d>) => packCellKey(0, Math.floor(p.x / 256), Math.floor(p.z / 256));
 
-function newDraw(id: number): PlayerVehicleDraw {
+function newDraw(id: number, kind: RideKind): PlayerVehicleDraw {
+  const k = KIND_LOOK[kind];
   return {
     id,
     posWF: { x: 0, y: 0, z: 0 },
     quat: { x: 0, y: 0, z: 0, w: 1 },
-    type: 0,
-    paint: SHARE_PAINT,
-    accent: SHARE_ACCENT,
+    type: k.type,
+    paint: k.paint,
+    accent: k.accent,
     wheelTurns: 0,
     flags: 0,
   };
@@ -90,7 +106,8 @@ interface State {
 }
 
 const driving = (st: State, c: Car): boolean =>
-  st.d.traversal.mode === 'drive' && st.d.traversal.hud.drive?.vehicle === c.handle;
+  (st.d.traversal.mode === 'drive' || st.d.traversal.mode === 'cycle') &&
+  st.d.traversal.hud.drive?.vehicle === c.handle;
 
 function remove(st: State, c: Car): void {
   if (c.handle !== undefined) st.d.physics()?.despawn(c.handle);
@@ -106,7 +123,11 @@ function trySpawn(st: State, ph: PhysicsService, c: Car): void {
     c.pending = false;
     if (!st.cars.includes(c) || c.handle !== undefined || hit?.layer === NPC_KINEMATIC) return;
     const y = hit ? hit.posWF.y : c.spawnWF.y;
-    c.handle = ph.spawnVehicle('sedan', { x: c.spawnWF.x, y: y + 0.05, z: c.spawnWF.z }, c.yawRad, SEDAN_PARAMS);
+    const at = { x: c.spawnWF.x, y: y + 0.05, z: c.spawnWF.z };
+    c.handle =
+      c.kind === 'bicycle'
+        ? ph.spawnVehicle('bicycle', at, c.yawRad, BICYCLE_PARAMS)
+        : ph.spawnVehicle('sedan', at, c.yawRad, SEDAN_PARAMS);
   });
 }
 
@@ -118,7 +139,7 @@ function frameCar(st: State, ph: PhysicsService, c: Car, dt: number): PlayerVehi
   const pose = ph.pose(c.handle);
   if (!pose) return undefined;
   const speed = ph.vehicleState(c.handle)?.speedMs ?? 0;
-  c.turns += (speed * dt) / (2 * Math.PI * SEDAN_PARAMS.tire.radiusM);
+  c.turns += (speed * dt) / (2 * Math.PI * KIND_LOOK[c.kind].radius);
   Object.assign(c.draw.posWF, pose.posWF);
   Object.assign(c.draw.quat, pose.quat);
   c.draw.wheelTurns = c.turns;
@@ -160,6 +181,30 @@ function updateCars(st: State, dt: number): void {
   st.d.render.vehicles.setPlayers(list);
 }
 
+function park(st: State, posWF: Readonly<Vec3d>, yawRad: number, origin: CarOrigin, kind: RideKind): number {
+  // 상한: 같은 종류 중 운전 중이 아닌 가장 오래된 부른 것(없으면 가장 오래된 것)을 치운다.
+  const { cars } = st;
+  const same = () => cars.filter((c) => c.kind === kind);
+  while (same().length >= MAX_OF[kind]) {
+    const old = same().find((c) => c.origin === 'summon' && !driving(st, c)) ?? same().find((c) => !driving(st, c));
+    if (!old) break;
+    remove(st, old);
+  }
+  const id = st.nextId++;
+  cars.push({
+    id,
+    kind,
+    origin,
+    spawnWF: { ...posWF },
+    yawRad,
+    handle: undefined,
+    pending: false,
+    turns: 0,
+    draw: newDraw(id, kind),
+  });
+  return id;
+}
+
 export function createPlayerCars(d: Deps): PlayerCars {
   const st: State = { d, cars: [], nextId: 1, wetT: 0, lastWet: -1 };
   const { cars } = st;
@@ -171,26 +216,7 @@ export function createPlayerCars(d: Deps): PlayerCars {
   };
   return {
     system,
-    park(posWF, yawRad, origin) {
-      // 상한: 운전 중이 아닌 가장 오래된 부른 차(없으면 가장 오래된 차)를 치운다.
-      while (cars.length >= MAX_CARS) {
-        const old = cars.find((c) => c.origin === 'summon' && !driving(st, c)) ?? cars.find((c) => !driving(st, c));
-        if (!old) break;
-        remove(st, old);
-      }
-      const id = st.nextId++;
-      cars.push({
-        id,
-        origin,
-        spawnWF: { ...posWF },
-        yawRad,
-        handle: undefined,
-        pending: false,
-        turns: 0,
-        draw: newDraw(id),
-      });
-      return id;
-    },
+    park: (posWF, yawRad, origin, kind = 'sedan') => park(st, posWF, yawRad, origin, kind),
     enterables() {
       const out: EnterableVehicle[] = [];
       const ph = d.physics();
@@ -199,7 +225,7 @@ export function createPlayerCars(d: Deps): PlayerCars {
         const p = ph?.pose(c.handle);
         if (!p) continue;
         const yaw = 2 * Math.atan2(p.quat.y, p.quat.w);
-        out.push({ vehicle: c.handle, kind: 'sedan', posWF: p.posWF, yawRad: yaw, driveSide: SEDAN_PARAMS.driveSide });
+        out.push({ vehicle: c.handle, kind: c.kind, posWF: p.posWF, yawRad: yaw, driveSide: KIND_LOOK[c.kind].side });
       }
       return out;
     },
@@ -209,14 +235,30 @@ export function createPlayerCars(d: Deps): PlayerCars {
       for (const c of cars) {
         if (c.handle === undefined || driving(st, c)) continue;
         const p = ph?.pose(c.handle);
-        if (p) carCircles(p.posWF.x, p.posWF.z, 2 * Math.atan2(p.quat.y, p.quat.w), 4.5, 1.75, out);
+        const k = KIND_LOOK[c.kind];
+        if (p) carCircles(p.posWF.x, p.posWF.z, 2 * Math.atan2(p.quat.y, p.quat.w), k.len, k.wid, out);
       }
       return out;
     },
     get live() {
       return cars.filter((c) => c.handle !== undefined).length;
     },
-    list: () => cars.map((c) => ({ id: c.id, handle: c.handle, origin: c.origin })),
+    list: () =>
+      cars.map((c) => ({
+        id: c.id,
+        kind: c.kind,
+        handle: c.handle,
+        origin: c.origin,
+        posWF: c.handle !== undefined ? { ...c.draw.posWF } : { ...c.spawnWF },
+      })),
+    release(id) {
+      const c = cars.find((x) => x.id === id);
+      if (c) c.origin = 'summon';
+    },
+    remove(id) {
+      const c = cars.find((x) => x.id === id);
+      if (c && !driving(st, c)) remove(st, c);
+    },
     dispose() {
       for (const c of [...cars]) remove(st, c);
     },

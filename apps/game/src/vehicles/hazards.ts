@@ -30,12 +30,13 @@ function pedestrians(buf: SharedInstanceBuffer, c: Readonly<Vec3d>, r2: number, 
     const x = (d[k] as number) + a.x;
     const z = (d[k + 2] as number) + a.z;
     if ((x - c.x) ** 2 + (z - c.z) ** 2 > r2) continue;
-    out.push({ x, z, r: PED_R });
+    out.push({ x, z, r: PED_R, kind: 'ped' });
     const anim = d[k + 4] as number;
     const v = (anim - Math.floor(anim)) * 10;
     if (v < 0.2) continue;
     const yaw = d[k + 3] as number;
-    for (const t of PREDICT_S) out.push({ x: x - Math.sin(yaw) * v * t, z: z - Math.cos(yaw) * v * t, r: PED_R });
+    for (const t of PREDICT_S)
+      out.push({ x: x - Math.sin(yaw) * v * t, z: z - Math.cos(yaw) * v * t, r: PED_R, kind: 'ped' });
   }
 }
 

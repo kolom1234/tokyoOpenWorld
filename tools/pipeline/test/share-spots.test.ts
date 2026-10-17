@@ -39,9 +39,11 @@ describe('share spots (M08)', () => {
       square('a2', 150, 150, 20, { amenity: 'parking', parking: 'underground' }),
       square('a3', 200, 30, 20, { amenity: 'parking', access: 'private' }),
     ];
-    const out = shareSpots(ctx, lots);
-    expect(out.map((s) => s.id)).toEqual(['share-a1']);
-    expect(out[0]?.posLocal[0]).toBeCloseTo(110, 5);
+    const out = shareSpots(ctx, [...lots, square('a0', 100, 180, 20, { amenity: 'parking' })]);
+    // 셀당 노면 주차장 1개(id 순).
+    expect(out.map((s) => s.id)).toEqual(['share-a0']);
+    expect(shareSpots(ctx, lots).map((s) => s.id)).toEqual(['share-a1']);
+    expect(shareSpots(ctx, lots)[0]?.posLocal[0]).toBeCloseTo(110, 5);
   });
 
   it('bicycle_rental on the road moves off it; cap, spacing and cell ownership', () => {

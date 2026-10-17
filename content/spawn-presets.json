@@ -138,6 +138,31 @@
           "yawDeg": 124.8
         }
       ]
+    },
+    {
+      "id": "bike-course",
+      "name": {
+        "ja": "自転車テストコース(平坦な直線)",
+        "en": "Bicycle test course (flat straight)",
+        "ko": "자전거 시험 코스(평지 직선)"
+      },
+      "posWF": [
+        -1537.5,
+        40.0,
+        -2597.6
+      ],
+      "yawDeg": 124.8,
+      "vehicles": [
+        {
+          "posWF": [
+            -1540.9,
+            40.0,
+            -2595.4
+          ],
+          "yawDeg": 124.8,
+          "kind": "bicycle"
+        }
+      ]
     }
   ]
 }

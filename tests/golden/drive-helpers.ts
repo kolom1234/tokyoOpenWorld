@@ -13,7 +13,7 @@ import {
 } from './autopilot.ts';
 
 export const WORLD = process.env.GOLDEN_WORLD === 'api' ? '' : 'world=local&';
-const COURSE = 'spawn=drive-course&traffic=0&crowd=0&debug=1';
+const COURSE = 'traffic=0&crowd=0&debug=1';
 
 export interface Sample {
   t: number;
@@ -24,6 +24,8 @@ export interface Sample {
   rpm: number;
   abs: boolean;
   fps: number;
+  /** 차체 롤(deg — 오른쪽 축 y 성분). */
+  roll: number;
 }
 
 /** nvidia-smi 1 s 표본(없으면 빈 배열). */
@@ -51,8 +53,9 @@ export function powerSampler(): { stop(): { drawW: number[]; limitW: number[] } 
 }
 
 /** 코스 부팅 → 세워 둔 차가 생기면 운전석에 앉힌다(추적 시점). 반환 = 차 핸들. */
-export async function boardCourse(page: Page, extra = ''): Promise<number> {
-  await page.goto(`/?${WORLD}${COURSE}${extra}`);
+export async function boardCourse(page: Page, extra = '', kind: 'sedan' | 'bicycle' = 'sedan'): Promise<number> {
+  const course = kind === 'bicycle' ? 'bike-course' : 'drive-course';
+  await page.goto(`/?${WORLD}spawn=${course}&${COURSE}${extra}`);
   await page.waitForFunction(
     () => {
       const w = (globalThis as { __SANPO_DEBUG__?: { world?: { traversal?: { mode: string } } } }).__SANPO_DEBUG__
@@ -75,13 +78,13 @@ export async function boardCourse(page: Page, extra = ''): Promise<number> {
   // 차가 내려앉고 주변 콜라이더가 차도록 잠시.
   await page.waitForTimeout(4000);
   const ok = await page.evaluate(
-    (vehicle) =>
+    ([vehicle, k]) =>
       (
         globalThis as unknown as {
           __SANPO_DEBUG__: { world: { traversal: { request(m: string, p: unknown): boolean } } };
         }
-      ).__SANPO_DEBUG__.world.traversal.request('drive', { vehicle, kind: 'sedan' }),
-    h,
+      ).__SANPO_DEBUG__.world.traversal.request(k === 'bicycle' ? 'cycle' : 'drive', { vehicle, kind: k }),
+    [h, kind] as const,
   );
   expect(ok).toBe(true);
   await page.waitForTimeout(1500);
@@ -93,7 +96,11 @@ export async function startSampler(page: Page, handle: number): Promise<void> {
   await page.evaluate((h) => {
     type W = {
       traversal: { hud: { drive?: { speedKmh: number; gear: string; rpm: number; abs: boolean } } };
-      physics: { pose(h: number): { posWF: { x: number; z: number } } | undefined };
+      physics: {
+        pose(
+          h: number,
+        ): { posWF: { x: number; z: number }; quat: { x: number; y: number; z: number; w: number } } | undefined;
+      };
     };
     const g = globalThis as unknown as {
       __SANPO_DEBUG__: { world: W };
@@ -117,6 +124,7 @@ export async function startSampler(page: Page, handle: number): Promise<void> {
           rpm: d.rpm,
           abs: d.abs,
           fps: 1000 / Math.max(now - last, 1),
+          roll: (Math.asin(Math.max(-1, Math.min(1, 2 * (p.quat.x * p.quat.y + p.quat.w * p.quat.z)))) * 180) / Math.PI,
         });
       last = now;
       if (g.__DRIVE_ON__) requestAnimationFrame(tick);

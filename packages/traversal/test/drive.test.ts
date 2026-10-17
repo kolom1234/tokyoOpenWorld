@@ -85,7 +85,7 @@ const log = createLogger({ level: 'warn' });
 const frame = (i: number): FrameContext =>
   ({ frameIndex: i, dtReal: 1 / 60, dtGame: 1 / 60, gameTimeMs: 0 }) as FrameContext;
 
-function setup(hazards?: { x: number; z: number; r: number }[]) {
+function setup(hazards?: { x: number; z: number; r: number; kind?: 'ped' }[]) {
   const inp = fakeInput();
   const ph = fakePhysics();
   const t = createTraversal({
@@ -194,7 +194,7 @@ describe('drive mode (M08-T01)', () => {
   });
 
   it('AEB brakes for a pedestrian in the path and blocks pulling away into them', async () => {
-    const { t, inp, ph, step } = setup([{ x: 0, z: -9, r: 0.3 }]);
+    const { t, inp, ph, step } = setup([{ x: 0, z: -9, r: 0.3, kind: 'ped' }]);
     ph.car.speed = 8;
     inp.axes.moveY = 1;
     await step();
@@ -204,7 +204,7 @@ describe('drive mode (M08-T01)', () => {
     ph.car.speed = 0;
     await step();
     expect(ph.inputs.at(-1)?.throttle).toBe(1);
-    const near = setup([{ x: 0, z: -3.2, r: 0.3 }]);
+    const near = setup([{ x: 0, z: -3.2, r: 0.3, kind: 'ped' }]);
     near.inp.axes.moveY = 1;
     await near.step();
     expect(near.ph.inputs.at(-1)).toMatchObject({ throttle: 0, brake: 1 });

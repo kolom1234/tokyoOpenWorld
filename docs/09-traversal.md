@@ -39,6 +39,8 @@
 - 속도 보조(옵션): 제한속도 표시, 크루즈.
 ### cycle
 - 페달(W), 브레이크(S), 조향(A/D), 벨(B). 카메라: 추적 / 1인칭.
+- 구현(M08-T03, ADR-0089): drive 모드와 같은 구현(`RIDE_SPECS.bicycle` — 추적 뒤 3.4 m·위 2.1 m, 1인칭 눈 1.62 m, 하차 왼쪽 0.9 m, 후진·방향지시등 없음). 탑승 = 자전거 왼쪽 0.6 m 안 F.
+  거점 = 셀 meta `bikeDock`(OSM amenity=bicycle_rental 위치 — 가상 브랜드 SANPO Cycle), 편의 소환 = walk B(1.6 m 앞).
 ### train
 - 구현(M07-T05, ADR-0074): 차내 걷기 = walk(물리 칸 바닥), train = 칸에 붙은 카메라(`camera/attached-rig.ts`) — `standing`(문 옆)·`seated`(롱시트)·`frontView`(선두 운전실), V 순환.
   승차 = walk 중 F + 발이 칸 안, 하차 = 문 열린 정차 F / 경계역(트립 마지막 정차) 안내 4 s 뒤 자동 → 승강장 쪽 문 앞(`WalkParams.exact`). LCD = 게임 오버레이(`train-lcd.ts`, 일·영·한 4 s 순환).

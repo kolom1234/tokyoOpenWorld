@@ -3,7 +3,7 @@
 // 표본 = 페이지 안 rAF마다(시각·속력·위치·기어·rpm·ABS) → Node에서 계산. 결과 test-results/golden/drive/metrics.json + 콘솔 표. GPU 전력(W)은 nvidia-smi 1 s 표본.
 // 서버 = 골든뷰와 같음(dev `?world=local` 또는 GOLDEN_BASE_URL + GOLDEN_WORLD=api).
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { buildGraph } from './autopilot.ts';
 import {
   boardCourse,
@@ -102,6 +102,61 @@ for (const wet of [0, 1] as const)
       expect(d).toBeLessThanOrEqual(20);
     } else expect(d ?? 0).toBeGreaterThan(((results.brakeDry as { distanceM?: number })?.distanceM ?? 0) + 1);
   });
+
+test('bicycle flat top speed 22–26 km/h, upright (real GPU)', async ({ page }) => {
+  const h = await boardCourse(page, '', 'bicycle');
+  const power = powerSampler();
+  await startSampler(page, h);
+  await page.keyboard.down('KeyW');
+  await page.waitForTimeout(25_000);
+  const top = await latest(page);
+  await page.keyboard.up('KeyW');
+  const samples = await stopSampler(page);
+  const pw = power.stop();
+  results.bikeTop = {
+    topKmh: top,
+    maxRollDeg: Math.max(...samples.map((s) => Math.abs(s.roll))),
+    fpsMedian: median(samples.map((s) => s.fps)),
+    gpuPowerW: { medianDraw: median(pw.drawW), maxDraw: Math.max(0, ...pw.drawW), limit: median(pw.limitW) },
+  };
+  report('bikeTop', results.bikeTop);
+  expect(top).toBeGreaterThanOrEqual(22);
+  expect(top).toBeLessThanOrEqual(26);
+});
+
+test('bicycle 1 m/s for 20 s with steering wobble: no fall (real GPU)', async ({ page }) => {
+  const h = await boardCourse(page, '', 'bicycle');
+  await startSampler(page, h);
+  const t0 = Date.now();
+  let left = false;
+  while (Date.now() - t0 < 20_000) {
+    const kmh = await latest(page);
+    // 1 m/s(3.6 km/h) 근처 유지 — 페달 끊어 밟기, 1.5 s마다 좌우 조향.
+    if (kmh < 3.2) await page.keyboard.down('KeyW');
+    else await page.keyboard.up('KeyW');
+    const want = Math.floor((Date.now() - t0) / 1500) % 2 === 0;
+    if (want !== left) {
+      left = want;
+      await page.keyboard.up(left ? 'KeyD' : 'KeyA');
+      await page.keyboard.down(left ? 'KeyA' : 'KeyD');
+    }
+    await page.waitForTimeout(50);
+  }
+  for (const k of ['KeyW', 'KeyA', 'KeyD']) await page.keyboard.up(k);
+  await page.keyboard.down('KeyS');
+  await page.waitForTimeout(3000);
+  await page.keyboard.up('KeyS');
+  const samples = await stopSampler(page);
+  const moving = samples.filter((s) => s.kmh > 1);
+  results.bikeSlow = {
+    avgKmh: moving.reduce((a, s) => a + s.kmh, 0) / Math.max(1, moving.length),
+    maxRollDeg: Math.max(...samples.map((s) => Math.abs(s.roll))),
+    stoppedRollDeg: Math.abs(samples[samples.length - 1]?.roll ?? 0),
+    falls: samples.filter((s) => Math.abs(s.roll) > 30).length,
+  };
+  report('bikeSlow', results.bikeSlow);
+  expect((results.bikeSlow as { falls: number }).falls).toBe(0);
+});
 
 /** 보행자 밀집 저속 주행(M08-T02 수락 — 접촉 0): 스크램블 교차로 둘레 차선을 자동 운전(15 km/h, 적·황 정지선 정지)하며 프레임마다 보행자 ↔ 차체 사각형 거리. */
 test('sedan at low speed through the Scramble crowd: pedestrian contacts 0 (real GPU)', async ({ page }) => {

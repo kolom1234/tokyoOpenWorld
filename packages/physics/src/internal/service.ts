@@ -15,7 +15,16 @@ import type {
 import { createCommandQueue } from './host/command-queue.ts';
 import { createSnapshotHistory, readSab } from './host/snapshot-reader.ts';
 import { createVehicleReader } from './host/vehicle-reader.ts';
-import { FRAME_F64, type FromWorker, isIsolated, MAX_BODIES, SLOT_BITS, SNAPSHOT_BYTES, slotOf } from './protocol.ts';
+import {
+  type Command,
+  FRAME_F64,
+  type FromWorker,
+  isIsolated,
+  MAX_BODIES,
+  SLOT_BITS,
+  SNAPSHOT_BYTES,
+  slotOf,
+} from './protocol.ts';
 import { sabViews } from './worker/snapshot-writer.ts';
 
 /** 01-architecture §5 phase 표: physics = 30(traversal 20 뒤, traversalPost 35 앞). */
@@ -210,7 +219,7 @@ function vehicleApi(
     spawnVehicle(kind, posWF, yaw, params) {
       const h = handles.alloc();
       reader.forget(h);
-      queue.push({ c: 'vehicle', h, kind, posWF: { ...posWF }, yaw, params });
+      queue.push({ c: 'vehicle', h, kind, posWF: { ...posWF }, yaw, params } as Command);
       return h;
     },
     setVehicleInput: (h, i) => queue.push({ c: 'vehInput', h, input: { ...i } }),

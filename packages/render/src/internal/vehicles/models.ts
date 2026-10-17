@@ -3,9 +3,12 @@
 // 색: 도장 = 인스턴스 색(셰이더), 고정 부품 = 정점색. 등화 = 부품 코드(전조등·후미등·좌우 깜빡이·택시 지붕등). LOD0 = 바퀴 살·거울·그릴, LOD2 = 상자 + 바퀴 6각.
 import { VEHICLE_TYPES, type VehicleTypeInfo } from '@sanpo/core';
 import type { BufferGeometry } from 'three/webgpu';
+import { bicycleModel } from './bicycle-model.ts';
 import { VehicleBuilder as B, VPART } from './builder.ts';
 
-export type VehicleLod = 0 | 1 | 2;
+export type { VehicleLod } from './builder.ts';
+
+import type { VehicleLod } from './builder.ts';
 /** LOD 최대 거리(m) — 이 밖은 그리지 않는다(교통 제거 500 m). */
 export const VEHICLE_LOD_M = [35, 110, 520] as const;
 
@@ -188,6 +191,7 @@ export function buildVehicleGeometry(type: number, lod: VehicleLod): BufferGeome
   if (profile) return car(t, profile, lod).build();
   if (t.name === 'keiTruck') return keiTruck(t, lod).build();
   if (t.name === 'deliveryTruck') return deliveryTruck(t, lod).build();
+  if (t.name === 'bicycle') return bicycleModel(t, lod).build();
   return bus(t, lod).build();
 }
 

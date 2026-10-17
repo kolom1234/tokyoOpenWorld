@@ -110,6 +110,35 @@ export interface SedanParams {
   speedLimitKmh: number;
 }
 
+/**
+ * 생활형 자전거 + 탄 사람(08 §7 — `content/vehicles/bicycle.json`). Jolt MotorcycleController(2륜·기울기), 원점 = 바닥 중심, 전방 = 로컬 −Z.
+ * 페달 토크 = 스로틀 × clamp(1 − v / vmaxMs) × maxTorqueNm(뒷바퀴), 후진 없음. 저속 보조: v < assistBelowMs면 기울기 제어기를 끄고 바로 세우는 롤 스프링,
+ * v < standStillMs면 발 딛기(강한 롤 고정).
+ */
+export interface BicycleParams {
+  massKg: number;
+  dimensionsM: { length: number; width: number; height: number };
+  wheelbaseM: number;
+  comHeightM: number;
+  maxPitchRollDeg: number;
+  wheel: { radiusM: number; widthM: number };
+  pedal: { maxTorqueNm: number; vmaxMs: number };
+  suspension: { minLengthM: number; maxLengthM: number; frequencyHz: number; damping: number };
+  tire: { longitudinalFriction: CurvePoints; lateralFriction: CurvePoints; wetFrictionScale: number };
+  steering: { maxSteerDeg: number; highSpeedFactor: number; highSpeedKmh: number };
+  brakes: { frontTorqueNm: number; rearTorqueNm: number };
+  lean: { maxLeanDeg: number; springConstant: number; springDamping: number; smoothing: number };
+  lowSpeed: {
+    assistBelowMs: number;
+    uprightStiffness: number;
+    uprightDamping: number;
+    standStillMs: number;
+    footDownStiffness: number;
+  };
+  aero: { dragAreaM2: number; airDensity: number; rollingCoeff: number };
+  speedLimitKmh: number;
+}
+
 /** 차량 입력(08 §10): 스로틀·브레이크 0..1, 조향 −1(왼쪽)..1(오른쪽), 후진 = 스로틀을 뒤로. */
 export interface VehicleInput {
   throttle: number;
@@ -244,6 +273,8 @@ export interface PhysicsService extends SystemProvider {
    * posWF = 차체 바닥 중심(지면), yaw = 전방(−Z 기준, +Y 반시계). 동시에 최대 MAX_VEHICLES(4)대.
    */
   spawnVehicle(kind: 'sedan', posWF: Vec3d, yawRad: number, params: SedanParams): BodyHandle;
+  /** 자전거(M08-T03 — 08 §7): MotorcycleController 2륜 + 저속 보조(넘어지지 않음). 입력 reverse는 무시(후진 없음). */
+  spawnVehicle(kind: 'bicycle', posWF: Vec3d, yawRad: number, params: BicycleParams): BodyHandle;
   /** 다음 step에 전달(같은 프레임 여러 번이면 마지막 것). */
   setVehicleInput(h: BodyHandle, i: VehicleInput): void;
   /** 최신 스냅샷의 차량 상태(없으면 undefined). */

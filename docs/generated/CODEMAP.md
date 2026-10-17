@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 520개.
+> 파일 524개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -38,7 +38,8 @@
 - `apps/game/src/vehicles/curb-spot.ts` — 차 부르기 자리(09 §1 drive "인접 차도 가장자리", M08-T01/T02): 플레이어 주변 3×3 셀 차선 중 연석 쪽(laneIdx 0 — 좌측통행 맨 왼쪽) 일반 도로 차선, | exports: CURB_SEARCH_M, CurbSpot, curbSpotInChunk, findCurbSpot
 - `apps/game/src/vehicles/drive-hud.ts` — 운전 계기판·탑승 안내(임시 DOM HUD — M10 @sanpo/ui가 대체): drive 중 오른쪽 아래 속도(km/h)·기어·RPM 막대·등화(전조등·방향지시등)·ABS/TCS, | exports: gaugeHtml, guideHtml, driveHudSystem
 - `apps/game/src/vehicles/hazards.ts` — AEB 위험물(M08-T02): sim 출력 버퍼(메인에서 읽기만) → 원 목록. 보행자 = 지금 + 0.5·1.0 s 뒤(걷는 방향·속력 — anim 소수 × 10 m/s), | exports: carCircles, hazardsNear
-- `apps/game/src/vehicles/player-cars.ts` — 플레이어 차(M08-T01): 세워 둔 차(스폰 프리셋·카셰어)와 부른 차 — 물리 차체(physics.spawnVehicle, content/vehicles/sedan.json)를 콜라이더 적재 뒤 지면에 맞춰 만들고, | exports: SEDAN_PARAMS, SHARE_PAINT, SHARE_ACCENT, CarOrigin, PlayerCars, createPlayerCars
+- `apps/game/src/vehicles/player-cars.ts` — 플레이어 탈것(M08-T01·T03): 세워 둔 차·자전거(스폰 프리셋·카셰어·공유자전거 거점)와 부른 것 — 물리 차체(physics.spawnVehicle, content/vehicles/*.json)를 | exports: SEDAN_PARAMS, BICYCLE_PARAMS, RideKind, KIND_LOOK, CarOrigin, PlayerCars, createPlayerCars
+- `apps/game/src/vehicles/share-spots.ts` — 카셰어·공유자전거 거점(M08-T02·T03 — 가상 브랜드 "SANPO Car"·"SANPO Cycle"): live L0 셀의 meta.json `interactables`(carShare·bikeDock) → | exports: ShareSpot, spotsOf, ShareSpots, createShareSpots
 - `apps/game/src/vehicles/traffic-guide.ts` — 운전 교통 안내(M08-T02 — 위반해도 벌점 없음, HUD 안내만): 차가 있는 차선을 lanes.bin(AI 교통과 같은 데이터)에서 찾아 | exports: LaneHit, laneAt, DriveGuide, createDriveGuide
 - `apps/game/src/vehicles/wiring.ts` — 플레이어 차 배선(M08-T01): 차 관리자(player-cars) + 차 부르기(walk R·패드 D-pad ← — 가까운 차도 연석, curb-spot) + 스폰 프리셋 차(`vehicles`) + 계기판 HUD. | exports: VehicleWiring, createVehicleWiring
 - `apps/game/src/weather-mode.ts` — 날씨 모드(M09-T01, 10 §3): `?weather=auto|live|<기후표 상태 id>` > 골든뷰 weather > `?time=`(고정 시각 = 맑음 고정 — e2e·비교 결정론) > auto(기후표 마르코프). | exports: WeatherSpec, parseWeatherFlag, weatherSpecOf, applyWeatherSpec, startLiveWeather
@@ -123,7 +124,7 @@
 - `packages/input/src/internal/service.ts` — createInput: 디바이스 부착 + phase 0 시스템(원시 입력 → ActionState 스냅샷). see docs/modules/input.md | exports: INPUT_PHASE, createInput
 
 ## packages/physics
-- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, CharacterInput, VehicleKind, CurvePoints, SedanParams, VehicleInput, WheelState, VehicleState, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, StaticGroupDesc, PhysicsTransport, PhysicsDeps
+- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, CharacterInput, VehicleKind, CurvePoints, SedanParams, BicycleParams, VehicleInput, WheelState, VehicleState, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, StaticGroupDesc, PhysicsTransport, PhysicsDeps
 - `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 물리. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts', createInlineTransport, anchorOf, createPhysics, DEFAULT_PHYSICS_CONFIG, PHYSICS_PHASE
 - `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). 캐릭터·차량 입력은 핸들당 마지막 것만(같은 프레임 덮어쓰기). | exports: CommandQueue, createCommandQueue
 - `packages/physics/src/internal/host/snapshot-reader.ts` — 스냅샷 읽기·보간(08 §9): SAB는 seqlock으로 최신 버퍼를 복사, 폴백은 받은 프레임 그대로. 최근 몇 개를 시뮬레이션 시각 순으로 두고 | exports: SnapshotHistory, createSnapshotHistory, readSab
@@ -147,7 +148,9 @@
 - `packages/physics/src/internal/worker/snapshot-writer.ts` — 스냅샷 쓰기(08 §9): SAB 더블 버퍼(비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가) 또는 폴백 postMessage(Transferable). | exports: SnapshotSink, sabViews, createSabSink, createPostSink
 - `packages/physics/src/internal/worker/static-groups.ts` — 이름 붙인 정적 묶음(M07-T04 — ADR-0073): 메인이 만든 승강장 바닥(삼각형 메시 — 레일 데이터에서)·홈도어(상자) → STATIC_WORLD 바디 1개씩. | exports: STATIC_BOX_STRIDE, StaticGroup, StaticGroups, createStaticGroups
 - `packages/physics/src/internal/worker/train-bodies.ts` — 열차 칸 바디(M07-T04, 08 §8 — ADR-0073): 메인 sim 열차(프레임마다 정확한 값) → step 명령 'trains'(core TRAIN_BODY_STRIDE 레코드) → | exports: carShapes, doorShapes, TrainBodies, createTrainBodies
-- `packages/physics/src/internal/worker/vehicle-sedan.ts` — 플레이어 승용차(M08-T01 — 08 §6): VEHICLE 레이어 동적 강체(하부 상자 + 무게중심 낮춤) + Jolt VehicleConstraint(WheeledVehicleController, 원통 캐스트 접지). | exports: WheelOut, SedanBody, createSedan
+- `packages/physics/src/internal/worker/vehicle-bicycle.ts` — 플레이어 자전거(M08-T03 — 08 §7): 생활형 자전거 + 탄 사람 = VEHICLE 동적 강체(세로로 긴 상자, 무게중심 0.95 m) + VehicleConstraint(MotorcycleController 2륜·기울기). | exports: createBicycle
+- `packages/physics/src/internal/worker/vehicle-common.ts` — 플레이어 탈것 공용(M08-T01·T03): 몸체 인터페이스, 동적 차체 강체, VehicleConstraint 붙이기(원통 캐스트·스텝 리스너·마찰 콜백), 공기·구름 저항, 바퀴 읽기. | exports: J, WheelOut, VehicleBody, Aero, setCurve, spawnBody, attachConstraint, resist, forwardSpeed, readWheel, destroyBody
+- `packages/physics/src/internal/worker/vehicle-sedan.ts` — 플레이어 승용차(M08-T01 — 08 §6): VEHICLE 레이어 동적 강체(하부 상자 + 무게중심 낮춤) + Jolt VehicleConstraint(WheeledVehicleController, 원통 캐스트 접지). | exports: SedanBody, createSedan
 - `packages/physics/src/internal/worker/vehicles.ts` — 플레이어 차량 목록(M08-T01): 생성·입력·스텝 전 보조·노면 젖음·스냅샷 차량 기록(protocol VEH_*). 차체 강체 자체는 bodies 슬롯(kind 'veh')이 포즈를 쓴다. | exports: VehicleBody, Vehicles, createVehicles
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
@@ -236,7 +239,8 @@
 - `packages/render/src/internal/trees/pools.ts` — 나무 풀(M05-T04): Mesh + InstancedBufferGeometry(InstancedMesh 아님 — three r186은 InstancedMesh마다 노드 빌드를 따로 해서, 같은 머티리얼·속성 배치의 | exports: TreePool, impostorQuad, makeTreePool, writeTreePool
 - `packages/render/src/internal/trees/season.ts` — 나무 계절 표(M05-T04, 07 §8): dayOfYear(JST) → 수종별 잎 색(선형 RGB)·잎 밀도(0 = 낙엽, 1 = 무성). | exports: SPECIES_SLOTS, BARK_COLORS, seasonTable
 - `packages/render/src/internal/vehicle-layer.ts` — 차량 레이어 API(M06-T06 교통 + M08-T01 플레이어 차): 머티리얼 1개 공유(그림자 티어 재컴파일 목록 vehicleMaterials), 처음 쓸 때 장면 밖 선컴파일 뒤 그리기. | exports: createVehicleLayer
-- `packages/render/src/internal/vehicles/builder.ts` — 차량 절차 모델 조립기(M06-T06, 자체 제작 — ADR-0066): 육면체(사다리꼴 상자)·상자·바퀴(축 x 원기둥 + 휠 살) → BufferGeometry | exports: VPART, VPart, Corner, VehicleBuilder
+- `packages/render/src/internal/vehicles/bicycle-model.ts` — 생활형 자전거 + 탄 사람(M08-T03 — 자체 제작, 실존 제품·로고 없음): 낮은 프레임(스텝 스루), 앞 바구니, 흙받이, 체인 커버, 전조등·후미등, | exports: bar, bicycleModel
+- `packages/render/src/internal/vehicles/builder.ts` — 차량 절차 모델 조립기(M06-T06, 자체 제작 — ADR-0066): 육면체(사다리꼴 상자)·상자·바퀴(축 x 원기둥 + 휠 살) → BufferGeometry | exports: VehicleLod, VPART, VPart, Corner, VehicleBuilder
 - `packages/render/src/internal/vehicles/field.ts` — 차량 필드(M06-T06, ADR-0066): sim 교통 SAB(stride 8: x,y,z·yaw·속력·바퀴 회전·variant·flags) → 프레임마다 외삽(30 Hz 틱 사이 — 속력·바퀴) → | exports: VEHICLE_POOL_CAPACITY, VehicleFieldStats, VehicleField, createVehicleField
 - `packages/render/src/internal/vehicles/material.ts` — 차량 머티리얼(07 §4 M_VEHICLE, M06-T06 — ADR-0066): 클리어코트 도장(인스턴스 색)·어두운 유리·고정 부품(정점색), 바퀴 = 축 둘레 회전(인스턴스 회전 수), | exports: VehicleUniforms, createVehicleUniforms, createVehicleMaterial, nightFromSun
 - `packages/render/src/internal/vehicles/models.ts` — 차량 절차 모델(M06-T06, 자체 제작 — 실존 차명·로고·엠블럼·번호판 없음, ADR-0066): core VEHICLE_TYPES 7종(치수 공유) × LOD 0–2. | exports: VehicleLod, VEHICLE_LOD_M, buildVehicleGeometry, vehicleColors
@@ -351,7 +355,7 @@
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
 - `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard, carGroundGuard
 - `packages/traversal/src/internal/modes/drive-actions.ts` — drive 모드 상태·동작(M08-T01·T02): 상태, 버튼(등화·방향지시등·시점), 운전석 카메라, 하차 자리 찾기, 안전(보도 서행·AEB). | exports: DriveState, createState, handleButtons, cockpitCamera, requestExit, safety
-- `packages/traversal/src/internal/modes/drive-control.ts` — drive 조작 순수 함수(M08-T01): 운전자 입력(가속·제동·후진·정지 유지), 키보드 조향 램프, 기어 표시, 차 방위, 운전석 문 앞 탑승 판정. | exports: STOP_MS, entryTarget, yawOfCar, driverInput, rampSteer, gearLabel, AebCar, hazardAhead, aebRange
+- `packages/traversal/src/internal/modes/drive-control.ts` — drive 조작 순수 함수(M08-T01): 운전자 입력(가속·제동·후진·정지 유지), 키보드 조향 램프, 기어 표시, 차 방위, 운전석 문 앞 탑승 판정. | exports: STOP_MS, entryTarget, yawOfCar, driverInput, rampSteer, gearLabel, RideSpec, RIDE_SPECS, AebCar, hazardAhead, aebRange
 - `packages/traversal/src/internal/modes/drive.ts` — drive 모드(09 §2 drive, M08-T01): 게임이 만든 물리 차량(DriveParams.vehicle)을 운전. input 'vehicle': W/RT 가속·S/LT 제동(멈추면 후진)·A/D·L스틱 조향 | exports: driverInput, entryTarget, rampSteer, yawOfCar, isDriveParams, createDriveMode
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → (physics 있으면) 지오메트리 진입 방지(free-guard.ts) → CameraState. | exports: FreecamMode, createFreecamMode
 - `packages/traversal/src/internal/modes/train.ts` — train 모드(09 §2 train, M07-T05): 탑승 중 카메라(AttachedRig) — 서기(문 옆)·좌석·전면 전망(선두 운전실), V 순환, 마우스 시선(칸 기준). | exports: isTrainParams, viewOffset, insideCar, DOOR_REACH_M, nearDoor, boardingTarget, alightSpot, createTrainMode

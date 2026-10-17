@@ -3,12 +3,19 @@
 // 운전자 보조는 여기서 스텝마다: ABS(바퀴 종 슬립 > absSlip → 제동 × absRelease), TCS(구동 바퀴 슬립 > tcsSlip → 스로틀 ½), 속도 감응 조향, 속도 제한.
 // 파라미터는 content/vehicles/sedan.json(코드 상수 금지 — 모듈 카드 Gotchas). 노면 마찰 = 타이어 곡선만 × lerp(1, wetFrictionScale, 젖음) —
 // Jolt 기본 결합 √(타이어 × 바디 마찰)은 셀 콜라이더 기본 마찰 0.2에서 접지력이 45 %로 떨어진다(GetCombinedFriction 콜백으로 대체).
-import type { CurvePoints, SedanParams, VehicleInput } from '../../api.ts';
-import type { Jolt } from './jolt-init.ts';
-import { OBJ } from './layers.ts';
+import type { SedanParams, VehicleInput } from '../../api.ts';
+import {
+  attachConstraint,
+  destroyBody,
+  forwardSpeed,
+  type J,
+  readWheel,
+  resist,
+  setCurve,
+  spawnBody,
+  type VehicleBody,
+} from './vehicle-common.ts';
 import type { PhysicsWorld } from './world.ts';
-
-type J<K extends keyof Jolt> = Jolt[K] extends abstract new (...a: never[]) => infer R ? R : never;
 
 /** 차체 충돌 상자: 바닥 틈(m)·높이 비율(차 높이 중 하부 상자). */
 const BODY_CLEARANCE_M = 0.18;
@@ -18,49 +25,7 @@ const REST_FRACTION = 0.45;
 /** 이 속력(m/s) 아래에서는 TCS·ABS를 쓰지 않는다(슬립 비 = 속도 차 ÷ 노면 속도 — 저속에서 과대). */
 const TCS_MIN_SPEED_MS = 4;
 
-export interface WheelOut {
-  rotation: number;
-  steer: number;
-  suspension: number;
-  slipLong: number;
-  slipLatDeg: number;
-  material: number;
-}
-
-export interface SedanBody {
-  readonly id: J<'BodyID'>;
-  readonly params: SedanParams;
-  input: VehicleInput;
-  /** 마지막 스텝 실제 스로틀·ABS·TCS. */
-  readonly applied: { throttle: number; abs: boolean; tcs: boolean };
-  /** 스텝 전: 입력 → SetDriverInput(보조 포함). */
-  preStep(dt: number): void;
-  /** 노면 젖음 0..1 → 마찰 곡선. */
-  setWetness(w: number): void;
-  /** 전방 속력(m/s, 후진 −). */
-  speed(): number;
-  rpm(): number;
-  gear(): number;
-  shifting(): boolean;
-  wheel(i: number, out: WheelOut): void;
-  readonly wheelCount: number;
-  dispose(): void;
-}
-
-function setCurve(c: J<'LinearCurve'>, pts: CurvePoints): void {
-  c.Clear();
-  for (const [x, y] of pts) c.AddPoint(x, y);
-}
-
-/** 바퀴–노면 마찰 = 타이어 곡선 값 × grip.k(젖음). 그 밖 콜백은 빈 함수(JS 구현 필수). */
-function frictionCallbacks(w: PhysicsWorld, grip: { k: number }): J<'VehicleConstraintCallbacksJS'> {
-  const cb = new w.Jolt.VehicleConstraintCallbacksJS();
-  cb.GetCombinedFriction = (_wheel: number, _dir: number, tireFriction: number) => tireFriction * grip.k;
-  cb.OnPreStepCallback = () => undefined;
-  cb.OnPostCollideCallback = () => undefined;
-  cb.OnPostStepCallback = () => undefined;
-  return cb;
-}
+export type SedanBody = VehicleBody;
 
 function bodyShape(w: PhysicsWorld, p: SedanParams): J<'Shape'> {
   const { Jolt } = w;
@@ -161,16 +126,6 @@ function constraintSettings(w: PhysicsWorld, p: SedanParams, wheels: J<'WheelSet
   return v;
 }
 
-/** 공기 저항 ½ρ·CdA·v² + 구름 저항 Crr·m·g(움직일 때) — 진행 반대 방향 힘. */
-function resist(w: PhysicsWorld, id: J<'BodyID'>, p: SedanParams, speed: number): void {
-  const v = w.bodies.GetLinearVelocity(id);
-  const [vx, vz] = [v.GetX(), v.GetZ()];
-  const sp = Math.hypot(vx, vz);
-  if (sp < 0.05 || Math.abs(speed) < 0.05) return;
-  const f = 0.5 * p.aero.airDensity * p.aero.dragAreaM2 * sp * sp + p.aero.rollingCoeff * p.massKg * 9.81;
-  w.bodies.AddForce(id, w.scratch.vec3((-vx / sp) * f, 0, (-vz / sp) * f), w.Jolt.EActivation_DontActivate);
-}
-
 /** 운전자 보조: ABS·TCS·속도 감응 조향·속도 제한 → SetDriverInput 인자. */
 function assist(b: { speed: number; slips: number[]; input: VehicleInput; p: SedanParams }) {
   const { p, input } = b;
@@ -190,51 +145,18 @@ function assist(b: { speed: number; slips: number[]; input: VehicleInput; p: Sed
 }
 
 /** 차체 강체(질량 = 파라미터, 선형 감쇠 0 — 저항은 resist). */
-function spawnBody(w: PhysicsWorld, pos: readonly [number, number, number], yaw: number, p: SedanParams) {
-  const { Jolt, bodies, scratch } = w;
-  const shape = bodyShape(w, p);
-  const bcs = new Jolt.BodyCreationSettings(
-    shape,
-    scratch.rvec3(pos[0], pos[1], pos[2]),
-    scratch.yawQuat(yaw),
-    Jolt.EMotionType_Dynamic,
-    OBJ.VEHICLE,
-  );
-  bcs.mOverrideMassProperties = Jolt.EOverrideMassProperties_CalculateInertia;
-  bcs.mMassPropertiesOverride.mMass = p.massKg;
-  bcs.mLinearDamping = 0;
-  const body = bodies.CreateBody(bcs);
-  Jolt.destroy(bcs);
-  const id = new Jolt.BodyID(body.GetID().GetIndexAndSequenceNumber());
-  bodies.AddBody(id, Jolt.EActivation_Activate);
-  return { body, id, shape };
-}
-
-/** VehicleConstraint(원통 캐스트 접지) + 스텝 리스너 + 마찰 콜백. */
-function attachConstraint(w: PhysicsWorld, body: J<'Body'>, p: SedanParams, grip: { k: number }) {
-  const { Jolt, system } = w;
-  const vs = constraintSettings(w, p, wheelSettings(w, p));
-  const constraint = new Jolt.VehicleConstraint(body, vs);
-  Jolt.destroy(vs);
-  constraint.SetVehicleCollisionTester(new Jolt.VehicleCollisionTesterCastCylinder(OBJ.VEHICLE, 0.05));
-  system.AddConstraint(constraint);
-  const listener = new Jolt.VehicleConstraintStepListener(constraint);
-  system.AddStepListener(listener);
-  const callbacks = frictionCallbacks(w, grip);
-  callbacks.SetVehicleConstraint(constraint);
-  return { constraint, listener, callbacks };
-}
-
 export function createSedan(
   w: PhysicsWorld,
   pos: readonly [number, number, number],
   yaw: number,
   p: SedanParams,
 ): SedanBody {
-  const { Jolt, bodies, system } = w;
-  const { body, id, shape } = spawnBody(w, pos, yaw, p);
+  const { Jolt, bodies } = w;
+  const shape = bodyShape(w, p);
+  const { body, id } = spawnBody(w, shape, pos, yaw, p.massKg);
   const grip = { k: 1 };
-  const { constraint, listener, callbacks } = attachConstraint(w, body, p, grip);
+  const att = attachConstraint(w, body, constraintSettings(w, p, wheelSettings(w, p)), grip);
+  const constraint = att.constraint;
   const ctl = Jolt.castObject(constraint.GetController(), Jolt.WheeledVehicleController);
   const wheel = (i: number) => Jolt.castObject(constraint.GetWheel(i), Jolt.WheelWV);
   const slips = [0, 0, 0, 0];
@@ -242,7 +164,6 @@ export function createSedan(
   const fwd = new Jolt.Vec3(0, 0, -1);
   const self: SedanBody = {
     id,
-    params: p,
     input: { throttle: 0, brake: 0, steer: 0, handbrake: false, reverse: false },
     applied,
     wheelCount: 4,
@@ -250,7 +171,7 @@ export function createSedan(
       for (let i = 0; i < 4; i++) slips[i] = wheel(i).HasContact() ? wheel(i).mLongitudinalSlip : 0;
       const speed = self.speed();
       const a = assist({ speed, slips, input: self.input, p });
-      resist(w, id, p, speed);
+      resist(w, id, p.aero, p.massKg, speed);
       ctl.SetDriverInput(a.forward, a.right, a.brake, self.input.handbrake ? 1 : 0);
       Object.assign(applied, { throttle: a.throttle, abs: a.abs, tcs: a.tcs });
       if (a.forward !== 0 || a.right !== 0 || a.brake !== 0 || self.input.handbrake) bodies.ActivateBody(id);
@@ -258,33 +179,15 @@ export function createSedan(
     setWetness(wet) {
       grip.k = 1 + (p.tire.wetFrictionScale - 1) * Math.min(Math.max(wet, 0), 1);
     },
-    speed() {
-      const f = bodies.GetRotation(id).MulVec3(fwd);
-      const v = bodies.GetLinearVelocity(id);
-      return f.GetX() * v.GetX() + f.GetY() * v.GetY() + f.GetZ() * v.GetZ();
-    },
+    speed: () => forwardSpeed(w, id, fwd),
     rpm: () => ctl.GetEngine().GetCurrentRPM(),
     gear: () => ctl.GetTransmission().GetCurrentGear(),
     shifting: () => ctl.GetTransmission().IsSwitchingGear(),
-    wheel(i, out) {
-      const wh = wheel(i);
-      out.rotation = wh.GetRotationAngle();
-      out.steer = wh.GetSteerAngle();
-      out.suspension = wh.GetSuspensionLength();
-      out.slipLong = wh.HasContact() ? wh.mLongitudinalSlip : 0;
-      out.slipLatDeg = wh.HasContact() ? (wh.mLateralSlip * 180) / Math.PI : 0;
-      out.material = wh.HasContact() ? Number(bodies.GetUserData(wh.GetContactBodyID())) & 0xff : -1;
-    },
+    wheel: (i, out) => readWheel(w, wheel(i), out),
     dispose() {
-      system.RemoveStepListener(listener);
-      system.RemoveConstraint(constraint);
-      Jolt.destroy(listener);
-      Jolt.destroy(callbacks);
-      bodies.RemoveBody(id);
-      bodies.DestroyBody(id);
-      Jolt.destroy(id);
+      att.dispose();
+      destroyBody(w, id, shape);
       Jolt.destroy(fwd);
-      shape.Release();
     },
   };
   return self;

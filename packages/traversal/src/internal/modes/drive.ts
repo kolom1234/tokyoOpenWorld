@@ -1,25 +1,23 @@
 // drive 모드(09 §2 drive, M08-T01): 게임이 만든 물리 차량(DriveParams.vehicle)을 운전. input 'vehicle': W/RT 가속·S/LT 제동(멈추면 후진)·A/D·L스틱 조향
 // (키보드는 속도 감응 램프 — 물리가 다시 속도 감응 각도 제한), Space/A 핸드브레이크, L/D-pad↑ 전조등, Q·E/D-pad←→ 방향지시등(조향을 풀면 자동 끔), V 시점(추적 ↔ 운전석),
 // F 하차(멈췄을 때 — 운전석 쪽(우핸들 = 오른쪽)부터 아래 레이로 지면을 찾아 walk exact). 정지 중 입력이 없으면 가볍게 제동(크리프 정지).
-import type { AvatarState, CameraState, FrameContext, ModeId, Quat, Vec3, Vec3d } from '@sanpo/core';
-import { quatFromAxisAngle, quatMultiply, vec3ApplyQuat } from '@sanpo/core';
+import type { AvatarState, CameraState, FrameContext, ModeId } from '@sanpo/core';
 import type { PhysicsService, VehicleInput, VehicleState } from '@sanpo/physics';
 import type {
   DriveHud,
   DriveParams,
   DriveView,
-  EnterableVehicle,
   ModeOutput,
   TraversalContext,
   TraversalMode,
   TraversalSettings,
 } from '../../api.ts';
 import { boomLength, createBoomState, requestBoom, resetBoom } from '../camera/boom.ts';
-import { chaseBoom, createChaseState, DEFAULT_CHASE, stepChase } from '../camera/chase-rig.ts';
+import { type ChaseSettings, chaseBoom, createChaseState, DEFAULT_CHASE, stepChase } from '../camera/chase-rig.ts';
 import { type Boom, createBoom } from '../camera/third-person-rig.ts';
 import { carGroundGuard } from '../ground-guard.ts';
 import { cockpitCamera, createState, type DriveState, handleButtons, requestExit, safety } from './drive-actions.ts';
-import { driverInput, gearLabel, rampSteer, yawOfCar } from './drive-control.ts';
+import { driverInput, gearLabel, RIDE_SPECS, type RideSpec, rampSteer, yawOfCar } from './drive-control.ts';
 
 export { driverInput, entryTarget, rampSteer, yawOfCar } from './drive-control.ts';
 
@@ -34,6 +32,7 @@ interface Rt {
   readonly settings: Readonly<TraversalSettings>;
   readonly st: DriveState;
   readonly chase: ReturnType<typeof createChaseState>;
+  readonly chaseCfg: ChaseSettings;
   readonly boom: ReturnType<typeof createBoomState>;
   readonly boomNow: Boom;
   readonly boomScratch: Boom;
@@ -41,8 +40,8 @@ interface Rt {
   readonly output: ModeOutput;
 }
 
-function createRt(settings: Readonly<TraversalSettings>): Rt {
-  const st = createState();
+function createRt(settings: Readonly<TraversalSettings>, spec: RideSpec): Rt {
+  const st = createState(spec);
   const camera: CameraState = {
     posWF: { x: 0, y: 0, z: 0 },
     quat: { x: 0, y: 0, z: 0, w: 1 },
@@ -64,6 +63,7 @@ function createRt(settings: Readonly<TraversalSettings>): Rt {
     settings,
     st,
     chase: createChaseState(),
+    chaseCfg: { ...DEFAULT_CHASE, ...spec.chase },
     boom: createBoomState(),
     boomNow: createBoom(),
     boomScratch: createBoom(),
@@ -97,12 +97,13 @@ function updateCamera(rt: Rt, frame: FrameContext, ctx: TraversalContext, physic
     return;
   }
   const yaw = chase.yaw + chase.lookYaw;
-  const want = chaseBoom(st.car.pos, yaw, chase.lookPitch, DEFAULT_CHASE, rt.boomNow).len;
+  const cfg = rt.chaseCfg;
+  const want = chaseBoom(st.car.pos, yaw, chase.lookPitch, cfg, rt.boomNow).len;
   const len = boomLength(boom, yaw, chase.lookPitch, want, dt * CHASE_BOOM_OUT);
   const car = { posWF: st.car.pos, yawRad: st.car.yaw, speedMs: st.car.speed };
-  stepChase(chase, car, look, len, rt.boomNow, DEFAULT_CHASE, dt, settings.fovDeg, camera);
+  stepChase(chase, car, look, len, rt.boomNow, cfg, dt, settings.fovDeg, camera);
   requestBoom(boom, physics, chase.yaw + chase.lookYaw, chase.lookPitch, (y, p) =>
-    chaseBoom(st.car.pos, y, p, DEFAULT_CHASE, rt.boomScratch),
+    chaseBoom(st.car.pos, y, p, cfg, rt.boomScratch),
   );
 }
 
@@ -132,6 +133,7 @@ function writeHud(
     aeb: st.aeb,
     sidewalk: st.sidewalk,
     exit: st.exit,
+    bell: st.bell,
   };
   rt.output.hud = { speedKmh: hud.speedKmh, rpm: hud.rpm, gear: hud.gear, drive: hud, groundLoading: st.loading };
 }
@@ -147,7 +149,8 @@ function update(rt: Rt, frame: FrameContext, ctx: TraversalContext): ModeOutput 
   handleButtons(st, ctx);
   const s = ctx.input.state;
   st.steer = rampSteer(st.steer, s.axis('moveX'), frame.dtReal);
-  const input = driverInput(s.axis('moveY'), st.car.speed, st.steer, s.pressed('handbrake'));
+  const input = driverInput(s.axis('moveY'), st.car.speed, st.steer, s.pressed('handbrake'), st.spec.reverse);
+  if (s.justPressed('bell')) st.bell++;
   // 앞 셀 콜라이더가 아직 없으면(빠르게 달려 스트리밍을 앞지름) 멈춰 기다린다(08 §4 groundMissing).
   st.loading = carGroundGuard(physics, st.car.pos, st.car.vel);
   if (st.loading) Object.assign(input, { throttle: 0, brake: 1 });
@@ -170,11 +173,15 @@ function update(rt: Rt, frame: FrameContext, ctx: TraversalContext): ModeOutput 
   return output;
 }
 
-export function createDriveMode(settings: Readonly<TraversalSettings>): TraversalMode & { readonly view: DriveView } {
-  const rt = createRt(settings);
+/** drive(세단) 또는 cycle(자전거, M08-T03) — 같은 조작·안전·카메라, 사양(RIDE_SPECS)만 다르다. */
+export function createDriveMode(
+  settings: Readonly<TraversalSettings>,
+  kind: 'sedan' | 'bicycle' = 'sedan',
+): TraversalMode & { readonly view: DriveView } {
+  const rt = createRt(settings, RIDE_SPECS[kind]);
   const { st } = rt;
   return {
-    id: 'drive',
+    id: kind === 'bicycle' ? 'cycle' : 'drive',
     requires: ['physics'],
     get view() {
       return st.view;

@@ -38,7 +38,10 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 **M08-T02**(ADR-0088): `TraversalContext += hazards?(centerWF, radiusM): HazardCircle[] { x, z, r }`(게임 — 보행자 지금·0.5·1 s 예측, 교통 차·세워 둔 차 원), `DriveHud += aeb, sidewalk`.
 drive 안전: 진행 통로(반폭 + 원 + 0.45 m, 조향 곡률로 휨) 안 위험물이 max(정지 거리(반응 0.25 s·4.5 m/s²)+2 m, 1.5 s × v) 안이면 스로틀 0·제동 1(AEB), 서 있을 때 1.2 m 안이면 출발 막음,
 바퀴가 보도 재질(tile 7)이면 10 km/h 넘게 못 감. 기어 표시 = 변속 중(Jolt 0)엔 마지막 전진 기어.
-미구현: `interactables`(카셰어 스팟 — 파이프라인), cycle/transition 모드, phase 35(traversalPost).
+**M08-T03**(ADR-0089): cycle 모드 = drive 모드 같은 구현(`createDriveMode(settings, 'bicycle')` — `RIDE_SPECS`(drive-control.ts): 반길이·반폭·조향·휠베이스·1인칭 눈·추적 거리·하차 거리·보도 규칙·후진·방향지시등).
+자전거: S = 브레이크만(후진 없음), 방향지시등 없음, B 벨(`DriveHud.bell` 횟수), 보도 = 보행자 6 m 안일 때만 6 km/h, 탑승 = 왼쪽 0.6 m 안 F. `DriveParams.kind`·`DriveHud.kind`·`EnterableVehicle.kind`·`HudHints.enterable` = 'sedan' | 'bicycle',
+`HazardCircle.kind?: 'ped'`(정지 중 출발 막기는 보행자만).
+미구현: `interactables` 레지스트리(거점은 게임 vehicles/share-spots), transition 모드, phase 35(traversalPost).
 
 ## Invariants
 - 모드 1개 = 파일 1개(`internal/modes/<id>.ts`), 레지스트리 등록으로 확장(기존 모드 수정 금지).

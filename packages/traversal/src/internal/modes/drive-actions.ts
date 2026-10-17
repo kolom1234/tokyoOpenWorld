@@ -3,24 +3,19 @@ import type { CameraState, Quat, Vec3, Vec3d } from '@sanpo/core';
 import { quatFromAxisAngle, quatMultiply, vec3ApplyQuat } from '@sanpo/core';
 import type { PhysicsService, VehicleInput, VehicleState } from '@sanpo/physics';
 import type { DriveHud, DriveParams, DriveView, ModeOutput, TraversalContext } from '../../api.ts';
-import { aebRange, hazardAhead, STOP_MS } from './drive-control.ts';
+import { aebRange, hazardAhead, type RideSpec, STOP_MS } from './drive-control.ts';
 
-/** 운전석 눈 위치(차 로컬, 우핸들 기준 x = 오른쪽 +): 좌석 중심 0.37 m, 눈높이 1.30 m(벨트라인 0.86·지붕 1.42 사이), 앞뒤 중심보다 0.15 m 앞. */
-const COCKPIT_EYE: readonly [number, number, number] = [0.37, 1.3, -0.15];
-/** 하차 후보(차 로컬 x·z): 운전석 쪽 → 반대쪽 → 뒤. */
-const EXIT_SIDE_M = 1.7;
-const EXIT_BACK_M = 3.6;
 /** 하차 지면: 차 바닥 높이 ±이 범위만(턱·옥상·고가 아래 제외). */
 const EXIT_DY_M = 0.9;
 const BLOCKED_SHOW_S = 2.5;
 /** 보도 재질(JCOL tile)·보도 최고 속력(m/s, 10 km/h)·위험물 찾는 반경(m)·정지 중 출발 막는 거리(m)·세단 최대 조향(deg). */
 const SIDEWALK_MATERIAL = 7;
-const SIDEWALK_MAX_MS = 10 / 3.6;
 const HAZARD_RADIUS_M = 40;
 const AEB_STANDSTILL_M = 1.2;
-const SEDAN_STEER_DEG = 35;
 
 export interface DriveState {
+  /** 탈것 사양(세단·자전거). */
+  readonly spec: RideSpec;
   physics: PhysicsService | undefined;
   params: DriveParams | undefined;
   view: DriveView;
@@ -38,14 +33,17 @@ export interface DriveState {
   /** AEB 작동 중·보도 위(M08-T02). */
   aeb: boolean;
   sidewalk: boolean;
+  /** 벨 누른 횟수(자전거 — 소리 배선이 바뀔 때 울림). */
+  bell: number;
   /** 마지막 전진 기어(변속 중 표시). */
   lastGear: { gear: number };
   look: { yaw: number; pitch: number; idleS: number };
   car: { pos: Vec3d; quat: Quat; vel: Vec3; yaw: number; speed: number };
 }
 
-export function createState(): DriveState {
+export function createState(spec: RideSpec): DriveState {
   return {
+    spec,
     physics: undefined,
     params: undefined,
     view: 'chase',
@@ -61,6 +59,7 @@ export function createState(): DriveState {
     aeb: false,
     sidewalk: false,
     lastGear: { gear: 1 },
+    bell: 0,
     look: { yaw: 0, pitch: -0.05, idleS: 99 },
     car: { pos: { x: 0, y: 0, z: 0 }, quat: { x: 0, y: 0, z: 0, w: 1 }, vel: { x: 0, y: 0, z: 0 }, yaw: 0, speed: 0 },
   };
@@ -70,8 +69,9 @@ export function createState(): DriveState {
 export function handleButtons(st: DriveState, ctx: TraversalContext): void {
   const s = ctx.input.state;
   if (s.justPressed('lights')) st.lights = !st.lights;
-  if (s.justPressed('indicatorLeft')) st.indicator = st.indicator === -1 ? 0 : -1;
-  if (s.justPressed('indicatorRight')) st.indicator = st.indicator === 1 ? 0 : 1;
+  if (!st.spec.indicators) st.indicator = 0;
+  else if (s.justPressed('indicatorLeft')) st.indicator = st.indicator === -1 ? 0 : -1;
+  if (st.spec.indicators && s.justPressed('indicatorRight')) st.indicator = st.indicator === 1 ? 0 : 1;
   if (st.indicator === 0) st.turned = false;
   else if (Math.sign(st.steer) === st.indicator && Math.abs(st.steer) > 0.5) st.turned = true;
   else if (st.turned && Math.abs(st.steer) < 0.1) {
@@ -102,8 +102,9 @@ export function cockpitCamera(
     L.yaw -= L.yaw * k;
     L.pitch += (-0.05 - L.pitch) * k;
   }
-  const x = side === 'right' ? COCKPIT_EYE[0] : -COCKPIT_EYE[0];
-  vec3ApplyQuat(scratchV, { x, y: COCKPIT_EYE[1], z: COCKPIT_EYE[2] }, st.car.quat);
+  const eye = st.spec.eye;
+  const x = side === 'right' ? eye[0] : -eye[0];
+  vec3ApplyQuat(scratchV, { x, y: eye[1], z: eye[2] }, st.car.quat);
   out.posWF.x = st.car.pos.x + scratchV.x;
   out.posWF.y = st.car.pos.y + scratchV.y;
   out.posWF.z = st.car.pos.z + scratchV.z;
@@ -125,9 +126,9 @@ export function requestExit(st: DriveState, physics: PhysicsService): void {
   const gen = ++st.exitGen;
   const side = st.params?.driveSide === 'left' ? -1 : 1;
   const cands: [number, number][] = [
-    [side * EXIT_SIDE_M, 0],
-    [-side * EXIT_SIDE_M, 0],
-    [0, EXIT_BACK_M],
+    [side * st.spec.exitSideM, 0],
+    [-side * st.spec.exitSideM, 0],
+    [0, st.spec.exitBackM],
   ];
   const car = { ...st.car.pos };
   const q = { ...st.car.quat };
@@ -165,12 +166,17 @@ export function safety(
   vs: Readonly<VehicleState> | undefined,
   input: VehicleInput,
 ): void {
+  const spec = st.spec;
+  const list = ctx.hazards?.(st.car.pos, HAZARD_RADIUS_M);
   st.sidewalk = vs?.wheels.some((w) => w.contactMaterial === SIDEWALK_MATERIAL) ?? false;
-  if (st.sidewalk && Math.abs(st.car.speed) > SIDEWALK_MAX_MS) {
+  const near = spec.sidewalk.nearM;
+  const slowHere =
+    st.sidewalk &&
+    (near === undefined || (list ?? []).some((h) => Math.hypot(h.x - st.car.pos.x, h.z - st.car.pos.z) < near + h.r));
+  if (slowHere && Math.abs(st.car.speed) > spec.sidewalk.maxMs) {
     input.throttle = 0;
     input.brake = Math.max(input.brake, 0.5);
   }
-  const list = ctx.hazards?.(st.car.pos, HAZARD_RADIUS_M);
   const moving = Math.abs(st.car.speed) >= 0.3;
   const intent = input.throttle > 0 || moving;
   if (!list || !intent) {
@@ -178,16 +184,19 @@ export function safety(
     return;
   }
   const speed = moving ? st.car.speed : input.reverse ? -0.01 : 0.01;
-  const steerRad = (st.steer * SEDAN_STEER_DEG * Math.PI) / 180;
+  const steerRad = (st.steer * spec.steerDeg * Math.PI) / 180;
   const car = {
     pos: st.car.pos,
     yaw: st.car.yaw,
     speed,
-    halfLength: 2.25,
-    halfWidth: 0.88,
-    curvature: Math.tan(steerRad) / 2.64,
+    halfLength: spec.halfLength,
+    halfWidth: spec.halfWidth,
+    curvature: Math.tan(steerRad) / spec.wheelbase,
   };
-  const d = hazardAhead(car, list);
-  st.aeb = d < Math.max(aebRange(st.car.speed), AEB_STANDSTILL_M);
+  const range = aebRange(st.car.speed);
+  // 서 있을 때 출발 막기는 보행자만(세워 둔 차 바로 뒤에서 탄 자전거·차는 조향해 빠져나간다 — 차끼리는 물리 충돌).
+  const peds = moving ? list : list.filter((h) => h.kind === 'ped');
+  const d = hazardAhead(car, moving ? list : peds);
+  st.aeb = d < Math.max(range, moving ? 0 : AEB_STANDSTILL_M);
   if (st.aeb) Object.assign(input, { throttle: 0, brake: 1 });
 }

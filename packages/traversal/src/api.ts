@@ -57,12 +57,14 @@ export interface HazardCircle {
   x: number;
   z: number;
   r: number;
+  /** ped = 보행자(정지 중 출발도 막는다), 없으면 차·물체(달릴 때만 AEB). */
+  kind?: 'ped';
 }
 
 /** walk에서 F로 탈 수 있는 차(차체 바닥 중심 WF·방위 — 운전석 문 = driveSide 쪽). */
 export interface EnterableVehicle {
   vehicle: BodyHandle;
-  kind: 'sedan';
+  kind: 'sedan' | 'bicycle';
   posWF: Vec3d;
   yawRad: number;
   driveSide: 'right' | 'left';
@@ -110,14 +112,15 @@ export type DriveView = 'chase' | 'cockpit';
  */
 export interface DriveParams {
   vehicle: BodyHandle;
-  kind: 'sedan';
+  /** sedan = drive 모드, bicycle = cycle 모드(M08-T03). */
+  kind: 'sedan' | 'bicycle';
   driveSide?: 'right' | 'left';
   view?: DriveView;
 }
 /** 운전 HUD(M08-T01 — 계기판): 기어 = 'R' | 'N' | '1'…, indicator −1 왼·1 오른, exit = 하차 상태(moving = 멈춰야 함, blocked = 내릴 자리 없음). */
 export interface DriveHud {
   vehicle: BodyHandle;
-  kind: 'sedan';
+  kind: 'sedan' | 'bicycle';
   view: DriveView;
   speedKmh: number;
   rpm: number;
@@ -133,6 +136,8 @@ export interface DriveHud {
   /** 보도 위(바퀴가 보도 재질) — 10 km/h 서행. */
   sidewalk: boolean;
   exit: 'ready' | 'moving' | 'searching' | 'blocked';
+  /** 자전거 벨 누른 횟수(B — 바뀌면 울림). */
+  bell: number;
 }
 export interface HudHints {
   promptKey?: I18nKey;
@@ -153,7 +158,7 @@ export interface HudHints {
   /** drive 중 계기판·등화(M08-T01). */
   drive?: DriveHud;
   /** walk: 지금 F로 탈 수 있는 차(운전석 문 앞 — M08-T01). */
-  enterable?: 'sedan';
+  enterable?: 'sedan' | 'bicycle';
 }
 /** 플레이어 바디가 있는 모드(walk…)의 출력. 없으면 카메라 위치·방위를 플레이어로 본다(freecam). */
 export interface ModePlayer {

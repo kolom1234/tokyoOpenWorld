@@ -68,6 +68,7 @@ export const DEFAULT_BINDINGS: BindingMap = {
     interact: [key('KeyF'), pad(PAD.X)],
     toggleView: [key('KeyV'), pad(PAD.R3)],
     summon: [key('KeyR'), pad(PAD.LEFT)],
+    summonBike: [key('KeyB'), pad(PAD.RIGHT)],
   },
   // 차량(M08-T01): 패드 D-pad ↑ = 전조등, ←/→ = 방향지시등(시선 휠 대신 — 운전 중 줌 없음).
   vehicle: {
@@ -79,6 +80,7 @@ export const DEFAULT_BINDINGS: BindingMap = {
     lights: [key('KeyL'), pad(PAD.UP)],
     indicatorLeft: [key('KeyQ'), pad(PAD.LEFT)],
     indicatorRight: [key('KeyE'), pad(PAD.RIGHT)],
+    bell: [key('KeyB'), pad(PAD.Y)],
     interact: [key('KeyF'), pad(PAD.X)],
     toggleView: [key('KeyV'), pad(PAD.R3)],
     skip: [key('KeyT')],

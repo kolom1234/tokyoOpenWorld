@@ -25,9 +25,9 @@ export function entryTarget(
     const side = v.driveSide === 'left' ? -1 : 1;
     const c = Math.cos(v.yawRad);
     const sn = Math.sin(v.yawRad);
-    // 차 로컬 (x, z) → WF: x' = x·c + z·s, z' = z·c − x·s(yaw +Y 반시계).
-    const lx = side * 1.25;
-    const lz = -0.35;
+    // 차 로컬 (x, z) → WF: x' = x·c + z·s, z' = z·c − x·s(yaw +Y 반시계). 자전거 = 옆 0.6 m(안장 옆).
+    const lx = side * (v.kind === 'bicycle' ? 0.6 : 1.25);
+    const lz = v.kind === 'bicycle' ? 0 : -0.35;
     const d = Math.hypot(v.posWF.x + lx * c + lz * sn - feet.x, v.posWF.z + lz * c - lx * sn - feet.z);
     if (d < bestD && Math.abs(v.posWF.y - feet.y) < 1.2) {
       best = v;
@@ -44,8 +44,18 @@ export function yawOfCar(q: Readonly<Quat>): number {
 }
 
 /** 운전자 입력 → 차량 입력: 앞으로 가는 중 S = 제동, 멈추면 S = 후진(뒤로 가는 중 W = 제동). */
-export function driverInput(fwd: number, speedMs: number, steer: number, handbrake: boolean): VehicleInput {
+export function driverInput(
+  fwd: number,
+  speedMs: number,
+  steer: number,
+  handbrake: boolean,
+  canReverse = true,
+): VehicleInput {
   const out: VehicleInput = { throttle: 0, brake: 0, steer, handbrake, reverse: false };
+  if (!canReverse && fwd < 0) {
+    out.brake = -fwd;
+    return out;
+  }
   if (fwd > 0) {
     if (speedMs < -STOP_MS) out.brake = fwd;
     else out.throttle = fwd;
@@ -77,6 +87,55 @@ export function gearLabel(s: Readonly<VehicleState> | undefined, last: { gear: n
   else if (Math.abs(s.speedMs) < 0.5) return 'N';
   return String(last.gear);
 }
+
+/**
+ * 탈것 사양(M08-T01·T03): 바닥 반길이·반폭·최대 조향(deg)·휠베이스(m)·1인칭 눈(로컬, 오른쪽 x)·추적 카메라·하차 거리·보도 규칙·후진·방향지시등.
+ * 보도: car = 언제나 maxMs, bicycle = 위험물(보행자)이 nearM 안일 때만 maxMs(08 §7 — 보도 주행 허용, 보행자 근접 서행 6 km/h).
+ */
+export interface RideSpec {
+  halfLength: number;
+  halfWidth: number;
+  steerDeg: number;
+  wheelbase: number;
+  eye: readonly [number, number, number];
+  chase: { distanceM: number; heightM: number; pivotHeightM: number };
+  exitSideM: number;
+  exitBackM: number;
+  sidewalk: { maxMs: number; nearM?: number };
+  reverse: boolean;
+  indicators: boolean;
+}
+
+export const RIDE_SPECS: Readonly<Record<'sedan' | 'bicycle', RideSpec>> = {
+  sedan: {
+    halfLength: 2.25,
+    halfWidth: 0.88,
+    steerDeg: 35,
+    wheelbase: 2.64,
+    // 우핸들 운전석 눈(0.37, 1.30, −0.15) — 벨트라인 0.86·지붕 1.42 사이.
+    eye: [0.37, 1.3, -0.15],
+    chase: { distanceM: 5.5, heightM: 2.2, pivotHeightM: 1.6 },
+    exitSideM: 1.7,
+    exitBackM: 3.6,
+    sidewalk: { maxMs: 10 / 3.6 },
+    reverse: true,
+    indicators: true,
+  },
+  bicycle: {
+    halfLength: 0.9,
+    halfWidth: 0.3,
+    steerDeg: 30,
+    wheelbase: 1.12,
+    // 탄 사람 눈(안장 위 1.62 m, 핸들 쪽으로 조금).
+    eye: [0, 1.62, 0.02],
+    chase: { distanceM: 3.4, heightM: 2.1, pivotHeightM: 1.9 },
+    exitSideM: 0.9,
+    exitBackM: 1.6,
+    sidewalk: { maxMs: 6 / 3.6, nearM: 6 },
+    reverse: false,
+    indicators: false,
+  },
+};
 
 /** AEB(08 §6 — M08-T02): 반응 시간(s)·가정 감속(m/s² — 젖은 노면 쪽으로 보수적)·앞 여유(m)·옆 여유(m)·TTC(s). */
 const AEB_REACT_S = 0.25;

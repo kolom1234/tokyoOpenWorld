@@ -10,7 +10,7 @@ export interface SpawnPreset {
   yawDeg: number;
   surface?: 'platform' | 'exact';
   /** 시작할 때 세워 둘 카셰어 차(M08-T01 — 차체 바닥 중심 WF·전방 방위 deg, 0 = 북 −Z). */
-  vehicles?: { posWF: [number, number, number]; yawDeg: number }[];
+  vehicles?: { posWF: [number, number, number]; yawDeg: number; kind?: 'sedan' | 'bicycle' }[];
 }
 
 export const SPAWN_PRESETS = (PRESETS as unknown as { presets: SpawnPreset[] }).presets;

@@ -3,6 +3,9 @@
 import { BufferAttribute, BufferGeometry, Color, Sphere, Vector3 } from 'three/webgpu';
 
 /** 부품 코드(셰이더 `_vpart.x`) — 도장·유리·바퀴 회전·등화 발광을 고른다. */
+/** 차량 LOD(0 = 가까움). */
+export type VehicleLod = 0 | 1 | 2;
+
 export const VPART = {
   fixed: 0,
   paint: 1,

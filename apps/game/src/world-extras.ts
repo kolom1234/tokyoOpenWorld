@@ -85,6 +85,34 @@ function presetSpawnSystem(
   };
 }
 
+type ExtrasDeps = Parameters<typeof startWorldExtras>[0];
+type ExtrasServices = Parameters<typeof startWorldExtras>[1];
+
+/** 플레이어 차·자전거(M08-T01·T03): 세워 둔 탈것·거점·부르기·계기판. */
+function wireVehicles(deps: ExtrasDeps, v: ExtrasServices, late: LateState): void {
+  const cars = createVehicleWiring({
+    doc: deps.canvas.ownerDocument,
+    render: v.render,
+    input: v.input,
+    traversal: v.traversal,
+    sim: v.sim,
+    physics: () => late.physics,
+    wetness: () => withWeatherOverride(v.sim.environment(), deps.weather).weather.wetness,
+    requestLanes: (key) => v.streaming.requestSections(key, ['lanes.bin']).then((p) => p.lanes),
+    requestMeta: (key) =>
+      v.streaming
+        .requestSections(key, ['meta.json'])
+        .then((p) => p.meta)
+        .catch(() => undefined),
+    onCellReady: (cb) => void v.cells.onCell((p) => cb(p.key, p.level)),
+    onEvicted: (cb) => void v.streaming.onEvicted(cb),
+    ...(deps.spawn ? { spawn: deps.spawn } : {}),
+  });
+  late.cars = cars.cars;
+  late.hazards = cars.hazards;
+  deps.scheduler.add({ systems: () => cars.systems });
+}
+
 export function startWorldExtras(
   deps: {
     canvas: HTMLCanvasElement;
@@ -122,21 +150,7 @@ export function startWorldExtras(
     ...(deps.debug ? { debug: true } : {}),
   });
   deps.scheduler.add({ systems: () => [stations] });
-  // 플레이어 차(M08-T01): 세워 둔 차·차 부르기·계기판.
-  const cars = createVehicleWiring({
-    doc: deps.canvas.ownerDocument,
-    render: v.render,
-    input: v.input,
-    traversal: v.traversal,
-    sim: v.sim,
-    physics: () => late.physics,
-    wetness: () => withWeatherOverride(v.sim.environment(), deps.weather).weather.wetness,
-    requestLanes: (key) => v.streaming.requestSections(key, ['lanes.bin']).then((p) => p.lanes),
-    ...(deps.spawn ? { spawn: deps.spawn } : {}),
-  });
-  late.cars = cars.cars;
-  late.hazards = cars.hazards;
-  deps.scheduler.add({ systems: () => cars.systems });
+  wireVehicles(deps, v, late);
   if (deps.spawn?.surface) {
     const ps = presetSpawnSystem(
       deps.spawn,

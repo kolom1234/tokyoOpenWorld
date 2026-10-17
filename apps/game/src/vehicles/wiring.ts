@@ -5,6 +5,7 @@ import type { InputService } from '@sanpo/input';
 import type { PhysicsService } from '@sanpo/physics';
 import type { RenderService } from '@sanpo/render';
 import type { SimService } from '@sanpo/sim';
+import type { CellMeta } from '@sanpo/tile-format';
 import type { HazardCircle, TraversalService } from '@sanpo/traversal';
 import { laneChunks } from '../lane-chunks.ts';
 import type { SpawnPreset } from '../spawn-presets.ts';
@@ -12,12 +13,15 @@ import { notice } from '../station/hud.ts';
 import { findCurbSpot } from './curb-spot.ts';
 import { driveHudSystem } from './drive-hud.ts';
 import { hazardsNear } from './hazards.ts';
-import { createPlayerCars, type PlayerCars, SEDAN_PARAMS } from './player-cars.ts';
+import { createPlayerCars, KIND_LOOK, type PlayerCars } from './player-cars.ts';
+import { createShareSpots, type ShareSpots } from './share-spots.ts';
 import { createDriveGuide } from './traffic-guide.ts';
 
 export interface VehicleWiring {
   readonly cars: PlayerCars;
   readonly systems: GameSystem[];
+  /** 카셰어·공유자전거 거점(디버그·봇). */
+  readonly spots: ShareSpots;
   /** traversal `hazards`(AEB — 보행자·교통 차·세워 둔 차). */
   hazards(center: Readonly<Vec3d>, radiusM: number): HazardCircle[];
 }
@@ -32,9 +36,28 @@ function footprintSystem(traversal: TraversalService, sim: SimService): GameSyst
       const m = traversal.mode;
       if (m === last) return;
       last = m;
-      sim.setPlayerVehicle(
-        m === 'drive' ? { lengthM: SEDAN_PARAMS.dimensionsM.length, widthM: SEDAN_PARAMS.dimensionsM.width } : null,
-      );
+      const k = m === 'drive' ? KIND_LOOK.sedan : m === 'cycle' ? KIND_LOOK.bicycle : undefined;
+      sim.setPlayerVehicle(k ? { lengthM: k.len, widthM: k.wid } : null);
+    },
+    dispose() {},
+  };
+}
+
+/** walk 중 B(패드 D-pad →): 자전거를 1.6 m 앞 지면에(방향 = 플레이어 방위) — M08-T03 편의 소환. */
+function summonBikeSystem(
+  doc: Document,
+  d: { input: InputService; traversal: TraversalService; physics: () => PhysicsService | undefined },
+  cars: PlayerCars,
+): GameSystem {
+  return {
+    id: 'wiring.summonBike',
+    phase: 22,
+    update() {
+      if (d.traversal.mode !== 'walk' || !d.input.state.justPressed('summonBike')) return;
+      const p = d.traversal.player;
+      const at = { x: p.posWF.x - Math.sin(p.yawRad) * 1.6, y: p.posWF.y, z: p.posWF.z - Math.cos(p.yawRad) * 1.6 };
+      cars.park(at, p.yawRad, 'summon', 'bicycle');
+      notice(doc, '공유자전거(SANPO Cycle)를 불렀어요 — 옆에 서서 F');
     },
     dispose() {},
   };
@@ -82,6 +105,11 @@ export function createVehicleWiring(d: {
   /** 노면 젖음 0..1(sim 날씨 + `?wet=` 덮어쓰기). */
   wetness: () => number;
   requestLanes: (key: CellKey) => Promise<ArrayBuffer | undefined>;
+  /** 셀 meta.json(카셰어·공유자전거 거점 interactables). */
+  requestMeta: (key: CellKey) => Promise<CellMeta | undefined>;
+  /** live L0 셀 알림·제거(거점 등록·정리). */
+  onCellReady: (cb: (key: CellKey, level: number) => void) => void;
+  onEvicted: (cb: (key: CellKey) => void) => void;
   spawn?: SpawnPreset;
 }): VehicleWiring {
   const cars = createPlayerCars(d);
@@ -89,14 +117,22 @@ export function createVehicleWiring(d: {
   void d.render.vehicles.preparePlayers();
   for (const v of d.spawn?.vehicles ?? []) {
     const [x, y, z] = v.posWF;
-    cars.park({ x, y, z }, (v.yawDeg * Math.PI) / 180, 'preset');
+    cars.park({ x, y, z }, (v.yawDeg * Math.PI) / 180, 'preset', v.kind ?? 'sedan');
   }
   const lanes = laneChunks(d.requestLanes);
+  const spots = createShareSpots(cars, d.traversal);
+  d.onCellReady((key, level) => {
+    if (level === 0) void d.requestMeta(key).then((m) => spots.addCell(key, m));
+  });
+  d.onEvicted((key) => spots.removeCell(key));
   return {
     cars,
+    spots,
     systems: [
       cars.system,
       summonSystem(d.doc, d, cars, lanes),
+      summonBikeSystem(d.doc, d, cars),
+      spots.system,
       driveHudSystem(
         d.doc,
         d.traversal,
