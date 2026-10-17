@@ -27,7 +27,7 @@ PhysicsService extends SystemProvider {   // system 'physics', phase 30 — 프�
   setVehicleInput(h, VehicleInput { throttle 0..1; brake 0..1; steer −1(왼)..1(오른); handbrake; reverse });   // 같은 프레임 마지막 것만. 보조(ABS·TCS·속도 감응 조향·속도 제한·공기/구름 저항)는 워커 스텝마다
   vehicleState(h): VehicleState | undefined;   // 최신 스냅샷(보간 없음): speedMs(전방 +)·rpm·gear(−1 R·0 N·1..)·throttle(실제)·abs·tcs·shifting·wheels[{rotationRad, steerRad, suspensionM, slipLong, slipLatDeg, contactMaterial(−1 없음)}]
   setSurfaceWetness(w 0..1);                // 타이어–노면 마찰 = 곡선 × lerp(1, wetFrictionScale, w)
-  SedanParams = content/vehicles/sedan.json(질량·치수·엔진 곡선·변속·서스펜션·타이어 곡선·조향·제동 앞/뒤·ABS/TCS·aero·속도 제한)
+  SedanParams = content/vehicles/sedan.json(질량·치수·기울기 상한 35°·엔진 곡선·변속·서스펜션·타이어 곡선·조향·제동 앞/뒤·ABS/TCS·aero·속도 제한)
   stats(): PhysicsStats;                    // ready, isolation, build, steps, simTimeS, bodies, initMs, tickMs, anchorWF, rebases, colliderCells, colliderPending, loadTickMaxMs, loadTicksOver8Ms, kinematicBodies, kinematicFrames(M06-T06)
   dispose();
 }

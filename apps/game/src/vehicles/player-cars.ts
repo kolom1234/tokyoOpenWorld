@@ -5,7 +5,6 @@ import type { GameSystem, Vec3d } from '@sanpo/core';
 import { packCellKey } from '@sanpo/core';
 import type { BodyHandle, PhysicsService, SedanParams } from '@sanpo/physics';
 import type { PlayerVehicleDraw, RenderService } from '@sanpo/render';
-import type { SimService } from '@sanpo/sim';
 import type { EnterableVehicle, TraversalService } from '@sanpo/traversal';
 import SEDAN from '../../../../content/vehicles/sedan.json';
 
@@ -75,7 +74,8 @@ interface Deps {
   physics: () => PhysicsService | undefined;
   render: RenderService;
   traversal: TraversalService;
-  sim: SimService;
+  /** 노면 젖음 0..1(sim 날씨 + 디버그 덮어쓰기). */
+  wetness: () => number;
 }
 
 interface State {
@@ -138,7 +138,7 @@ function updateCars(st: State, dt: number): void {
   st.wetT -= dt;
   if (st.wetT <= 0) {
     st.wetT = 1;
-    const w = st.d.sim.environment().weather.wetness;
+    const w = st.d.wetness();
     if (Math.abs(w - st.lastWet) > 0.02) {
       st.lastWet = w;
       ph.setSurfaceWetness(w);

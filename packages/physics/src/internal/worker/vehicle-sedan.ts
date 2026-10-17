@@ -142,6 +142,7 @@ function constraintSettings(w: PhysicsWorld, p: SedanParams, wheels: J<'WheelSet
   const v = new Jolt.VehicleConstraintSettings();
   v.mUp = new Jolt.Vec3(0, 1, 0);
   v.mForward = new Jolt.Vec3(0, 0, -1);
+  v.mMaxPitchRollAngle = (p.maxPitchRollDeg * Math.PI) / 180;
   v.mWheels.clear();
   for (const ws of wheels) v.mWheels.push_back(ws);
   v.mAntiRollBars.clear();

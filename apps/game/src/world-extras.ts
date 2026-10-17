@@ -8,6 +8,7 @@ import type { SimService } from '@sanpo/sim';
 import type { StreamingService } from '@sanpo/streaming';
 import type { TraversalService } from '@sanpo/traversal';
 import ACCESS from '../../../content/stations/access.json';
+import { type WeatherOverride, withWeatherOverride } from './debug/wet-override.ts';
 import { evaluateSpot, findLanding, type LandingQueries, roadIndex } from './landing.ts';
 import type { SpawnPreset } from './spawn-presets.ts';
 import type { AccessFile } from './station/layout.ts';
@@ -92,6 +93,8 @@ export function startWorldExtras(
     scheduler: Pick<Scheduler, 'add'>;
     debug?: boolean;
     spawn?: SpawnPreset;
+    /** `?wet=` 디버그 젖음(차 노면 마찰도 같은 값 — M08-T01 젖은 노면 제동 측정). */
+    weather?: WeatherOverride;
   },
   v: {
     render: RenderService;
@@ -127,6 +130,7 @@ export function startWorldExtras(
     traversal: v.traversal,
     sim: v.sim,
     physics: () => late.physics,
+    wetness: () => withWeatherOverride(v.sim.environment(), deps.weather).weather.wetness,
     requestLanes: (key) => v.streaming.requestSections(key, ['lanes.bin']).then((p) => p.lanes),
     ...(deps.spawn ? { spawn: deps.spawn } : {}),
   });

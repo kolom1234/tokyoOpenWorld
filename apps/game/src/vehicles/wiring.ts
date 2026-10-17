@@ -57,6 +57,8 @@ export function createVehicleWiring(d: {
   traversal: TraversalService;
   sim: SimService;
   physics: () => PhysicsService | undefined;
+  /** 노면 젖음 0..1(sim 날씨 + `?wet=` 덮어쓰기). */
+  wetness: () => number;
   requestLanes: (key: CellKey) => Promise<ArrayBuffer | undefined>;
   spawn?: SpawnPreset;
 }): VehicleWiring {

@@ -5,6 +5,7 @@
   "wheelbaseM": 2.64,
   "trackM": 1.53,
   "comHeightM": 0.5,
+  "maxPitchRollDeg": 35,
   "engine": {
     "maxTorqueNm": 200,
     "minRpm": 800,

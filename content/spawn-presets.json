@@ -114,6 +114,30 @@
         -1150
       ],
       "yawDeg": 0
+    },
+    {
+      "id": "drive-course",
+      "name": {
+        "ja": "走行テストコース(平坦な直線 311 m)",
+        "en": "Driving test course (flat straight 311 m)",
+        "ko": "주행 시험 코스(평지 직선 311 m)"
+      },
+      "posWF": [
+        -1537.5,
+        40.0,
+        -2597.6
+      ],
+      "yawDeg": 124.8,
+      "vehicles": [
+        {
+          "posWF": [
+            -1540.9,
+            40.0,
+            -2595.4
+          ],
+          "yawDeg": 124.8
+        }
+      ]
     }
   ]
 }

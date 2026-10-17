@@ -52,6 +52,8 @@ export interface SedanParams {
   trackM: number;
   /** 무게중심 높이(지면 위 m). */
   comHeightM: number;
+  /** 차체 기울기 상한(deg, Jolt mMaxPitchRollAngle) — 연석·턱에 걸려도 뒤집히지 않는다(사고 연출 없음, M08-T01). */
+  maxPitchRollDeg: number;
   engine: {
     maxTorqueNm: number;
     minRpm: number;

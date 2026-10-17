@@ -22,7 +22,13 @@
    도장 = 가상 카셰어(흰 차체 + 청록 띠) — 로고·번호판·브랜드 없음.
 5. game: `vehicles/`(player-cars·curb-spot·drive-hud·wiring). 차 부르기 = walk R(패드 D-pad ←) → 3×3 셀 연석 차선(laneIdx 0, 교차로 9 m 밖)에서 진행 방향 왼쪽으로 비킨 자리. 스폰 프리셋 `vehicles`.
 
+6. 차체 기울기 상한 35°(Jolt `mMaxPitchRollAngle`, sedan.json `maxPitchRollDeg`): 실제 MVP 연석 차선에서 60 km/h로 솟은 연석에 걸려 차가 뒤집혔다(x ≈ −776) — 뒤집힘은 사고 연출이라 막는다.
+7. 실제 GPU 주행 봇 `pnpm drive`(tests/golden/drive.spec.ts) + 시험 코스 프리셋 `drive-course`(평지 직선 311 m: lanes.bin 직선 차선 연쇄 후보를 1 m 간격 아래 레이 ±0.9 m로 검사 —
+   니시신주쿠 342 m 후보는 노면 높이 ±0.13 m 계단·차선 가장자리 정적 턱이 있어 탈락).
+
 ## Consequences
-- Node(실제 Jolt, 평지): 0→100 km/h 12.4 s, 60 km/h 제동 건조 18.8 m·젖음(마찰 × 0.7) 27.4 m, 조향·후진 테스트 통과. 실제 GPU 주행 봇 수치는 PR.
+- Node(실제 Jolt, 평지): 0→100 km/h 12.4 s, 60 km/h 제동 건조 18.8 m·젖음(마찰 × 0.7) 27.4 m, 조향·후진 테스트 통과.
+- 실제 GPU(RTX 3050 Laptop, Chrome WebGPU, dev 서버 MVP, 1600×900, 60 fps, GPU 21.9–22.9 W·상한 32–34 W): 0→100 km/h **12.42 s**, 60 km/h 제동 건조 **18.25 m**·젖음 **27.02 m**(ABS 작동).
+- ⚠️ MVP 노면: 차선 데이터의 연석 쪽 차선이 보도 턱에 걸리는 곳이 있다(lanes.bin ↔ 보도 메시 불일치 — 차 부르기 자리·카셰어 배치는 T02에서 턱 검사).
 - ⚠️ 운전석 시점: 실내·계기판 모델 없음(흰 보닛이 화면 아래 ⅓, 계기판은 HUD). 바퀴 앞바퀴 조향·서스펜션 상하는 렌더하지 않음(차체 자세만). 전조등 빛(노면 조명) 없음 — 발광만(조명 풀 재컴파일 문제).
 - 교통 AI는 아직 플레이어 차를 모른다(T02).
