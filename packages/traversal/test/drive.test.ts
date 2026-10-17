@@ -165,8 +165,20 @@ describe('drive mode (M08-T01)', () => {
     expect(t.hud.drive?.indicator).toBe(0);
   });
 
+  it('the F that boarded (still held) does not exit; after release F exits', async () => {
+    const { t, inp, step } = setup();
+    inp.hits.add('interact');
+    await step(3);
+    expect(t.mode).toBe('drive');
+    await step();
+    inp.hits.add('interact');
+    await step(4);
+    expect(t.mode).toBe('walk');
+  });
+
   it('F while moving = "moving"; stopped = walk exact on the driver (right) side', async () => {
     const { t, inp, ph, step } = setup();
+    await step();
     ph.car.speed = 8;
     inp.hits.add('interact');
     await step();

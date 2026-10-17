@@ -44,7 +44,7 @@ function emptyInputs(): EngineInputs {
 function contextFactory(deps: AudioDeps): (() => AudioContext) | null {
   if (deps.createContext) return deps.createContext;
   return typeof globalThis.AudioContext === 'function'
-    ? () => new globalThis.AudioContext({ latencyHint: 'interactive' })
+    ? () => new globalThis.AudioContext({ latencyHint: 'balanced' })
     : null;
 }
 

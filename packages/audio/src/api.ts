@@ -95,7 +95,7 @@ export interface AudioStats {
   signalTones: number;
   steps: number;
   mix: AudioMix;
-  /** 탈것 엔진 합성기(M08-T04): off = 탈것 없음, loading = 워클릿 적재 중, fallback = 워클릿 불가(오실레이터). */
+  /** 탈것 엔진 합성기(M08-T04 — unlock 직후 적재): off = 오디오 없음, loading = 워클릿 적재 중, fallback = 워클릿 불가(오실레이터). */
   engine: 'off' | 'loading' | 'worklet' | 'fallback';
   /** 출력 시계 결손(1 s 구간에서 컨텍스트 시각이 성능 시각보다 20 ms 넘게 뒤처짐 — 오디오 스레드 언더런 근사) 횟수. */
   clockGlitches: number;

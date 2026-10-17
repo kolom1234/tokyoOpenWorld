@@ -27,6 +27,8 @@ export interface DriveState {
   exit: DriveHud['exit'];
   blockedS: number;
   exitGen: number;
+  /** 탄 뒤 F를 한 번 뗐나(뗀 뒤부터 F = 하차). */
+  armed: boolean;
   next: ModeOutput['next'];
   /** 앞 셀 콜라이더 대기(제동 중). */
   loading: boolean;
@@ -54,6 +56,7 @@ export function createState(spec: RideSpec): DriveState {
     exit: 'ready',
     blockedS: 0,
     exitGen: 0,
+    armed: false,
     next: undefined,
     loading: false,
     aeb: false,

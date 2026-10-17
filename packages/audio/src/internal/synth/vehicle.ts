@@ -212,16 +212,15 @@ export function createVehicleVoice(ctx: AudioContext, dest: AudioNode): VehicleV
   let state: AudioStats['engine'] = 'off';
   let lastShift = false;
   let disposed = false;
+  // 워클릿은 unlock 직후(아직 소리 없음) 적재 — Chrome은 첫 AudioWorkletNode 때 렌더링을 워클릿 스레드로 옮기며 한 번 끊긴다(운전 중이면 들림, 실측 결손 1).
+  state = 'loading';
+  void loadEngine(ctx, cabin).then((e) => {
+    if (disposed) return e.stop();
+    engine = e;
+    state = e.kind;
+  });
   return {
     update(s) {
-      if (s?.kind === 'car' && state === 'off') {
-        state = 'loading';
-        void loadEngine(ctx, cabin).then((e) => {
-          if (disposed) return e.stop();
-          engine = e;
-          state = e.kind;
-        });
-      }
       if (s?.kind === 'car' && s.shifting && !lastShift) clunk(ctx, cabin);
       lastShift = s?.shifting ?? false;
       const k = vehicleTargets(s);

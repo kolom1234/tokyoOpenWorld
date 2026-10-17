@@ -156,7 +156,9 @@ function update(rt: Rt, frame: FrameContext, ctx: TraversalContext): ModeOutput 
   if (st.loading) Object.assign(input, { throttle: 0, brake: 1 });
   safety(st, ctx, vs, input);
   physics.setVehicleInput(p.vehicle, input);
-  if (s.justPressed('interact')) requestExit(st, physics);
+  // 탈 때 누른 F를 새 입력 맥락이 다시 '방금 누름'으로 읽어 바로 내리던 문제 — 한 번 뗀 뒤부터 하차(열차 모드와 같은 armed).
+  if (!st.armed) st.armed = !s.pressed('interact');
+  else if (s.justPressed('interact')) requestExit(st, physics);
   updateCamera(rt, frame, ctx, physics);
   writeHud(rt, p, vs, input, frame.dtReal);
   output.player = { posWF: st.car.pos, velWF: st.car.vel, yawRad: st.car.yaw };
@@ -192,6 +194,7 @@ export function createDriveMode(
       st.next = undefined;
       st.exit = 'ready';
       st.exitGen++;
+      st.armed = false;
       if (isDriveParams(params)) {
         st.params = { ...params };
         st.view = params.view ?? st.view;
