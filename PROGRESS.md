@@ -2,12 +2,13 @@
 Updated: 2026-10-17 (session #24 — ① 첫 표시 개선 + M08 Vehicles, 브랜치 `claude/m08-vehicles`)
 
 ## Current Milestone: M08 Vehicles (T01 → T02 → T03 → T04)
-## Current Task: M08-T01 Sedan physics & drive mode
-- Done in this session (#24, 2026-10-17): ① 첫 표시 — 선컴파일을 씬 패스 대상(MRT·TAAU 속도 투영)으로·three compileAsync 파이프라인 병렬(패치)·셀 기본 머티리얼 조기 컴파일(ADR-0086).
-  staging(코드 ea0262c, Worker 473a2836, 월드 그대로 `20261013-363d72a-cba213ec`) 골든 부트 첫 표시 **6.75–7.64 s**(전 8.74–9.11 s, M06 7.2–7.9) · 첫 로드 26.4 MB · 22–27 W.
-- In progress: M08-T01.
-- Next step (정확히 한 걸음): `docs/roadmap/M08.md` T01 블록 → physics `worker/vehicle-sedan.ts`(WheeledVehicleController) + `content/vehicles/sedan.json`.
-- Blockers: 없음. ODPT 키 없음(긴자선 대기 — M08 무관).
+## Current Task: M08-T02 AEB, traffic interaction, summon & car-share spots
+- Done in this session (#24, 2026-10-17): ① 첫 표시(ADR-0086) staging 6.75–7.64 s(전 8.74–9.11)·26.4 MB.
+  M08-T01(ADR-0087): physics 세단(WheeledVehicleController, content/vehicles/sedan.json, ABS·TCS·저항·마찰 콜백·기울기 상한 35°) + traversal drive(추적·우핸들 운전석, F 하차)
+  + render 플레이어 차(가상 카셰어 도장) + game vehicles/(차 부르기 R·HUD) + `pnpm drive` 실제 GPU 봇(코스 `drive-course`): 0→100 12.42 s, 60 km/h 제동 건조 18.25 m·젖음 27.02 m.
+- In progress: M08-T02(AEB·교통 AI 양보·카셰어 스팟).
+- Next step (정확히 한 걸음): T02 블록 Read → physics AEB(전방 레이 TTC < 1.5 s — 보행자·자전거) + sim 교통이 플레이어 차를 장애물로(sim 직결 포트 반대 방향).
+- Blockers: 없음. ODPT 키 없음(M08 무관).
 
 ## Recently Completed
 - 사람 확인 후속(2026-10-13~14, PR #22) — ① 원인: 하라주쿠 외회가 옛 승강장에 정차해 섬식 승강장 서쪽 가장자리에 홈도어 없음 + 도착점이 그 가장자리 1.2 m + 물리에 승강장 윗면만 → 한 걸음에 선로 구덩이(1.5 m)·승강장 밑.
