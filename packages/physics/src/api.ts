@@ -35,6 +35,112 @@ export interface CharacterInput {
   hold?: boolean;
 }
 
+/** 플레이어 차량 종류(08 §6·§7). */
+export type VehicleKind = 'sedan' | 'bicycle';
+
+/** 곡선 점 [x, y] 목록(Jolt LinearCurve). */
+export type CurvePoints = ReadonlyArray<readonly [number, number]>;
+
+/**
+ * 4륜 승용차 파라미터(08 §6 — `content/vehicles/sedan.json`, 코드 상수 금지). 차체 원점 = 바닥 중심(앞뒤 차축 가운데, 지면 높이), 전방 = 로컬 −Z.
+ * 앞바퀴 조향·앞바퀴 굴림(소형 세단), 우핸들은 traversal 카메라·하차 쪽만.
+ */
+export interface SedanParams {
+  massKg: number;
+  dimensionsM: { length: number; width: number; height: number };
+  wheelbaseM: number;
+  trackM: number;
+  /** 무게중심 높이(지면 위 m). */
+  comHeightM: number;
+  engine: {
+    maxTorqueNm: number;
+    minRpm: number;
+    maxRpm: number;
+    /** 정규화 토크 곡선 [rpm 비율 0..1, 토크 비율]. */
+    torqueCurve: CurvePoints;
+    inertia: number;
+    angularDamping: number;
+  };
+  transmission: {
+    gearRatios: readonly number[];
+    reverseRatio: number;
+    finalDrive: number;
+    shiftUpRpm: number;
+    shiftDownRpm: number;
+    switchTimeS: number;
+    clutchStrength: number;
+  };
+  suspension: {
+    minLengthM: number;
+    maxLengthM: number;
+    frequencyHz: number;
+    damping: number;
+    antiRollFront: number;
+    antiRollRear: number;
+  };
+  tire: {
+    radiusM: number;
+    widthM: number;
+    /** 종 마찰 [슬립 비, 마찰 계수]. */
+    longitudinalFriction: CurvePoints;
+    /** 횡 마찰 [슬립 각(deg), 마찰 계수]. */
+    lateralFriction: CurvePoints;
+    /** 젖은 노면 마찰 배율(08 §6 = 0.7). */
+    wetFrictionScale: number;
+  };
+  steering: { maxSteerDeg: number; highSpeedFactor: number; highSpeedKmh: number };
+  brakes: {
+    /** 앞바퀴 최대 제동 토크(Nm, 바퀴당). */
+    maxBrakeTorqueNm: number;
+    /** 뒷바퀴(앞뒤 배분 — 뒤가 먼저 잠기지 않게). */
+    rearBrakeTorqueNm: number;
+    handbrakeTorqueNm: number;
+    /** ABS: 바퀴 종 슬립이 이보다 크면 제동 입력을 absRelease 배로 줄인다(스텝마다). */
+    absSlip: number;
+    absRelease: number;
+    /** TCS: 구동 바퀴 슬립이 이보다 크면 스로틀을 줄인다. */
+    tcsSlip: number;
+  };
+  /** 공기 저항(Cd·A m²·공기 밀도)·구름 저항 계수(× 무게) — Jolt 선형 감쇠 대신(감쇠는 0). */
+  aero: { dragAreaM2: number; airDensity: number; rollingCoeff: number };
+  driveSide: 'right' | 'left';
+  /** 속도 제한(km/h) — 넘으면 스로틀 0. */
+  speedLimitKmh: number;
+}
+
+/** 차량 입력(08 §10): 스로틀·브레이크 0..1, 조향 −1(왼쪽)..1(오른쪽), 후진 = 스로틀을 뒤로. */
+export interface VehicleInput {
+  throttle: number;
+  brake: number;
+  steer: number;
+  handbrake: boolean;
+  reverse: boolean;
+}
+
+/** 바퀴 상태(렌더·소리): 회전 각(rad, 누적)·조향 각(rad)·서스펜션 길이(m)·종 슬립·횡 슬립(deg)·접지(지면 재질, 없으면 −1). */
+export interface WheelState {
+  rotationRad: number;
+  steerRad: number;
+  suspensionM: number;
+  slipLong: number;
+  slipLatDeg: number;
+  contactMaterial: number;
+}
+
+/** 차량 상태(최신 스냅샷 — HUD·렌더·소리). speedMs = 전방 +. gear: −1 후진, 0 중립, 1.. 전진. */
+export interface VehicleState {
+  speedMs: number;
+  rpm: number;
+  gear: number;
+  /** 이번 스텝 실제 스로틀(0..1 — TCS·제한 뒤, 엔진음 부하). */
+  throttle: number;
+  abs: boolean;
+  tcs: boolean;
+  /** 변속 중(클러치 떨어짐). */
+  shifting: boolean;
+  wheels: WheelState[];
+}
+
 export interface PhysicsConfig {
   /** 고정 스텝(Hz). 08 §1 = 120. */
   stepHz: number;
@@ -129,8 +235,19 @@ export interface PhysicsService extends SystemProvider {
    * 워커가 모든 바디를 −Δ 옮긴다(WF 명령·스냅샷은 그대로 — 호출 측은 모른다).
    */
   setFocus(posWF: Vec3d): void;
-  /** 보간 완료 포즈(아직 스냅샷이 없으면 undefined). */
+  /** 보간 완료 포즈(아직 스냅샷이 없으면 undefined). 차량 = 차체 원점(바닥 중심). */
   pose(h: BodyHandle): Readonly<Pose> | undefined;
+  /**
+   * 플레이어 차량(M08-T01 — 08 §6): VEHICLE 레이어 강체 + Jolt VehicleConstraint(WheeledVehicleController, 앞바퀴 조향·굴림, ABS·TCS는 워커).
+   * posWF = 차체 바닥 중심(지면), yaw = 전방(−Z 기준, +Y 반시계). 동시에 최대 MAX_VEHICLES(4)대.
+   */
+  spawnVehicle(kind: 'sedan', posWF: Vec3d, yawRad: number, params: SedanParams): BodyHandle;
+  /** 다음 step에 전달(같은 프레임 여러 번이면 마지막 것). */
+  setVehicleInput(h: BodyHandle, i: VehicleInput): void;
+  /** 최신 스냅샷의 차량 상태(없으면 undefined). */
+  vehicleState(h: BodyHandle): Readonly<VehicleState> | undefined;
+  /** 노면 젖음 0..1(날씨) — 타이어 마찰 = 건조 × lerp(1, wetFrictionScale, w). */
+  setSurfaceWetness(w: number): void;
   /**
    * sim 직결 키네마틱 원천(08 §8, M06-T06 — ADR-0066): sim이 연 MessagePort(KinematicFrame, core)를 워커로 넘긴다(소유권 이전).
    * 워커가 플레이어 60 m 안 차량을 NPC_KINEMATIC 상자로 두고 스텝마다 외삽 목표로 MoveKinematic — 캐릭터가 관통하지 않고 밀린다. 다시 부르면 옛 포트를 닫는다.

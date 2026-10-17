@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 502개.
+> 파일 505개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -116,12 +116,13 @@
 - `packages/input/src/internal/service.ts` — createInput: 디바이스 부착 + phase 0 시스템(원시 입력 → ActionState 스냅샷). see docs/modules/input.md | exports: INPUT_PHASE, createInput
 
 ## packages/physics
-- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, CharacterInput, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, StaticGroupDesc, PhysicsTransport, PhysicsDeps
+- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, CharacterInput, VehicleKind, CurvePoints, SedanParams, VehicleInput, WheelState, VehicleState, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, StaticGroupDesc, PhysicsTransport, PhysicsDeps
 - `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 물리. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts', createInlineTransport, anchorOf, createPhysics, DEFAULT_PHYSICS_CONFIG, PHYSICS_PHASE
-- `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). 캐릭터 입력은 핸들당 마지막 것만(같은 프레임 덮어쓰기). | exports: CommandQueue, createCommandQueue
+- `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). 캐릭터·차량 입력은 핸들당 마지막 것만(같은 프레임 덮어쓰기). | exports: CommandQueue, createCommandQueue
 - `packages/physics/src/internal/host/snapshot-reader.ts` — 스냅샷 읽기·보간(08 §9): SAB는 seqlock으로 최신 버퍼를 복사, 폴백은 받은 프레임 그대로. 최근 몇 개를 시뮬레이션 시각 순으로 두고 | exports: SnapshotHistory, createSnapshotHistory, readSab
+- `packages/physics/src/internal/host/vehicle-reader.ts` — 차량 기록 읽기(M08-T01): 최신 스냅샷의 VEH_* 칸 → VehicleState(핸들별 객체 재사용 — 프레임마다 할당 없음). 보간 없음(HUD·바퀴·소리용). | exports: readVehicle, createVehicleReader
 - `packages/physics/src/internal/inline-transport.ts` — 같은 스레드 전송: 워커 대신 워커 코어를 직접 돌린다(Node 테스트·도구 — 브라우저 게임은 쓰지 않는다). flush() = 마지막 메시지 처리 완료. | exports: createInlineTransport
-- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, BODY_ESCALATOR, isIsolated, SLOT_BITS, slotOf, Command, RayHitMsg, ToWorker, FromWorker
+- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, MAX_VEHICLES, MAX_WHEELS, WHEEL_STRIDE, VEH_HEAD, VEH_STRIDE, VEH_ABS, VEH_TCS, VEH_SHIFTING, VEH_BASE, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, BODY_ESCALATOR, isIsolated, SLOT_BITS, slotOf, Command, RayHitMsg, ToWorker, FromWorker
 - `packages/physics/src/internal/service.ts` — createPhysics(08 §1·§9·§10): 워커(감독자) 또는 주입 전송 → init(앵커·SAB) → ready. 시스템 'physics'(phase 30)가 프레임마다 | exports: PHYSICS_PHASE, DEFAULT_PHYSICS_CONFIG, anchorOf, createPhysics
 - `packages/physics/src/internal/worker/bodies.ts` — 워커 바디 슬롯: 명령(상자·캐릭터·입력·삭제·순간이동) 적용 + 스냅샷 채우기. 슬롯 = 핸들 하위 비트(메인이 발급), 좌표 변환 WF ↔ PHYS는 여기서만. | exports: BodyCommand, BodySlots, createBodySlots
 - `packages/physics/src/internal/worker/cell-colliders.ts` — 셀 콜라이더 적재(08 §4): 셀마다 [높이장, JCOL 셰이프들] 작업 → 적재 큐(도착 순서, 가까운 셀부터 보내는 건 메인 배선). | exports: MAX_JOB_TRIS, PRIMITIVES_PER_JOB, meshSlice, CellColliders, createCellColliders
@@ -139,6 +140,8 @@
 - `packages/physics/src/internal/worker/snapshot-writer.ts` — 스냅샷 쓰기(08 §9): SAB 더블 버퍼(비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가) 또는 폴백 postMessage(Transferable). | exports: SnapshotSink, sabViews, createSabSink, createPostSink
 - `packages/physics/src/internal/worker/static-groups.ts` — 이름 붙인 정적 묶음(M07-T04 — ADR-0073): 메인이 만든 승강장 바닥(삼각형 메시 — 레일 데이터에서)·홈도어(상자) → STATIC_WORLD 바디 1개씩. | exports: STATIC_BOX_STRIDE, StaticGroup, StaticGroups, createStaticGroups
 - `packages/physics/src/internal/worker/train-bodies.ts` — 열차 칸 바디(M07-T04, 08 §8 — ADR-0073): 메인 sim 열차(프레임마다 정확한 값) → step 명령 'trains'(core TRAIN_BODY_STRIDE 레코드) → | exports: carShapes, doorShapes, TrainBodies, createTrainBodies
+- `packages/physics/src/internal/worker/vehicle-sedan.ts` — 플레이어 승용차(M08-T01 — 08 §6): VEHICLE 레이어 동적 강체(하부 상자 + 무게중심 낮춤) + Jolt VehicleConstraint(WheeledVehicleController, 원통 캐스트 접지). | exports: WheelOut, SedanBody, createSedan
+- `packages/physics/src/internal/worker/vehicles.ts` — 플레이어 차량 목록(M08-T01): 생성·입력·스텝 전 보조·노면 젖음·스냅샷 차량 기록(protocol VEH_*). 차체 강체 자체는 bodies 슬롯(kind 'veh')이 포즈를 쓴다. | exports: VehicleBody, Vehicles, createVehicles
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render

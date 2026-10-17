@@ -13,6 +13,7 @@ import { createQueries, type Queries } from './queries.ts';
 import { createPostSink, createSabSink, type SnapshotSink } from './snapshot-writer.ts';
 import { createStaticGroups, type StaticGroups } from './static-groups.ts';
 import { createTrainBodies, type TrainBodies } from './train-bodies.ts';
+import { createVehicles, type Vehicles } from './vehicles.ts';
 import { createWorld, type PhysicsWorld } from './world.ts';
 
 export type Send = (msg: FromWorker, transfer?: Transferable[]) => void;
@@ -27,6 +28,8 @@ interface State {
   escalators: Escalators;
   bodies: BodySlots;
   characters: Characters;
+  /** 플레이어 차량(M08-T01). */
+  vehicles: Vehicles;
   /** sim 직결 키네마틱 차량(M06-T06). */
   kin: Kinematics;
   kinPort: MessagePort | undefined;
@@ -89,6 +92,7 @@ function step(st: State, targetS: number): void {
     st.kin.beforeStep(st.dt);
     st.trains.beforeStep(st.simT + st.dt, st.dt);
     st.characters.update(st.dt);
+    st.vehicles.preStep(st.dt);
     st.world.step(st.dt);
     st.simT += st.dt;
     st.steps++;
@@ -111,6 +115,7 @@ function step(st: State, targetS: number): void {
   frame[9] = st.kin.frames;
   frame[10] = st.trains.count;
   frame[11] = st.statics.count;
+  st.vehicles.fill(frame);
   st.sink.commit();
 }
 
@@ -130,16 +135,18 @@ async function init(msg: Extract<ToWorker, { t: 'init' }>, send: Send): Promise<
   const anchor: Vec3d = { ...msg.anchorWF };
   const escalators = createEscalators();
   const characters = createCharacters(world, escalators);
+  const vehicles = createVehicles(world);
   const st: State = {
     world,
     anchor,
     escalators,
     characters,
+    vehicles,
     kin: createKinematics(world, anchor),
     kinPort: undefined,
     trains: createTrainBodies(world, anchor),
     statics: createStaticGroups(world, anchor),
-    bodies: createBodySlots(world, anchor, characters),
+    bodies: createBodySlots(world, anchor, characters, vehicles),
     colliders: createCellColliders(
       world,
       anchor,
@@ -195,6 +202,7 @@ export function createPhysicsCore(send: Send): PhysicsCore {
         else if (c.c === 'rebase') rebase(st, c.anchorWF);
         else if (c.c === 'trains') st.trains.apply(c.data, msg.targetS);
         else if (c.c === 'statics') st.statics.set(c.name, c.group);
+        else if (c.c === 'wetness') st.vehicles.setWetness(c.w);
         else st.bodies.apply(c);
       }
       step(st, msg.targetS);
@@ -212,6 +220,7 @@ export function createPhysicsCore(send: Send): PhysicsCore {
       st.colliders.dispose();
       st.queries.dispose();
       st.bodies.dispose();
+      st.vehicles.dispose();
       st.characters.dispose();
       st.world.dispose();
       st = undefined;
