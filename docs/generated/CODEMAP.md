@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 515개.
+> 파일 519개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -36,8 +36,10 @@
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
 - `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainLcdSystem
 - `apps/game/src/vehicles/curb-spot.ts` — 차 부르기 자리(09 §1 drive "인접 차도 가장자리", M08-T01/T02): 플레이어 주변 3×3 셀 차선 중 연석 쪽(laneIdx 0 — 좌측통행 맨 왼쪽) 일반 도로 차선, | exports: CURB_SEARCH_M, CurbSpot, curbSpotInChunk, findCurbSpot
-- `apps/game/src/vehicles/drive-hud.ts` — 운전 계기판·탑승 안내(임시 DOM HUD — M10 @sanpo/ui가 대체): drive 중 오른쪽 아래 속도(km/h)·기어·RPM 막대·등화(전조등·방향지시등)·ABS/TCS, | exports: gaugeHtml, driveHudSystem
+- `apps/game/src/vehicles/drive-hud.ts` — 운전 계기판·탑승 안내(임시 DOM HUD — M10 @sanpo/ui가 대체): drive 중 오른쪽 아래 속도(km/h)·기어·RPM 막대·등화(전조등·방향지시등)·ABS/TCS, | exports: gaugeHtml, guideHtml, driveHudSystem
+- `apps/game/src/vehicles/hazards.ts` — AEB 위험물(M08-T02): sim 출력 버퍼(메인에서 읽기만) → 원 목록. 보행자 = 지금 + 0.5·1.0 s 뒤(걷는 방향·속력 — anim 소수 × 10 m/s), | exports: carCircles, hazardsNear
 - `apps/game/src/vehicles/player-cars.ts` — 플레이어 차(M08-T01): 세워 둔 차(스폰 프리셋·카셰어)와 부른 차 — 물리 차체(physics.spawnVehicle, content/vehicles/sedan.json)를 콜라이더 적재 뒤 지면에 맞춰 만들고, | exports: SEDAN_PARAMS, SHARE_PAINT, SHARE_ACCENT, CarOrigin, PlayerCars, createPlayerCars
+- `apps/game/src/vehicles/traffic-guide.ts` — 운전 교통 안내(M08-T02 — 위반해도 벌점 없음, HUD 안내만): 차가 있는 차선을 lanes.bin(AI 교통과 같은 데이터)에서 찾아 | exports: LaneHit, laneAt, DriveGuide, createDriveGuide
 - `apps/game/src/vehicles/wiring.ts` — 플레이어 차 배선(M08-T01): 차 관리자(player-cars) + 차 부르기(walk R·패드 D-pad ← — 가까운 차도 연석, curb-spot) + 스폰 프리셋 차(`vehicles`) + 계기판 HUD. | exports: VehicleWiring, createVehicleWiring
 - `apps/game/src/weather-mode.ts` — 날씨 모드(M09-T01, 10 §3): `?weather=auto|live|<기후표 상태 id>` > 골든뷰 weather > `?time=`(고정 시각 = 맑음 고정 — e2e·비교 결정론) > auto(기후표 마르코프). | exports: WeatherSpec, parseWeatherFlag, weatherSpecOf, applyWeatherSpec, startLiveWeather
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라·아바타(phase 20 확정) → render.setCamera·setAvatar(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
@@ -243,7 +245,7 @@
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06), 비 파문 노멀(M09-T01). | exports: EnvUniforms, createEnvUniforms, rainRipples, WetInput, WetOutput, applyWetness
 
 ## packages/sim
-- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, SimService, RailStaticLayout, SimDeps, HolidaysFile, SeasonTableFile
+- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, PlayerFootprint, SimService, RailStaticLayout, SimDeps, HolidaysFile, SeasonTableFile
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts', createSim
 - `packages/sim/src/internal/clock/astronomy.ts` — 천문(10 §2, 01 §7): suncalc 2.x(도 단위, 방위 = 진북 기준 시계방향, 고도 = 대기차 보정 겉보기) → 도북 방위(수렴각 보정) → WF 단위 벡터. | exports: BodyPosition, dirWFFromGrid, sunPosition, moonPosition, clearSkyIlluminanceLux
 - `packages/sim/src/internal/clock/holidays.ts` — 일본 공휴일 표(10 §2, M09-T05): content/sim/holidays-jp.json(법 규칙 생성 2026–2035)을 createSim이 등록 → 운행일 요일 유형(dayTypeOf)이 휴일로 본다. | exports: setHolidays, isHolidayJst
@@ -259,6 +261,7 @@
 - `packages/sim/src/internal/crowd/lod-manager.ts` — 군중 LOD(10 §4.2, M06-T04 — ADR-0064): tier A(DetourCrowd, radiusA 안) ↔ tier B(흐름) 승강격. 히스테리시스 ± lodBandM(80 m ± 5) — | exports: outputPos, LodMoves, lodStep
 - `packages/sim/src/internal/crowd/nav-world.ts` — 내비 월드(M06-T03, ADR-0063): sim.worker 안 타일 Detour NavMesh(원점 0, 64 m 타일 = 파이프라인 nav.bin 타일 좌표 그대로) — | exports: CrossingRec, configureFilter, NavWorld, createNavWorld
 - `packages/sim/src/internal/crowd/route.ts` — 보행 경로의 횡단 분해(M06-T03, ADR-0063): 전체 필터(횡단 포함) 경로의 꺾은선에서 처음 들어가는 횡단보도 띠를 찾고, | exports: V3, CrossingHit, inBand, firstCrossing, keepLeftLat, crossingPoints
+- `packages/sim/src/internal/player-footprint.ts` — 플레이어 차·자전거 바닥 사각형(M08-T02): 교통 양보(사각형까지 거리)·군중 회피(축 위 원 장애물). 원점 = 차체 바닥 중심, 전방 = (−sin yaw, −cos yaw). | exports: footprintDistance, footprintGrid, footprintCircles
 - `packages/sim/src/internal/rail/motion-profile.ts` — 트립 운동(M07-T03, 10 §6.2, ADR-0071·0072): s(trip, t) = 시각의 순수 함수. 구간 곡선 = core tripLegs(시간표 컴파일러와 같은 입력 — | exports: DOOR_OPEN_AFTER_S, DOOR_CLOSED_BEFORE_S, DOOR_MOVE_S, TripMotion, tripMotion, MotionState, motionAt
 - `packages/sim/src/internal/rail/network.ts` — 철도 망 런타임(M07-T03, ADR-0072): rail.bin(RailNetwork) → 선로별 표본 보간. 칸 자세 = 앞·뒤 대차 위치(선로 위 s ± 대차 반간격)의 | exports: TrackRt, RailRt, createRailRt, pointAt, inTunnel, CarPose, carPose
 - `packages/sim/src/internal/rail/platforms.ts` — 승강장·홈도어(M07-T04, ADR-0073): rail.bin 승강장 고리(OSM) → 윗면 삼각형(귀 자르기) + 옆면(레일 높이까지) — render 메시·physics 바닥 공용. | exports: PSD_OFFSET_M, PSD_HEIGHT_M, PSD_GATE_M, triangulate, PlatformGeometry, platformGeometry, EDGE_STRIP_M, PsdStop, psdLayout, psdPiece
@@ -336,7 +339,7 @@
 - `packages/tile-format/src/internal/xxh64.ts` — XXH64(seed 0) — 섹션 해시·cells.idx hash32. BigInt 없이 u32 hi/lo 쌍 연산(파이프라인 처리량). see docs/05-tile-format.md §3, §5 | exports: xxh64Hex, xxh64Low32
 
 ## packages/traversal
-- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, EnterableVehicle, LandingFailReason, LandingResult, LandingHud, TrainView, TrainParams, TrainHud, DriveView, DriveParams, DriveHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
+- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, HazardCircle, EnterableVehicle, LandingFailReason, LandingResult, LandingHud, TrainView, TrainParams, TrainHud, DriveView, DriveParams, DriveHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
 - `packages/traversal/src/index.ts` — @sanpo/traversal 공개 엔트리(L3): 이동 모드 상태기계·카메라 리그. api.ts 재수출 + create* 팩토리만. see docs/modules/traversal.md | exports: * from './api.ts', forwardOf, lookAtAngles, createTraversal, DEFAULT_TRAVERSAL_SETTINGS
 - `packages/traversal/src/internal/camera/attached-rig.ts` — AttachedRig(09 §3, M07-T05): 부모(열차 칸) 로컬 오프셋 + 부모 기준 시선(yaw·pitch) + 미세 진동(속력 비례 — 레일 이음매 상하·좌우 흔들림). | exports: ParentPose, localToWorld, worldToLocal, vibration, attachedCamera
 - `packages/traversal/src/internal/camera/boom.ts` — 3인칭 카메라 붐 충돌(09 §3 ThirdPersonRig, M04-T05, ADR-0045): 피벗 → 카메라 방향 sphereCast(반경 0.2 m, 워커 — 비동기 ≈ 1프레임). | exports: CAMERA_RADIUS_M, MAX_STEP_RAD, BoomState, createBoomState, resetBoom, stepToward, requestBoom, boomLength
@@ -347,7 +350,8 @@
 - `packages/traversal/src/internal/camera/third-person-rig.ts` — ThirdPersonRig(09 §3): 피벗 = 발 + 어깨 높이, 붐 = 오른쪽 어깨 0.4 m − 시선 × 거리 3.5 m(휠 1.5–6). 충돌은 boom.ts(sphereCast)가 붐 길이를 줄인다(M04-T05), | exports: zoomDistance, Boom, createBoom, thirdPersonBoom, thirdPersonCamera, avatarOpacity
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
 - `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard, carGroundGuard
-- `packages/traversal/src/internal/modes/drive-control.ts` — drive 조작 순수 함수(M08-T01): 운전자 입력(가속·제동·후진·정지 유지), 키보드 조향 램프, 기어 표시, 차 방위, 운전석 문 앞 탑승 판정. | exports: STOP_MS, entryTarget, yawOfCar, driverInput, rampSteer, gearLabel
+- `packages/traversal/src/internal/modes/drive-actions.ts` — drive 모드 상태·동작(M08-T01·T02): 상태, 버튼(등화·방향지시등·시점), 운전석 카메라, 하차 자리 찾기, 안전(보도 서행·AEB). | exports: DriveState, createState, handleButtons, cockpitCamera, requestExit, safety
+- `packages/traversal/src/internal/modes/drive-control.ts` — drive 조작 순수 함수(M08-T01): 운전자 입력(가속·제동·후진·정지 유지), 키보드 조향 램프, 기어 표시, 차 방위, 운전석 문 앞 탑승 판정. | exports: STOP_MS, entryTarget, yawOfCar, driverInput, rampSteer, gearLabel, AebCar, hazardAhead, aebRange
 - `packages/traversal/src/internal/modes/drive.ts` — drive 모드(09 §2 drive, M08-T01): 게임이 만든 물리 차량(DriveParams.vehicle)을 운전. input 'vehicle': W/RT 가속·S/LT 제동(멈추면 후진)·A/D·L스틱 조향 | exports: driverInput, entryTarget, rampSteer, yawOfCar, isDriveParams, createDriveMode
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → (physics 있으면) 지오메트리 진입 방지(free-guard.ts) → CameraState. | exports: FreecamMode, createFreecamMode
 - `packages/traversal/src/internal/modes/train.ts` — train 모드(09 §2 train, M07-T05): 탑승 중 카메라(AttachedRig) — 서기(문 옆)·좌석·전면 전망(선두 운전실), V 순환, 마우스 시선(칸 기준). | exports: isTrainParams, viewOffset, insideCar, DOOR_REACH_M, nearDoor, boardingTarget, alightSpot, createTrainMode

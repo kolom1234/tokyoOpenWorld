@@ -135,6 +135,7 @@ export function startWorldExtras(
     ...(deps.spawn ? { spawn: deps.spawn } : {}),
   });
   late.cars = cars.cars;
+  late.hazards = cars.hazards;
   deps.scheduler.add({ systems: () => cars.systems });
   if (deps.spawn?.surface) {
     const ps = presetSpawnSystem(

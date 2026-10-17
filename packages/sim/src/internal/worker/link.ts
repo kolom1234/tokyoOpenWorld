@@ -8,7 +8,15 @@ import type {
   Vec3d,
   WorkerSupervisor,
 } from '@sanpo/core';
-import type { CrowdParams, DayType, SimDeps, SimWorkerStats, TrafficParams, WorldClock } from '../../api.ts';
+import type {
+  CrowdParams,
+  DayType,
+  PlayerFootprint,
+  SimDeps,
+  SimWorkerStats,
+  TrafficParams,
+  WorldClock,
+} from '../../api.ts';
 import { dayRatio } from '../crowd/density.ts';
 import type { ClockSync } from './crowd-runtime.ts';
 import { type SimWorkerHost, startSimWorker } from './host.ts';
@@ -28,6 +36,8 @@ export interface WorkerLink {
   addCell(key: CellKey, nav?: ArrayBuffer, lanes?: ArrayBuffer): void;
   removeCell(key: CellKey): void;
   scenario(c: Vec3d, r: number, n: number): void;
+  /** 플레이어 탈것 치수(M08-T02) — frame이 yaw와 함께 워커로. */
+  setPlayerVehicle(size: { lengthM: number; widthM: number } | null): void;
   /** 물리 직결(M06-T06): 워커 시작 전이면 기억했다가 시작 때. */
   connectPhysics(link: (port: MessagePort) => void): void;
   /** 매 프레임(sim 시계 시스템): 플레이어·카메라 전방(스폰 시야 판정)·시계·밀도 배율 동기. */
@@ -37,6 +47,14 @@ export interface WorkerLink {
 }
 
 const absNow = (): number => performance.timeOrigin + performance.now();
+
+/** 탄것 중이면 바닥 사각형(방위 = 플레이어 yaw), 걷기·그 밖 = undefined. */
+function footprintOf(
+  player: Readonly<PlayerState>,
+  size: { lengthM: number; widthM: number } | null,
+): PlayerFootprint | undefined {
+  return size && (player.mode === 'drive' || player.mode === 'cycle') ? { yaw: player.yawRad, ...size } : undefined;
+}
 
 /** 쿼터니언으로 돌린 카메라 전방(로컬 −Z). */
 export function forwardOf(q: Readonly<{ x: number; y: number; z: number; w: number }>): Vec3 {
@@ -63,10 +81,9 @@ function startHost(o: Parameters<WorkerLink['start']>[0], deps: SimDeps, clock: 
 export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
   let worker: SimWorkerHost | undefined;
   const early = new Map<CellKey, { nav?: ArrayBuffer | undefined; lanes?: ArrayBuffer | undefined }>();
-  let lastPlayer = Number.NEGATIVE_INFINITY;
-  let lastDensity = 1;
-  let crowdParams: CrowdParams | undefined;
-  let synced: ClockSync | undefined;
+  let [lastPlayer, lastDensity] = [Number.NEGATIVE_INFINITY, 1];
+  let [crowdParams, synced]: [CrowdParams | undefined, ClockSync | undefined] = [undefined, undefined];
+  let vehicleSize: { lengthM: number; widthM: number } | null = null;
   let physicsLink: ((port: MessagePort) => void) | undefined;
   const sync = (): ClockSync => ({ gameMs: clock.gameTimeMs, atAbs: absNow(), scale: clock.timeScale });
   return {
@@ -94,6 +111,9 @@ export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
       worker?.removeCell(key);
     },
     scenario: (c, r, n) => worker?.scenario(c, r, n),
+    setPlayerVehicle(size) {
+      vehicleSize = size ? { ...size } : null;
+    },
     connectPhysics(link) {
       physicsLink = link;
       worker?.connectPhysics(link);
@@ -104,7 +124,7 @@ export function createWorkerLink(clock: WorldClock, deps: SimDeps): WorkerLink {
       const now = absNow();
       if (now - lastPlayer >= PLAYER_INTERVAL_MS) {
         lastPlayer = now;
-        worker.setPlayer(player.posWF, player.velWF, forwardOf(camera.quat));
+        worker.setPlayer(player.posWF, player.velWF, forwardOf(camera.quat), footprintOf(player, vehicleSize));
       }
       if (densityScale !== lastDensity) {
         lastDensity = densityScale;

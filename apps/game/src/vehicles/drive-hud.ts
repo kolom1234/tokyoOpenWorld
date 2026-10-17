@@ -1,8 +1,9 @@
 // 운전 계기판·탑승 안내(임시 DOM HUD — M10 @sanpo/ui가 대체): drive 중 오른쪽 아래 속도(km/h)·기어·RPM 막대·등화(전조등·방향지시등)·ABS/TCS,
 // walk 중 운전석 문 앞이면 "F 운전하기"(hud.enterable). 게임 로직 없음 — traversal hud만 읽는다. 하차 실패 이유는 notice.
-import type { GameSystem } from '@sanpo/core';
+import type { GameSystem, Vec3d } from '@sanpo/core';
 import type { DriveHud, TraversalService } from '@sanpo/traversal';
 import { notice } from '../station/hud.ts';
+import type { DriveGuide } from './traffic-guide.ts';
 
 const RPM_MAX = 6500;
 
@@ -51,21 +52,45 @@ export function gaugeHtml(d: DriveHud): string {
     `<div style="height:5px;background:#333;border-radius:3px;margin:4px 0"><div style="height:5px;width:${(rpm * 100).toFixed(0)}%;` +
     `background:${rpm > 0.85 ? '#f55' : '#7cf'};border-radius:3px"></div></div>` +
     `<div style="display:flex;gap:4px;font-size:11px">${lamp(d.lights, '#9df', '전조등')}${lamp(d.abs, '#fc4', 'ABS')}` +
-    `${lamp(d.tcs, '#fc4', 'TCS')}${lamp(d.braking, '#f66', '제동')}</div>`
+    `${lamp(d.tcs, '#fc4', 'TCS')}${lamp(d.braking, '#f66', '제동')}${lamp(d.aeb, '#f44', '긴급제동')}</div>`
   );
 }
 
+/** 안내 한 줄(제한 속도·정지선 신호·역주행·보도). */
+export function guideHtml(d: DriveHud, g: Readonly<DriveGuide> | undefined): string {
+  const parts: string[] = [];
+  if (g?.limitKmh) {
+    const over = d.speedKmh > g.limitKmh + 10;
+    parts.push(`<span style="color:${over ? '#f86' : '#ddd'}">제한 ${g.limitKmh}</span>`);
+  }
+  if (g?.stop)
+    parts.push(
+      `<span style="color:${g.stop.lamp === 'R' ? '#f55' : '#fd5'}">● 정지선 ${Math.round(g.stop.distM)} m</span>`,
+    );
+  if (g?.wrongWay) parts.push('<span style="color:#f86">역주행 — 일본은 좌측통행(왼쪽 차선)</span>');
+  if (d.sidewalk) parts.push('<span style="color:#fd5">보도 — 10 km/h 서행</span>');
+  return parts.length
+    ? `<div style="margin-top:6px;font-size:12px;display:flex;flex-wrap:wrap;gap:8px">${parts.join('')}</div>`
+    : '';
+}
+
 /** phase 67(HUD). */
-export function driveHudSystem(doc: Document, traversal: TraversalService): GameSystem {
+export function driveHudSystem(
+  doc: Document,
+  traversal: TraversalService,
+  guide?: { update(pos: Readonly<Vec3d>, yawRad: number, dtS: number): DriveGuide },
+): GameSystem {
   let lastExit: DriveHud['exit'] = 'ready';
   return {
     id: 'wiring.driveHud',
     phase: 67,
-    update() {
+    update(f) {
       const d = traversal.mode === 'drive' ? traversal.hud.drive : undefined;
       const el = panel(doc);
       el.style.display = d ? 'block' : 'none';
-      if (d) el.innerHTML = gaugeHtml(d);
+      const g = d ? guide?.update(traversal.player.posWF, traversal.player.yawRad, f.dtReal) : undefined;
+      if (d) el.innerHTML = gaugeHtml(d) + guideHtml(d, g);
+      if (g?.ranRed) notice(doc, '적신호에 정지선을 넘었어요 — 안내만 해요(벌점 없음). 다음엔 정지선 앞에서 멈춰요');
       enterPrompt(doc, traversal.mode === 'walk' && traversal.hud.enterable !== undefined);
       const exit = d?.exit ?? 'ready';
       if (exit !== lastExit) {

@@ -130,6 +130,7 @@ export function createSim(deps: SimDeps): SimService {
     removeCell: (key) => link.removeCell(key),
     crowdScenario: (c, r, n) => link.scenario(c, r, n),
     connectPhysics: (l) => link.connectPhysics(l),
+    setPlayerVehicle: (s) => link.setPlayerVehicle(s),
     workerStats: () => link.stats(),
     environment: env,
     systems: () => [system],

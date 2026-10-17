@@ -2,168 +2,45 @@
 // 코스 = spawn 프리셋 `drive-course`(평지 직선 311 m, 높이 39.76–40.05 m — lanes.bin 직선 차선 연쇄 + 1 m 간격 아래 레이로 턱 없음 확인), 교통·군중 끔(`traffic=0&crowd=0` — 재현).
 // 표본 = 페이지 안 rAF마다(시각·속력·위치·기어·rpm·ABS) → Node에서 계산. 결과 test-results/golden/drive/metrics.json + 콘솔 표. GPU 전력(W)은 nvidia-smi 1 s 표본.
 // 서버 = 골든뷰와 같음(dev `?world=local` 또는 GOLDEN_BASE_URL + GOLDEN_WORLD=api).
-import { execFile } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
+import { buildGraph } from './autopilot.ts';
+import {
+  boardCourse,
+  brakeDistance,
+  type Dbg,
+  lanesAround,
+  latest,
+  median,
+  pilot,
+  powerSampler,
+  startContactMeter,
+  startLane,
+  startSampler,
+  stopContactMeter,
+  stopSampler,
+  timeTo,
+  WORLD,
+} from './drive-helpers.ts';
 
 const OUT = 'test-results/golden/drive';
-const WORLD = process.env.GOLDEN_WORLD === 'api' ? '' : 'world=local&';
-const COURSE = 'spawn=drive-course&traffic=0&crowd=0&debug=1';
 
 test.use({ viewport: { width: 1600, height: 900 } });
 test.describe.configure({ mode: 'serial' });
 
-interface Sample {
-  t: number;
-  kmh: number;
-  x: number;
-  z: number;
-  gear: string;
-  rpm: number;
-  abs: boolean;
-  fps: number;
-}
-
 const results: Record<string, unknown> = {};
 /** 수치 한 줄(PR 표용 — 콘솔 금지 규칙 밖의 stdout). */
-const report = (k: string, v: unknown): void => void process.stdout.write(`[drive] ${k} ${JSON.stringify(v)}\n`);
+const report = (k: string, v: unknown): void =>
+  void process.stdout.write(`[drive] ${k} ${JSON.stringify(v)}
+`);
 test.beforeAll(() => mkdirSync(OUT, { recursive: true }));
-test.afterAll(() => writeFileSync(`${OUT}/metrics.json`, `${JSON.stringify(results, null, 2)}\n`));
-
-/** nvidia-smi 1 s 표본(없으면 빈 배열). */
-function powerSampler(): { stop(): { drawW: number[]; limitW: number[] } } {
-  const drawW: number[] = [];
-  const limitW: number[] = [];
-  const t = setInterval(() => {
-    execFile(
-      'nvidia-smi',
-      ['--query-gpu=power.draw,enforced.power.limit', '--format=csv,noheader,nounits'],
-      (err, out) => {
-        if (err) return;
-        const [d, l] = out.trim().split(',').map(Number);
-        if (Number.isFinite(d)) drawW.push(d as number);
-        if (Number.isFinite(l)) limitW.push(l as number);
-      },
-    );
-  }, 1000);
-  return {
-    stop() {
-      clearInterval(t);
-      return { drawW, limitW };
-    },
-  };
-}
-
-/** 코스 부팅 → 세워 둔 차가 생기면 운전석에 앉힌다(추적 시점). 반환 = 차 핸들. */
-async function boardCourse(page: Page, extra = ''): Promise<number> {
-  await page.goto(`/?${WORLD}${COURSE}${extra}`);
-  await page.waitForFunction(
-    () => {
-      const w = (globalThis as { __SANPO_DEBUG__?: { world?: { traversal?: { mode: string } } } }).__SANPO_DEBUG__
-        ?.world;
-      return w?.traversal?.mode === 'walk';
-    },
-    null,
-    { timeout: 180_000 },
-  );
-  const handle = await page.waitForFunction(
-    () => {
-      const w = (globalThis as unknown as { __SANPO_DEBUG__: { world: { cars?: { list(): { handle?: number }[] } } } })
-        .__SANPO_DEBUG__.world;
-      return w.cars?.list().find((c) => c.handle !== undefined)?.handle;
-    },
-    null,
-    { timeout: 60_000 },
-  );
-  const h = (await handle.jsonValue()) as number;
-  // 차가 내려앉고 주변 콜라이더가 차도록 잠시.
-  await page.waitForTimeout(4000);
-  const ok = await page.evaluate(
-    (vehicle) =>
-      (
-        globalThis as unknown as {
-          __SANPO_DEBUG__: { world: { traversal: { request(m: string, p: unknown): boolean } } };
-        }
-      ).__SANPO_DEBUG__.world.traversal.request('drive', { vehicle, kind: 'sedan' }),
-    h,
-  );
-  expect(ok).toBe(true);
-  await page.waitForTimeout(1500);
-  return h;
-}
-
-/** 페이지 안 rAF 표본기 시작(전역 배열). */
-async function startSampler(page: Page, handle: number): Promise<void> {
-  await page.evaluate((h) => {
-    type W = {
-      traversal: { hud: { drive?: { speedKmh: number; gear: string; rpm: number; abs: boolean } } };
-      physics: { pose(h: number): { posWF: { x: number; z: number } } | undefined };
-    };
-    const g = globalThis as unknown as {
-      __SANPO_DEBUG__: { world: W };
-      __DRIVE_SAMPLES__: unknown[];
-      __DRIVE_ON__: boolean;
-    };
-    const w = g.__SANPO_DEBUG__.world;
-    g.__DRIVE_SAMPLES__ = [];
-    g.__DRIVE_ON__ = true;
-    let last = performance.now();
-    const tick = (now: number): void => {
-      const d = w.traversal.hud.drive;
-      const p = w.physics.pose(h);
-      if (d && p)
-        g.__DRIVE_SAMPLES__.push({
-          t: now / 1000,
-          kmh: d.speedKmh,
-          x: p.posWF.x,
-          z: p.posWF.z,
-          gear: d.gear,
-          rpm: d.rpm,
-          abs: d.abs,
-          fps: 1000 / Math.max(now - last, 1),
-        });
-      last = now;
-      if (g.__DRIVE_ON__) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }, handle);
-}
-
-async function stopSampler(page: Page): Promise<Sample[]> {
-  return page.evaluate(() => {
-    const g = globalThis as unknown as { __DRIVE_SAMPLES__: Sample[]; __DRIVE_ON__: boolean };
-    g.__DRIVE_ON__ = false;
-    return g.__DRIVE_SAMPLES__;
-  });
-}
-
-const latest = async (page: Page): Promise<number> =>
-  page.evaluate(
-    () =>
-      (
-        globalThis as unknown as {
-          __SANPO_DEBUG__: { world: { traversal: { hud: { drive?: { speedKmh: number } } } } };
-        }
-      ).__SANPO_DEBUG__.world.traversal.hud.drive?.speedKmh ?? 0,
-  );
-
-/** 표본에서 정지 → 목표 속력까지 시간(s): 스로틀 시작 시각 t0부터. */
-function timeTo(samples: readonly Sample[], t0: number, kmh: number): number | undefined {
-  const s = samples.find((x) => x.t >= t0 && x.kmh >= kmh);
-  return s ? s.t - t0 : undefined;
-}
-
-/** 제동 시작 시각 t0부터 멈출 때(< 0.2 km/h)까지 이동 거리(m). */
-function brakeDistance(samples: readonly Sample[], t0: number): number | undefined {
-  const start = samples.find((x) => x.t >= t0);
-  const stop = samples.find((x) => x.t > t0 + 0.2 && x.kmh < 0.2);
-  return start && stop ? Math.hypot(stop.x - start.x, stop.z - start.z) : undefined;
-}
-
-const median = (a: number[]): number => {
-  const s = [...a].sort((x, y) => x - y);
-  return s.length ? (s[Math.floor(s.length / 2)] as number) : 0;
-};
+test.afterAll(() =>
+  writeFileSync(
+    `${OUT}/metrics.json`,
+    `${JSON.stringify(results, null, 2)}
+`,
+  ),
+);
 
 test('sedan 0→100 km/h on the straight (real GPU)', async ({ page }) => {
   const h = await boardCourse(page);
@@ -225,3 +102,54 @@ for (const wet of [0, 1] as const)
       expect(d).toBeLessThanOrEqual(20);
     } else expect(d ?? 0).toBeGreaterThan(((results.brakeDry as { distanceM?: number })?.distanceM ?? 0) + 1);
   });
+
+/** 보행자 밀집 저속 주행(M08-T02 수락 — 접촉 0): 스크램블 교차로 둘레 차선을 자동 운전(15 km/h, 적·황 정지선 정지)하며 프레임마다 보행자 ↔ 차체 사각형 거리. */
+test('sedan at low speed through the Scramble crowd: pedestrian contacts 0 (real GPU)', async ({ page }) => {
+  const secs = Number(process.env.DRIVE_CROWD_S ?? '150');
+  await page.goto(`/?${WORLD}spawn=shibuya-scramble&debug=1`);
+  await page.waitForFunction(
+    () => (globalThis as unknown as Dbg).__SANPO_DEBUG__?.world?.traversal?.mode === 'walk',
+    null,
+    {
+      timeout: 180_000,
+    },
+  );
+  await page.waitForTimeout(8000);
+  const graph = buildGraph(await lanesAround(page, -2, 1, -2, 1));
+  const start = startLane(graph);
+  const p0 = start.pts[1] as [number, number];
+  const p1 = (start.pts[2] ?? start.pts[1]) as [number, number];
+  const yaw0 = Math.atan2(-(p1[0] - p0[0]), -(p1[1] - p0[1]));
+  const id = await page.evaluate(
+    ([x, z, yaw]) => (globalThis as unknown as Dbg).__SANPO_DEBUG__.world.cars.park({ x, y: 15.5, z }, yaw, 'preset'),
+    [p0[0], p0[1], yaw0] as const,
+  );
+  const h = (await (
+    await page.waitForFunction(
+      (cid) => (globalThis as unknown as Dbg).__SANPO_DEBUG__.world.cars.list().find((c) => c.id === cid)?.handle,
+      id,
+      { timeout: 60_000 },
+    )
+  ).jsonValue()) as number;
+  await page.waitForTimeout(2000);
+  await page.evaluate(
+    (v) =>
+      (globalThis as unknown as Dbg).__SANPO_DEBUG__.world.traversal.request('drive', { vehicle: v, kind: 'sedan' }),
+    h,
+  );
+  await page.waitForTimeout(1500);
+  await startContactMeter(page, h);
+  const power = powerSampler();
+  // 앞 40 %는 신호를 지키고, 나머지는 일부러 무시(보행 현시 횡단보도로 — AEB 스트레스).
+  await pilot(page, graph, start, secs, (n) => `${OUT}/crowd-${n}.png`, secs * 0.4);
+  const m = await stopContactMeter(page);
+  const pw = power.stop();
+  results.crowd = {
+    ...m,
+    seconds: secs,
+    gpuPowerW: { medianDraw: median(pw.drawW), maxDraw: Math.max(0, ...pw.drawW), limit: median(pw.limitW) },
+  };
+  report('crowd', results.crowd);
+  expect(m.contacts).toBe(0);
+  expect(m.distanceM).toBeGreaterThan(150);
+});

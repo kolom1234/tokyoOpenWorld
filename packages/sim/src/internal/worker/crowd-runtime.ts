@@ -4,7 +4,7 @@
 import { init } from '@recast-navigation/core';
 import type { Vec3, Vec3d } from '@sanpo/core';
 import type { NavCrossing } from '@sanpo/tile-format';
-import type { CrowdParams, SignalPlansFile } from '../../api.ts';
+import type { CrowdParams, PlayerFootprint, SignalPlansFile } from '../../api.ts';
 import { type CrowdSim, type CrowdSimStats, createCrowdSim } from '../crowd/crowd-sim.ts';
 import { createNavWorld, type NavWorld } from '../crowd/nav-world.ts';
 import { pedWalkLeftS, signalState } from '../signals/controller.ts';
@@ -20,7 +20,7 @@ export interface ClockSync {
 export interface CrowdRuntime {
   addCell(key: number, nav: ArrayBuffer): void;
   removeCell(key: number): void;
-  setPlayer(pos: Readonly<Vec3d>, vel: Readonly<Vec3>, fwd?: Readonly<Vec3>): void;
+  setPlayer(pos: Readonly<Vec3d>, vel: Readonly<Vec3>, fwd?: Readonly<Vec3>, veh?: Readonly<PlayerFootprint>): void;
   setDensityScale(k: number): void;
   setClock(c: ClockSync): void;
   scenario(center: Readonly<Vec3d>, radius: number, count: number): void;
@@ -66,7 +66,7 @@ export function createCrowdRuntime(
       if (nav) nav.removeCell(key);
       else pending.delete(key);
     },
-    setPlayer: (pos, vel, fwd) => tier?.setPlayer(pos, vel, fwd),
+    setPlayer: (pos, vel, fwd, veh) => tier?.setPlayer(pos, vel, fwd, veh),
     setDensityScale(k) {
       densityScale = k;
       tier?.setDensityScale(k);

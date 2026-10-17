@@ -211,8 +211,8 @@ function createTraversalFor(
       jumpClock: (ms) => sim.clock.jumpTo(ms),
       // freecam G(ADR-0083): 월드 표시 뒤 world-extras가 채운다.
       landing: (p) => late.landing?.(p) ?? Promise.resolve({ ok: false, reason: 'not-ready' }),
-      // 탈 수 있는 차(M08-T01): world-extras의 플레이어 차 관리자.
-      vehicles: () => late.cars?.enterables() ?? [],
+      vehicles: () => late.cars?.enterables() ?? [], // 탈 수 있는 차·AEB 위험물(M08 — world-extras 차량 배선)
+      hazards: (c, r) => late.hazards?.(c, r) ?? [],
     },
     { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
   );

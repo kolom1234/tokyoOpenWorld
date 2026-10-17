@@ -4,7 +4,7 @@
 import { setRandomSeed } from '@recast-navigation/core';
 import { hash32, type Vec3, WORLD_SEED } from '@sanpo/core';
 import { NAV_FLAG, NAV_NO_SIGNAL } from '@sanpo/tile-format';
-import type { CrowdAgentsParams, CrowdParams } from '../../api.ts';
+import type { CrowdAgentsParams, CrowdParams, PlayerFootprint } from '../../api.ts';
 import type { Agent, FsmCtx, PedLamp } from './agent-fsm.ts';
 import { writeAgents, writeFlows } from './agent-output.ts';
 import { createTierAPool, type TierAPool } from './agents-detour.ts';
@@ -38,7 +38,7 @@ export interface CrowdSimStats {
 }
 
 export interface CrowdSim {
-  setPlayer(pos: Readonly<V3>, vel: Readonly<Vec3>, fwd?: Readonly<Vec3>): void;
+  setPlayer(pos: Readonly<V3>, vel: Readonly<Vec3>, fwd?: Readonly<Vec3>, veh?: Readonly<PlayerFootprint>): void;
   /** 날씨 등 밀도 배율(비 0.6 — 10 §4.1). */
   setDensityScale(k: number): void;
   /** 스크램블 시험: 중심 radius 안 신호 횡단 대기점에 count명(tier A). 반환 = 만든 수. */
@@ -253,9 +253,9 @@ export function createCrowdSim(
     wMax: maxHotspotWeight(params),
   };
   return {
-    setPlayer(pos, vel, fwd) {
+    setPlayer(pos, vel, fwd, veh) {
       c.player = { pos: { ...pos }, vel: { ...vel }, fwd: fwd ? { ...fwd } : c.player.fwd };
-      c.a.setPlayer(c.player.pos, c.player.vel);
+      c.a.setPlayer(c.player.pos, c.player.vel, veh);
     },
     setDensityScale(k) {
       c.scale = k;

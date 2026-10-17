@@ -6,6 +6,7 @@ import type { BodyHandle, PhysicsService, Pose, RayHit, VehicleInput, VehicleSta
 import { describe, expect, it } from 'vitest';
 import { createTraversal, type DriveParams } from '../src/index.ts';
 import { driverInput, rampSteer } from '../src/internal/modes/drive.ts';
+import { aebRange, hazardAhead } from '../src/internal/modes/drive-control.ts';
 
 function fakeInput() {
   let context: InputContext = 'fly';
@@ -84,7 +85,7 @@ const log = createLogger({ level: 'warn' });
 const frame = (i: number): FrameContext =>
   ({ frameIndex: i, dtReal: 1 / 60, dtGame: 1 / 60, gameTimeMs: 0 }) as FrameContext;
 
-function setup() {
+function setup(hazards?: { x: number; z: number; r: number }[]) {
   const inp = fakeInput();
   const ph = fakePhysics();
   const t = createTraversal({
@@ -93,6 +94,7 @@ function setup() {
     log,
     ground: { groundHeightAt: () => 0 },
     physics: ph.physics,
+    ...(hazards ? { hazards: () => hazards } : {}),
   });
   const params: DriveParams = { vehicle: 3 as BodyHandle, kind: 'sedan' };
   expect(t.request('drive', params)).toBe(true);
@@ -175,5 +177,36 @@ describe('drive mode (M08-T01)', () => {
     await step(4);
     expect(ph.rays[0]?.x).toBeCloseTo(1.7, 5);
     expect(t.mode).toBe('walk');
+  });
+
+  it('AEB geometry: corridor ahead (forward/reverse), lateral clearance, curvature', () => {
+    const car = { pos: { x: 0, y: 0, z: 0 }, yaw: 0, speed: 8, halfLength: 2.25, halfWidth: 0.88, curvature: 0 };
+    // 전방 −Z 10 m 보행자(r 0.3): 차 앞(2.25)부터 10 − 2.25 − 0.3.
+    expect(hazardAhead(car, [{ x: 0, z: -10, r: 0.3 }])).toBeCloseTo(7.45, 5);
+    expect(hazardAhead(car, [{ x: 2.5, z: -10, r: 0.3 }])).toBe(Number.POSITIVE_INFINITY);
+    expect(hazardAhead(car, [{ x: 0, z: 10, r: 0.3 }])).toBe(Number.POSITIVE_INFINITY);
+    expect(hazardAhead({ ...car, speed: -2 }, [{ x: 0, z: 10, r: 0.3 }])).toBeCloseTo(7.45, 5);
+    // 오른쪽으로 도는 중(곡률 0.05/m)이면 오른쪽 앞 보행자도 통로 안.
+    expect(hazardAhead({ ...car, curvature: 0.05 }, [{ x: 2.6, z: -10, r: 0.3 }])).toBeLessThan(10);
+    // 30 km/h 정지 범위 ≥ 1.5 s × v, 서 있으면 0.
+    expect(aebRange(8.33)).toBeGreaterThanOrEqual(8.33 * 1.5);
+    expect(aebRange(0.1)).toBe(0);
+  });
+
+  it('AEB brakes for a pedestrian in the path and blocks pulling away into them', async () => {
+    const { t, inp, ph, step } = setup([{ x: 0, z: -9, r: 0.3 }]);
+    ph.car.speed = 8;
+    inp.axes.moveY = 1;
+    await step();
+    expect(ph.inputs.at(-1)).toMatchObject({ throttle: 0, brake: 1 });
+    expect(t.hud.drive?.aeb).toBe(true);
+    // 정지: 1.2 m 밖이면 출발 허용, 안이면 막음.
+    ph.car.speed = 0;
+    await step();
+    expect(ph.inputs.at(-1)?.throttle).toBe(1);
+    const near = setup([{ x: 0, z: -3.2, r: 0.3 }]);
+    near.inp.axes.moveY = 1;
+    await near.step();
+    expect(near.ph.inputs.at(-1)).toMatchObject({ throttle: 0, brake: 1 });
   });
 });

@@ -1,21 +1,43 @@
 // 플레이어 차 배선(M08-T01): 차 관리자(player-cars) + 차 부르기(walk R·패드 D-pad ← — 가까운 차도 연석, curb-spot) + 스폰 프리셋 차(`vehicles`) + 계기판 HUD.
 // traversal 컨텍스트 `vehicles`(탈 수 있는 차)는 world-view가 late.cars로 넘긴다.
-import type { CellKey, GameSystem } from '@sanpo/core';
+import type { CellKey, GameSystem, Vec3d } from '@sanpo/core';
 import type { InputService } from '@sanpo/input';
 import type { PhysicsService } from '@sanpo/physics';
 import type { RenderService } from '@sanpo/render';
 import type { SimService } from '@sanpo/sim';
-import type { TraversalService } from '@sanpo/traversal';
+import type { HazardCircle, TraversalService } from '@sanpo/traversal';
 import { laneChunks } from '../lane-chunks.ts';
 import type { SpawnPreset } from '../spawn-presets.ts';
 import { notice } from '../station/hud.ts';
 import { findCurbSpot } from './curb-spot.ts';
 import { driveHudSystem } from './drive-hud.ts';
-import { createPlayerCars, type PlayerCars } from './player-cars.ts';
+import { hazardsNear } from './hazards.ts';
+import { createPlayerCars, type PlayerCars, SEDAN_PARAMS } from './player-cars.ts';
+import { createDriveGuide } from './traffic-guide.ts';
 
 export interface VehicleWiring {
   readonly cars: PlayerCars;
   readonly systems: GameSystem[];
+  /** traversal `hazards`(AEB — 보행자·교통 차·세워 둔 차). */
+  hazards(center: Readonly<Vec3d>, radiusM: number): HazardCircle[];
+}
+
+/** 탄것 치수 → sim(교통 양보·군중 회피, M08-T02): 모드가 바뀔 때만. */
+function footprintSystem(traversal: TraversalService, sim: SimService): GameSystem {
+  let last: string | undefined;
+  return {
+    id: 'wiring.playerFootprint',
+    phase: 21,
+    update() {
+      const m = traversal.mode;
+      if (m === last) return;
+      last = m;
+      sim.setPlayerVehicle(
+        m === 'drive' ? { lengthM: SEDAN_PARAMS.dimensionsM.length, widthM: SEDAN_PARAMS.dimensionsM.width } : null,
+      );
+    },
+    dispose() {},
+  };
 }
 
 /** walk 중 R: 연석 자리를 찾아 부른다(찾는 동안 한 번만). */
@@ -72,6 +94,16 @@ export function createVehicleWiring(d: {
   const lanes = laneChunks(d.requestLanes);
   return {
     cars,
-    systems: [cars.system, summonSystem(d.doc, d, cars, lanes), driveHudSystem(d.doc, d.traversal)],
+    systems: [
+      cars.system,
+      summonSystem(d.doc, d, cars, lanes),
+      driveHudSystem(
+        d.doc,
+        d.traversal,
+        createDriveGuide(lanes, (c) => d.sim.signalStateAt(c)),
+      ),
+      footprintSystem(d.traversal, d.sim),
+    ],
+    hazards: (c, r) => hazardsNear(d.sim.outputs(), c, r, cars.parkedCircles()),
   };
 }

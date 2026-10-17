@@ -2,7 +2,8 @@
 // 여기는 정체성(appearance)을 받아 에이전트를 만들고 지운다. 플레이어는 조향 없는 에이전트(매 틱 순간이동 + 속도)로 넣어 보행자가 피한다.
 import { Crowd } from '@recast-navigation/core';
 import type { Vec3 } from '@sanpo/core';
-import type { CrowdAgentsParams } from '../../api.ts';
+import type { CrowdAgentsParams, PlayerFootprint } from '../../api.ts';
+import { footprintGrid } from '../player-footprint.ts';
 import { type Agent, FILTER, type FsmCtx, plan, STATE, startCross, stepAgent } from './agent-fsm.ts';
 import { identityOf, type PedIdentity } from './appearance.ts';
 import { configureFilter, type NavWorld } from './nav-world.ts';
@@ -12,6 +13,20 @@ const AGENT = { radius: 0.3, height: 1.7, maxAcceleration: 6, collisionQueryRang
 /** ANTICIPATE_TURNS | OBSTACLE_AVOIDANCE | SEPARATION | OPTIMIZE_VIS | OPTIMIZE_TOPO. */
 const UPDATE_FLAGS = 1 | 2 | 4 | 8 | 16;
 const SEPARATION = 1.5;
+/** 탄것 장애물(M08-T02): 원 수 상한·반경 여유(m)·최대 반경(Crowd maxAgentRadius). */
+const MAX_OBSTACLES = 12;
+const OBSTACLE_MARGIN_M = 0.2;
+/** 장애물 원 반경 = Crowd maxAgentRadius(0.6 — 보행자 분리 동작 그대로). */
+const OBSTACLE_R = 0.6;
+
+interface PlayerSlot {
+  pos: V3 | undefined;
+  vel: Vec3;
+  ca: Agent['ca'] | undefined;
+  veh: PlayerFootprint | undefined;
+  /** 탄것 원 장애물. */
+  obs: (Agent['ca'] | undefined)[];
+}
 /** 스폰·승격 자리: 다른 에이전트·플레이어와 이만큼 떨어져야(겹쳐 태어나면 Detour 충돌 풀이가 한동안 겹친 채로 둔다). */
 export const SPAWN_GAP_M = 0.65;
 
@@ -22,22 +37,19 @@ export interface TierAPool {
   /** i번 에이전트를 지우고 정체성을 돌려준다(강등 — 위치는 호출 측이 먼저 읽는다). */
   removeAt(i: number): PedIdentity;
   free(pos: V3): boolean;
-  setPlayer(pos: Readonly<V3> | undefined, vel: Readonly<Vec3>): void;
+  /** veh = 플레이어가 탄 차·자전거 바닥(M08-T02) — 차체를 덮는 원 장애물들(조향 없음)로 넣어 보행자가 피한다. */
+  setPlayer(pos: Readonly<V3> | undefined, vel: Readonly<Vec3>, veh?: Readonly<PlayerFootprint>): void;
   /** 상태 전이·경로 계획(틱당 상한)·Detour 갱신. 반환 = 제거 사유별 수. */
   step(dt: number): { offMesh: number; stuck: number; plans: number };
   destroy(): void;
 }
 
 export function createTierAPool(nav: NavWorld, p: CrowdAgentsParams, fsm: FsmCtx): TierAPool {
-  const crowd = new Crowd(nav.navMesh, { maxAgents: p.maxA + 2, maxAgentRadius: 0.6 });
+  const crowd = new Crowd(nav.navMesh, { maxAgents: p.maxA + 2 + MAX_OBSTACLES, maxAgentRadius: OBSTACLE_R });
   configureFilter(crowd.getFilter(FILTER.walk), false);
   configureFilter(crowd.getFilter(FILTER.all), true);
   const agents: Agent[] = [];
-  const player = {
-    pos: undefined as V3 | undefined,
-    vel: { x: 0, y: 0, z: 0 },
-    ca: undefined as Agent['ca'] | undefined,
-  };
+  const player: PlayerSlot = { pos: undefined, vel: { x: 0, y: 0, z: 0 }, ca: undefined, veh: undefined, obs: [] };
 
   const free = (pos: V3): boolean => {
     for (const o of agents) {
@@ -64,9 +76,10 @@ export function createTierAPool(nav: NavWorld, p: CrowdAgentsParams, fsm: FsmCtx
       return a;
     },
     removeAt,
-    setPlayer(pos, vel) {
+    setPlayer(pos, vel, veh) {
       player.pos = pos ? { ...pos } : undefined;
       player.vel = { ...vel };
+      player.veh = veh ? { ...veh } : undefined;
     },
     step: (dt) => stepPool(nav, crowd, agents, player, fsm, p, removeAt, dt),
     destroy: () => crowd.destroy(),
@@ -97,7 +110,7 @@ function stepPool(
   nav: NavWorld,
   crowd: Crowd,
   agents: Agent[],
-  player: { pos: V3 | undefined; vel: Vec3; ca: Agent['ca'] | undefined },
+  player: PlayerSlot,
   fsm: FsmCtx,
   p: CrowdAgentsParams,
   removeAt: (i: number) => PedIdentity,
@@ -124,13 +137,38 @@ function stepPool(
   return out;
 }
 
-/** 플레이어(내비 위일 때만): 조향 없는 에이전트로 순간이동 + 속도 — 보행자가 피한다. */
-function syncPlayer(
-  nav: NavWorld,
-  crowd: Crowd,
-  player: { pos: V3 | undefined; vel: Vec3; ca: Agent['ca'] | undefined },
-): void {
+/**
+ * 탄 차·자전거(M08-T02): 차체를 덮는 원마다 가장 가까운 내비 점(원 반경 안 — 횡단보도·보도 가장자리)에 조향 없는 장애물 에이전트.
+ * 내비 밖(차도 가운데)인 원은 빼고, 남는 장애물은 지운다.
+ */
+function syncVehicle(nav: NavWorld, crowd: Crowd, player: PlayerSlot, veh: PlayerFootprint, pos: V3): void {
+  const circles = footprintGrid(veh, pos.x, pos.z, OBSTACLE_R, OBSTACLE_MARGIN_M).slice(0, MAX_OBSTACLES);
+  const r = OBSTACLE_R;
+  let k = 0;
+  for (const c of circles) {
+    const q = { x: c.x, y: pos.y, z: c.z };
+    const near = nav.query.findClosestPoint(q, { filter: nav.allFilter, halfExtents: { x: r, y: 1.5, z: r } });
+    if (!near?.success || Math.hypot(near.point.x - c.x, near.point.z - c.z) > r) continue;
+    player.obs[k] ??=
+      crowd.addAgent(near.point, { ...AGENT, radius: r, maxSpeed: 30, maxAcceleration: 200, updateFlags: 0 }) ??
+      undefined;
+    player.obs[k]?.teleport(near.point);
+    player.obs[k]?.requestMoveVelocity(player.vel);
+    k++;
+  }
+  for (const o of player.obs.splice(k)) if (o) crowd.removeAgent(o);
+}
+
+/** 플레이어(내비 위일 때만): 조향 없는 에이전트로 순간이동 + 속도 — 보행자가 피한다. 차·자전거면 syncVehicle. */
+function syncPlayer(nav: NavWorld, crowd: Crowd, player: PlayerSlot): void {
   const pos = player.pos;
+  if (pos && player.veh) {
+    if (player.ca) crowd.removeAgent(player.ca);
+    player.ca = undefined;
+    syncVehicle(nav, crowd, player, player.veh, pos);
+    return;
+  }
+  for (const o of player.obs.splice(0)) if (o) crowd.removeAgent(o);
   const near = pos
     ? nav.query.findClosestPoint(pos, { filter: nav.allFilter, halfExtents: { x: 0.5, y: 1.5, z: 0.5 } })
     : undefined;

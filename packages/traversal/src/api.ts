@@ -45,6 +45,18 @@ export interface TraversalContext {
   landing?: (cameraWF: Readonly<Vec3d>) => Promise<LandingResult>;
   /** 탈 수 있는 차(M08-T01 — 카셰어에 세운 차·내린 차): walk 중 운전석 문 앞 + F → drive. 게임 배선이 물리 포즈로. */
   vehicles?: () => ReadonlyArray<EnterableVehicle>;
+  /**
+   * 주변 위험물(M08-T02 AEB): centerWF 반경 안 보행자(지금 + 0.5·1 s 뒤 예측)·자전거·교통 차(차체를 덮는 원들). 게임이 sim 출력 버퍼로.
+   * 없으면 AEB 없음(단위 테스트·물리만).
+   */
+  hazards?: (centerWF: Readonly<Vec3d>, radiusM: number) => ReadonlyArray<HazardCircle>;
+}
+
+/** 위험물 원(WF xz, 반경 m). */
+export interface HazardCircle {
+  x: number;
+  z: number;
+  r: number;
 }
 
 /** walk에서 F로 탈 수 있는 차(차체 바닥 중심 WF·방위 — 운전석 문 = driveSide 쪽). */
@@ -116,6 +128,10 @@ export interface DriveHud {
   reversing: boolean;
   abs: boolean;
   tcs: boolean;
+  /** 자동 긴급 제동 중(보행자·자전거·차가 진행 통로 안 — M08-T02). */
+  aeb: boolean;
+  /** 보도 위(바퀴가 보도 재질) — 10 km/h 서행. */
+  sidewalk: boolean;
   exit: 'ready' | 'moving' | 'searching' | 'blocked';
 }
 export interface HudHints {

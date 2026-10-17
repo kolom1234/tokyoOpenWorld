@@ -5,8 +5,9 @@ import type { GameSystem, Vec3d } from '@sanpo/core';
 import { packCellKey } from '@sanpo/core';
 import type { BodyHandle, PhysicsService, SedanParams } from '@sanpo/physics';
 import type { PlayerVehicleDraw, RenderService } from '@sanpo/render';
-import type { EnterableVehicle, TraversalService } from '@sanpo/traversal';
+import type { EnterableVehicle, HazardCircle, TraversalService } from '@sanpo/traversal';
 import SEDAN from '../../../../content/vehicles/sedan.json';
+import { carCircles } from './hazards.ts';
 
 export const SEDAN_PARAMS = SEDAN as unknown as SedanParams;
 /** 가상 카셰어 도장(sRGB 24비트). */
@@ -41,6 +42,8 @@ export interface PlayerCars {
   park(posWF: Vec3d, yawRad: number, origin: CarOrigin): number;
   /** traversal 컨텍스트: walk에서 F로 탈 수 있는 차. */
   enterables(): EnterableVehicle[];
+  /** 운전 중이 아닌 차(세워 둔·부른)의 차체 원 — AEB 위험물. */
+  parkedCircles(): HazardCircle[];
   /** 물리 핸들이 있는 차 수. */
   readonly live: number;
   /** 디버그·봇: 차 목록(ID·핸들·출처). */
@@ -197,6 +200,16 @@ export function createPlayerCars(d: Deps): PlayerCars {
         if (!p) continue;
         const yaw = 2 * Math.atan2(p.quat.y, p.quat.w);
         out.push({ vehicle: c.handle, kind: 'sedan', posWF: p.posWF, yawRad: yaw, driveSide: SEDAN_PARAMS.driveSide });
+      }
+      return out;
+    },
+    parkedCircles() {
+      const out: HazardCircle[] = [];
+      const ph = d.physics();
+      for (const c of cars) {
+        if (c.handle === undefined || driving(st, c)) continue;
+        const p = ph?.pose(c.handle);
+        if (p) carCircles(p.posWF.x, p.posWF.z, 2 * Math.atan2(p.quat.y, p.quat.w), 4.5, 1.75, out);
       }
       return out;
     },

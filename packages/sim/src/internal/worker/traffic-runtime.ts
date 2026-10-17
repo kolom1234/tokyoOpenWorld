@@ -9,7 +9,8 @@ import {
   type VehicleTypeInfo,
 } from '@sanpo/core';
 import { parseLanes } from '@sanpo/tile-format';
-import type { TrafficParams } from '../../api.ts';
+import type { PlayerFootprint, TrafficParams } from '../../api.ts';
+import { footprintDistance } from '../player-footprint.ts';
 import { createLaneGraph } from '../traffic/lane-graph.ts';
 import { createTrafficSim, type TrafficStats, type Vehicle } from '../traffic/traffic-sim.ts';
 import type { CrossBand } from '../traffic/yielding.ts';
@@ -22,7 +23,7 @@ export const KINEMATIC_RADIUS_M = 60;
 export interface TrafficRuntime {
   addCell(key: CellKey, lanes: ArrayBuffer): void;
   removeCell(key: CellKey): void;
-  setPlayer(pos: Readonly<Vec3d>, fwd?: { x: number; z: number }): void;
+  setPlayer(pos: Readonly<Vec3d>, fwd?: { x: number; z: number }, veh?: Readonly<PlayerFootprint>): void;
   /** 군중 출력(이번 틱, WF − anchor) → 보행자 격자. */
   setPedestrians(buf: Float32Array, count: number, anchor: Readonly<Vec3d>): void;
   step(dt: number, gameMs: number, out: Float32Array, anchor: Readonly<Vec3d>): number;
@@ -52,9 +53,12 @@ export function createTrafficRuntime(
   const graph = createLaneGraph();
   const grid = new Map<number, number[]>();
   let player: Vec3d | undefined;
+  let veh: PlayerFootprint | undefined;
   const key = (gx: number, gz: number) => gx * 100003 + gz;
   const pedNear = (x: number, z: number, r: number): boolean => {
-    if (player && Math.hypot(player.x - x, player.z - z) < r) return true;
+    // 플레이어: 걷기 = 점, 차·자전거 = 바닥 사각형(M08-T02 — 차 앞에서 선다).
+    if (player && (veh ? footprintDistance(veh, player.x, player.z, x, z) : Math.hypot(player.x - x, player.z - z)) < r)
+      return true;
     const gx = Math.floor(x / CELL);
     const gz = Math.floor(z / CELL);
     for (let dz = -1; dz <= 1; dz++)
@@ -77,8 +81,9 @@ export function createTrafficRuntime(
     removeCell(k) {
       sim.dropLanes(graph.removeCell(k));
     },
-    setPlayer(pos, fwd) {
+    setPlayer(pos, fwd, v) {
       player = { ...pos };
+      veh = v ? { ...v } : undefined;
       sim.setPlayer(pos, fwd);
     },
     setPedestrians(buf, count, anchor) {

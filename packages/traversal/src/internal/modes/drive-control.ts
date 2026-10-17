@@ -1,7 +1,7 @@
 // drive 조작 순수 함수(M08-T01): 운전자 입력(가속·제동·후진·정지 유지), 키보드 조향 램프, 기어 표시, 차 방위, 운전석 문 앞 탑승 판정.
 import { type Quat, type Vec3d, vec3ApplyQuat } from '@sanpo/core';
 import type { VehicleInput, VehicleState } from '@sanpo/physics';
-import type { EnterableVehicle } from '../../api.ts';
+import type { EnterableVehicle, HazardCircle } from '../../api.ts';
 
 /** 키보드 조향 램프(1/s): 꺾기·되돌리기. */
 const STEER_IN_PER_S = 2.2;
@@ -69,8 +69,57 @@ export function rampSteer(cur: number, target: number, dt: number): number {
   return Math.abs(d) <= rate * dt + 1e-9 ? target : cur + Math.sign(d) * rate * dt;
 }
 
-export function gearLabel(s: Readonly<VehicleState> | undefined): string {
+/** 기어 글자: 후진 R, 정지 N, 변속 중(Jolt 0)·전진 = 마지막 전진 기어(last). */
+export function gearLabel(s: Readonly<VehicleState> | undefined, last: { gear: number }): string {
   if (!s) return 'N';
   if (s.gear < 0) return 'R';
-  return s.gear === 0 ? 'N' : String(s.gear);
+  if (s.gear > 0) last.gear = s.gear;
+  else if (Math.abs(s.speedMs) < 0.5) return 'N';
+  return String(last.gear);
+}
+
+/** AEB(08 §6 — M08-T02): 반응 시간(s)·가정 감속(m/s² — 젖은 노면 쪽으로 보수적)·앞 여유(m)·옆 여유(m)·TTC(s). */
+const AEB_REACT_S = 0.25;
+const AEB_DECEL = 4.5;
+const AEB_FRONT_MARGIN_M = 2;
+const AEB_SIDE_MARGIN_M = 0.45;
+const AEB_TTC_S = 1.5;
+/** 이 속력(m/s) 아래는 정지로 본다. */
+const AEB_MIN_MS = 0.3;
+
+export interface AebCar {
+  pos: Readonly<Vec3d>;
+  yaw: number;
+  /** 전방 + 속력(m/s). */
+  speed: number;
+  halfLength: number;
+  halfWidth: number;
+  /** 경로 곡률(1/m, 오른쪽 +) — 조향 각 ÷ 휠베이스 근사. */
+  curvature: number;
+}
+
+/** 진행 방향 차체 앞(후진이면 뒤) 통로 안 가장 가까운 위험물까지 거리(m) — 없으면 ∞. */
+export function hazardAhead(car: Readonly<AebCar>, list: readonly HazardCircle[]): number {
+  const dir = car.speed >= 0 ? 1 : -1;
+  const fx = -Math.sin(car.yaw);
+  const fz = -Math.cos(car.yaw);
+  let best = Number.POSITIVE_INFINITY;
+  for (const h of list) {
+    const dx = h.x - car.pos.x;
+    const dz = h.z - car.pos.z;
+    const along = (dx * fx + dz * fz) * dir - car.halfLength;
+    if (along < -h.r) continue;
+    // 오른쪽 = (−fz, fx).
+    const lat = dx * -fz + dz * fx;
+    const bend = (car.curvature * dir * Math.max(along, 0) ** 2) / 2;
+    if (Math.abs(lat - bend) < car.halfWidth + h.r + AEB_SIDE_MARGIN_M) best = Math.min(best, Math.max(along - h.r, 0));
+  }
+  return best;
+}
+
+/** 지금 속력에서 멈춰야 하는 거리(정지 거리 + 여유 또는 TTC 1.5 s 중 큰 것). */
+export function aebRange(speedMs: number): number {
+  const v = Math.abs(speedMs);
+  if (v < AEB_MIN_MS) return 0;
+  return Math.max(v * AEB_REACT_S + (v * v) / (2 * AEB_DECEL) + AEB_FRONT_MARGIN_M, v * AEB_TTC_S);
 }

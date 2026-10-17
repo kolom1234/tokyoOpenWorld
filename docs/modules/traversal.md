@@ -35,7 +35,10 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 **M08-T01**(ADR-0087): drive 모드 — `DriveParams { vehicle: BodyHandle; kind: 'sedan'; driveSide?: 'right'|'left'(기본 우핸들); view?: DriveView('chase'|'cockpit') }`,
 `HudHints += drive?: DriveHud { vehicle, kind, view, speedKmh, rpm, gear('R'|'N'|'1'…), lights, indicator(−1|0|1), braking, reversing, abs, tcs, exit('ready'|'moving'|'searching'|'blocked') }; enterable?: 'sedan'`,
 `TraversalContext += vehicles?(): EnterableVehicle[] { vehicle, kind, posWF(차체 바닥 중심), yawRad, driveSide }` — walk 중 운전석 문 앞(차 로컬 x = 쪽 × 1.25, z = −0.35, 1.3 m 안) + F → drive(열차 탑승 다음).
-미구현: `interactables`(M08-T02), cycle/transition 모드, phase 35(traversalPost).
+**M08-T02**(ADR-0088): `TraversalContext += hazards?(centerWF, radiusM): HazardCircle[] { x, z, r }`(게임 — 보행자 지금·0.5·1 s 예측, 교통 차·세워 둔 차 원), `DriveHud += aeb, sidewalk`.
+drive 안전: 진행 통로(반폭 + 원 + 0.45 m, 조향 곡률로 휨) 안 위험물이 max(정지 거리(반응 0.25 s·4.5 m/s²)+2 m, 1.5 s × v) 안이면 스로틀 0·제동 1(AEB), 서 있을 때 1.2 m 안이면 출발 막음,
+바퀴가 보도 재질(tile 7)이면 10 km/h 넘게 못 감. 기어 표시 = 변속 중(Jolt 0)엔 마지막 전진 기어.
+미구현: `interactables`(카셰어 스팟 — 파이프라인), cycle/transition 모드, phase 35(traversalPost).
 
 ## Invariants
 - 모드 1개 = 파일 1개(`internal/modes/<id>.ts`), 레지스트리 등록으로 확장(기존 모드 수정 금지).
