@@ -26,6 +26,8 @@ export const OSM_FILTERS = [
   'nwr/leisure=park,garden,playground',
   'nwr/landuse=grass,forest,park,recreation_ground',
   'nwr/amenity=post_box,vending_machine,bicycle_parking,bench,waste_basket,telephone',
+  // 카셰어·노면 주차장·공유자전거(M08 — 거점 위치만, 브랜드는 가상).
+  'nwr/amenity=car_sharing,parking,bicycle_rental',
   'nwr/man_made=street_cabinet',
   'nwr/power=pole,tower',
   'nwr/bridge',
@@ -60,6 +62,8 @@ const KEEP_KEYS = new Set([
   'amenity',
   'man_made',
   'power',
+  'parking',
+  'access',
   'name',
   'surface',
   'incline',

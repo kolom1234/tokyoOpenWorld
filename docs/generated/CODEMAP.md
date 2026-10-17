@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 519개.
+> 파일 520개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -499,6 +499,7 @@
 - `tools/pipeline/src/stages/derive/rail/splines.ts` — 선로 스플라인(M07-T01, 04 §4.3): 꼭짓점 → 구심 Catmull-Rom → 0.5 m 등간격 표본(x, z, s, 구간 플래그) → 높이: | exports: RAIL_STEP_M, RAIL_TOP_M, TrackSamples, railHeights, trackSamples
 - `tools/pipeline/src/stages/derive/rail/tracks.ts` — 선로 조립(M07-T01): OSM 철도 선(노선 이름별, service 없는 본선만) → 끝점 공유로 이은 사슬 → 긴 사슬 = 선로. 방향 = 좌측통행: | exports: V2, VERTEX_FLAG, RawTrack, chainWays, lengthOf, signedOffset, buildTracks
 - `tools/pipeline/src/stages/derive/roads.ts` — 도로 분류(M05-T01): PLATEAU TrafficArea 폴리곤(셀 + 8-이웃, normalize가 셀 경계에서 자른 조각) → 성형용 1 m 래스터(차도 0·보행 1·없음 7)와 | exports: ROAD_CLASS, RoadSide, isWalk, roadRaster, insideRings, RoadIndex, roadIndex
+- `tools/pipeline/src/stages/derive/share-spots.ts` — 카셰어·공유자전거 거점(M08-T02·T03 — cell meta `interactables`): 위치만 OSM에서(브랜드는 게임의 가상 이름 — 실제 운영사·로고 없음). | exports: ShareSpotCtx, yawTowardRoad, shareSpots
 - `tools/pipeline/src/stages/derive/sidewalks.ts` — 보행면 윗면(M05-T01): 보도·교통섬 폴리곤(이 셀 조각) → earcut → 삼각형을 2 m 격자 칸으로 잘라(볼록 조각 부채꼴) 높이 = 성형 윗면(쌍선형) + 6 mm. | exports: TOP_OFFSET_M, EDGE_PIECE_M, HeightAt, MeshBuf, emptyMesh, TopWriter, topWriter, addWalkTop
 - `tools/pipeline/src/stages/derive/stairs.ts` — 교량 계단(M05-T08): OSM `highway=steps` 선 중 한 끝 이상이 PLATEAU 교량 상판에 닿고 두 끝 높이(상판 또는 지형)가 0.5 m 이상 다른 것 → 계단 명세. | exports: StairSpec, Deck, decksOf, deckHeightAt, STAIR_MAX_RISE_M, stairsOf, landingOf, cutAtDeck, WalkwaySources, walkwaysOf
 - `tools/pipeline/src/stages/derive/terrain-shape.ts` — 지형 성형(M05-T01, 04 §4.3): 셀 + 여유 1 m 창에서 국소 연산만 — 이웃 셀과 공유하는 샘플은 같은 입력 → 같은 값(04 §6). | exports: SHAPE_PAD, CURB_M, CROSSFALL, CROWN_MAX_M, TOL_TIGHT_M, TOL_DEFAULT_M, ShapedGround, shapeGround
