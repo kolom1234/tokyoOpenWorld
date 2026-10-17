@@ -90,6 +90,7 @@ type ExtrasServices = Parameters<typeof startWorldExtras>[1];
 
 /** 플레이어 차·자전거(M08-T01·T03): 세워 둔 탈것·거점·부르기·계기판. */
 function wireVehicles(deps: ExtrasDeps, v: ExtrasServices, late: LateState): void {
+  const shown = late.shown ?? Promise.resolve();
   const cars = createVehicleWiring({
     doc: deps.canvas.ownerDocument,
     render: v.render,
@@ -106,11 +107,17 @@ function wireVehicles(deps: ExtrasDeps, v: ExtrasServices, late: LateState): voi
         .catch(() => undefined),
     onCellReady: (cb) => void v.cells.onCell((p) => cb(p.key, p.level)),
     onEvicted: (cb) => void v.streaming.onEvicted(cb),
+    shown,
     ...(deps.spawn ? { spawn: deps.spawn } : {}),
   });
   late.cars = cars.cars;
   late.hazards = cars.hazards;
-  deps.scheduler.add({ systems: () => cars.systems });
+  // 탈것 시스템·셰이더는 첫 표시 뒤(첫 표시 선컴파일과 다퉈 staging 첫 표시 +1.5 s — 실측).
+  let on = false;
+  void shown.then(() => {
+    on = true;
+  });
+  deps.scheduler.add({ systems: () => (on ? cars.systems : []) });
 }
 
 export function startWorldExtras(

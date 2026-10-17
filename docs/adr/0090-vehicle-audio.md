@@ -14,6 +14,7 @@
    일반 .js 파일(같은 코드가 Node 테스트에서 `EngineSynth`로 돈다) — Vite가 `new URL('./engine-worklet.js', import.meta.url)`을 같은 출처 에셋으로 내보낸다(`assetsInlineLimit`에서 .js 인라인 금지). 불가하면 톱니 오실레이터 대체.
 3. 노면: 타이어 구름(대역 잡음 — 속력·재질(타일·콘크리트 높게)), 젖은 노면 쉭(고역 잡음 — 젖음 × 속력), 미끄럼 끽(좁은 대역 — 바퀴 슬립 비·횡 슬립각 정규화, 젖으면 ¼), 바람(속력²), 운전석 시점 = 실내 저역 통과 1.5 kHz·바람 0.4배.
 4. 자전거: 엔진 없음, 페달 = 체인 사각거림, 타력 = 프리휠 딸깍(펄스 주기파, 바퀴 회전 × 18), 벨 = SfxId `bicycleBell`(비화성 두 부분음 두 번 — 일반 종소리) 핸들 높이 3D.
+   워클릿은 unlock 직후(소리 나기 전) 적재·노드 생성 — Chrome이 첫 AudioWorkletNode 때 렌더링을 워클릿 스레드로 옮기며 한 번 끊겼다(운전 시작 때 결손 1, 실측). AudioContext latencyHint 'balanced'.
 5. 언더런 측정 = `OutputClock`: 1 s마다 `getOutputTimestamp()` 컨텍스트 시각 증가가 성능 시각보다 20 ms 넘게 뒤처지면 결손 1(`stats().clockGlitches`). 실제 GPU 주행 봇이 0을 확인한다.
 
 ## Consequences

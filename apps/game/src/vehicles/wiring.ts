@@ -111,10 +111,12 @@ export function createVehicleWiring(d: {
   onCellReady: (cb: (key: CellKey, level: number) => void) => void;
   onEvicted: (cb: (key: CellKey) => void) => void;
   spawn?: SpawnPreset;
+  /** 첫 표시 뒤 풀림(플레이어 탈것 선컴파일을 미룬다). */
+  shown?: Promise<void>;
 }): VehicleWiring {
   const cars = createPlayerCars(d);
   // 첫 차가 보일 때 끊김이 없게 미리(장면 밖 선컴파일).
-  void d.render.vehicles.preparePlayers();
+  void (d.shown ?? Promise.resolve()).then(() => d.render.vehicles.preparePlayers());
   for (const v of d.spawn?.vehicles ?? []) {
     const [x, y, z] = v.posWF;
     cars.park({ x, y, z }, (v.yawDeg * Math.PI) / 180, 'preset', v.kind ?? 'sedan');

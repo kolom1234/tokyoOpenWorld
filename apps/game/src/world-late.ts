@@ -23,6 +23,8 @@ import type { LoadedWorld } from './world-load.ts';
 export interface LateState {
   streaming?: StreamingService;
   wiring?: StreamingRenderWiring;
+  /** 첫 표시(commitStaged) 뒤 풀림 — 첫 표시 선컴파일과 다투는 일(플레이어 탈것 셰이더 등)을 미룬다. */
+  shown?: Promise<void>;
   /** 오디오(M09-T04, world-audio.ts). */
   audio?: AudioService | undefined;
   physics?: PhysicsService;
