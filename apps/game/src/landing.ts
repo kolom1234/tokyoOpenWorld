@@ -4,8 +4,9 @@
 import type { CellKey, Vec3, Vec3d } from '@sanpo/core';
 import { packCellKey } from '@sanpo/core';
 import type { RayHit } from '@sanpo/physics';
-import { JCOL_MATERIAL, LANE_KIND, type LaneGraphChunk, parseLanes } from '@sanpo/tile-format';
+import { JCOL_MATERIAL, LANE_KIND, type LaneGraphChunk } from '@sanpo/tile-format';
 import type { LandingFailReason, LandingResult } from '@sanpo/traversal';
+import { laneChunks } from './lane-chunks.ts';
 import { clearTopAt, type PlatformTops, type TrackPits } from './station/platform-geo.ts';
 
 export interface LandingQueries {
@@ -115,25 +116,11 @@ export async function findLanding(q: LandingQueries, cam: Readonly<Vec3d>): Prom
   return center.ok ? center : { ok: false, reason: center.reason };
 }
 
-/** 셀 차선(lanes.bin) 지연 적재·캐시(최근 16셀) → 점이 차선(도로·버스·교차로 연결로) 폭 안인가. */
+/** 셀 차선(lanes.bin) 지연 적재·캐시(최근 16셀 — lane-chunks.ts) → 점이 차선(도로·버스·교차로 연결로) 폭 안인가. */
 export function roadIndex(
   request: (key: CellKey) => Promise<ArrayBuffer | undefined>,
 ): (x: number, z: number) => Promise<boolean> {
-  const cache = new Map<CellKey, Promise<LaneGraphChunk | null>>();
-  const load = (key: CellKey): Promise<LaneGraphChunk | null> => {
-    const hit = cache.get(key);
-    if (hit) return hit;
-    const p = request(key)
-      .then((b) => {
-        if (!b) return null;
-        const r = parseLanes(new Uint8Array(b));
-        return r.ok ? r.value : null;
-      })
-      .catch(() => null);
-    cache.set(key, p);
-    if (cache.size > 16) cache.delete(cache.keys().next().value as CellKey);
-    return p;
-  };
+  const load = laneChunks(request);
   return async (x, z) => {
     const ix = Math.floor(x / 256);
     const iz = Math.floor(z / 256);

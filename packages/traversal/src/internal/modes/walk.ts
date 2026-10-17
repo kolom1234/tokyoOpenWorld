@@ -329,9 +329,14 @@ export function createWalkMode(settings: Readonly<TraversalSettings>): WalkMode 
         arriveAt(rt, physics, { posWF: { ...rt.camera.posWF }, yawRad: rt.look.yawRad });
     },
     update: (frame, ctx) => update(rt, frame, ctx),
-    exit() {
+    exit(_ctx: TraversalContext, to: ModeId) {
       cancel(st);
-      if (st.handle !== undefined) st.physics?.setCharacterInput(st.handle, { moveWF: { x: 0, y: 0, z: 0 } });
+      if (st.handle === undefined) return;
+      // 차·자전거에 타면 몸(캡슐)은 치운다 — 서 있던 자리에 남으면 출발하는 차를 막는다(M08-T01). 내릴 때 exact로 새로 놓는다.
+      if (to === 'drive' || to === 'cycle') {
+        st.physics?.despawn(st.handle);
+        st.handle = undefined;
+      } else st.physics?.setCharacterInput(st.handle, { moveWF: { x: 0, y: 0, z: 0 } });
     },
     teleport(posWF, yawRad) {
       const physics = st.physics;

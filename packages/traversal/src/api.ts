@@ -19,7 +19,7 @@ import type {
   Vec3d,
 } from '@sanpo/core';
 import type { InputService } from '@sanpo/input';
-import type { PhysicsService } from '@sanpo/physics';
+import type { BodyHandle, PhysicsService } from '@sanpo/physics';
 
 /**
  * 모드 컨텍스트. physics가 없으면 `requires: ['physics']` 모드(walk…) 진입 불가 — freecam만.
@@ -43,6 +43,17 @@ export interface TraversalContext {
    * 없으면 G = 'not-ready'.
    */
   landing?: (cameraWF: Readonly<Vec3d>) => Promise<LandingResult>;
+  /** 탈 수 있는 차(M08-T01 — 카셰어에 세운 차·내린 차): walk 중 운전석 문 앞 + F → drive. 게임 배선이 물리 포즈로. */
+  vehicles?: () => ReadonlyArray<EnterableVehicle>;
+}
+
+/** walk에서 F로 탈 수 있는 차(차체 바닥 중심 WF·방위 — 운전석 문 = driveSide 쪽). */
+export interface EnterableVehicle {
+  vehicle: BodyHandle;
+  kind: 'sedan';
+  posWF: Vec3d;
+  yawRad: number;
+  driveSide: 'right' | 'left';
 }
 
 /** 카메라 아래 내리기 실패 이유(HUD 문구는 게임). */
@@ -79,6 +90,34 @@ export interface TrainHud {
   notice: 'mvpEdge' | null;
   skipping: boolean;
 }
+/** 운전 시점(09 §2 drive): 추적(뒤 5.5 m)·운전석(우핸들 — 오른쪽 좌석 눈높이). V 순환. */
+export type DriveView = 'chase' | 'cockpit';
+/**
+ * drive 진입(M08-T01): 이미 만든 물리 차량(게임이 spawnVehicle — 카셰어·소환)을 운전한다. driveSide = 운전석 쪽(하차 쪽, 기본 right — 우핸들).
+ * 다시 진입(freecam C 복귀 등)하면서 params가 없으면 같은 차.
+ */
+export interface DriveParams {
+  vehicle: BodyHandle;
+  kind: 'sedan';
+  driveSide?: 'right' | 'left';
+  view?: DriveView;
+}
+/** 운전 HUD(M08-T01 — 계기판): 기어 = 'R' | 'N' | '1'…, indicator −1 왼·1 오른, exit = 하차 상태(moving = 멈춰야 함, blocked = 내릴 자리 없음). */
+export interface DriveHud {
+  vehicle: BodyHandle;
+  kind: 'sedan';
+  view: DriveView;
+  speedKmh: number;
+  rpm: number;
+  gear: string;
+  lights: boolean;
+  indicator: -1 | 0 | 1;
+  braking: boolean;
+  reversing: boolean;
+  abs: boolean;
+  tcs: boolean;
+  exit: 'ready' | 'moving' | 'searching' | 'blocked';
+}
 export interface HudHints {
   promptKey?: I18nKey;
   speedKmh?: number;
@@ -95,6 +134,10 @@ export interface HudHints {
   landing?: LandingHud;
   /** walk: 지금 F로 탈 수 있는 열차(칸 안 또는 문 열린 칸의 문 앞 1.3 m)가 있다(ADR-0084). */
   boardable?: boolean;
+  /** drive 중 계기판·등화(M08-T01). */
+  drive?: DriveHud;
+  /** walk: 지금 F로 탈 수 있는 차(운전석 문 앞 — M08-T01). */
+  enterable?: 'sedan';
 }
 /** 플레이어 바디가 있는 모드(walk…)의 출력. 없으면 카메라 위치·방위를 플레이어로 본다(freecam). */
 export interface ModePlayer {

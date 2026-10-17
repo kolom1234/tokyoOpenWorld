@@ -13,12 +13,13 @@ import SIGNAL_PLANS from '../../../content/sim/signal-plans.json';
 import TRAFFIC_PARAMS from '../../../content/sim/traffic.json';
 import type { BootStage } from './boot-progress.ts';
 import type { TrainLcdData } from './train-lcd.ts';
+/** 월드 로드 뒤 생기는 것들(getter로 노출). */
+import type { PlayerCars } from './vehicles/player-cars.ts';
 import type { StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
 import type { StreamingSimWiring } from './wiring/streaming-sim.ts';
 import type { LoadedWorld } from './world-load.ts';
 
-/** 월드 로드 뒤 생기는 것들(getter로 노출). */
 export interface LateState {
   streaming?: StreamingService;
   wiring?: StreamingRenderWiring;
@@ -44,6 +45,8 @@ export interface LateState {
   boot: BootStage;
   /** freecam G 카메라 아래 내리기(ADR-0083 — world-extras가 물리·역 격자·차선으로). */
   landing?: (cameraWF: Readonly<Vec3d>) => Promise<LandingResult>;
+  /** 플레이어 차(M08-T01 — world-extras). traversal `vehicles`가 읽는다. */
+  cars?: PlayerCars;
 }
 
 /** 텍스처는 첫 표시 뒤(초기 다운로드 예산 밖, 14 §2). 실패하면 평균색으로 계속. */

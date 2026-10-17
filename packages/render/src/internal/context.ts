@@ -37,6 +37,7 @@ import { createTreeField, type TreeField } from './trees/field.ts';
 import type { TreeUniforms } from './trees/materials.ts';
 import { createVehicleField, type VehicleField } from './vehicles/field.ts';
 import { createVehicleUniforms, type VehicleUniforms } from './vehicles/material.ts';
+import { createPlayerVehicles, type PlayerVehicles } from './vehicles/players.ts';
 import { createRainField, type RainField } from './weather/rain.ts';
 import { createEnvUniforms, type EnvUniforms } from './weather/wetness.ts';
 
@@ -68,6 +69,8 @@ export interface RenderContext {
   readonly crowdMaterials: Material[];
   /** 차량(M06-T06): 풀·밤 유니폼·머티리얼(bind 때 — 그림자 티어 재컴파일 대상). */
   readonly vehicles: VehicleField;
+  /** 플레이어 차량(M08-T01 — 물리 차체, 교통과 같은 머티리얼). */
+  readonly players: PlayerVehicles;
   /** 열차(M07-T03) — 머티리얼은 vehicleMaterials에(그림자 티어 재컴파일 대상 공유). */
   readonly trains: TrainField;
   readonly vehicleUniforms: VehicleUniforms;
@@ -166,6 +169,7 @@ function attachActors(graph: SceneGraph): {
   crowd: CrowdField;
   farCrowd: FarCrowd;
   vehicles: VehicleField;
+  players: PlayerVehicles;
   trains: TrainField;
   vehicleUniforms: VehicleUniforms;
 } {
@@ -183,9 +187,12 @@ function attachActors(graph: SceneGraph): {
   graph.roots.dynamic.add(farCrowd.root);
   const vehicles = createVehicleField();
   graph.roots.dynamic.add(vehicles.root);
+  const players = createPlayerVehicles();
+  graph.roots.dynamic.add(players.root);
   const trains = createTrainField();
   graph.roots.dynamic.add(trains.root);
-  return { avatar, props, trees, signs, crowd, farCrowd, vehicles, trains, vehicleUniforms: createVehicleUniforms() };
+  const vehicleUniforms = createVehicleUniforms();
+  return { avatar, props, trees, signs, crowd, farCrowd, vehicles, players, trains, vehicleUniforms };
 }
 
 /** 적재 뒤 붙는 머티리얼(그림자 티어 재컴파일 대상). */

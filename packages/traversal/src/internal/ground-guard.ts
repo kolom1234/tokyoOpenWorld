@@ -37,3 +37,16 @@ export function groundGuard(
   const ok = loadedAhead(physics, feet, want.x, want.z, dist) && loadedAhead(physics, feet, vel.x, vel.z, dist);
   return { hold: false, stop: !ok };
 }
+
+/** 차(M08-T01): 제동 거리(v²/2·6 m/s² — 젖은 노면 여유) + 3 m 앞, 진행 방향 셀이 없으면 멈춤(스로틀 0·제동). */
+const CAR_DECEL = 6;
+const CAR_MARGIN_M = 3;
+export function carGroundGuard(
+  physics: Pick<PhysicsService, 'hasCell'>,
+  pos: Readonly<Vec3d>,
+  vel: Readonly<Vec3>,
+): boolean {
+  if (!physics.hasCell(cellOf(0, pos.x, pos.z))) return true;
+  const v = Math.hypot(vel.x, vel.z);
+  return !loadedAhead(physics, pos, vel.x, vel.z, (v * v) / (2 * CAR_DECEL) + CAR_MARGIN_M);
+}

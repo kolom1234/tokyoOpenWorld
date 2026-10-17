@@ -14,7 +14,7 @@ InputService extends SystemProvider {   // system 'input', phase 0
 }
 ActionState { axis(a: AxisAction): number; pressed(a: ButtonAction): boolean; justPressed(a: ButtonAction): boolean }
 InputContext = 'walk' | 'vehicle' | 'fly' | 'ui'
-ButtonAction = sprint | pace | interact | toggleView | freeCam | map | photo | pause | handbrake | lights | skip | land   // skip = 열차 다음 역까지 빨리감기(T, vehicle 컨텍스트 — M07-T05), land = freecam 카메라 아래 내리기(G·패드 A, fly 컨텍스트 — ADR-0083)
+ButtonAction = sprint | pace | interact | toggleView | freeCam | map | photo | pause | handbrake | lights | skip | land | indicatorLeft | indicatorRight | summon   // M08-T01: indicatorLeft/Right = 차 방향지시등(Q·E·패드 D-pad ←→, vehicle), lights 패드 D-pad ↑, summon = 차 부르기(walk R·패드 D-pad ←), vehicle 컨텍스트 wheel = 마우스만. skip = 열차 다음 역까지 빨리감기(T, vehicle 컨텍스트 — M07-T05), land = freecam 카메라 아래 내리기(G·패드 A, fly 컨텍스트 — ADR-0083)
 AxisAction = moveX(오른쪽 +) | moveY(앞 +) | lookX(px, 오른쪽 +) | lookY(px, 아래 +) | fly(위 +) | wheel(노치, 위로 굴림 +)
 Binding = {device:'key', code} | {device:'mouseButton', button} | {device:'keyAxis', negative, positive} | {device:'mouseAxis', axis:'x'|'y'|'wheel'}
         | {device:'padButton', button, hold?} | {device:'padAxis', axis, scale?, perSecond?} | {device:'padButtonAxis', negative, positive, scale?, perSecond?}   // 표준 매핑 번호

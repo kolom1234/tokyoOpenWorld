@@ -60,13 +60,14 @@ function unpackColor(c: F): V3 {
   return pow(vec3(r, g, b).div(255), vec3(2.2)) as unknown as V3;
 }
 
-/** flags 비트 k(0 제동·1 좌·2 우) → 0/1. */
+/** flags 비트 k(0 제동·1 좌·2 우·3 전조등 켬 — 플레이어 차, M08-T01) → 0/1. */
 const bit = (k: number): F => step(0.5, mod(floor(ivar.y.div(2 ** k)), 2)) as unknown as F;
 
 function emissive(night: F): V3 {
   const blink = step(0.5, fract(time.mul(BLINK_HZ).add(ipos.x.mul(0.013)))).mul(BLINK_EMISSIVE);
-  const head = night.mul(HEAD_EMISSIVE).add(0.15);
-  const tail = night.mul(TAIL_NIGHT).add(bit(0).mul(BRAKE_EMISSIVE));
+  const lit = night.max(bit(3));
+  const head = lit.mul(HEAD_EMISSIVE).add(0.15);
+  const tail = lit.mul(TAIL_NIGHT).add(bit(0).mul(BRAKE_EMISSIVE));
   const k = select(
     isPart(VPART.head),
     head,

@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 505개.
+> 파일 515개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -21,6 +21,7 @@
 - `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
 - `apps/game/src/help-hud.ts` — 조작 도움말 + 카메라 아래 내리기 알림(임시 DOM HUD — M08 @sanpo/ui가 대체, ADR-0083). 왼쪽 아래 모드별 키 목록(H로 접기·펴기, 접으면 "H 도움말"), | exports: HELP_LINES, LANDING_TEXT, helpHudSystem
 - `apps/game/src/landing.ts` — freecam G 카메라 아래 내리기(ADR-0083): 카메라 바로 아래(+ 2·4·7 m 링 × 8방위) 후보마다 물리 레이로 판정 → 가장 가까운 안전한 자리(발 WF) 또는 가운데 후보의 이유. | exports: LandingQueries, landingOffsets, evaluateSpot, findLanding, roadIndex, onLane
+- `apps/game/src/lane-chunks.ts` — 셀 차선(lanes.bin, 05 §7) 지연 적재·캐시(최근 16셀): freecam G 차도 판정(landing.ts)·차 부르기 연석 자리(vehicles/curb-spot.ts)가 공유. | exports: laneChunks
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/spawn-presets.ts` — URL 스폰 프리셋(ADR-0084 — M10 지도 전 임시): `?spawn=<id>` → content/spawn-presets.json의 위치·방위로 월드 스폰을 바꾼다 | exports: SpawnPreset, SPAWN_PRESETS, spawnPreset, withSpawn
@@ -34,6 +35,10 @@
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
 - `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainLcdSystem
+- `apps/game/src/vehicles/curb-spot.ts` — 차 부르기 자리(09 §1 drive "인접 차도 가장자리", M08-T01/T02): 플레이어 주변 3×3 셀 차선 중 연석 쪽(laneIdx 0 — 좌측통행 맨 왼쪽) 일반 도로 차선, | exports: CURB_SEARCH_M, CurbSpot, curbSpotInChunk, findCurbSpot
+- `apps/game/src/vehicles/drive-hud.ts` — 운전 계기판·탑승 안내(임시 DOM HUD — M10 @sanpo/ui가 대체): drive 중 오른쪽 아래 속도(km/h)·기어·RPM 막대·등화(전조등·방향지시등)·ABS/TCS, | exports: gaugeHtml, driveHudSystem
+- `apps/game/src/vehicles/player-cars.ts` — 플레이어 차(M08-T01): 세워 둔 차(스폰 프리셋·카셰어)와 부른 차 — 물리 차체(physics.spawnVehicle, content/vehicles/sedan.json)를 콜라이더 적재 뒤 지면에 맞춰 만들고, | exports: SEDAN_PARAMS, SHARE_PAINT, SHARE_ACCENT, CarOrigin, PlayerCars, createPlayerCars
+- `apps/game/src/vehicles/wiring.ts` — 플레이어 차 배선(M08-T01): 차 관리자(player-cars) + 차 부르기(walk R·패드 D-pad ← — 가까운 차도 연석, curb-spot) + 스폰 프리셋 차(`vehicles`) + 계기판 HUD. | exports: VehicleWiring, createVehicleWiring
 - `apps/game/src/weather-mode.ts` — 날씨 모드(M09-T01, 10 §3): `?weather=auto|live|<기후표 상태 id>` > 골든뷰 weather > `?time=`(고정 시각 = 맑음 고정 — e2e·비교 결정론) > auto(기후표 마르코프). | exports: WeatherSpec, parseWeatherFlag, weatherSpecOf, applyWeatherSpec, startLiveWeather
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라·아바타(phase 20 확정) → render.setCamera·setAvatar(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
 - `apps/game/src/wiring/env.ts` — 배선: sim.environment()(태양·달·날씨, 카메라 위치) → render.setEnvironment. camera(65) 뒤·renderPrep(70) 앞. see docs/modules/game.md, docs/01-architecture.md §5 | exports: ENV_WIRING_PHASE, defaultClock, createEnvWiring
@@ -145,7 +150,7 @@
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, StationFixtures, StationSign, RenderDebugLayer, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, PlayerVehicleDraw, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, StationFixtures, StationSign, RenderDebugLayer, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, NIGHT_LIGHT_POOL, NIGHT_LIGHTS_ACTIVE, createRenderContext
@@ -228,10 +233,12 @@
 - `packages/render/src/internal/trees/materials.ts` — 나무 머티리얼(M05-T04, 07 §4 M_FOLIAGE·M_IMPOSTOR): 인스턴싱은 InstancedMesh 대신 InstancedBufferGeometry 속성 `_ipos`(x, y, z 렌더 좌표, yaw)· | exports: TreeUniforms, createTreeUniforms, createBarkMaterial, FoliageLighting, createLeafMaterial, ImpostorLayout, createImpostorMaterial
 - `packages/render/src/internal/trees/pools.ts` — 나무 풀(M05-T04): Mesh + InstancedBufferGeometry(InstancedMesh 아님 — three r186은 InstancedMesh마다 노드 빌드를 따로 해서, 같은 머티리얼·속성 배치의 | exports: TreePool, impostorQuad, makeTreePool, writeTreePool
 - `packages/render/src/internal/trees/season.ts` — 나무 계절 표(M05-T04, 07 §8): dayOfYear(JST) → 수종별 잎 색(선형 RGB)·잎 밀도(0 = 낙엽, 1 = 무성). | exports: SPECIES_SLOTS, BARK_COLORS, seasonTable
+- `packages/render/src/internal/vehicle-layer.ts` — 차량 레이어 API(M06-T06 교통 + M08-T01 플레이어 차): 머티리얼 1개 공유(그림자 티어 재컴파일 목록 vehicleMaterials), 처음 쓸 때 장면 밖 선컴파일 뒤 그리기. | exports: createVehicleLayer
 - `packages/render/src/internal/vehicles/builder.ts` — 차량 절차 모델 조립기(M06-T06, 자체 제작 — ADR-0066): 육면체(사다리꼴 상자)·상자·바퀴(축 x 원기둥 + 휠 살) → BufferGeometry | exports: VPART, VPart, Corner, VehicleBuilder
 - `packages/render/src/internal/vehicles/field.ts` — 차량 필드(M06-T06, ADR-0066): sim 교통 SAB(stride 8: x,y,z·yaw·속력·바퀴 회전·variant·flags) → 프레임마다 외삽(30 Hz 틱 사이 — 속력·바퀴) → | exports: VEHICLE_POOL_CAPACITY, VehicleFieldStats, VehicleField, createVehicleField
 - `packages/render/src/internal/vehicles/material.ts` — 차량 머티리얼(07 §4 M_VEHICLE, M06-T06 — ADR-0066): 클리어코트 도장(인스턴스 색)·어두운 유리·고정 부품(정점색), 바퀴 = 축 둘레 회전(인스턴스 회전 수), | exports: VehicleUniforms, createVehicleUniforms, createVehicleMaterial, nightFromSun
 - `packages/render/src/internal/vehicles/models.ts` — 차량 절차 모델(M06-T06, 자체 제작 — 실존 차명·로고·엠블럼·번호판 없음, ADR-0066): core VEHICLE_TYPES 7종(치수 공유) × LOD 0–2. | exports: VehicleLod, VEHICLE_LOD_M, buildVehicleGeometry, vehicleColors
+- `packages/render/src/internal/vehicles/players.ts` — 플레이어 차량(M08-T01): 물리 차체(카셰어·운전 중) 몇 대를 교통과 같은 가상 절차 모델(LOD0)·머티리얼로 — 인스턴스 1개짜리 메시 + 메시 변환(차체 자세 그대로, | exports: PlayerVehicleDraw, PlayerVehicles, createPlayerVehicles
 - `packages/render/src/internal/weather/rain.ts` — 빗줄기·눈(07 §8 비, M09-T01 — ADR-0076): 깊이 인지 화면 공간 층 — 카메라 둘레 원통 4겹(반경 2.2–18 m)에 칸마다 무작위 빗줄기를 두고, 화소 시선이 원통에 닿는 점의 | exports: RAIN_LAYERS, RainUniforms, RainField, createRainField, rainLayers
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06), 비 파문 노멀(M09-T01). | exports: EnvUniforms, createEnvUniforms, rainRipples, WetInput, WetOutput, applyWetness
 
@@ -329,16 +336,19 @@
 - `packages/tile-format/src/internal/xxh64.ts` — XXH64(seed 0) — 섹션 해시·cells.idx hash32. BigInt 없이 u32 hi/lo 쌍 연산(파이프라인 처리량). see docs/05-tile-format.md §3, §5 | exports: xxh64Hex, xxh64Low32
 
 ## packages/traversal
-- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, LandingFailReason, LandingResult, LandingHud, TrainView, TrainParams, TrainHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
+- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, EnterableVehicle, LandingFailReason, LandingResult, LandingHud, TrainView, TrainParams, TrainHud, DriveView, DriveParams, DriveHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
 - `packages/traversal/src/index.ts` — @sanpo/traversal 공개 엔트리(L3): 이동 모드 상태기계·카메라 리그. api.ts 재수출 + create* 팩토리만. see docs/modules/traversal.md | exports: * from './api.ts', forwardOf, lookAtAngles, createTraversal, DEFAULT_TRAVERSAL_SETTINGS
 - `packages/traversal/src/internal/camera/attached-rig.ts` — AttachedRig(09 §3, M07-T05): 부모(열차 칸) 로컬 오프셋 + 부모 기준 시선(yaw·pitch) + 미세 진동(속력 비례 — 레일 이음매 상하·좌우 흔들림). | exports: ParentPose, localToWorld, worldToLocal, vibration, attachedCamera
 - `packages/traversal/src/internal/camera/boom.ts` — 3인칭 카메라 붐 충돌(09 §3 ThirdPersonRig, M04-T05, ADR-0045): 피벗 → 카메라 방향 sphereCast(반경 0.2 m, 워커 — 비동기 ≈ 1프레임). | exports: CAMERA_RADIUS_M, MAX_STEP_RAD, BoomState, createBoomState, resetBoom, stepToward, requestBoom, boomLength
+- `packages/traversal/src/internal/camera/chase-rig.ts` — ChaseRig(09 §3): 차량 뒤 distance·위 height, 방향 지연(차 진행 방향을 ω로 따라감)·위치 스프링(ω 6), 마우스로 둘러보기(손을 떼면 2 s 뒤 뒤로 복귀), | exports: ChaseSettings, DEFAULT_CHASE, ChaseState, createChaseState, chaseBoom, stepChase, lookAt
 - `packages/traversal/src/internal/camera/first-person-rig.ts` — FirstPersonRig(09 §3): 눈 = 발 + 눈높이(연석·계단 높이 변화는 스무딩) + 헤드밥(걸음 주기 수직·반주기 측면), 시선 스무딩. 순수 계산. see docs/09-traversal.md §3 | exports: LookState, FirstPersonState, BOB_AIR_GRACE_S, createLookState, createFirstPersonState, stepLook, followFeet, headBob, firstPersonCamera
 - `packages/traversal/src/internal/camera/free-guard.ts` — freecam 지오메트리 진입 방지(M06 사전 3): 교량 상판·건물 안에 카메라가 들어가 화면이 검게(블룸이 NaN을 번져 전체가) 되던 문제. | exports: CAMERA_RADIUS_M, FreeGuard, createFreeGuard, resetFreeGuard, stepFreeGuard
 - `packages/traversal/src/internal/camera/free-rig.ts` — FreeRig: 6DOF 관성 자유비행(요·피치, 롤 잠금) 순수 계산. WF float64. see docs/09-traversal.md §2 freecam, §3 | exports: FreeRigState, FreeRigIntent, createFreeRigState, clampPitch, forwardOf, rigQuat, lookAtAngles, stepFreeRig
 - `packages/traversal/src/internal/camera/third-person-rig.ts` — ThirdPersonRig(09 §3): 피벗 = 발 + 어깨 높이, 붐 = 오른쪽 어깨 0.4 m − 시선 × 거리 3.5 m(휠 1.5–6). 충돌은 boom.ts(sphereCast)가 붐 길이를 줄인다(M04-T05), | exports: zoomDistance, Boom, createBoom, thirdPersonBoom, thirdPersonCamera, avatarOpacity
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
-- `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard
+- `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard, carGroundGuard
+- `packages/traversal/src/internal/modes/drive-control.ts` — drive 조작 순수 함수(M08-T01): 운전자 입력(가속·제동·후진·정지 유지), 키보드 조향 램프, 기어 표시, 차 방위, 운전석 문 앞 탑승 판정. | exports: STOP_MS, entryTarget, yawOfCar, driverInput, rampSteer, gearLabel
+- `packages/traversal/src/internal/modes/drive.ts` — drive 모드(09 §2 drive, M08-T01): 게임이 만든 물리 차량(DriveParams.vehicle)을 운전. input 'vehicle': W/RT 가속·S/LT 제동(멈추면 후진)·A/D·L스틱 조향 | exports: driverInput, entryTarget, rampSteer, yawOfCar, isDriveParams, createDriveMode
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → (physics 있으면) 지오메트리 진입 방지(free-guard.ts) → CameraState. | exports: FreecamMode, createFreecamMode
 - `packages/traversal/src/internal/modes/train.ts` — train 모드(09 §2 train, M07-T05): 탑승 중 카메라(AttachedRig) — 서기(문 옆)·좌석·전면 전망(선두 운전실), V 순환, 마우스 시선(칸 기준). | exports: isTrainParams, viewOffset, insideCar, DOOR_REACH_M, nearDoor, boardingTarget, alightSpot, createTrainMode
 - `packages/traversal/src/internal/modes/walk.ts` — walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도 | exports: isWalkParams, moveVelocity, WalkMode, createWalkMode

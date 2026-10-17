@@ -13,6 +13,7 @@ import type { SpawnPreset } from './spawn-presets.ts';
 import type { AccessFile } from './station/layout.ts';
 import { type PlatformTops, safeArrival } from './station/platform-geo.ts';
 import { stationSystem } from './station/wiring.ts';
+import { createVehicleWiring } from './vehicles/wiring.ts';
 import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
 import { type AudioFlags, audioForWorld } from './world-audio.ts';
 import type { LateState } from './world-late.ts';
@@ -118,6 +119,19 @@ export function startWorldExtras(
     ...(deps.debug ? { debug: true } : {}),
   });
   deps.scheduler.add({ systems: () => [stations] });
+  // 플레이어 차(M08-T01): 세워 둔 차·차 부르기·계기판.
+  const cars = createVehicleWiring({
+    doc: deps.canvas.ownerDocument,
+    render: v.render,
+    input: v.input,
+    traversal: v.traversal,
+    sim: v.sim,
+    physics: () => late.physics,
+    requestLanes: (key) => v.streaming.requestSections(key, ['lanes.bin']).then((p) => p.lanes),
+    ...(deps.spawn ? { spawn: deps.spawn } : {}),
+  });
+  late.cars = cars.cars;
+  deps.scheduler.add({ systems: () => cars.systems });
   if (deps.spawn?.surface) {
     const ps = presetSpawnSystem(
       deps.spawn,

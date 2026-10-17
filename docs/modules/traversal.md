@@ -32,7 +32,10 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 **ADR-0083**: `TraversalContext += landing?(cameraWF): Promise<LandingResult>`, `LandingResult = { ok: true; posWF } | { ok: false; reason: LandingFailReason }`(not-ready·no-ground·building·track·road·blocked·steep),
 `HudHints += landing?: LandingHud { seq; state: 'searching'|'failed'; reason? }` — freecam G(input `land`) → 성공이면 다음 프레임 `next: walk { exact, yaw = 카메라 }`, 실패면 hud.landing. 판정은 게임(apps/game `landing.ts`).
 `HudHints += boardable?`(walk — 칸 안 또는 문 열린 칸의 문 앞 1.3 m, `modes/train.ts nearDoor`, ADR-0084).
-미구현: `interactables`(M08), drive/cycle/transition 모드, phase 35(traversalPost).
+**M08-T01**(ADR-0087): drive 모드 — `DriveParams { vehicle: BodyHandle; kind: 'sedan'; driveSide?: 'right'|'left'(기본 우핸들); view?: DriveView('chase'|'cockpit') }`,
+`HudHints += drive?: DriveHud { vehicle, kind, view, speedKmh, rpm, gear('R'|'N'|'1'…), lights, indicator(−1|0|1), braking, reversing, abs, tcs, exit('ready'|'moving'|'searching'|'blocked') }; enterable?: 'sedan'`,
+`TraversalContext += vehicles?(): EnterableVehicle[] { vehicle, kind, posWF(차체 바닥 중심), yawRad, driveSide }` — walk 중 운전석 문 앞(차 로컬 x = 쪽 × 1.25, z = −0.35, 1.3 m 안) + F → drive(열차 탑승 다음).
+미구현: `interactables`(M08-T02), cycle/transition 모드, phase 35(traversalPost).
 
 ## Invariants
 - 모드 1개 = 파일 1개(`internal/modes/<id>.ts`), 레지스트리 등록으로 확장(기존 모드 수정 금지).
@@ -50,7 +53,8 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 
 ## Files
 api.ts, internal/(fsm, service — 승차 판정(walk 중 F + 칸 안)·모드 next 요청, settings, walk-placement — 착지점 하늘 레이, ground-guard — 발밑·앞 셀 적재 확인), internal/modes/(freecam, walk, train — 칸 카메라 시점·빨리감기·하차·경계역 자동 하차, M07-T05), internal/camera/(attached-rig — 부모 칸 로컬 오프셋·시선·미세 진동(M07-T05), free-rig, free-guard — freecam 지오메트리 진입 방지(구 캐스트 쓸기 + 6방향 레이 안쪽 판정, ADR-0059), first-person-rig — 시선 스무딩·발 높이 스프링·헤드밥, third-person-rig — 붐·아바타 페이드, boom — 부채꼴 sphereCast·회전 상한).
-예정: modes/(drive, cycle, train, transition), camera/(chase-rig, attached-rig), interactables.ts, interest.ts.
+modes/drive(M08-T01 — 운전자 입력: W 가속·S 제동/멈추면 후진·정지 유지 제동 0.3, 키보드 조향 램프 2.2/4 s⁻¹, 하차 레이 운전석 쪽 → 반대 → 뒤, 앞 셀 콜라이더 대기 = carGroundGuard), camera/chase-rig(뒤 5.5 m·위 2.2 m·피벗 1.6 m, 위치 ω 6·방향 ω 4, 둘러보기 2 s 뒤 복귀, 붐 = boom.ts 부채꼴 × 풀기 3배, FOV +5° @100 km/h).
+예정: modes/(cycle, transition), interactables.ts, interest.ts.
 
 ## Tests
 test/free-rig.test.ts(방향 규약·쿼터니언 = forwardOf·롤 잠금, lookAt 역함수, 관성 감쇠 수치, 휠 속도 범위, sprint, 고도 상한·지면 여유, 피치 제한),
