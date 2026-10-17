@@ -15,7 +15,8 @@ export type SfxId =
   | 'stationChime'
   | 'lcdChime'
   | 'doorChime'
-  | 'uiClick';
+  | 'uiClick'
+  | 'bicycleBell';
 
 export interface AudioDeps {
   log: Logger;
@@ -60,6 +61,27 @@ export interface NearTrain {
 
 export type PedSignal = 'W' | 'F' | 'D';
 
+/** 플레이어 탈것 소리 입력(M08-T04, ADR-0090 — 게임이 physics vehicleState·traversal HUD에서 채운다). */
+export interface VehicleAudioState {
+  kind: 'car' | 'bicycle';
+  /** 엔진 회전수(자전거 0). */
+  rpm: number;
+  /** 실제 스로틀·페달 0..1(엔진 부하). */
+  throttle: number;
+  /** 전방 속력 m/s(후진 −). */
+  speedMs: number;
+  /** 변속 중(클러치 떨어짐 — 부하 빠짐·RPM 낙하가 들린다). */
+  shifting: boolean;
+  /** 가장 미끄러지는 바퀴 0..1(종 슬립 비·횡 슬립각 정규화) — 타이어 끽 소리. */
+  slip: number;
+  /** 노면 젖음 0..1. */
+  wetness: number;
+  /** 바퀴 아래 재질(JCOL_MATERIAL). */
+  surface: number;
+  /** 운전석 시점(실내 — 고역·바람 줄임). */
+  interior: boolean;
+}
+
 export interface AudioStats {
   state: 'locked' | 'running' | 'unavailable';
   /** 존 종류별 가중(합 1). */
@@ -73,6 +95,10 @@ export interface AudioStats {
   signalTones: number;
   steps: number;
   mix: AudioMix;
+  /** 탈것 엔진 합성기(M08-T04): off = 탈것 없음, loading = 워클릿 적재 중, fallback = 워클릿 불가(오실레이터). */
+  engine: 'off' | 'loading' | 'worklet' | 'fallback';
+  /** 출력 시계 결손(1 s 구간에서 컨텍스트 시각이 성능 시각보다 20 ms 넘게 뒤처짐 — 오디오 스레드 언더런 근사) 횟수. */
+  clockGlitches: number;
 }
 
 export interface AudioService extends SystemProvider {
@@ -90,7 +116,7 @@ export interface AudioService extends SystemProvider {
   setOccluder(f: ((fromWF: Vec3d, toWF: Vec3d) => Promise<boolean>) | null): void;
   playAt(id: SfxId, posWF: Vec3d, opts?: { gain?: number; pitch?: number }): void;
   playUi(id: SfxId): void;
-  setVehicleState(s: { rpm: number; throttle: number; speed: number; surface: number } | null): void;
+  setVehicleState(s: VehicleAudioState | null): void;
   setTrainState(s: { speed: number; inside: boolean } | null): void;
   setTrainsNear(trains: readonly NearTrain[]): void;
   setMix(m: Partial<AudioMix>): void;

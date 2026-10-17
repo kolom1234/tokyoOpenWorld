@@ -167,5 +167,7 @@ export default defineConfig({
     target: 'es2024',
     // public/_headers의 `/assets/*` immutable 규칙과 짝을 이룬다(파일명에 해시 포함).
     assetsDir: 'assets',
+    // 오디오 워클릿(@sanpo/audio engine-worklet.js)은 작아도 data: URL로 넣지 않는다 — CSP script-src 'self'(blob:·data: 불가).
+    assetsInlineLimit: (file: string) => (file.endsWith('.js') ? false : undefined),
   },
 });

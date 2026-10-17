@@ -136,7 +136,8 @@ export function startWorldExtras(
   baseUrl: string,
   late: LateState,
 ): AudioService | undefined {
-  const audio = audioForWorld(deps, v, baseUrl, () => late.physics);
+  const wetness = () => withWeatherOverride(v.sim.environment(), deps.weather).weather.wetness;
+  const audio = audioForWorld({ ...deps, wetness }, v, baseUrl, () => late.physics);
   const stations = stationSystem({
     doc: deps.canvas.ownerDocument,
     access: ACCESS as unknown as AccessFile,

@@ -363,3 +363,17 @@ export async function pilot(
   }
   for (const k of held) await page.keyboard.up(k);
 }
+
+/** 오디오 상태(M08-T04 — 엔진 합성기 종류·출력 시계 결손 = 언더런 근사). 키 입력이 첫 제스처라 이미 unlock. */
+export async function audioStats(page: Page): Promise<{ state: string; engine: string; clockGlitches: number } | null> {
+  return page.evaluate(() => {
+    const a = (
+      globalThis as unknown as {
+        __SANPO_DEBUG__: { world: { audio?: { stats(): { state: string; engine: string; clockGlitches: number } } } };
+      }
+    ).__SANPO_DEBUG__.world.audio;
+    if (!a) return null;
+    const s = a.stats();
+    return { state: s.state, engine: s.engine, clockGlitches: s.clockGlitches };
+  });
+}

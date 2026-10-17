@@ -6,6 +6,7 @@ import type { PhysicsService } from '@sanpo/physics';
 import type { SimService } from '@sanpo/sim';
 import type { StreamingService } from '@sanpo/streaming';
 import type { TraversalService } from '@sanpo/traversal';
+import { createVehicleAudio } from './vehicles/vehicle-audio.ts';
 import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
 
 const MIX_KEY = 'sanpo.audio.mix.v1';
@@ -155,6 +156,8 @@ export interface AudioWiringDeps {
   traversal: TraversalService;
   ground: GroundQuery;
   physics: () => PhysicsService | undefined;
+  /** 노면 젖음(차 마찰과 같은 값 — `?wet=` 디버그 포함). 없으면 sim 날씨. */
+  wetness?: () => number;
 }
 
 /** 가려짐: 리스너 → 소리 선분에 정적 지오메트리가 있으면(끝 1 m 전까지) 가려짐. */
@@ -171,6 +174,7 @@ function occluderOf(physics: () => PhysicsService | undefined) {
 }
 
 function frameSystem(d: AudioWiringDeps, audio: AudioService): GameSystem {
+  const vehicle = createVehicleAudio(audio);
   return {
     id: 'wiring.audio',
     phase: WIRING_PHASE,
@@ -201,6 +205,7 @@ function frameSystem(d: AudioWiringDeps, audio: AudioService): GameSystem {
         .trainsNear(cam.posWF, NEAR_TRAIN_R)
         .map((tr) => ({ id: tr.tripId, posWF: nearestOnTrain(tr, cam.posWF), speedMs: tr.speedMs }));
       audio.setTrainsNear(near);
+      vehicle(t, d.physics(), d.wetness?.() ?? env.weather.wetness);
     },
     dispose: () => undefined,
   };
@@ -226,7 +231,13 @@ export function startAudio(d: AudioWiringDeps): AudioService | undefined {
 
 /** world-view 배선용: 월드 baseUrl의 shared/audio/manifest.json. */
 export function audioForWorld(
-  deps: { canvas: HTMLCanvasElement; log: Logger; audio?: AudioFlags; scheduler: Pick<Scheduler, 'add'> },
+  deps: {
+    canvas: HTMLCanvasElement;
+    log: Logger;
+    audio?: AudioFlags;
+    scheduler: Pick<Scheduler, 'add'>;
+    wetness?: () => number;
+  },
   v: {
     traversal: TraversalService;
     ground: GroundQuery;
@@ -245,5 +256,6 @@ export function audioForWorld(
     scheduler: deps.scheduler,
     ...v,
     physics,
+    ...(deps.wetness ? { wetness: deps.wetness } : {}),
   });
 }

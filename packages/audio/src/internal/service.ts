@@ -12,6 +12,7 @@ import type {
   NearTrain,
   PedSignal,
   SfxId,
+  VehicleAudioState,
 } from '../api.ts';
 import type { Occluder } from './emitters.ts';
 import { createEngine, type Engine, type EngineInputs } from './engine.ts';
@@ -143,7 +144,7 @@ class Audio implements AudioService {
   playUi(id: SfxId): void {
     if (this.st === 'running') this.engine?.playUi(id);
   }
-  setVehicleState(s: { rpm: number; throttle: number; speed: number; surface: number } | null): void {
+  setVehicleState(s: VehicleAudioState | null): void {
     this.inputs.vehicle = s;
   }
   setTrainState(s: { speed: number; inside: boolean } | null): void {
@@ -169,6 +170,8 @@ class Audio implements AudioService {
       signalTones: e?.tones ?? 0,
       steps: e?.steps ?? 0,
       mix: { ...this.mixState },
+      engine: e?.engine ?? 'off',
+      clockGlitches: e?.clockGlitches ?? 0,
     };
   }
 

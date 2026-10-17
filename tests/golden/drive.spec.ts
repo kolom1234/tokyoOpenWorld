@@ -6,6 +6,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { buildGraph } from './autopilot.ts';
 import {
+  audioStats,
   boardCourse,
   brakeDistance,
   type Dbg,
@@ -65,8 +66,14 @@ test('sedan 0→100 km/h on the straight (real GPU)', async ({ page }) => {
     gpuPowerW: { medianDraw: median(p.drawW), maxDraw: Math.max(0, ...p.drawW), limit: median(p.limitW) },
   };
   report('accel', results.accel);
+  // M08-T04: 가속·변속·제동 내내 엔진 워클릿이 돌고 출력 시계 결손(언더런) 0.
+  results.audio = await audioStats(page);
+  report('audio', results.audio);
   expect(t100).toBeGreaterThanOrEqual(10);
   expect(t100).toBeLessThanOrEqual(13);
+  if (results.audio) {
+    expect(results.audio).toMatchObject({ state: 'running', engine: 'worklet', clockGlitches: 0 });
+  }
 });
 
 for (const wet of [0, 1] as const)

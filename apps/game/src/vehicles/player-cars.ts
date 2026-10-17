@@ -10,6 +10,8 @@ import BICYCLE from '../../../../content/vehicles/bicycle.json';
 import SEDAN from '../../../../content/vehicles/sedan.json';
 import { carCircles } from './hazards.ts';
 
+const PARKED = { throttle: 0, brake: 1, steer: 0, handbrake: true, reverse: false } as const;
+
 export const SEDAN_PARAMS = SEDAN as unknown as SedanParams;
 export const BICYCLE_PARAMS = BICYCLE as unknown as BicycleParams;
 export type RideKind = 'sedan' | 'bicycle';
@@ -128,6 +130,8 @@ function trySpawn(st: State, ph: PhysicsService, c: Car): void {
       c.kind === 'bicycle'
         ? ph.spawnVehicle('bicycle', at, c.yawRad, BICYCLE_PARAMS)
         : ph.spawnVehicle('sedan', at, c.yawRad, SEDAN_PARAMS);
+    // 세워 둔 것은 제동 + 핸드브레이크(경사 주차장에서 굴러가지 않게 — 타면 drive 모드가 입력을 덮는다).
+    ph.setVehicleInput(c.handle, PARKED);
   });
 }
 

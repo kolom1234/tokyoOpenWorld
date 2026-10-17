@@ -2,6 +2,7 @@
 // 카셰어 = amenity=car_sharing 점(셀 소유) → 건물 안이면 가까운 열린 땅(차도·보도·건물 아님 — 주차장·광장)으로, 없으면 그대로(런타임이 연석으로 옮김);
 //          (면이면 중심) 셀에 없으면 amenity=parking 노면 주차장 면(공용·150–20,000 m²) 하나의 중심(면 안·건물 아님).
 // 공유자전거 = amenity=bicycle_rental 점(보도·광장 위면 그대로, 차도면 가까운 비차도로). yaw = 가장 가까운 차도 쪽을 바라봄(게임 규약: 전방 = (−sin, −cos)).
+// 자리 = 탈것 발자국(+ 타는 쪽 여유)이 통째로 건물·차도 밖인 가장 가까운 점(재빌드 실측: 주차장 면 중심이 PLATEAU 건물 벽에 걸려 차가 반쯤 묻혔다) — 없으면 버림.
 // 셀당 상한·서로 띄우기(결정론 — OSM id 순). see docs/roadmap/M08.md M08-T02·T03
 import type { InteractableRecord } from '@sanpo/tile-format';
 import type { OsmRecord } from '../normalize-osm.ts';
@@ -46,14 +47,45 @@ export function yawTowardRoad(c: ShareSpotCtx, p: V2): number {
   return 0;
 }
 
-/** 조건을 만족하는 가장 가까운 점(링 1 m 걸음, 16방위). */
-function nearest(_c: ShareSpotCtx, p: V2, ok: (x: number, z: number) => boolean, maxM: number): V2 | undefined {
-  if (ok(p[0], p[1])) return p;
+/** 탈것 발자국(반길이·반폭) + 타는 쪽 여유(side > 0 = 오른쪽 — 우핸들 운전석, < 0 = 왼쪽 — 자전거). */
+interface Foot {
+  halfLen: number;
+  halfWid: number;
+  side: number;
+}
+const CAR_FOOT: Foot = { halfLen: 2.6, halfWid: 1.0, side: 1.4 };
+/** 자전거 2대 나란히(0.8 m 간격) + 왼쪽 타는 자리. */
+const BIKE_FOOT: Foot = { halfLen: 1.1, halfWid: 0.8, side: -0.9 };
+
+/** p에 yaw로 놓은 발자국 격자(5 × 5 표본)가 전부 ok인가. 오른쪽 = (cos, −sin). */
+export function footClear(p: V2, yaw: number, f: Foot, ok: (x: number, z: number) => boolean): boolean {
+  const [fx, fz, rx, rz] = [-Math.sin(yaw), -Math.cos(yaw), Math.cos(yaw), -Math.sin(yaw)];
+  const b0 = -f.halfWid + Math.min(0, f.side);
+  const b1 = f.halfWid + Math.max(0, f.side);
+  for (let i = 0; i <= 4; i++)
+    for (let j = 0; j <= 4; j++) {
+      const a = -f.halfLen + (i / 4) * 2 * f.halfLen;
+      const b = b0 + (j / 4) * (b1 - b0);
+      if (!ok(p[0] + fx * a + rx * b, p[1] + fz * a + rz * b)) return false;
+    }
+  return true;
+}
+
+/** 발자국이 들어가는 가장 가까운 점(링 1 m 걸음, 16방위 — yaw = 그 점에서 차도 쪽). */
+function place(
+  c: ShareSpotCtx,
+  p: V2,
+  ok: (x: number, z: number) => boolean,
+  foot: Foot,
+  maxM: number,
+): V2 | undefined {
+  const fits = (q: V2) => ok(q[0], q[1]) && footClear(q, yawTowardRoad(c, q), foot, ok);
+  if (fits(p)) return p;
   for (let d = 1; d <= maxM; d++)
     for (let k = 0; k < 16; k++) {
       const a = (k / 16) * 2 * Math.PI;
       const q: V2 = [p[0] + Math.cos(a) * d, p[1] + Math.sin(a) * d];
-      if (ok(q[0], q[1])) return q;
+      if (fits(q)) return q;
     }
   return undefined;
 }
@@ -97,16 +129,17 @@ function carCandidates(c: ShareSpotCtx, osm: readonly OsmRecord[]): { id: string
       return { id: r.id, p: (r.geom === 'point' ? [ring[0] ?? 0, ring[1] ?? 0] : ringCentroidArea(ring).c) as V2 };
     })
     .filter((s) => owns(c, s.p))
-    .map((s) => ({ id: s.id, p: nearest(c, s.p, open, OPEN_SEARCH_M) ?? s.p }));
+    .map((s) => ({ id: s.id, p: place(c, s.p, open, CAR_FOOT, OPEN_SEARCH_M) }))
+    .filter((s): s is { id: string; p: V2 } => s.p !== undefined);
   if (pts.length > 0) return pts;
   return osm
     .filter((r) => r.geom === 'polygon' && isLot(r.tags) && r.rings[0])
     .map((r) => ({ id: r.id, ring: r.rings[0] as number[] }))
     .map(({ id, ring }) => ({ id, ring, ...ringCentroidArea(ring) }))
     .filter((l) => l.area >= LOT_MIN_M2 && l.area <= LOT_MAX_M2 && owns(c, l.c))
-    .map((l) => ({ id: l.id, p: nearest(c, l.c, (x, z) => inRing(l.ring, x, z) && !c.inBuilding(x, z), 15) }))
-    .filter((l): l is { id: string; p: V2 } => l.p !== undefined)
     .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .map((l) => ({ id: l.id, p: place(c, l.c, (x, z) => inRing(l.ring, x, z) && open(x, z), CAR_FOOT, 15) }))
+    .filter((l): l is { id: string; p: V2 } => l.p !== undefined)
     .slice(0, MAX_LOT);
 }
 
@@ -117,7 +150,7 @@ function bikeCandidates(c: ShareSpotCtx, osm: readonly OsmRecord[]): { id: strin
     .filter((r) => r.geom === 'point' && r.tags.amenity === 'bicycle_rental' && r.rings[0])
     .map((r) => ({ id: r.id, p: [r.rings[0]?.[0] ?? 0, r.rings[0]?.[1] ?? 0] as V2 }))
     .filter((s) => owns(c, s.p))
-    .map((s) => ({ id: s.id, p: nearest(c, s.p, offRoad, 12) }))
+    .map((s) => ({ id: s.id, p: place(c, s.p, offRoad, BIKE_FOOT, 12) }))
     .filter((s): s is { id: string; p: V2 } => s.p !== undefined);
 }
 

@@ -1,14 +1,25 @@
 // 실행 중 오디오 엔진(unlock 뒤 생성): 버스·에셋·베드·보이스·유도음·열차를 묶고 프레임마다 갱신. service.ts가 상태·입력을 들고 이것을 부른다.
 import { type CameraState, createRng, type Logger, type Rng, type Vec3d } from '@sanpo/core';
-import type { AudioEnv, AudioMix, FootstepState, NearTrain, PedSignal, SfxId } from '../api.ts';
+import type {
+  AudioEnv,
+  AudioMix,
+  AudioStats,
+  FootstepState,
+  NearTrain,
+  PedSignal,
+  SfxId,
+  VehicleAudioState,
+} from '../api.ts';
 import { type AssetStore, createAssetStore } from './assets.ts';
 import { type BedPlayer, createBedPlayer } from './beds.ts';
 import { createTonePlayer, type Occluder, type TonePlayer } from './emitters.ts';
 import { StepClock, stepSetOf } from './footsteps.ts';
 import { type BusGraph, createBusGraph } from './graph.ts';
 import { bedGains } from './mixer.ts';
+import { OutputClock } from './output-clock.ts';
 import { noiseOf, playSfx } from './synth/sfx.ts';
-import { createEngineVoice, createTrainVoice, type TrainVoice } from './synth/train.ts';
+import { createTrainVoice, type TrainVoice } from './synth/train.ts';
+import { createVehicleVoice, type VehicleVoice } from './synth/vehicle.ts';
 import { createVoicePool, type VoicePool } from './voices.ts';
 import type { ZoneIndex } from './zones.ts';
 
@@ -28,7 +39,7 @@ export interface EngineInputs {
   signal: ((code: number) => PedSignal) | null;
   occluder: Occluder | null;
   train: { speed: number; inside: boolean } | null;
-  vehicle: { rpm: number; throttle: number; speed: number } | null;
+  vehicle: VehicleAudioState | null;
   near: readonly NearTrain[];
 }
 
@@ -39,7 +50,15 @@ export interface Engine {
   playAt(id: SfxId, posWF: Vec3d, gain: number, pitch: number): void;
   playUi(id: SfxId): void;
   setMix(m: AudioMix): void;
-  stats(): { zones: Record<string, number>; beds: string[]; voices: number; tones: number; steps: number };
+  stats(): {
+    zones: Record<string, number>;
+    beds: string[];
+    voices: number;
+    tones: number;
+    steps: number;
+    engine: AudioStats['engine'];
+    clockGlitches: number;
+  };
   dispose(): void;
 }
 
@@ -134,7 +153,8 @@ class AudioEngine implements Engine {
   private readonly voices: VoicePool;
   private readonly tones: TonePlayer;
   private readonly trains: TrainSounds;
-  private readonly engineVoice: ReturnType<typeof createEngineVoice>;
+  private readonly engineVoice: VehicleVoice;
+  private readonly outClock = new OutputClock();
   private readonly rng: Rng = createRng(0x41_55_44);
   private readonly clock = new StepClock();
   private origin: Vec3d = { x: 0, y: 0, z: 0 };
@@ -169,7 +189,7 @@ class AudioEngine implements Engine {
     );
     this.tones = createTonePlayer(ctx, this.graph.buses.sfx, zones);
     this.trains = new TrainSounds(ctx, this.graph.buses.train);
-    this.engineVoice = createEngineVoice(ctx, this.graph.buses.vehicle);
+    this.engineVoice = createVehicleVoice(ctx, this.graph.buses.vehicle);
   }
 
   private moveListener(cam: CameraState): void {
@@ -235,6 +255,7 @@ class AudioEngine implements Engine {
     this.tones.update(this.listener, this.origin, i.signal, i.occluder);
     this.trains.update(i, this.listener, this.origin);
     this.engineVoice.update(i.vehicle);
+    this.outClock.update(this.ctx, dtS);
   }
 
   playAt(id: SfxId, posWF: Vec3d, gain: number, pitch: number): void {
@@ -257,6 +278,8 @@ class AudioEngine implements Engine {
       voices: this.voices.active(),
       tones: this.tones.active(),
       steps: this.stepsPlayed,
+      engine: this.engineVoice.engine,
+      clockGlitches: this.outClock.glitches,
     };
   }
 

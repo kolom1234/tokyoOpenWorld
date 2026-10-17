@@ -1,7 +1,7 @@
 // 카셰어·공유자전거 거점(M08-T02·T03): car_sharing 점(건물 안이면 가까운 열린 땅), 없으면 노면 주차장 면 중심, bicycle_rental 점(차도면 비차도로),
 // yaw = 차도 쪽(전방 −Z 규약), 셀 소유·상한·간격, 지하·사유 주차장 제외.
 import { describe, expect, it } from 'vitest';
-import { shareSpots, yawTowardRoad } from '../src/stages/derive/share-spots.ts';
+import { footClear, shareSpots, yawTowardRoad } from '../src/stages/derive/share-spots.ts';
 import type { OsmRecord } from '../src/stages/normalize-osm.ts';
 
 /** 셀 원점 (0, 0): x < 10 = 차도, 10–14 = 보도, 그 밖 = 열린 땅. 건물 = 50 ≤ x < 70, 50 ≤ z < 70. */
@@ -44,6 +44,17 @@ describe('share spots (M08)', () => {
     expect(out.map((s) => s.id)).toEqual(['share-a0']);
     expect(shareSpots(ctx, lots).map((s) => s.id)).toEqual(['share-a1']);
     expect(shareSpots(ctx, lots)[0]?.posLocal[0]).toBeCloseTo(110, 5);
+  });
+
+  it('lot centroid against a building: the whole car footprint (+ driver side) ends up clear', () => {
+    // 면 44–76 — 중심(60, 60)이 건물(50–70) 안.
+    const [s] = shareSpots(ctx, [square('a9', 44, 44, 32, { amenity: 'parking' })]);
+    expect(s).toBeDefined();
+    const p: [number, number] = [s?.posLocal[0] ?? 0, s?.posLocal[2] ?? 0];
+    const open = (x: number, z: number) => ctx.classify(x) === 'none' && !ctx.inBuilding(x, z);
+    expect(footClear(p, s?.yaw ?? 0, { halfLen: 2.6, halfWid: 1.0, side: 1.4 }, open)).toBe(true);
+    // 너무 좁은 면(전부 건물 안)은 버린다.
+    expect(shareSpots(ctx, [square('a8', 52, 52, 16, { amenity: 'parking' })])).toEqual([]);
   });
 
   it('bicycle_rental on the road moves off it; cap, spacing and cell ownership', () => {

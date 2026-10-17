@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 524개.
+> 파일 527개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -41,6 +41,7 @@
 - `apps/game/src/vehicles/player-cars.ts` — 플레이어 탈것(M08-T01·T03): 세워 둔 차·자전거(스폰 프리셋·카셰어·공유자전거 거점)와 부른 것 — 물리 차체(physics.spawnVehicle, content/vehicles/*.json)를 | exports: SEDAN_PARAMS, BICYCLE_PARAMS, RideKind, KIND_LOOK, CarOrigin, PlayerCars, createPlayerCars
 - `apps/game/src/vehicles/share-spots.ts` — 카셰어·공유자전거 거점(M08-T02·T03 — 가상 브랜드 "SANPO Car"·"SANPO Cycle"): live L0 셀의 meta.json `interactables`(carShare·bikeDock) → | exports: ShareSpot, spotsOf, ShareSpots, createShareSpots
 - `apps/game/src/vehicles/traffic-guide.ts` — 운전 교통 안내(M08-T02 — 위반해도 벌점 없음, HUD 안내만): 차가 있는 차선을 lanes.bin(AI 교통과 같은 데이터)에서 찾아 | exports: LaneHit, laneAt, DriveGuide, createDriveGuide
+- `apps/game/src/vehicles/vehicle-audio.ts` — 탈것 소리 입력(M08-T04, ADR-0090): drive·cycle 중 physics vehicleState + traversal HUD → audio VehicleAudioState, 벨(HUD bell 횟수가 바뀌면 핸들 높이에서 울림). | exports: wheelSlip, vehicleAudioOf, createVehicleAudio
 - `apps/game/src/vehicles/wiring.ts` — 플레이어 차 배선(M08-T01): 차 관리자(player-cars) + 차 부르기(walk R·패드 D-pad ← — 가까운 차도 연석, curb-spot) + 스폰 프리셋 차(`vehicles`) + 계기판 HUD. | exports: VehicleWiring, createVehicleWiring
 - `apps/game/src/weather-mode.ts` — 날씨 모드(M09-T01, 10 §3): `?weather=auto|live|<기후표 상태 id>` > 골든뷰 weather > `?time=`(고정 시각 = 맑음 고정 — e2e·비교 결정론) > auto(기후표 마르코프). | exports: WeatherSpec, parseWeatherFlag, weatherSpecOf, applyWeatherSpec, startLiveWeather
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라·아바타(phase 20 확정) → render.setCamera·setAvatar(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
@@ -70,7 +71,7 @@
 - `apps/worker/src/validate.ts` — 요청 입력 검증: buildId 형식, /world 경로(경로 조작 차단), formatVersion 쿼리. see docs/13-deployment.md §4 | exports: BUILD_ID_RE, isValidBuildId, parseWorldPath, parseFormatVersion
 
 ## packages/audio
-- `packages/audio/src/api.ts` — @sanpo/audio 공개 계약(타입·인터페이스). see docs/modules/audio.md, docs/11-audio.md, ADR-0079 | exports: AudioBus, AudioMix, SfxId, AudioDeps, AudioEnv, FootstepState, NearTrain, PedSignal, AudioStats, AudioService
+- `packages/audio/src/api.ts` — @sanpo/audio 공개 계약(타입·인터페이스). see docs/modules/audio.md, docs/11-audio.md, ADR-0079 | exports: AudioBus, AudioMix, SfxId, AudioDeps, AudioEnv, FootstepState, NearTrain, PedSignal, VehicleAudioState, AudioStats, AudioService
 - `packages/audio/src/index.ts` — @sanpo/audio 공개 엔트리(L2): WebAudio 앰비언스·3D 사운드. api.ts 재수출 + create* 팩토리만. see docs/modules/audio.md | exports: * from './api.ts', createAudio
 - `packages/audio/src/internal/assets.ts` — 녹음 에셋(빌드 shared/audio — R2 공유 에셋, 지연 로딩): manifest 1회 + 파일별 decodeAudioData는 처음 필요할 때(첫 로드 예산 밖). | exports: AssetStore, createAssetStore
 - `packages/audio/src/internal/beds.ts` — 앰비언스 베드 재생(11 §2): 베드마다 루프 AudioBufferSourceNode + GainNode. 목표 이득은 setTargetAtTime(τ 0.8 s)으로만 바꾼다 | exports: BED_TAU_S, BedPlayer, createBedPlayer
@@ -79,10 +80,12 @@
 - `packages/audio/src/internal/footsteps.ts` — 발소리(11 §3, M09-T04 — ADR-0079): 지면 재질(JCOL_MATERIAL) → 발소리 세트, 보폭 시계(이동 거리 누적), 라운드로빈(직전 두 개 제외) + 피치 ±5 %. | exports: stepSetOf, strideM, StepEvent, StepClock
 - `packages/audio/src/internal/graph.ts` — 버스 그래프(11 §1): 버스별 GainNode → master → DynamicsCompressor → destination. 잔향 = 짧은 실외·긴 실내 ConvolverNode 2개(절차 IR), 존 가중으로 보냄 이득. | exports: DEFAULT_MIX, RAMP_TAU_S, BusGraph, createBusGraph
 - `packages/audio/src/internal/mixer.ts` — 앰비언스 베드 믹스(11 §2 시간·날씨 변조, M09-T04 — ADR-0079): 존 가중 × 낮/밤 × 계절 × 비·바람·고도 → 베드별 목표 이득(선형). | exports: BED_IDS, BedId, BedGains, monthJst, bedGains, msOfDayJst
+- `packages/audio/src/internal/output-clock.ts` — 오디오 출력 시계 감시(M08-T04 수락 "오디오 스레드 언더런 0"의 측정): 1 s마다 getOutputTimestamp()의 컨텍스트 시각 증가를 성능 시각 증가와 비교 — | exports: OutputClock
 - `packages/audio/src/internal/service.ts` — createAudio(11 §5): 사용자 제스처 전에는 AudioContext를 만들지 않는다(재생 시도 금지 — 모듈 카드 불변식). unlock() 뒤 engine.ts가 소리를 낸다. | exports: createAudio
 - `packages/audio/src/internal/synth/sfx.ts` — 합성 효과음(11 §2·§4, M09-T04 — ADR-0079): 개찰구 날개·카드 접촉·거부·역 차임·LCD 알림·문 차임·UI 클릭. | exports: SFX_TONES, sfxDuration, playSfx, noiseOf
 - `packages/audio/src/internal/synth/signal-tones.ts` — 음향식 보행 신호 유도음(11 §2, M09-T04 — ADR-0079): 일본식 "새 울음(피요)·뻐꾸기(깍꾸)" 계열을 매개변수 합성. | exports: TonePattern, ToneNote, ToneCycle, toneCycle, patternOfCode, notesBetween
-- `packages/audio/src/internal/synth/train.ts` — 열차 주행음 합성(11 §1 trainBus): 바퀴 굴림(저역 잡음) + 모터(톱니파 대역 통과, 속력 비례 음높이) + 레일 이음매 "타탄" | exports: RAIL_LEN_M, jointTimes, TrainVoice, createTrainVoice, createEngineVoice
+- `packages/audio/src/internal/synth/train.ts` — 열차 주행음 합성(11 §1 trainBus): 바퀴 굴림(저역 잡음) + 모터(톱니파 대역 통과, 속력 비례 음높이) + 레일 이음매 "타탄" | exports: RAIL_LEN_M, jointTimes, TrainVoice, createTrainVoice
+- `packages/audio/src/internal/synth/vehicle.ts` — 플레이어 탈것 소리(M08-T04, ADR-0090 — 11 §1 vehicleBus): 엔진(AudioWorklet engine-worklet.js, 불가하면 톱니 오실레이터) + 타이어 구름·젖은 노면 쉭·미끄럼 끽·바람 | exports: VehicleTargets, vehicleTargets, VehicleVoice, createVehicleVoice
 - `packages/audio/src/internal/voices.ts` — 3D 보이스 풀(11 §1 sfxBus): PannerNode(HRTF, inverse, ref 2 m, rolloff 1.2) — 동시 32개 상한, 넘치면 우선순위(이득 ÷ 거리²) 최저를 빼앗는다. | exports: MAX_VOICES, OCCLUDED_HZ, VoiceInfo, chooseVictim, priorityOf, Voice, VoicePool, createVoicePool
 - `packages/audio/src/internal/zones.ts` — 앰비언스 존 색인(11 §2, M09-T04 — ADR-0079): 셀 audio.json 다각형(셀 로컬 → WF) → 리스너 xz에서 종류별 가중. | exports: EDGE_M, WorldEmitter, ZONE_SAMPLES, ZoneIndex
 
@@ -503,7 +506,7 @@
 - `tools/pipeline/src/stages/derive/rail/splines.ts` — 선로 스플라인(M07-T01, 04 §4.3): 꼭짓점 → 구심 Catmull-Rom → 0.5 m 등간격 표본(x, z, s, 구간 플래그) → 높이: | exports: RAIL_STEP_M, RAIL_TOP_M, TrackSamples, railHeights, trackSamples
 - `tools/pipeline/src/stages/derive/rail/tracks.ts` — 선로 조립(M07-T01): OSM 철도 선(노선 이름별, service 없는 본선만) → 끝점 공유로 이은 사슬 → 긴 사슬 = 선로. 방향 = 좌측통행: | exports: V2, VERTEX_FLAG, RawTrack, chainWays, lengthOf, signedOffset, buildTracks
 - `tools/pipeline/src/stages/derive/roads.ts` — 도로 분류(M05-T01): PLATEAU TrafficArea 폴리곤(셀 + 8-이웃, normalize가 셀 경계에서 자른 조각) → 성형용 1 m 래스터(차도 0·보행 1·없음 7)와 | exports: ROAD_CLASS, RoadSide, isWalk, roadRaster, insideRings, RoadIndex, roadIndex
-- `tools/pipeline/src/stages/derive/share-spots.ts` — 카셰어·공유자전거 거점(M08-T02·T03 — cell meta `interactables`): 위치만 OSM에서(브랜드는 게임의 가상 이름 — 실제 운영사·로고 없음). | exports: ShareSpotCtx, yawTowardRoad, shareSpots
+- `tools/pipeline/src/stages/derive/share-spots.ts` — 카셰어·공유자전거 거점(M08-T02·T03 — cell meta `interactables`): 위치만 OSM에서(브랜드는 게임의 가상 이름 — 실제 운영사·로고 없음). | exports: ShareSpotCtx, yawTowardRoad, footClear, shareSpots
 - `tools/pipeline/src/stages/derive/sidewalks.ts` — 보행면 윗면(M05-T01): 보도·교통섬 폴리곤(이 셀 조각) → earcut → 삼각형을 2 m 격자 칸으로 잘라(볼록 조각 부채꼴) 높이 = 성형 윗면(쌍선형) + 6 mm. | exports: TOP_OFFSET_M, EDGE_PIECE_M, HeightAt, MeshBuf, emptyMesh, TopWriter, topWriter, addWalkTop
 - `tools/pipeline/src/stages/derive/stairs.ts` — 교량 계단(M05-T08): OSM `highway=steps` 선 중 한 끝 이상이 PLATEAU 교량 상판에 닿고 두 끝 높이(상판 또는 지형)가 0.5 m 이상 다른 것 → 계단 명세. | exports: StairSpec, Deck, decksOf, deckHeightAt, STAIR_MAX_RISE_M, stairsOf, landingOf, cutAtDeck, WalkwaySources, walkwaysOf
 - `tools/pipeline/src/stages/derive/terrain-shape.ts` — 지형 성형(M05-T01, 04 §4.3): 셀 + 여유 1 m 창에서 국소 연산만 — 이웃 셀과 공유하는 샘플은 같은 입력 → 같은 값(04 §6). | exports: SHAPE_PAD, CURB_M, CROSSFALL, CROWN_MAX_M, TOL_TIGHT_M, TOL_DEFAULT_M, ShapedGround, shapeGround

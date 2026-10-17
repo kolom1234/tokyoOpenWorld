@@ -16,11 +16,12 @@ AudioService extends SystemProvider /* 'audio' phase 60 */ {
   setSignalSource(f: ((code) => PedSignal 'W'|'F'|'D') | null): void   // 음향식 보행 신호 유도음
   setOccluder(f: ((fromWF, toWF) => Promise<boolean>) | null): void    // 가려짐 → 로우패스 1.2 kHz(4 Hz)
   playAt(id: SfxId, posWF, opts?: { gain?; pitch? }): void;  playUi(id: SfxId): void
-  setVehicleState(s | null): void;  setTrainState(s: { speed; inside } | null): void;  setTrainsNear(t: NearTrain { id; posWF; speedMs }[]): void
+  setVehicleState(s: VehicleAudioState { kind 'car'|'bicycle'; rpm; throttle; speedMs; shifting; slip 0..1; wetness; surface /* JCOL */; interior } | null): void   // M08-T04
+   setTrainState(s: { speed; inside } | null): void;  setTrainsNear(t: NearTrain { id; posWF; speedMs }[]): void
   setMix(m: Partial<AudioMix>): void;  readonly mix: AudioMix /* master(0–1.5)·ambience·sfx·vehicle·train·ui */
-  stats(): AudioStats { state, zones, beds, loaded, files, voices, signalTones, steps, mix };  dispose(): void
+  stats(): AudioStats { state, zones, beds, loaded, files, voices, signalTones, steps, mix, engine 'off'|'loading'|'worklet'|'fallback', clockGlitches /* 출력 시계 결손 = 언더런 근사 */ };  dispose(): void
 }
-SfxId = 'gateOpen'|'gateClose'|'gateDenied'|'cardTouch'|'stationChime'|'lcdChime'|'doorChime'|'uiClick'   // 전부 자체 합성
+SfxId = 'gateOpen'|'gateClose'|'gateDenied'|'cardTouch'|'stationChime'|'lcdChime'|'doorChime'|'uiClick'|'bicycleBell'   // 전부 자체 합성
 ```
 
 ## Invariants
@@ -30,10 +31,11 @@ SfxId = 'gateOpen'|'gateClose'|'gateDenied'|'cardTouch'|'stationChime'|'lcdChime
 - 존 가중 = 리스너 둘레 원반 표본 32점(반경 14 m)의 존 포함 비율(같은 종류 사각형 경계에서 꺼지지 않음).
 - 녹음 파일은 manifest(빌드 `shared/audio/`, R2 공유 에셋)에서 처음 필요할 때 디코드(첫 로드 예산 밖). 모든 원천 = `content/audio/library.json` + `content/ATTRIBUTION.json`(pipeline test가 누락 0 검사).
 - 신호 유도음·개찰구·차임·LCD음은 녹음 금지 — synth/ 합성(실제 기기·사업자 음과 다른 음형).
+- 탈것 소리(ADR-0090)는 녹음 없이 합성 — 엔진 = AudioWorklet `engine-worklet.js`(일반 .js, 같은 출처 에셋 — CSP blob: 불가), process() 할당 없음.
 - 오디오 좌표 = WF − 원점(1024 m 격자로 리스너를 따라 이동) — float32 정밀도.
 
 ## Files
-api.ts, index.ts, internal/{service(상태·입력), engine(실행 중 그래프 묶음·열차), graph(버스·압축·절차 IR 잔향), assets(manifest·지연 디코드), zones(ZoneIndex 원반 표본), mixer(존 × 낮밤·계절·비·바람·고도 → 베드 이득), beds(루프 램프), voices(32 풀·빼앗기·가려짐 필터), emitters(유도음 발음체), footsteps(재질 → 세트·보폭 시계·라운드로빈), synth/{signal-tones, sfx, train(주행음·이음매·엔진)}}.
+api.ts, index.ts, internal/{service(상태·입력), engine(실행 중 그래프 묶음·열차), graph(버스·압축·절차 IR 잔향), assets(manifest·지연 디코드), zones(ZoneIndex 원반 표본), mixer(존 × 낮밤·계절·비·바람·고도 → 베드 이득), beds(루프 램프), voices(32 풀·빼앗기·가려짐 필터), emitters(유도음 발음체), footsteps(재질 → 세트·보폭 시계·라운드로빈), synth/{signal-tones, sfx, train(주행음·이음매), vehicle(탈것 — 목표 매핑·잡음층·프리휠·워클릿 적재), engine-worklet.js(+ .d.ts — 4기통 점화 펄스 합성기)}, output-clock(언더런 근사)}.
 
 ## Status
-M09-T04 구현(ADR-0079). 엔진(drive 모드)은 합성만 준비 — drive 모드가 생기면 setVehicleState.
+M09-T04 구현(ADR-0079). M08-T04 탈것 소리(ADR-0090 — 엔진 워클릿·타이어·젖은 노면·끽·바람·체인·프리휠·벨).

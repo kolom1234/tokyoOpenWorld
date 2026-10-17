@@ -163,6 +163,34 @@
           "kind": "bicycle"
         }
       ]
+    },
+    {
+      "id": "carshare-shibuya",
+      "name": {
+        "ja": "渋谷 カーシェア(SANPO Car)乗り場",
+        "en": "Shibuya car-share spot (SANPO Car)",
+        "ko": "시부야 카셰어(SANPO Car) 거점"
+      },
+      "posWF": [
+        -250.2,
+        20.57,
+        129.5
+      ],
+      "yawDeg": 0.0
+    },
+    {
+      "id": "bike-dock-harajuku",
+      "name": {
+        "ja": "原宿 シェアサイクル(SANPO Cycle)ポート",
+        "en": "Harajuku bike-share dock (SANPO Cycle)",
+        "ko": "하라주쿠 공유자전거(SANPO Cycle) 거점"
+      },
+      "posWF": [
+        187.5,
+        32.87,
+        -1009.4
+      ],
+      "yawDeg": 112.5
     }
   ]
 }
