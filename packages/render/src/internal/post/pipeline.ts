@@ -40,9 +40,12 @@ import {
 } from 'three/tsl';
 import {
   type Camera,
+  type Matrix4,
+  type MRTNode,
   type PassNode,
   type PerspectiveCamera,
   RenderPipeline,
+  type RenderTarget,
   type Scene,
   type TextureNode,
   type Node as TslNode,
@@ -72,13 +75,31 @@ interface SsgiNode {
 
 export interface PostPipeline {
   render(dtS: number): void;
+  /** 선컴파일용 한 프레임(자동 노출 상태는 건드리지 않음 — 첫 실제 프레임이 노출을 바로 맞춘다). */
+  warmup(): void;
   /** 적용 중 효과(직접 렌더 = null). */
   readonly effects: PostEffects | null;
   /** 자동 노출 최근 값(없으면 null). */
   exposure(): { lum: number; scale: number } | null;
   /** 동적 해상도: 씬 패스·중간 RTT·AO·SSR 해상도 배율(TAAU가 출력 해상도로 복원). */
   setRenderScale(scale: number): void;
+  /**
+   * 머티리얼 선컴파일 대상(ADR-0086): 씬 패스 렌더 타깃 + MRT — 캔버스로 컴파일하면 다른 변형(출력 형식·MRT 출력)이라 첫 프레임에 다시 동기 컴파일한다.
+   * 직접 렌더 = null(캔버스 그대로).
+   */
+  compileTarget(): CompileTarget | null;
   dispose(): void;
+}
+
+/** 씬 패스가 그리는 대상(`PassNode.compileAsync`와 같은 설정). */
+export interface CompileTarget {
+  readonly target: RenderTarget;
+  readonly mrt: MRTNode | null;
+  /**
+   * TAAU가 자기 프레임 동안 `velocity.setProjectionMatrix`로 거는 지터 없는 투영 행렬(같은 객체) — 컴파일 때도 걸어야 속도 MRT 셰이더가 같다
+   * (안 걸면 cameraProjectionMatrix 변형 → 첫 프레임 재컴파일). TAA 없으면 null.
+   */
+  readonly velocityProjection: Matrix4 | null;
 }
 
 /**
@@ -88,9 +109,11 @@ export interface PostPipeline {
 export function createDirectRender(renderer: WebGPURenderer, scene: Scene, camera: Camera): PostPipeline {
   return {
     render: () => renderer.render(scene, camera),
+    warmup: () => renderer.render(scene, camera),
     effects: null,
     exposure: () => null,
     setRenderScale() {},
+    compileTarget: () => null,
     dispose() {},
   };
 }
@@ -237,6 +260,30 @@ export interface PostOverlays {
   sky?: { u: WeatherSkyUniforms; camWF: UniformNode<'vec3', Vector3> };
 }
 
+/**
+ * TAAU: 동적 해상도(M03-T08)로 스케일이 1 ↔ < 1을 오가므로 항상 TAAU(스케일 1에서도 TRAA 대신 동작, 비용 비슷).
+ * velocityProjection = TAAU가 자기 프레임에 속도 노드에 거는 지터 없는 투영 행렬(같은 객체 — 선컴파일 대상, ADR-0086).
+ */
+function applyTaau(
+  hdr: V4,
+  scenePass: PassNode,
+  camera: PerspectiveCamera,
+  fx: PostEffects,
+  sc: Scalables,
+  nodes: { dispose(): void }[],
+): { hdr: V4; velocityProjection: Matrix4 } {
+  const vel = scenePass.getTextureNode('velocity');
+  const t = taau(
+    lowRes(hdr, fx, sc) as unknown as Parameters<typeof taau>[0],
+    scenePass.getTextureNode('depth'),
+    vel,
+    camera,
+  );
+  nodes.push(t);
+  const velocityProjection = (t as unknown as { _originalProjectionMatrix: Matrix4 })._originalProjectionMatrix;
+  return { hdr: t as unknown as V4, velocityProjection };
+}
+
 export function createPostPipeline(
   renderer: WebGPURenderer,
   scene: Scene,
@@ -266,13 +313,8 @@ export function createPostPipeline(
     nodes.push(b);
     hdr = hdr.add(b);
   }
-  if (fx.taa) {
-    // 동적 해상도(M03-T08)로 스케일이 1 ↔ < 1을 오가므로 항상 TAAU(스케일 1에서도 TRAA 대신 동작, 비용 비슷).
-    const vel = scenePass.getTextureNode('velocity');
-    const t = taau(lowRes(hdr, fx, sc) as unknown as Parameters<typeof taau>[0], depth, vel, camera);
-    nodes.push(t);
-    hdr = t as unknown as V4;
-  }
+  const temporal = fx.taa ? applyTaau(hdr, scenePass, camera, fx, sc, nodes) : null;
+  if (temporal) hdr = temporal.hdr;
   if (overlays.rain) hdr = vec4(hdr.rgb.add(rainLayers(overlays.rain, depth, camera)), hdr.a);
   pipeline.outputColorTransform = false;
   let out: V4 = renderOutput(hdr);
@@ -285,6 +327,7 @@ export function createPostPipeline(
       pipeline.render();
       exposure?.update(renderer, dtS);
     },
+    warmup: () => pipeline.render(),
     effects: fx,
     exposure: () => (exposure ? { ...exposure.last } : null),
     setRenderScale(scale) {
@@ -296,6 +339,11 @@ export function createPostPipeline(
       if (sc.aerial) sc.aerial.renderScale = scale;
       if (sc.ssr) sc.ssr.resolutionScale = 0.5 * scale;
     },
+    compileTarget: () => ({
+      target: scenePass.renderTarget,
+      mrt: scenePass.getMRT(),
+      velocityProjection: temporal?.velocityProjection ?? null,
+    }),
     dispose() {
       pipeline.dispose();
       scenePass.dispose();

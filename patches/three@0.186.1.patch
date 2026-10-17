@@ -1,5 +1,5 @@
 diff --git a/build/three.webgpu.js b/build/three.webgpu.js
-index 48b30e6..80de9a8 100644
+index 48b30e6..86c787b 100644
 --- a/build/three.webgpu.js
 +++ b/build/three.webgpu.js
 @@ -40407,6 +40407,11 @@ const getViewPosition = /*@__PURE__*/ Fn( ( [ screenPosition, depth, projectionM
@@ -14,8 +14,44 @@ index 48b30e6..80de9a8 100644
  	} else {
  
  		clipSpacePosition = vec4( vec3( screenPosition.x, screenPosition.y.oneMinus(), depth ).mul( 2.0 ).sub( 1.0 ), 1.0 );
+@@ -62718,6 +62723,9 @@ class Renderer {
+ 
+ 		const total = compilationPromises.length;
+ 		let loaded = 0;
++		// sanpo patch (ADR-0086): start every pipeline without awaiting each one — the GPU process compiles them in parallel
++		// (awaiting per object serialized all shader compiles: 75 cell groups ≈ 2.5–3 s back-to-back).
++		const pendingPipelines = [];
+ 
+ 		for ( const item of compilationPromises ) {
+ 
+@@ -62735,14 +62743,8 @@ class Renderer {
+ 			this._bindings.updateForRender( renderObject );
+ 			this._isPreCompiling = false;
+ 
+-			// Wait for pipeline creation
+-			const pipelinePromises = [];
+-			this._pipelines.getForRender( renderObject, pipelinePromises );
+-			if ( pipelinePromises.length > 0 ) {
+-
+-				await Promise.all( pipelinePromises );
+-
+-			}
++			// sanpo patch (ADR-0086): collect pipeline creation (awaited together after the loop)
++			this._pipelines.getForRender( renderObject, pendingPipelines );
+ 
+ 			this._isPreCompiling = true;
+ 			this._nodes.updateAfter( renderObject );
+@@ -62761,6 +62763,8 @@ class Renderer {
+ 
+ 		}
+ 
++		if ( pendingPipelines.length > 0 ) await Promise.all( pendingPipelines );
++
+ 	}
+ 
+ 	/**
 diff --git a/build/three.webgpu.nodes.js b/build/three.webgpu.nodes.js
-index e96c4ae..ecef7f7 100644
+index e96c4ae..cb55533 100644
 --- a/build/three.webgpu.nodes.js
 +++ b/build/three.webgpu.nodes.js
 @@ -40407,6 +40407,11 @@ const getViewPosition = /*@__PURE__*/ Fn( ( [ screenPosition, depth, projectionM
@@ -30,6 +66,42 @@ index e96c4ae..ecef7f7 100644
  	} else {
  
  		clipSpacePosition = vec4( vec3( screenPosition.x, screenPosition.y.oneMinus(), depth ).mul( 2.0 ).sub( 1.0 ), 1.0 );
+@@ -62718,6 +62723,9 @@ class Renderer {
+ 
+ 		const total = compilationPromises.length;
+ 		let loaded = 0;
++		// sanpo patch (ADR-0086): start every pipeline without awaiting each one — the GPU process compiles them in parallel
++		// (awaiting per object serialized all shader compiles: 75 cell groups ≈ 2.5–3 s back-to-back).
++		const pendingPipelines = [];
+ 
+ 		for ( const item of compilationPromises ) {
+ 
+@@ -62735,14 +62743,8 @@ class Renderer {
+ 			this._bindings.updateForRender( renderObject );
+ 			this._isPreCompiling = false;
+ 
+-			// Wait for pipeline creation
+-			const pipelinePromises = [];
+-			this._pipelines.getForRender( renderObject, pipelinePromises );
+-			if ( pipelinePromises.length > 0 ) {
+-
+-				await Promise.all( pipelinePromises );
+-
+-			}
++			// sanpo patch (ADR-0086): collect pipeline creation (awaited together after the loop)
++			this._pipelines.getForRender( renderObject, pendingPipelines );
+ 
+ 			this._isPreCompiling = true;
+ 			this._nodes.updateAfter( renderObject );
+@@ -62761,6 +62763,8 @@ class Renderer {
+ 
+ 		}
+ 
++		if ( pendingPipelines.length > 0 ) await Promise.all( pendingPipelines );
++
+ 	}
+ 
+ 	/**
 diff --git a/src/nodes/utils/PostProcessingUtils.js b/src/nodes/utils/PostProcessingUtils.js
 index 09c471b..fa41333 100644
 --- a/src/nodes/utils/PostProcessingUtils.js
@@ -46,3 +118,43 @@ index 09c471b..fa41333 100644
  	} else {
  
  		clipSpacePosition = vec4( vec3( screenPosition.x, screenPosition.y.oneMinus(), depth ).mul( 2.0 ).sub( 1.0 ), 1.0 );
+diff --git a/src/renderers/common/Renderer.js b/src/renderers/common/Renderer.js
+index c05aa68..857628f 100644
+--- a/src/renderers/common/Renderer.js
++++ b/src/renderers/common/Renderer.js
+@@ -1057,6 +1057,9 @@ class Renderer {
+ 
+ 		const total = compilationPromises.length;
+ 		let loaded = 0;
++		// sanpo patch (ADR-0086): start every pipeline without awaiting each one — the GPU process compiles them in parallel
++		// (awaiting per object serialized all shader compiles: 75 cell groups ≈ 2.5–3 s back-to-back).
++		const pendingPipelines = [];
+ 
+ 		for ( const item of compilationPromises ) {
+ 
+@@ -1074,14 +1077,8 @@ class Renderer {
+ 			this._bindings.updateForRender( renderObject );
+ 			this._isPreCompiling = false;
+ 
+-			// Wait for pipeline creation
+-			const pipelinePromises = [];
+-			this._pipelines.getForRender( renderObject, pipelinePromises );
+-			if ( pipelinePromises.length > 0 ) {
+-
+-				await Promise.all( pipelinePromises );
+-
+-			}
++			// sanpo patch (ADR-0086): collect pipeline creation (awaited together after the loop)
++			this._pipelines.getForRender( renderObject, pendingPipelines );
+ 
+ 			this._isPreCompiling = true;
+ 			this._nodes.updateAfter( renderObject );
+@@ -1100,6 +1097,8 @@ class Renderer {
+ 
+ 		}
+ 
++		if ( pendingPipelines.length > 0 ) await Promise.all( pendingPipelines );
++
+ 	}
+ 
+ 	/**

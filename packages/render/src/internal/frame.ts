@@ -118,7 +118,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
     id: 'render',
     phase: RENDER_PHASE,
     update(f) {
-      ctx.post.render(f.dtReal);
+      ctx.compileScope.frame(() => ctx.post.render(f.dtReal));
       ctx.quality.onFrame(f.dtReal);
       ctx.gpuTimer.afterFrame();
       counters.frames++;

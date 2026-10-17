@@ -32,7 +32,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   removeCell(key: CellKey): void;
   setHlodChildVisible(parent: CellKey, child: number /*0..15*/, visible: boolean): void;  // false = 0.3 s 디더 페이드, true = 즉시(M02-T05)
   loadMaterials(manifestUrl): Promise<MaterialLibraryStats>;  // M03-T01: manifest → 평균색 → KTX2 배열 3장 교체(재컴파일 없음), 첫 표시 뒤 호출
-  precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;   // 첫 표시 전: 대기 LUT(+ 장면 컴파일) → 아바타 (M06, PrecompileProgress{stage,done,total})
+  precompile(onProgress?: (p: PrecompileProgress) => void): Promise<void>;   // 첫 표시 전: 대기 LUT(+ 장면 컴파일) ∥ 셀 머티리얼 기본 변형(precompileBase) → 아바타 (M06, PrecompileProgress{stage,done,total}, ADR-0086)
   precompileLate(onProgress?): Promise<void>;   // 첫 표시 뒤: 머티리얼 ID 묶음마다 1프레임 양보(소품 풀 priming), 소프트웨어 래스터는 생략(ADR-0085)
   stageCells(on); compileStaged(): Promise<void>; commitStaged();
   setSignalLamps(lamp: ((code) => number) | null): void;   // M06-T02(ADR-0062): props 신호 기둥 현시 코드 → 램프 값(차량 1–3 + 4 × 보행 1–2), 보이는 슬롯만·바뀐 범위만 업로드. 소품 풀 정점 버퍼 ≤ 8(_ptype·_itype = vec2). 램프 범위는 같은 프레임 풀 재작성 범위와 **합친다**(지우면 다른 소품 `_itype`가 GPU에 안 가 사라짐 — ADR-0068)
@@ -90,6 +90,7 @@ M01-T06 최소 구현(초기화·reversed-Z·방향광·셀 메시·원점 재�
 - GPU 타이머는 풀 `timestamps` 합산(three 반환값은 마지막 frame id만 — ADR-0029 §6). 그림자는 `renderer.shadowMap.enabled` 필수.
 - WebGPU 경로에 `scene.backgroundNode`를 두지 말 것(환경 프로브와 겹치면 배경 머티리얼 매 프레임 재빌드, ADR-0029 §5).
 - three r186 패치(ADR-0040): `getViewPosition` 역-Z 분기 — 없으면 WebGL2(EXT_clip_control)에서 GTAO·TAAU 히스토리 검증이 틀린 위치를 복원(파사드가 어둡다).
+- 선컴파일(ADR-0086): 모든 `renderer.compileAsync`는 씬 패스 대상(MRT·TAAU 속도 투영 — `renderer/compile-scope.ts`)으로 감싸져 있고, 프레임 렌더는 `ctx.compileScope.frame`으로 부른다(직접 `post.render` 금지). three 패치 = compileAsync 파이프라인 병렬 생성.
 - takram 0.19.1 × three r186: 패치 필수(struct Proxy, requestIdleCallback 타임아웃). LUT가 0이면 조명·하늘이 **검게** 나온다 — `precompile()`의 LUT prepare 확인.
 - 게임 번들은 `three` → `apps/game/src/three-compat.ts` alias(WebGLCubeRenderTarget·WebGLRenderer 대체). render 패키지 테스트(Node)는 실제 `three`를 쓴다.
 - three r186 명칭: 후처리는 `RenderPipeline`(구 PostProcessing), `PCFSoftShadowMap` 제거됨. addon 이름은 `node_modules/three/examples/jsm/{tsl/display,lighting,lights}`에서 확인.

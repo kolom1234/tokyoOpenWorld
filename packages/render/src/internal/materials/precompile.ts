@@ -22,6 +22,8 @@ function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
   const pos = quantized ? new Uint16Array([0, 0, 0, 1, 0, 0, 0, 0, 1]) : new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 1]);
   g.setAttribute('position', new BufferAttribute(pos, 3));
   g.setAttribute('normal', new BufferAttribute(new Int8Array([0, 127, 0, 0, 127, 0, 0, 127, 0]), 3, true));
+  // 셀 메시는 색인이 있다 — 파이프라인 캐시 키에 `index`가 들어간다(ADR-0086).
+  g.setIndex(new BufferAttribute(new Uint16Array([0, 1, 2]), 1));
   if (hlod) g.setAttribute('_child', new BufferAttribute(new Float32Array(3), 1));
   if (hlod && id === 'facade_default') {
     g.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
@@ -39,6 +41,44 @@ function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
     g.setAttribute('_facade', new BufferAttribute(new Uint8Array(12), 4, true));
   }
   return g;
+}
+
+/** 실제 셀 메시와 같은 캐시 키: L0는 그림자를 받고(receiveShadow — 셰이더가 다르다), HLOD는 받지 않는다(cell-node). */
+function dummyMesh(g: BufferGeometry, material: Material, hlod: boolean): Mesh {
+  const m = new Mesh(g, material);
+  if (hlod) m.userData.hlodFade = createHlodFades();
+  m.receiveShadow = !hlod;
+  m.frustumCulled = false;
+  return m;
+}
+
+/**
+ * 첫 표시 전(ADR-0086): L0 셀 머티리얼 기본 변형(+ 파사드 깊이 프리패스)을 더미 메시 한 묶음으로 — 스폰 셀이 내려받아지는 동안 GPU가 병렬로 만든다
+ * (셀이 오면 compileStaged는 캐시만). 장면 밖 묶음(일반 프레임이 동기로 그리지 않게, compileDetached와 같은 이유).
+ */
+export async function precompileBase(
+  renderer: WebGPURenderer,
+  scene: Scene,
+  camera: Camera,
+  materials: MaterialRegistry,
+): Promise<void> {
+  const holder = new Group();
+  const geos = PRECOMPILE_IDS.map((id) => dummyGeometry(id, false));
+  for (const [i, id] of PRECOMPILE_IDS.entries()) {
+    const g = geos[i] as BufferGeometry;
+    holder.add(dummyMesh(g, materials.get(id), false));
+    if (id === 'facade_default') {
+      const p = dummyMesh(g, materials.prepass(), false);
+      p.receiveShadow = false;
+      holder.add(p);
+    }
+  }
+  holder.updateMatrixWorld(true);
+  try {
+    await renderer.compileAsync(holder, camera, scene);
+  } finally {
+    for (const g of geos) g.dispose();
+  }
 }
 
 /** 다음 프레임까지 양보(브라우저 = rAF — GPU 프로세스가 프레임을 내보낼 틈, 그 밖 = 매크로태스크). */
@@ -94,10 +134,7 @@ export async function precompileMaterials(
     const holder = new Group();
     holder.name = 'precompile';
     const add = (g: BufferGeometry, material: Material, hlod: boolean): void => {
-      const m = new Mesh(g, material);
-      if (hlod) m.userData.hlodFade = createHlodFades();
-      m.frustumCulled = false;
-      holder.add(m);
+      holder.add(dummyMesh(g, material, hlod));
     };
     const base = dummyGeometry(id, false);
     geos.push(base);
@@ -110,7 +147,10 @@ export async function precompileMaterials(
       add(hl, materials.getHlod(id, true), true);
     }
     // 건물 파사드 깊이 프리패스(같은 속성 형식).
-    if (id === 'facade_default') add(base, materials.prepass(), false);
+    if (id === 'facade_default') {
+      add(base, materials.prepass(), false);
+      (holder.children.at(-1) as Mesh).receiveShadow = false;
+    }
     meshes += holder.children.length;
     scene.add(holder);
     try {

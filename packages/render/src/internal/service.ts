@@ -7,7 +7,7 @@ import { loadCrowdAssets } from './crowd/assets.ts';
 import { createCrowdMaterial, outfitU } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
 import { nightU, updateNight } from './lighting/night.ts';
-import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
+import { compileDetached, precompileBase, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
 import { createTrainMaterial } from './trains/material.ts';
@@ -134,7 +134,14 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
   const { renderer, view, graph, log } = ctx;
   const t0 = performance.now();
   onProgress?.({ stage: 'atmosphere', done: 0, total: 1 });
-  await ctx.atmosphere.prepare(yieldFrame);
+  // 셀 머티리얼 기본 변형을 대기 LUT·장면 컴파일과 동시에(GPU 프로세스가 병렬로 만든다 — ADR-0086). 소프트웨어 래스터는 셀 컴파일이 짧아 생략.
+  const base = ctx.software
+    ? Promise.resolve()
+    : precompileBase(renderer, graph.scene, view.camera, ctx.materials).catch((e: unknown) =>
+        log.warn('base precompile', e),
+      );
+  await ctx.atmosphere.prepare(yieldFrame, () => ctx.compileScope.frame(() => ctx.post.warmup()));
+  await base;
   onProgress?.({ stage: 'atmosphere', done: 1, total: 1 });
   await yieldFrame();
   const t2 = performance.now();
