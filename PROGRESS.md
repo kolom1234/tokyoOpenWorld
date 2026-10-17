@@ -1,20 +1,19 @@
 # PROGRESS
-Updated: 2026-10-17 (session #24 — ① 첫 표시 개선 + M08 Vehicles, 브랜치 `claude/m08-vehicles`)
+Updated: 2026-10-18 (session #24 — ① 첫 표시 개선 + M08 Vehicles, 브랜치 `claude/m08-vehicles`)
 
 ## Current Milestone: M08 Vehicles (T01 → T02 → T03 → T04)
-## Current Task: M08 마무리 — MVP 재빌드·dev publish·staging 배포·실제 GPU 안내 확인 (T01–T04 완료)
-- Done in this session (#24, 2026-10-17): ① 첫 표시(ADR-0086) staging 6.75–7.64 s(전 8.74–9.11)·26.4 MB.
-  M08-T01(ADR-0087): 세단(WheeledVehicleController, content/vehicles/sedan.json) + drive 모드 + 차 부르기 R + `pnpm drive` 실제 GPU 봇: 0→100 12.42 s, 60 km/h 제동 건조 18.25 m·젖음 27.02 m.
-  M08-T02(ADR-0088): AEB(보행자 예측 원·교통 차·세워 둔 차) + 보도 서행 + sim 교통·군중이 플레이어 탈것을 장애물로 + 신호·정지선·역주행·제한속도 HUD 안내(벌점 없음),
-  파이프라인 거점(cell meta interactables carShare·bikeDock — OSM car_sharing·노면 주차장·bicycle_rental). 실제 GPU 스크램블 군중 주행 접촉 0(최소 0.34 m).
-  M08-T03(ADR-0089): 자전거(MotorcycleController·저속 보조) + cycle 모드 + 렌더 자전거·탄 사람 + 게임 거점 런타임(SANPO Car·SANPO Cycle) + B 자전거 부르기. 실제 GPU: 최고 23.36 km/h, 1 m/s 롤 ≤ 2.54°·넘어짐 0.
-  M08-T04(ADR-0090): 탈것 소리 전부 합성 — 엔진 AudioWorklet(4기통 점화 펄스)·타이어·젖은 노면·끽·바람·체인·프리휠·벨, 출력 시계 결손(언더런 근사) 실제 GPU 0.
-  실측 수정: 세워 둔 탈것 제동+핸드브레이크(경사 주차장 굴러감), 거점 = 탈것 발자국이 건물·차도 밖인 자리만(주차장 중심이 건물 벽에 걸림). 프리셋 carshare-shibuya·bike-dock-harajuku.
-- In progress: 재빌드(거점 발자국 검사) → 프리셋 좌표 확정 → dev publish → staging 배포 → 실제 GPU 안내 순서 확인.
-- Next step (정확히 한 걸음): 재빌드 결과 확인 → scratch spots.ts로 시부야·하라주쿠 거점 좌표 → content/spawn-presets.json 갱신 → 실제 GPU 프리셋 확인.
-- Blockers: 없음. ODPT 키 없음(M08 무관). 거점 데이터는 MVP 재빌드 뒤부터(옛 빌드 interactables 비어 있음).
+## Current Task: M08 Vehicles 완료(T01–T04) — PR #23 사람 확인 대기
+- Done in this session (#24, 2026-10-17~18, 브랜치 `claude/m08-vehicles`, PR #23): ① 첫 표시(ADR-0086) + M08-T01–T04(ADR-0087–0090). 수치는 아래 Recently Completed·PR 본문.
+  MVP 재빌드 `20261017-18986b3-cba213ec`(L0 294 + HLOD 177, validate 0, 거점 카셰어 147·공유자전거 117) → dev 버킷 publish(current) → staging Worker b9913ddc(코드 41e9e72). dev 버킷 gc(7일) 3개 삭제.
+- In progress: 없음. 사람 확인(PR 본문 "따라 해 보기" — 엔진음 변속 리뷰 포함) 대기.
+- Next step (정확히 한 걸음): 사용자 확인 결과 반영 → 병합 뒤 M10(로드맵 docs/17) 첫 태스크 블록 Read. (⚠️ 후속 후보: 첫 표시 선컴파일 체인 변동 6.6–9.2 s, 탄 사람 다리 애니메이션, 운전석 실내 모델.)
+- Blockers: 없음. ODPT 키 없음(M08 무관).
 
 ## Recently Completed
+- M08 Vehicles T01–T04(2026-10-17~18, PR #23) — 세단(Jolt WheeledVehicleController·ABS·TCS·마찰 콜백)·drive 모드(추적·우핸들 운전석)·카셰어 SANPO Car(가상), AEB(보행자 예측·교통 차)·보도 서행·교통/군중이 플레이어 탈것 인지·신호·역주행·제한속도 HUD 안내(벌점 없음),
+  자전거(MotorcycleController·저속 보조)·cycle 모드·공유자전거 SANPO Cycle, 거점 = OSM car_sharing·노면 주차장·bicycle_rental(발자국 비어 있고 평평한 자리), 탈것 소리 전부 합성(엔진 AudioWorklet·타이어·젖은 노면·끽·바람·체인·프리휠·벨).
+  **수락(staging 실제 GPU)**: 0→100 12.47 s, 60 km/h 제동 18.38 m·젖음 27.18 m, 군중 접촉 0(최소 0.34 m), 자전거 23.41 km/h·1 m/s 넘어짐 0, 오디오 결손 0, 22–23 W. 첫 로드 26.45 MB, 첫 표시 6.64–9.20 s ⚠️(선컴파일 체인 변동).
+  실측 수정: 키보드 F 탑승 즉시 하차(armed), 세워 둔 탈것 굴러감(제동), 거점이 건물 벽·단 가장자리(발자국·평탄 검사), 탈것 선컴파일이 첫 표시와 경쟁(두 프레임 뒤로), 첫 워클릿 노드 끊김(unlock 때 적재). 스폰 프리셋 carshare-shibuya·bike-dock-harajuku·drive-course·bike-course. ADR-0086–0090
 - 사람 확인 후속(2026-10-13~14, PR #22) — ① 원인: 하라주쿠 외회가 옛 승강장에 정차해 섬식 승강장 서쪽 가장자리에 홈도어 없음 + 도착점이 그 가장자리 1.2 m + 물리에 승강장 윗면만 → 한 걸음에 선로 구덩이(1.5 m)·승강장 밑.
   `preferPlatforms`·도착 = 승강장 윗면 메시 + 여유 1.2 m·구덩이 0.4 s 구조·승강장 옆면 물리·출구 4역·validate stations·`pnpm stations`(ADR-0082). ② freecam G(지면·승강장, 차양 통과, 선로·차도·건물 안·물체·경사 거부 + 이유 HUD)·조작 도움말 H(ADR-0083).
   ③ 가상 안내판(출구당 4장)·근접 안내·`?spawn=` 8개·walk 착지 중 플레이어 = 도착점(ADR-0084). ④ 문 앞 1.3 m 탑승·"F 열차 타기"·route 봇. ⑤ precompileLate·exclusive 첫 표시까지·warmStaged·e2e STATE_VIEW 640×360(ADR-0085).
@@ -45,11 +44,6 @@ Updated: 2026-10-17 (session #24 — ① 첫 표시 개선 + M08 Vehicles, 브�
   physics `worker/kinematics.ts`(sim 직결 포트 → NPC_KINEMATIC 상자, 외삽 MoveKinematic). 실제 GPU에서 찾아 고침: TAA 모션 벡터(positionPrevious — 차량·군중), 횡단보도 위 정차(런타임 횡단 띠 앞 정지 —
   world-mini 35 % → 0), 차 높이(차선 점 4 m — ±0.02 m), 차선 넘김 중심 튐. **수락**: 단위(실제 Jolt 최소 간격 0.136 m) + 걷기 봇 5분 × 2 관통 0·낙하 0·끼임 0 ✅.
   물리 틱 ≤ 0.33 ms, sim p95 2.7–4.5 ms, GPU +1.3/−0.35 ms(거리)·+0.01 ms(상공). 나무·간판 TAA 모션 벡터는 별도 작업 칩. ADR-0066 (2026-10-05)
-- M06-T05 Traffic — 파이프라인 `derive/lanes*`·`build/lanes-cell.ts`: OSM 간선 → 좌측통행 차선·교차로 정지선·연결로(좌 = 연석·우 = 안쪽)·신호 코드·셀 포털 → `lanes.bin` v2.
-  신호 코드 배치 변경(연동 오프셋 칸 6비트·ID 14비트), 주축 A = 등급 가중(간선), 기본 계획 A 67 s·B 43 s. sim.worker `traffic/*`(그래프 병합·IDM·회전·양보·스폰) + 차량 SAB, game 448 m nav+lanes.
-  **수락**: world-mini 10분(40대) 교착 0 ✅·적신호 통과 0 ✅, 메이지도리 평균 속도 비율 **0.37 ⚠️**(목표 0.4–0.8, 신호 없으면 0.82 — 120 s 주기·회전·가장자리). 브라우저 9셀 정오 90대 + 보행자 950:
-  워커 p95 2.2–2.7 ms, 위반·교착 0. ADR-0065 (2026-10-04)
-
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
 - [bridges] **PLATEAU 상판 없는 OSM 단독 육교**(M05-T08 ⚠️): `highway=footway + bridge=yes`(+ 계단 두 끝) 중 PLATEAU brid가 없는 것 — OSM 선 + 폭 태그(없으면 2.5 m)로 절차 상판·난간·계단 메시 + JCOL 램프. 공원 비탈 계단(두 끝 지형)도 같은 경로.
@@ -59,8 +53,9 @@ Updated: 2026-10-17 (session #24 — ① 첫 표시 개선 + M08 Vehicles, 브�
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
-- [perf] staging 첫 표시(골든 부트) 6.75–7.64 s(ADR-0086 — 전 8.7–9.1 s). 남은 임계 경로 = 선컴파일 체인(첫 조명 셰이더 ≈ 2.3 s + 대기 LUT, 끝 ≈ 5.7–6.5 s) → 첫 프레임 동기 생성(그림자 패스 변형·HLOD/원경 지형 ≈ 0.3–0.6 s). 대기 LUT는 첫 프레임 updateBefore와 prepare에서 두 번 계산(임계 경로 밖).
-- [audio] 녹음 베드는 자동 음조 검사만 거침 — 사람 귀 검수 필요(안내방송·음악 섞임 시 library.json 원천·구간 교체 후 `pnpm pipeline audio --update-lock`). drive 모드 엔진음은 합성만 준비.
+- [vehicles] (M08 ⚠️) 운전석 실내·계기판 모델 없음(HUD), 앞바퀴 조향·서스펜션 렌더 없음, 전조등 노면 조명 없음, 탄 사람 = 상자 마네킹(페달 다리·발 딛기 자세 없음), 자전거 독 설비 모델 없음. 붐비는 광장(하라주쿠 거점)에선 AEB가 자주 세운다(의도 — 보행자 우선). 교통 NPC 엔진음 없음.
+- [perf] staging 첫 표시(골든 부트) 6.75–7.64 s(ADR-0086 — 전 8.7–9.1 s) → M08 뒤 6.64–9.20 s(10회, 2026-10-18): 탈것 작업은 첫 표시 두 프레임 뒤로 뺐고(선컴파일 끝 → 첫 표시 1.2–1.3 s 그대로), 변동은 대기 선컴파일 4.9–6.4 s(전력 상태). 남은 임계 경로 = 선컴파일 체인(첫 조명 셰이더 ≈ 2.3 s + 대기 LUT, 끝 ≈ 5.7–6.5 s) → 첫 프레임 동기 생성(그림자 패스 변형·HLOD/원경 지형 ≈ 0.3–0.6 s). 대기 LUT는 첫 프레임 updateBefore와 prepare에서 두 번 계산(임계 경로 밖).
+- [audio] 녹음 베드는 자동 음조 검사만 거침 — 사람 귀 검수 필요(안내방송·음악 섞임 시 library.json 원천·구간 교체 후 `pnpm pipeline audio --update-lock`). 탈것 소리(ADR-0090)는 전부 합성 — 변속 음 자연스러움은 사람 귀 리뷰 대기.
 - [stations] 역 계단·콘코스 기하 없음 — 개찰구 안 계단 입구 ↔ 승강장은 F 페이드 이동(ADR-0081), 출구는 역마다 1곳(하라주쿠 다케시타·요요기 서·신주쿠 서·시부야 하치코 — 가상 배치, ADR-0082), HUD 안내·도움말은 임시 DOM(M08 대체). 승강장 끝(홈도어 밖)·주오선 쪽 가장자리는 열려 있고 구덩이 구조가 받는다. 차선 데이터 없는 골목 차도는 G 차도 판정 밖.
 - [rail] 역 건물 = 선로·승강장 구간 벽만 레일 띠에서 잘림(ADR-0075) — 잘린 가장자리 두께 없음, 회랑 밖 벽 유지(승강장 바깥쪽 시야 일부), 선로 위 건물 충돌 제외 유지(역 동선은 M07-T06).
 - [rail] 항공사진 대조 1 m 초과 15 %(T01 ⚠️ — 0.49 m/px 한계, 시부야 데크·고층 그늘), 역간 소요 = 곡선 그대로라 실제보다 짧다(시부야→하라주쿠 91 s vs ≈ 2분, 근사 — 노선별 여유 계수 후보).

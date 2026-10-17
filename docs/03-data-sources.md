@@ -13,7 +13,7 @@
 | `gsi-dem` | 기반지도정보 수치표고모델 **1 m (DEM1A, 항공레이저) 주** + 5 m (DEM5A) 결측 채움. 2025-08-22판(수평 JGD2024 = JGD2011, 표고는 2025 개정 기준) | 국토지리원 | 지형 높이장, 물리 heightfield | 국토지리원 콘텐츠 이용규약(CC BY 4.0 호환). 표기: `出典：国土地理院（基盤地図情報 数値標高モデル）を加工して作成` ⚠ 측량법 승인 필요 여부 |
 | `gsi-dem-tiles` | 지리원 타일 표고 타일 `dem_png` z14(기반지도정보 수치표고모델 기반, ≈ 8 m 화소) | 국토지리원 | HLOD 원경 지형(L2 16 m·L3 64 m·영역 밖 L1) — hlodExtentWF 48 km 정사각형, 676 타일 | 국토지리원 콘텐츠 이용규약(CC BY 4.0 호환). 표기 `出典：国土地理院（地理院タイル 標高タイル）を加工して作成` |
 | `gsi-photo` | 지리원 타일 전국최신사진(seamlessphoto) | 국토지리원 | **검증 전용**(M05-T02 횡단보도 위치 대조 z18, `checks/markings-photo.ts` — 게임 데이터에 굽지 않음). 원거리 지면 알베도 참고는 미사용 | 동 규약. 표기 `出典：地理院タイル（全国最新写真）` |
-| `osm-kanto` | OpenStreetMap 간토 추출본 (Geofabrik `kanto-260929.osm.pbf` 고정판, `normalize --layer osm`) | OSM 기여자 | 도로 속성(차선·일방통행·제한속도), 신호, 철도 선로 상세, 플랫폼, 나무, 공원, POI 이름, 건물 층수 보완 | **ODbL 1.0**. 표기 `© OpenStreetMap contributors`. 파생 DB 공개 의무 → §4 참조 |
+| `osm-kanto` | OpenStreetMap 간토 추출본 (Geofabrik `kanto-260929.osm.pbf` 고정판, `normalize --layer osm`) | OSM 기여자 | 도로 속성(차선·일방통행·제한속도), 신호, 철도 선로 상세, 플랫폼, 나무, 공원, POI 이름, 건물 층수 보완, 카셰어·공유자전거 거점 위치(M08 — amenity=car_sharing·노면 주차장·bicycle_rental, 위치만 — 운영사 이름·브랜드 미사용) | **ODbL 1.0**. 표기 `© OpenStreetMap contributors`. 파생 DB 공개 의무 → §4 참조 |
 | `ksj-n02` | 국토수치정보 철도 데이터(N02, **2025년도판** `N02-25_GML.zip`, `pnpm pipeline fetch --source ksj-n02` — sha256 lock) | 국토교통성 | 노선 식별 대조(OSM 선로 ↔ 노선·사업자, 평균 4.7–9.5 m), 역 위치 | **CC BY 4.0**(2020년도판 이후 오픈 데이터 — 다운로드 페이지 표기). 표기 `出典：国土数値情報（鉄道データ）（国土交通省）を加工して作成` |
 | `estat-small-area` | 국세조사 소지역(町丁・字) 경계 2020 | e-Stat | HUD 지명 표시(○○区 ○○町 ○丁目) | 정부표준이용규약(CC BY 4.0 호환). 표기 `出典：政府統計の総合窓口(e-Stat)` |
 
