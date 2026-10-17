@@ -88,9 +88,19 @@ function presetSpawnSystem(
 type ExtrasDeps = Parameters<typeof startWorldExtras>[0];
 type ExtrasServices = Parameters<typeof startWorldExtras>[1];
 
+/** n 애니메이션 프레임 뒤(rAF 없으면 0 ms 타이머). */
+function framesLater(n: number): Promise<void> {
+  const raf = globalThis.requestAnimationFrame ?? ((cb: () => void) => setTimeout(cb, 0));
+  return new Promise((r) => {
+    const tick = (k: number): void => void (k <= 0 ? r() : raf(() => tick(k - 1)));
+    tick(n);
+  });
+}
+
 /** 플레이어 차·자전거(M08-T01·T03): 세워 둔 탈것·거점·부르기·계기판. */
 function wireVehicles(deps: ExtrasDeps, v: ExtrasServices, late: LateState): void {
-  const shown = late.shown ?? Promise.resolve();
+  // 첫 표시 뒤 두 프레임 — shown.then에서 바로 시작하면 플레이어 탈것 선컴파일(동기 노드 빌드)이 첫 표시 표시·첫 프레임보다 먼저 돌았다(staging +1.7 s).
+  const shown = (late.shown ?? Promise.resolve()).then(() => framesLater(2));
   const cars = createVehicleWiring({
     doc: deps.canvas.ownerDocument,
     render: v.render,
