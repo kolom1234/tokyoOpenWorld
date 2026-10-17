@@ -1,15 +1,13 @@
 # PROGRESS
-Updated: 2026-10-14 (session #23 — M09·M07 사람 확인 후속 ①–⑤, 브랜치 `claude/m09-m07-followups`, draft PR #22)
+Updated: 2026-10-17 (session #24 — ① 첫 표시 개선 + M08 Vehicles, 브랜치 `claude/m08-vehicles`)
 
-## Current Milestone: M09 ✅ + M07-T06 ✅ + 사람 확인 후속 ✅ → 다음 = M08 UI
-## Current Task: (없음 — 후속 ①–⑤ 완료, PR #22 draft 사람 확인 대기)
-- Done in this session (#23, 2026-10-13~14): ① 계단 도착·구덩이 구조·출구 4역·validate stations(ADR-0082) ② freecam G 카메라 아래 내리기·조작 도움말(ADR-0083)
-  ③ 역 가상 안내판·근접 안내·`?spawn=` 8개(ADR-0084, docs/12 §2.1) ④ 문 앞 탑승 + 하라주쿠→신주쿠 실제 GPU 봇(`pnpm stations`) ⑤ 선컴파일 분리·e2e 경량화(ADR-0085).
-  MVP 재빌드 `20261013-363d72a-cba213ec`(294셀 280 s + HLOD 177, validate 0, 하라주쿠 내·외회 = 섬식 a288861390) → dev 버킷 publish(505파일 392.9 MB, current) → staging Worker 03909919.
-  staging 실제 GPU: `pnpm stations`(역 4곳 + 하라주쿠→신주쿠) 통과, 첫 로드 26.4 MB, walk 시작 7.3–8.2 s · 골든 부트 지표 8.3–9.0 s(⚠️ M06 7.2–7.9). e2e 로컬 3.0·3.0분(연속 2회), CI 7.6·9.3분.
-- In progress: 없음.
-- Next step (정확히 한 걸음): 사용자 staging 확인(PR #22 "따라 하기") → PR 머지 → M08 시작(`docs/roadmap/M08.md` 첫 태스크). M08에서 첫 조명 셰이더 3.3 s(첫 표시 임계 경로) 보기.
-- Blockers: 없음. (세션 중 Docker Desktop 시작 실패 → 사용자가 복구, 이미지·볼륨 유지 확인.)
+## Current Milestone: M08 Vehicles (T01 → T02 → T03 → T04)
+## Current Task: M08-T01 Sedan physics & drive mode
+- Done in this session (#24, 2026-10-17): ① 첫 표시 — 선컴파일을 씬 패스 대상(MRT·TAAU 속도 투영)으로·three compileAsync 파이프라인 병렬(패치)·셀 기본 머티리얼 조기 컴파일(ADR-0086).
+  staging(코드 ea0262c, Worker 473a2836, 월드 그대로 `20261013-363d72a-cba213ec`) 골든 부트 첫 표시 **6.75–7.64 s**(전 8.74–9.11 s, M06 7.2–7.9) · 첫 로드 26.4 MB · 22–27 W.
+- In progress: M08-T01.
+- Next step (정확히 한 걸음): `docs/roadmap/M08.md` T01 블록 → physics `worker/vehicle-sedan.ts`(WheeledVehicleController) + `content/vehicles/sedan.json`.
+- Blockers: 없음. ODPT 키 없음(긴자선 대기 — M08 무관).
 
 ## Recently Completed
 - 사람 확인 후속(2026-10-13~14, PR #22) — ① 원인: 하라주쿠 외회가 옛 승강장에 정차해 섬식 승강장 서쪽 가장자리에 홈도어 없음 + 도착점이 그 가장자리 1.2 m + 물리에 승강장 윗면만 → 한 걸음에 선로 구덩이(1.5 m)·승강장 밑.
@@ -56,7 +54,7 @@ Updated: 2026-10-14 (session #23 — M09·M07 사람 확인 후속 ①–⑤, �
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
-- [perf] staging 첫 표시: walk 시작 7.3–8.2 s, 골든 부트 지표 8.3–9.0 s ⚠️(M06 7.2–7.9 s, M09 10.2–11.9 s → ADR-0085로 개선). 남은 임계 경로 = 첫 조명 셰이더 파이프라인 ≈ 3.3 s(어느 메시든 처음 컴파일하는 쪽 — 큰 조명 셰이더) + 스폰 셀 75묶음 compileStaged ≈ 2.8 s가 GPU 프로세스 컴파일을 나눠 씀. 첫 프레임 render ≈ 0.6 s(후처리 파이프라인) 별도. 후보: 조명 노드 정리·셰이더 변형 줄이기(M08 로딩).
+- [perf] staging 첫 표시(골든 부트) 6.75–7.64 s(ADR-0086 — 전 8.7–9.1 s). 남은 임계 경로 = 선컴파일 체인(첫 조명 셰이더 ≈ 2.3 s + 대기 LUT, 끝 ≈ 5.7–6.5 s) → 첫 프레임 동기 생성(그림자 패스 변형·HLOD/원경 지형 ≈ 0.3–0.6 s). 대기 LUT는 첫 프레임 updateBefore와 prepare에서 두 번 계산(임계 경로 밖).
 - [audio] 녹음 베드는 자동 음조 검사만 거침 — 사람 귀 검수 필요(안내방송·음악 섞임 시 library.json 원천·구간 교체 후 `pnpm pipeline audio --update-lock`). drive 모드 엔진음은 합성만 준비.
 - [stations] 역 계단·콘코스 기하 없음 — 개찰구 안 계단 입구 ↔ 승강장은 F 페이드 이동(ADR-0081), 출구는 역마다 1곳(하라주쿠 다케시타·요요기 서·신주쿠 서·시부야 하치코 — 가상 배치, ADR-0082), HUD 안내·도움말은 임시 DOM(M08 대체). 승강장 끝(홈도어 밖)·주오선 쪽 가장자리는 열려 있고 구덩이 구조가 받는다. 차선 데이터 없는 골목 차도는 G 차도 판정 밖.
 - [rail] 역 건물 = 선로·승강장 구간 벽만 레일 띠에서 잘림(ADR-0075) — 잘린 가장자리 두께 없음, 회랑 밖 벽 유지(승강장 바깥쪽 시야 일부), 선로 위 건물 충돌 제외 유지(역 동선은 M07-T06).
