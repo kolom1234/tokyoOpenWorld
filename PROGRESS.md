@@ -2,13 +2,15 @@
 Updated: 2026-10-17 (session #24 — ① 첫 표시 개선 + M08 Vehicles, 브랜치 `claude/m08-vehicles`)
 
 ## Current Milestone: M08 Vehicles (T01 → T02 → T03 → T04)
-## Current Task: M08-T02 AEB, traffic interaction, summon & car-share spots
+## Current Task: M08-T04 Vehicle audio (T01–T03 완료)
 - Done in this session (#24, 2026-10-17): ① 첫 표시(ADR-0086) staging 6.75–7.64 s(전 8.74–9.11)·26.4 MB.
-  M08-T01(ADR-0087): physics 세단(WheeledVehicleController, content/vehicles/sedan.json, ABS·TCS·저항·마찰 콜백·기울기 상한 35°) + traversal drive(추적·우핸들 운전석, F 하차)
-  + render 플레이어 차(가상 카셰어 도장) + game vehicles/(차 부르기 R·HUD) + `pnpm drive` 실제 GPU 봇(코스 `drive-course`): 0→100 12.42 s, 60 km/h 제동 건조 18.25 m·젖음 27.02 m.
-- In progress: M08-T02(AEB·교통 AI 양보·카셰어 스팟).
-- Next step (정확히 한 걸음): T02 블록 Read → physics AEB(전방 레이 TTC < 1.5 s — 보행자·자전거) + sim 교통이 플레이어 차를 장애물로(sim 직결 포트 반대 방향).
-- Blockers: 없음. ODPT 키 없음(M08 무관).
+  M08-T01(ADR-0087): 세단(WheeledVehicleController, content/vehicles/sedan.json) + drive 모드 + 차 부르기 R + `pnpm drive` 실제 GPU 봇: 0→100 12.42 s, 60 km/h 제동 건조 18.25 m·젖음 27.02 m.
+  M08-T02(ADR-0088): AEB(보행자 예측 원·교통 차·세워 둔 차) + 보도 서행 + sim 교통·군중이 플레이어 탈것을 장애물로 + 신호·정지선·역주행·제한속도 HUD 안내(벌점 없음),
+  파이프라인 거점(cell meta interactables carShare·bikeDock — OSM car_sharing·노면 주차장·bicycle_rental). 실제 GPU 스크램블 군중 주행 접촉 0(최소 0.34 m).
+  M08-T03(ADR-0089): 자전거(MotorcycleController·저속 보조) + cycle 모드 + 렌더 자전거·탄 사람 + 게임 거점 런타임(SANPO Car·SANPO Cycle) + B 자전거 부르기. 실제 GPU: 최고 23.36 km/h, 1 m/s 롤 ≤ 2.54°·넘어짐 0.
+- In progress: 거점 스폰 프리셋(carshare-shibuya·bike-dock-harajuku — 재빌드 뒤 거점 좌표로) → M08-T04.
+- Next step (정확히 한 걸음): T04 블록 Read(`### M08-T04`) → audio 엔진 합성 보이스(RPM·부하)·변속·타이어(슬립)·젖은 노면 → game 배선(vehicleState).
+- Blockers: 없음. ODPT 키 없음(M08 무관). 거점 데이터는 MVP 재빌드 뒤부터(옛 빌드 interactables 비어 있음).
 
 ## Recently Completed
 - 사람 확인 후속(2026-10-13~14, PR #22) — ① 원인: 하라주쿠 외회가 옛 승강장에 정차해 섬식 승강장 서쪽 가장자리에 홈도어 없음 + 도착점이 그 가장자리 1.2 m + 물리에 승강장 윗면만 → 한 걸음에 선로 구덩이(1.5 m)·승강장 밑.
