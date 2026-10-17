@@ -2,7 +2,7 @@
 // 카셰어 = amenity=car_sharing 점(셀 소유) → 건물 안이면 가까운 열린 땅(차도·보도·건물 아님 — 주차장·광장)으로, 없으면 그대로(런타임이 연석으로 옮김);
 //          (면이면 중심) 셀에 없으면 amenity=parking 노면 주차장 면(공용·150–20,000 m²) 하나의 중심(면 안·건물 아님).
 // 공유자전거 = amenity=bicycle_rental 점(보도·광장 위면 그대로, 차도면 가까운 비차도로). yaw = 가장 가까운 차도 쪽을 바라봄(게임 규약: 전방 = (−sin, −cos)).
-// 자리 = 탈것 발자국(+ 타는 쪽 여유)이 통째로 건물·차도 밖인 가장 가까운 점(재빌드 실측: 주차장 면 중심이 PLATEAU 건물 벽에 걸려 차가 반쯤 묻혔다) — 없으면 버림.
+// 자리 = 탈것 발자국(+ 타는 쪽 여유)이 통째로 건물·차도 밖이고 평평한(높이 차 ≤ 0.25 m) 가장 가까운 점(재빌드 실측: 주차장 면 중심이 PLATEAU 건물 벽에 걸려 차가 반쯤 묻혔다) — 없으면 버림.
 // 셀당 상한·서로 띄우기(결정론 — OSM id 순). see docs/roadmap/M08.md M08-T02·T03
 import type { InteractableRecord } from '@sanpo/tile-format';
 import type { OsmRecord } from '../normalize-osm.ts';
@@ -71,6 +71,22 @@ export function footClear(p: V2, yaw: number, f: Foot, ok: (x: number, z: number
   return true;
 }
 
+/** 발자국 위 표면 높이 차(최대 − 최소) 상한(m) — 계단·옹벽 가장자리에 세우면 탈것이 기울어 미끄러졌다(재빌드 실측). */
+const MAX_RISE_M = 0.25;
+
+/** 발자국 표면이 평평한가(표본 높이 차 ≤ MAX_RISE_M, 표면 없는 점 = 실패). */
+export function footFlat(c: ShareSpotCtx, p: V2, yaw: number, f: Foot): boolean {
+  let lo = Number.POSITIVE_INFINITY;
+  let hi = Number.NEGATIVE_INFINITY;
+  return footClear(p, yaw, f, (x, z) => {
+    const y = c.surfaceAt(x - c.ox, z - c.oz);
+    if (y === undefined) return false;
+    lo = Math.min(lo, y);
+    hi = Math.max(hi, y);
+    return hi - lo <= MAX_RISE_M;
+  });
+}
+
 /** 발자국이 들어가는 가장 가까운 점(링 1 m 걸음, 16방위 — yaw = 그 점에서 차도 쪽). */
 function place(
   c: ShareSpotCtx,
@@ -79,7 +95,11 @@ function place(
   foot: Foot,
   maxM: number,
 ): V2 | undefined {
-  const fits = (q: V2) => ok(q[0], q[1]) && footClear(q, yawTowardRoad(c, q), foot, ok);
+  const fits = (q: V2) => {
+    if (!ok(q[0], q[1])) return false;
+    const yaw = yawTowardRoad(c, q);
+    return footClear(q, yaw, foot, ok) && footFlat(c, q, yaw, foot);
+  };
   if (fits(p)) return p;
   for (let d = 1; d <= maxM; d++)
     for (let k = 0; k < 16; k++) {

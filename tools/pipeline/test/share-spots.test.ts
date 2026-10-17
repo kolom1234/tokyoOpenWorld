@@ -1,7 +1,7 @@
 // 카셰어·공유자전거 거점(M08-T02·T03): car_sharing 점(건물 안이면 가까운 열린 땅), 없으면 노면 주차장 면 중심, bicycle_rental 점(차도면 비차도로),
 // yaw = 차도 쪽(전방 −Z 규약), 셀 소유·상한·간격, 지하·사유 주차장 제외.
 import { describe, expect, it } from 'vitest';
-import { footClear, shareSpots, yawTowardRoad } from '../src/stages/derive/share-spots.ts';
+import { footClear, footFlat, shareSpots, yawTowardRoad } from '../src/stages/derive/share-spots.ts';
 import type { OsmRecord } from '../src/stages/normalize-osm.ts';
 
 /** 셀 원점 (0, 0): x < 10 = 차도, 10–14 = 보도, 그 밖 = 열린 땅. 건물 = 50 ≤ x < 70, 50 ≤ z < 70. */
@@ -55,6 +55,20 @@ describe('share spots (M08)', () => {
     expect(footClear(p, s?.yaw ?? 0, { halfLen: 2.6, halfWid: 1.0, side: 1.4 }, open)).toBe(true);
     // 너무 좁은 면(전부 건물 안)은 버린다.
     expect(shareSpots(ctx, [square('a8', 52, 52, 16, { amenity: 'parking' })])).toEqual([]);
+  });
+
+  it('needs flat ground under the footprint (step edge → moves to the flat side)', () => {
+    // x < 30 높이 31.5, 그 밖 33.0(1.5 m 단) — 단 가장자리 점은 평평한 쪽으로.
+    const stepped = { ...ctx, surfaceAt: (x: number) => (x < 30 ? 31.5 : 33) };
+    const [s] = shareSpots(stepped, [point('b9', 30, 100, { amenity: 'bicycle_rental' })]);
+    expect(s).toBeDefined();
+    expect(
+      footFlat(stepped, [s?.posLocal[0] ?? 0, s?.posLocal[2] ?? 0], s?.yaw ?? 0, {
+        halfLen: 1.1,
+        halfWid: 0.8,
+        side: -0.9,
+      }),
+    ).toBe(true);
   });
 
   it('bicycle_rental on the road moves off it; cap, spacing and cell ownership', () => {
