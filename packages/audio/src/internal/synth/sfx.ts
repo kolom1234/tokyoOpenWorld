@@ -72,6 +72,15 @@ export const SFX_TONES: Readonly<
     ],
   },
   uiClick: { tones: [{ t: 0, dur: 0.03, f: 2200, bright: 0, gain: 0.25 }] },
+  // 자전거 벨(M08-T04): 비화성 두 부분음(종 — 2.96·4.19 kHz) 두 번 "따릉"(일반 종소리 — 특정 제품음 아님).
+  bicycleBell: {
+    tones: [
+      { t: 0, dur: 0.5, f: 2960, bright: 0, gain: 0.32 },
+      { t: 0, dur: 0.35, f: 4190, bright: 0, gain: 0.16 },
+      { t: 0.14, dur: 0.6, f: 2960, bright: 0, gain: 0.3 },
+      { t: 0.14, dur: 0.4, f: 4190, bright: 0, gain: 0.15 },
+    ],
+  },
 };
 
 /** 재생 길이(s, 꼬리 포함). */

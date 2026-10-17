@@ -153,12 +153,27 @@ for (const v of SELECTED) {
   });
 }
 
-/** 스폰(기본 부팅) 첫 표시까지 받은 바이트(14 §2 초기 다운로드 ≤ 60 MB). 새 컨텍스트 = 캐시 없음. */
+/** 부팅 로그 중 첫 표시 경로 단계 시간(ms) — 렌더 선컴파일·대기 셀 컴파일 로그 줄. */
+const BOOT_LOG = /precompile|staged cells|first display|vehicles attached|trains attached/;
+const BOOT_RUNS = Math.max(1, Number(process.env.GOLDEN_BOOT_RUNS ?? '1'));
+
+/** 스폰(기본 부팅) 첫 표시까지 받은 바이트(14 §2 초기 다운로드 ≤ 60 MB)·시간. 새 컨텍스트 = 캐시 없음. GOLDEN_BOOT_RUNS = 반복 수. */
 test('boot transfer to first display', async ({ browser }) => {
   test.skip(process.env.GOLDEN_BOOT !== '1', 'GOLDEN_BOOT=1일 때만');
+  const runs: unknown[] = [];
+  for (let i = 0; i < BOOT_RUNS; i++) runs.push(await bootOnce(browser));
+  metrics.boot = runs.length === 1 ? runs[0] : runs;
+});
+
+async function bootOnce(browser: Browser): Promise<Record<string, unknown>> {
   const page = await freshPage(browser);
   const bytes: Record<string, number> = { world: 0, materials: 0, other: 0 };
   const pending: Promise<void>[] = [];
+  const log: string[] = [];
+  const t0 = Date.now();
+  page.on('console', (m) => {
+    if (BOOT_LOG.test(m.text())) log.push(`${((Date.now() - t0) / 1000).toFixed(2)} ${m.text()}`);
+  });
   page.on('requestfinished', (r) => {
     const url = r.url();
     const kind = /\/materials\//.test(url) ? 'materials' : /\/(local-world|world)\//.test(url) ? 'world' : 'other';
@@ -168,13 +183,15 @@ test('boot transfer to first display', async ({ browser }) => {
       }),
     );
   });
-  const t0 = Date.now();
-  await page.goto(`/?${WORLD.replace(/&$/, '')}`);
+  const query = [WORLD.replace(/&$/, ''), EXTRA_QUERY.replace(/^&/, '')].filter((x) => x !== '').join('&');
+  await page.goto(`/?${query}`);
   await expect(page.locator('#app')).toHaveAttribute('data-rendered-cells', /[1-9]/, { timeout: 120_000 });
   const firstDisplayS = (Date.now() - t0) / 1000;
   await Promise.all(pending);
   const mb = Object.fromEntries(Object.entries(bytes).map(([k, v]) => [`${k}MB`, v / 1e6]));
   const total = Object.values(bytes).reduce((a, b) => a + b, 0) / 1e6;
-  metrics.boot = { firstDisplayS, transferMB: total, ...mb };
+  // 첫 표시 뒤 로그(지연 선컴파일·레이어 붙이기)도 보려면 GOLDEN_BOOT_TAIL_MS(전송량은 위에서 이미 셈).
+  await page.waitForTimeout(Number(process.env.GOLDEN_BOOT_TAIL_MS ?? '0'));
   await page.context().close();
-});
+  return { firstDisplayS, transferMB: total, ...mb, log };
+}

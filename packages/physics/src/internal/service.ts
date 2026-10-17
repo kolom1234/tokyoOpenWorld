@@ -14,7 +14,17 @@ import type {
 } from '../api.ts';
 import { createCommandQueue } from './host/command-queue.ts';
 import { createSnapshotHistory, readSab } from './host/snapshot-reader.ts';
-import { FRAME_F64, type FromWorker, isIsolated, MAX_BODIES, SLOT_BITS, SNAPSHOT_BYTES, slotOf } from './protocol.ts';
+import { createVehicleReader } from './host/vehicle-reader.ts';
+import {
+  type Command,
+  FRAME_F64,
+  type FromWorker,
+  isIsolated,
+  MAX_BODIES,
+  SLOT_BITS,
+  SNAPSHOT_BYTES,
+  slotOf,
+} from './protocol.ts';
 import { sabViews } from './worker/snapshot-writer.ts';
 
 /** 01-architecture §5 phase 표: physics = 30(traversal 20 뒤, traversalPost 35 앞). */
@@ -196,6 +206,27 @@ type BodyApi = Pick<
   PhysicsService,
   'debugSpawnBox' | 'spawnCharacter' | 'setCharacterInput' | 'despawn' | 'teleport' | 'pose'
 >;
+type VehicleApi = Pick<PhysicsService, 'spawnVehicle' | 'setVehicleInput' | 'vehicleState' | 'setSurfaceWetness'>;
+
+/** 플레이어 차량(M08-T01): 생성·입력 명령, 최신 스냅샷 차량 기록. */
+function vehicleApi(
+  queue: ReturnType<typeof createCommandQueue>,
+  handles: ReturnType<typeof createHandles>,
+  history: ReturnType<typeof createSnapshotHistory>,
+): VehicleApi {
+  const reader = createVehicleReader(() => history.latest);
+  return {
+    spawnVehicle(kind, posWF, yaw, params) {
+      const h = handles.alloc();
+      reader.forget(h);
+      queue.push({ c: 'vehicle', h, kind, posWF: { ...posWF }, yaw, params } as Command);
+      return h;
+    },
+    setVehicleInput: (h, i) => queue.push({ c: 'vehInput', h, input: { ...i } }),
+    vehicleState: (h) => reader.state(h),
+    setSurfaceWetness: (w) => queue.push({ c: 'wetness', w }),
+  };
+}
 type CellApi = Pick<PhysicsService, 'addCell' | 'removeCell' | 'hasCell' | 'raycast' | 'sphereCast'>;
 
 function bodyApi(
@@ -297,6 +328,7 @@ export function createPhysics(deps: PhysicsDeps): PhysicsService {
     isolation,
     ...bodyApi(queue, handles, history, () => now() / 1000 - cfg.interpolationDelayS),
     ...cellApi(transport, queue, track),
+    ...vehicleApi(queue, handles, history),
     setFocus(p) {
       const d = Math.hypot(p.x - anchorWF.x, p.y - anchorWF.y, p.z - anchorWF.z);
       if (d <= cfg.rebaseDistanceM) return;

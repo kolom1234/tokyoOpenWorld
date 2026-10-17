@@ -13,6 +13,7 @@ import {
 } from '@sanpo/core';
 import type { ModeOutput, TraversalContext, TraversalOptions, TraversalService } from '../api.ts';
 import { createModeFsm, type ModeFsm } from './fsm.ts';
+import { createDriveMode, entryTarget } from './modes/drive.ts';
 import { createFreecamMode } from './modes/freecam.ts';
 import { boardingTarget, createTrainMode } from './modes/train.ts';
 import { createWalkMode } from './modes/walk.ts';
@@ -51,6 +52,22 @@ function handleBoarding(fsm: ModeFsm, ctx: TraversalContext, player: Readonly<Pl
   if (fsm.current?.id !== 'walk' || !ctx.trainCar || !ctx.input.state.justPressed('interact')) return;
   const t = boardingTarget(ctx, player.posWF);
   if (t) fsm.request('train', { tripId: t.tripId, car: t.car, view: 'standing' });
+}
+
+/** walk 중 F + 운전석 문 앞이면 drive(M08-T01). 열차 탑승이 먼저(같은 F). */
+function handleVehicleEntry(fsm: ModeFsm, ctx: TraversalContext, player: Readonly<PlayerState>): void {
+  if (fsm.current?.id !== 'walk' || !ctx.vehicles || !ctx.input.state.justPressed('interact')) return;
+  const v = entryTarget(ctx.vehicles(), player.posWF);
+  if (v)
+    fsm.request(v.kind === 'bicycle' ? 'cycle' : 'drive', { vehicle: v.vehicle, kind: v.kind, driveSide: v.driveSide });
+}
+
+/** walk HUD: 지금 F면 탈 수 있는 열차(칸 안·열린 문 앞 — ADR-0084)·차(운전석 문 앞 — M08-T01). */
+function walkHints(ctx: TraversalContext, o: ModeOutput, player: Readonly<PlayerState>): void {
+  if (ctx.trainCar) o.hud.boardable = boardingTarget(ctx, player.posWF) !== undefined;
+  const v = ctx.vehicles ? entryTarget(ctx.vehicles(), player.posWF) : undefined;
+  if (v) o.hud.enterable = v.kind;
+  else delete o.hud.enterable;
 }
 
 interface OutputState {
@@ -130,6 +147,8 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
   const walk = createWalkMode(settings);
   fsm.register(walk);
   fsm.register(createTrainMode(settings));
+  fsm.register(createDriveMode(settings));
+  fsm.register(createDriveMode(settings, 'bicycle'));
   const initial = opts.initial ?? { mode: 'freecam' };
   if (!fsm.request(initial.mode, initial.params))
     throw new Error(`traversal: initial mode '${initial.mode}' unavailable`);
@@ -142,11 +161,11 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
     update(frame) {
       handleFreecamToggle(fsm, ctx, out.camera);
       handleBoarding(fsm, ctx, out.player);
+      handleVehicleEntry(fsm, ctx, out.player);
       const mode = fsm.current;
       if (mode === undefined) return;
       const o = mode.update(frame, ctx);
-      // walk: 지금 F면 탈 수 있는 열차(칸 안·열린 문 앞)가 있나 — HUD "F 열차 타기"(ADR-0084).
-      if (mode.id === 'walk' && ctx.trainCar) o.hud.boardable = boardingTarget(ctx, out.player.posWF) !== undefined;
+      if (mode.id === 'walk') walkHints(ctx, o, out.player);
       out.apply(o, mode.id);
       // 모드가 스스로 다른 모드로(열차 하차 → walk, M07-T05).
       if (o.next) fsm.request(o.next.mode, o.next.params);

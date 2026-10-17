@@ -3,7 +3,7 @@
 // 교통(M06-T05): 군중 다음 같은 틱 — 군중 출력 칸을 보행자 격자로 넘겨 차량 양보, 출력 = 두 번째 SAB.
 // physics-port(M06-T06): 물리 워커 직결 포트 — 틱마다 플레이어 60 m 안 차량 KinematicFrame(빈 프레임은 직전이 비지 않았을 때만 — 바디 정리).
 import type { KinematicFrame, Vec3, Vec3d } from '@sanpo/core';
-import type { SignalPlansFile, TrafficParams } from '../../api.ts';
+import type { PlayerFootprint, SignalPlansFile, TrafficParams } from '../../api.ts';
 import { type CrowdParams, createDummyAgents, type DummyAgent, stepDummy } from '../crowd/dummy.ts';
 import { type ClockSync, type CrowdRuntime, createCrowdRuntime } from './crowd-runtime.ts';
 import { type InstanceWriter, instanceWriter } from './instance-buffer.ts';
@@ -25,7 +25,7 @@ export type SimWorkerMsg =
       traffic?: { sab: SharedArrayBuffer; capacity: number; params: TrafficParams };
     }
   | { t: 'center'; center: Vec3d }
-  | { t: 'player'; pos: Vec3d; vel: Vec3; fwd?: Vec3 }
+  | { t: 'player'; pos: Vec3d; vel: Vec3; fwd?: Vec3; veh?: PlayerFootprint }
   | { t: 'density'; scale: number }
   | { t: 'clock'; clock: ClockSync }
   | { t: 'cell-add'; key: number; nav?: ArrayBuffer; lanes?: ArrayBuffer }
@@ -141,8 +141,8 @@ scope.onmessage = (e) => {
     st.center = { ...(m.t === 'center' ? m.center : m.pos) };
     st.anchor = anchorOf(st.center);
     if (m.t === 'player') {
-      st.crowd?.setPlayer(m.pos, m.vel, m.fwd);
-      st.traffic?.rt.setPlayer(m.pos, m.fwd);
+      st.crowd?.setPlayer(m.pos, m.vel, m.fwd, m.veh);
+      st.traffic?.rt.setPlayer(m.pos, m.fwd, m.veh);
     }
   } else if (m.t === 'clock') st.crowd?.setClock(m.clock);
   else if (m.t === 'density') st.crowd?.setDensityScale(m.scale);

@@ -9,6 +9,7 @@ import type {
   EventBus,
   Logger,
   QualityTier,
+  Quat,
   SharedInstanceBuffer,
   SystemProvider,
   Vec3d,
@@ -202,6 +203,25 @@ export interface InstanceLayer {
  */
 export interface VehicleLayer {
   bindShared(buf: SharedInstanceBuffer): Promise<void>;
+  /**
+   * 플레이어 차량(M08-T01 — 카셰어·운전 중 물리 차체): 같은 가상 절차 모델(LOD0)·머티리얼, 차체 자세 그대로(경사·기울기).
+   * 처음 쓰기 전에 부르면 장면 밖 선컴파일(첫 차가 보일 때 끊김 없음). 안 불러도 setPlayers가 시작한다(준비 전까지 안 그림).
+   */
+  preparePlayers(): Promise<void>;
+  /** 이번 프레임 목록(프레임마다 — 빠진 ID는 지운다). */
+  setPlayers(list: readonly PlayerVehicleDraw[]): void;
+}
+
+/** 플레이어 차량 한 대(WF): id(안정)·자세·차종(core VEHICLE_TYPES 순번)·도장/액센트 sRGB 24비트·바퀴 회전 수(누적, 앞 +)·flags(0 제동·1 왼·2 오른 깜빡이·3 전조등). */
+export interface PlayerVehicleDraw {
+  id: number;
+  posWF: Vec3d;
+  quat: Quat;
+  type: number;
+  paint: number;
+  accent: number;
+  wheelTurns: number;
+  flags: number;
 }
 
 /**

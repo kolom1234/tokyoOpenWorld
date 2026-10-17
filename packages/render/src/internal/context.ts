@@ -22,6 +22,7 @@ import { createDirectRender, createPostPipeline, type PostPipeline } from './pos
 import { createWeatherSkyUniforms, type WeatherSkyUniforms } from './post/weather-sky.ts';
 import { createPropField, type PropField } from './props/pools.ts';
 import { createQualityManager, type QualityManager } from './quality.ts';
+import { type CompileScope, routeCompileToScenePass } from './renderer/compile-scope.ts';
 import { createGpuTimer, type GpuTimer } from './renderer/gpu-timer.ts';
 import { initRenderer } from './renderer/init.ts';
 import { type Avatar, createAvatar } from './scene/avatar.ts';
@@ -36,6 +37,7 @@ import { createTreeField, type TreeField } from './trees/field.ts';
 import type { TreeUniforms } from './trees/materials.ts';
 import { createVehicleField, type VehicleField } from './vehicles/field.ts';
 import { createVehicleUniforms, type VehicleUniforms } from './vehicles/material.ts';
+import { createPlayerVehicles, type PlayerVehicles } from './vehicles/players.ts';
 import { createRainField, type RainField } from './weather/rain.ts';
 import { createEnvUniforms, type EnvUniforms } from './weather/wetness.ts';
 
@@ -67,6 +69,8 @@ export interface RenderContext {
   readonly crowdMaterials: Material[];
   /** 차량(M06-T06): 풀·밤 유니폼·머티리얼(bind 때 — 그림자 티어 재컴파일 대상). */
   readonly vehicles: VehicleField;
+  /** 플레이어 차량(M08-T01 — 물리 차체, 교통과 같은 머티리얼). */
+  readonly players: PlayerVehicles;
   /** 열차(M07-T03) — 머티리얼은 vehicleMaterials에(그림자 티어 재컴파일 대상 공유). */
   readonly trains: TrainField;
   readonly vehicleUniforms: VehicleUniforms;
@@ -84,6 +88,8 @@ export interface RenderContext {
   readonly shadows: SunShadows | undefined;
   /** 티어 변경 때 교체된다(quality.ts). */
   post: PostPipeline;
+  /** 선컴파일 = 씬 패스 대상(ADR-0086). 프레임 렌더는 `compileScope.frame`으로 감싼다. */
+  readonly compileScope: CompileScope;
   readonly quality: QualityManager;
   readonly gpuTimer: GpuTimer;
   /** 프레임 카운터·마지막 HLOD 페이드 수·장면 버전(셀·HLOD 표시 변경마다 +1, 그림자 캐시 무효화)·이번 프레임 그림자 캐스케이드 수(stats). */
@@ -163,6 +169,7 @@ function attachActors(graph: SceneGraph): {
   crowd: CrowdField;
   farCrowd: FarCrowd;
   vehicles: VehicleField;
+  players: PlayerVehicles;
   trains: TrainField;
   vehicleUniforms: VehicleUniforms;
 } {
@@ -180,9 +187,12 @@ function attachActors(graph: SceneGraph): {
   graph.roots.dynamic.add(farCrowd.root);
   const vehicles = createVehicleField();
   graph.roots.dynamic.add(vehicles.root);
+  const players = createPlayerVehicles();
+  graph.roots.dynamic.add(players.root);
   const trains = createTrainField();
   graph.roots.dynamic.add(trains.root);
-  return { avatar, props, trees, signs, crowd, farCrowd, vehicles, trains, vehicleUniforms: createVehicleUniforms() };
+  const vehicleUniforms = createVehicleUniforms();
+  return { avatar, props, trees, signs, crowd, farCrowd, vehicles, players, trains, vehicleUniforms };
 }
 
 /** 적재 뒤 붙는 머티리얼(그림자 티어 재컴파일 대상). */
@@ -256,6 +266,34 @@ function weatherState(): Pick<RenderContext, 'rain' | 'sky' | 'weather'> {
   };
 }
 
+/** 품질·선컴파일 범위는 ctx를 받아 만든다(뒤에서 채움). */
+type ContextUnderConstruction = Omit<RenderContext, 'quality' | 'compileScope'> & {
+  quality?: QualityManager;
+  compileScope?: CompileScope;
+};
+
+/** 선컴파일 범위·품질 관리자(ctx를 받아 만든다). */
+function finishContext(
+  ctx: ContextUnderConstruction,
+  deps: RenderDeps,
+  hw: { post: boolean; software: boolean },
+  makePost: (tier: QualityTier) => PostPipeline,
+  postFor: (tier: QualityTier) => PostEffects,
+): RenderContext {
+  const { renderer, cfg } = ctx;
+  // 선컴파일 = 씬 패스 대상(ADR-0086 — 캔버스 변형은 첫 프레임에 다시 동기 컴파일), 티어 변경 뒤에도 지금 post.
+  ctx.compileScope = routeCompileToScenePass(renderer, () => ctx.post.compileTarget());
+  ctx.quality = attachQuality(ctx, deps, hw, (tier) => {
+    ctx.shadows?.setTier(tier);
+    ctx.post.dispose();
+    ctx.post = makePost(tier);
+    return postFor(tier).renderScale;
+  });
+  // WebGL2 상한 등으로 관리자가 티어를 낮췄으면 그림자도 맞춘다(첫 빌드 전 — 재컴파일 없음).
+  if (ctx.quality.tier !== cfg.quality) ctx.shadows?.setTier(ctx.quality.tier);
+  return ctx as RenderContext;
+}
+
 export async function createRenderContext(deps: RenderDeps): Promise<RenderContext> {
   const cfg = mergeConfig(DEFAULT_RENDER_CONFIG, deps.config ?? {});
   const log = deps.log.child('render');
@@ -266,8 +304,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const materials = createMaterialRegistry(library, envUniforms, cfg.facade);
   const [hlod, view] = [createHlodSwitch(), createRenderView(cfg, deps.bus, log)];
   renderer.toneMappingExposure = cfg.exposure;
-  // 하드웨어(WebGPU·WebGL2) = 후처리(공중원근이 하늘까지) + 환경 프로브 + 그림자, 소프트웨어 WebGL2(SwiftShader — CI) = 직접 렌더 + 하늘 배경(ADR-0028, M03-T09).
-  // `debugForcePost` = CI 정지 떨림 e2e(SwiftShader에서 후처리 체인 검증).
+  // 하드웨어 = 후처리 + 환경 프로브 + 그림자, 소프트웨어(SwiftShader — CI) = 직접 렌더 + 하늘 배경(ADR-0028). `debugForcePost` = CI 정지 떨림 e2e.
   const post = !software || cfg.debugForcePost;
   const atmosphere = attachAtmosphere(renderer, graph, view, !post);
   if (backend === 'webgl2') glassRoughness.value = WEBGL2_GLASS_ROUGHNESS;
@@ -282,7 +319,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     post
       ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, overlays)
       : createDirectRender(renderer, graph.scene, view.camera);
-  const ctx: Omit<RenderContext, 'quality'> & { quality?: QualityManager } = {
+  const ctx: ContextUnderConstruction = {
     cfg,
     log,
     canvas: deps.canvas,
@@ -308,13 +345,5 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     ...wx,
     ...attachExtras(renderer, graph, backend === 'webgpu' && !software && cfg.nightLights),
   };
-  ctx.quality = attachQuality(ctx, deps, { post, software }, (tier) => {
-    ctx.shadows?.setTier(tier);
-    ctx.post.dispose();
-    ctx.post = makePost(tier);
-    return postFor(tier).renderScale;
-  });
-  // WebGL2 상한 등으로 관리자가 티어를 낮췄으면 그림자도 맞춘다(첫 빌드 전 — 재컴파일 없음).
-  if (ctx.quality.tier !== cfg.quality) ctx.shadows?.setTier(ctx.quality.tier);
-  return ctx as RenderContext;
+  return finishContext(ctx, deps, { post, software }, makePost, postFor);
 }

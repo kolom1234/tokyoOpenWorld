@@ -1,7 +1,14 @@
 // 셀 소품(M05-T03)·나무(M05-T04): 성형 결과·지형 메시·도로 색인 → buildProps → props.inst(gzip) + 콜라이더 + 전선, 이어서 buildTrees(소품 자리 피함)
 // → trees.inst(gzip) + 줄기 콜라이더. 04 §4.3, 05 §4, ADR-0051·0052
 import { type CellKey, cellIdString } from '@sanpo/core';
-import { gzip, type JcolShape, type PropBatch, writeProps, writeTrees } from '@sanpo/tile-format';
+import {
+  gzip,
+  type InteractableRecord,
+  type JcolShape,
+  type PropBatch,
+  writeProps,
+  writeTrees,
+} from '@sanpo/tile-format';
 import type { BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
 import { type FootprintSource, footprintRingTest } from '../derive/footprints.ts';
 import { bilinear, type LocalGrid } from '../derive/grid.ts';
@@ -9,6 +16,7 @@ import type { PropCatalog } from '../derive/props/context.ts';
 import { buildProps, type PropStats } from '../derive/props/index.ts';
 import type { WireBuf } from '../derive/props/wires.ts';
 import { type RoadIndex, roadIndex } from '../derive/roads.ts';
+import { shareSpots } from '../derive/share-spots.ts';
 import { TOP_OFFSET_M } from '../derive/sidewalks.ts';
 import type { ShapedGround } from '../derive/terrain-shape.ts';
 import { buildTrees, type TreeStats } from '../derive/trees/index.ts';
@@ -47,6 +55,8 @@ export interface PropCellOutput {
   stats: PropStats;
   trees: Uint8Array | null;
   treeStats: TreeStats;
+  /** 카셰어·공유자전거 거점(M08 — cell meta interactables). */
+  interactables: InteractableRecord[];
 }
 
 /** 소품 배치 → WF 위치(나무가 피할 자리). */
@@ -95,6 +105,7 @@ export async function propsCell(i: PropCellInput): Promise<PropCellOutput> {
     ...(i.vehicleRoadsAround ? { vehicleRoadsAround: i.vehicleRoadsAround } : {}),
   });
   const tr = buildTrees({ ...common, avoid: propSpots(out.batches, i.ox, i.oz) });
+  const spots = { ox: i.ox, oz: i.oz, classify: i.index.classify, inBuilding: common.inBuilding, surfaceAt };
   const inst = out.batches.length > 0 ? await gzip(writeProps(out.batches)) : null;
   const trees = tr.records.length > 0 ? await gzip(writeTrees(tr.records)) : null;
   return {
@@ -105,5 +116,6 @@ export async function propsCell(i: PropCellInput): Promise<PropCellOutput> {
     stats: out.stats,
     trees,
     treeStats: tr.stats,
+    interactables: shareSpots(spots, i.osm),
   };
 }

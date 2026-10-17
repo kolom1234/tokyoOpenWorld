@@ -2,6 +2,7 @@
 // 스냅샷 = 헤더 Int32[16] + 버퍼 2개 × (메타 f64[10] + 바디 f64[MAX_BODIES × 16]). 워커가 비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가(seqlock).
 import type { CellKey, Vec3, Vec3d } from '@sanpo/core';
 import type { HeightfieldData } from '@sanpo/tile-format';
+import type { BicycleParams, SedanParams, VehicleInput } from '../api.ts';
 
 export const MAX_BODIES = 128;
 /** posWF(3), quat(4), linVel(3), angVel(3), flags, groundMat, reserved. */
@@ -13,8 +14,22 @@ export const HEADER_INTS = 16;
 export const H_WRITE_INDEX = 0;
 export const H_SEQ = 1;
 
-/** 한 버퍼(메타 + 바디) 크기(f64 개수). postMessage 폴백은 이 한 덩어리를 보낸다. */
-export const FRAME_F64 = META_STRIDE + MAX_BODIES * BODY_STRIDE;
+/** 플레이어 차량 기록(M08-T01): 슬롯 수·바퀴 상한·기록 길이. */
+export const MAX_VEHICLES = 8;
+export const MAX_WHEELS = 4;
+/** 바퀴: 회전 각, 조향 각, 서스펜션 길이, 종 슬립, 횡 슬립(deg), 접지 재질(−1 = 없음). */
+export const WHEEL_STRIDE = 6;
+/** 차량: handle(0 = 빈 칸), 속력(전방 +), rpm, 기어, flags(VEH_*), 스로틀, 바퀴 수, 예비 + 바퀴 × WHEEL_STRIDE. */
+export const VEH_HEAD = 8;
+export const VEH_STRIDE = VEH_HEAD + MAX_WHEELS * WHEEL_STRIDE;
+export const VEH_ABS = 1;
+export const VEH_TCS = 2;
+export const VEH_SHIFTING = 4;
+/** 차량 기록 시작(바디 기록 뒤). */
+export const VEH_BASE = META_STRIDE + MAX_BODIES * BODY_STRIDE;
+
+/** 한 버퍼(메타 + 바디 + 차량) 크기(f64 개수). postMessage 폴백은 이 한 덩어리를 보낸다. */
+export const FRAME_F64 = VEH_BASE + MAX_VEHICLES * VEH_STRIDE;
 export const SNAPSHOT_BYTES = HEADER_INTS * 4 + 2 * FRAME_F64 * 8;
 
 /** 바디 플래그(f64로 저장, 비트는 정수 부분). */
@@ -44,6 +59,12 @@ export type Command =
   | { c: 'character'; h: number; posWF: Vec3d; yaw: number }
   /** 원하는 수평 속도(m/s, WF)·방향(yaw — 아바타). */
   | { c: 'charInput'; h: number; moveWF: Vec3; yaw?: number; hold?: boolean }
+  /** 플레이어 차량(M08-T01 — 08 §6): 차체 바닥 중심(WF)·yaw·파라미터(content/vehicles). */
+  | { c: 'vehicle'; h: number; kind: 'sedan'; posWF: Vec3d; yaw: number; params: SedanParams }
+  | { c: 'vehicle'; h: number; kind: 'bicycle'; posWF: Vec3d; yaw: number; params: BicycleParams }
+  | { c: 'vehInput'; h: number; input: VehicleInput }
+  /** 노면 젖음 0..1(타이어 마찰 배율). */
+  | { c: 'wetness'; w: number }
   /** 앵커 재설정(08 §2): 모든 바디·캐릭터·구간을 −Δ 이동, 브로드페이즈 최적화. */
   | { c: 'rebase'; anchorWF: Vec3d }
   | { c: 'removeCell'; key: CellKey }

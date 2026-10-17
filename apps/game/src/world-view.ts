@@ -25,6 +25,7 @@ import { helpHudSystem } from './help-hud.ts';
 import type { SpawnPreset } from './spawn-presets.ts';
 import { presetFreecamPose, startFreecamPose, startWalkParams } from './start-view.ts';
 import { trainLcdSystem } from './train-lcd.ts';
+import type { PlayerCars } from './vehicles/player-cars.ts';
 import type { WeatherSpec } from './weather-mode.ts';
 import { createCameraWiring } from './wiring/camera.ts';
 import { createEnvWiring } from './wiring/env.ts';
@@ -68,6 +69,8 @@ export interface WorldView {
   /** showWorld 뒤에만 있다(물리 워커 — M04-T02 셀 콜라이더). */
   readonly physics: PhysicsService | undefined;
   readonly physicsWiring: StreamingPhysicsWiring | undefined;
+  /** 플레이어 차(M08-T01) — showWorld 뒤. 디버그·주행 봇(`__SANPO_DEBUG__.world.cars`). */
+  readonly cars: PlayerCars | undefined;
   /** 머티리얼 라이브러리 적재가 끝났거나(성공·실패) 대상이 없음(골든뷰 안정 조건). */
   readonly materialsSettled: boolean;
   /** 아바타 모델 적재·선컴파일이 끝났다(성공·실패 — e2e 안정 조건, ADR-0048). */
@@ -208,6 +211,8 @@ function createTraversalFor(
       jumpClock: (ms) => sim.clock.jumpTo(ms),
       // freecam G(ADR-0083): 월드 표시 뒤 world-extras가 채운다.
       landing: (p) => late.landing?.(p) ?? Promise.resolve({ ok: false, reason: 'not-ready' }),
+      vehicles: () => late.cars?.enterables() ?? [], // 탈 수 있는 차·AEB 위험물(M08 — world-extras 차량 배선)
+      hazards: (c, r) => late.hazards?.(c, r) ?? [],
     },
     { initial: { mode: 'freecam', params: startPose(ground) }, ...(fov ? { settings: { fovDeg: fov } } : {}) },
   );
@@ -281,16 +286,14 @@ async function showWorldWith(
   render.stageCells(true);
   const pre = v.precompiled;
   const s = await startStreaming(deps, { render, traversal, sim: v.sim }, world, late);
+  const { promise: shown, resolve: markShown } = Promise.withResolvers<void>();
+  late.shown = shown;
   // 오디오는 스폰 셀 onReady를 받도록 스트리밍 직후(소리는 첫 제스처 unlock 뒤 — 녹음은 R2 shared/audio 지연 로딩).
   if (late.wiring) late.audio = startWorldExtras(deps, { ...v, streaming: s, cells: late.wiring }, world.baseUrl, late);
   late.boot.spawn = world.spawnCells;
   const centerWF = deps.start?.centerWF ?? world.spawnWF;
   // exclusive: 첫 표시(commitStaged)까지 준비 집합만 받는다(14 §2 초기 다운로드 — 선컴파일 끝 기준이면 선컴파일이 짧아진 뒤(ADR-0085)
   // 첫 표시 전 남은 몇 초에 이웃·HLOD 선적재가 쌓여 첫 로드가 26 → 75–94 MB였다).
-  let markShown: () => void = () => {};
-  const shown = new Promise<void>((r) => {
-    markShown = r;
-  });
   // 스폰 셀이 오는 동안 대기 그룹을 미리 컴파일(0.5 s마다 — 이미 만든 파이프라인은 캐시): 다운로드·디코드와 셀 셰이더 컴파일을 겹친다(ADR-0085).
   const warm = { on: true, stop: () => {} };
   const warming = warmStaged(render, warm);
@@ -367,6 +370,9 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     },
     get physicsWiring() {
       return late.physicsWiring;
+    },
+    get cars() {
+      return late.cars;
     },
     get materialsSettled() {
       return late.materialsSettled;

@@ -213,6 +213,13 @@ export interface WorldClock {
   jumpTo(ms: number): void;
 }
 
+/** 플레이어 차체 바닥 사각형(M08-T02 — 워커 전달): 방위·길이·폭. */
+export interface PlayerFootprint {
+  yaw: number;
+  lengthM: number;
+  widthM: number;
+}
+
 export interface SimService extends SystemProvider {
   readonly clock: WorldClock;
   /** 날씨(M09-T01, 10 §3·§8). 기후표가 없으면 맑음 고정(auto = 맑음). */
@@ -267,6 +274,11 @@ export interface SimService extends SystemProvider {
    * (배선이 physics.connectKinematicSource로). 워커는 틱마다 플레이어 60 m 안 차량 KinematicFrame(core)을 보낸다. 시작 전이면 시작 때.
    */
   connectPhysics(link: (port: MessagePort) => void): void;
+  /**
+   * 플레이어가 탄 차·자전거 치수(M08-T02): 교통은 그 사각형 앞에서 서고(양보), 군중 tier A는 차체를 덮는 원 장애물을 피한다.
+   * 방위는 플레이어 yaw(traversal), null = 걷기(점 플레이어).
+   */
+  setPlayerVehicle(size: { lengthM: number; widthM: number } | null): void;
   /** 워커 틱 통계(시작 전 undefined). */
   workerStats(): SimWorkerStats | undefined;
   /** 신호 코드(props.inst 신호 기둥 — 교차로 ID × 16 + 계획 × 4 + 그룹)의 지금 상태(10 §5.2, M06-T02). 계획 없음 = 항상 적·보행 적. */

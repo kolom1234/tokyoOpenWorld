@@ -56,7 +56,8 @@ function syncProps(ctx: RenderContext, rebased: boolean): boolean {
   // 둘 다 매 프레임 갱신(|| 단락 평가로 열차 풀이 멈추지 않게 — M07-T04에서 발견).
   const cars = ctx.vehicles.update(camera, o);
   const trains = ctx.trains.update(camera, o);
-  const vehicles = cars || trains;
+  ctx.players.update(o);
+  const vehicles = cars || trains || ctx.players.count > 0;
   ctx.farCrowd.update(camera, o, performance.now() / 1000);
   return ctx.trees.update(scratchCam, o, rebased) || props || signs || crowd || vehicles;
 }
@@ -118,7 +119,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
     id: 'render',
     phase: RENDER_PHASE,
     update(f) {
-      ctx.post.render(f.dtReal);
+      ctx.compileScope.frame(() => ctx.post.render(f.dtReal));
       ctx.quality.onFrame(f.dtReal);
       ctx.gpuTimer.afterFrame();
       counters.frames++;
@@ -130,6 +131,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
       ctx.signs.dispose();
       ctx.crowd.dispose();
       ctx.vehicles.dispose();
+      ctx.players.dispose();
       ctx.trains.dispose();
       ctx.avatar.dispose();
       ctx.quality.dispose();

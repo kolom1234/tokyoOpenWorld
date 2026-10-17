@@ -178,7 +178,13 @@ export interface CellParts {
 async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSectionInput[]> {
   const { bld, roads, own, col, props } = p;
   const metaSources = bld.sources.length > 0 ? bld.sources : [...input.metaFallbackSources];
-  const meta = { buildings: bld.meta, pois: [], placeNames: [], signals: [], interactables: [] };
+  const meta = {
+    buildings: bld.meta,
+    pois: [],
+    placeNames: [],
+    signals: [],
+    interactables: props?.interactables ?? [],
+  };
   const sections: TkcSectionInput[] = [
     { type: 'terrain.mesh', sources: [TERRAIN_SOURCE], data: await encodeTerrainMesh(p.terrain) },
     { type: 'terrain.height', sources: [TERRAIN_SOURCE], data: await encodeTerrainHeight(p.sc.window) },

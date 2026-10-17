@@ -114,6 +114,83 @@
         -1150
       ],
       "yawDeg": 0
+    },
+    {
+      "id": "drive-course",
+      "name": {
+        "ja": "走行テストコース(平坦な直線 311 m)",
+        "en": "Driving test course (flat straight 311 m)",
+        "ko": "주행 시험 코스(평지 직선 311 m)"
+      },
+      "posWF": [
+        -1537.5,
+        40.0,
+        -2597.6
+      ],
+      "yawDeg": 124.8,
+      "vehicles": [
+        {
+          "posWF": [
+            -1540.9,
+            40.0,
+            -2595.4
+          ],
+          "yawDeg": 124.8
+        }
+      ]
+    },
+    {
+      "id": "bike-course",
+      "name": {
+        "ja": "自転車テストコース(平坦な直線)",
+        "en": "Bicycle test course (flat straight)",
+        "ko": "자전거 시험 코스(평지 직선)"
+      },
+      "posWF": [
+        -1537.5,
+        40.0,
+        -2597.6
+      ],
+      "yawDeg": 124.8,
+      "vehicles": [
+        {
+          "posWF": [
+            -1540.9,
+            40.0,
+            -2595.4
+          ],
+          "yawDeg": 124.8,
+          "kind": "bicycle"
+        }
+      ]
+    },
+    {
+      "id": "carshare-shibuya",
+      "name": {
+        "ja": "渋谷 カーシェア(SANPO Car)乗り場",
+        "en": "Shibuya car-share spot (SANPO Car)",
+        "ko": "시부야 카셰어(SANPO Car) 거점"
+      },
+      "posWF": [
+        -394.9,
+        32.64,
+        129.4
+      ],
+      "yawDeg": 67.5
+    },
+    {
+      "id": "bike-dock-harajuku",
+      "name": {
+        "ja": "原宿 シェアサイクル(SANPO Cycle)ポート",
+        "en": "Harajuku bike-share dock (SANPO Cycle)",
+        "ko": "하라주쿠 공유자전거(SANPO Cycle) 거점"
+      },
+      "posWF": [
+        195.35,
+        33.01,
+        -1013.37
+      ],
+      "yawDeg": 112.5
     }
   ]
 }

@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 501개.
+> 파일 527개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -21,6 +21,7 @@
 - `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
 - `apps/game/src/help-hud.ts` — 조작 도움말 + 카메라 아래 내리기 알림(임시 DOM HUD — M08 @sanpo/ui가 대체, ADR-0083). 왼쪽 아래 모드별 키 목록(H로 접기·펴기, 접으면 "H 도움말"), | exports: HELP_LINES, LANDING_TEXT, helpHudSystem
 - `apps/game/src/landing.ts` — freecam G 카메라 아래 내리기(ADR-0083): 카메라 바로 아래(+ 2·4·7 m 링 × 8방위) 후보마다 물리 레이로 판정 → 가장 가까운 안전한 자리(발 WF) 또는 가운데 후보의 이유. | exports: LandingQueries, landingOffsets, evaluateSpot, findLanding, roadIndex, onLane
+- `apps/game/src/lane-chunks.ts` — 셀 차선(lanes.bin, 05 §7) 지연 적재·캐시(최근 16셀): freecam G 차도 판정(landing.ts)·차 부르기 연석 자리(vehicles/curb-spot.ts)가 공유. | exports: laneChunks
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
 - `apps/game/src/spawn-presets.ts` — URL 스폰 프리셋(ADR-0084 — M10 지도 전 임시): `?spawn=<id>` → content/spawn-presets.json의 위치·방위로 월드 스폰을 바꾼다 | exports: SpawnPreset, SPAWN_PRESETS, spawnPreset, withSpawn
@@ -34,6 +35,14 @@
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
 - `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainLcdSystem
+- `apps/game/src/vehicles/curb-spot.ts` — 차 부르기 자리(09 §1 drive "인접 차도 가장자리", M08-T01/T02): 플레이어 주변 3×3 셀 차선 중 연석 쪽(laneIdx 0 — 좌측통행 맨 왼쪽) 일반 도로 차선, | exports: CURB_SEARCH_M, CurbSpot, curbSpotInChunk, findCurbSpot
+- `apps/game/src/vehicles/drive-hud.ts` — 운전 계기판·탑승 안내(임시 DOM HUD — M10 @sanpo/ui가 대체): drive 중 오른쪽 아래 속도(km/h)·기어·RPM 막대·등화(전조등·방향지시등)·ABS/TCS, | exports: gaugeHtml, guideHtml, driveHudSystem
+- `apps/game/src/vehicles/hazards.ts` — AEB 위험물(M08-T02): sim 출력 버퍼(메인에서 읽기만) → 원 목록. 보행자 = 지금 + 0.5·1.0 s 뒤(걷는 방향·속력 — anim 소수 × 10 m/s), | exports: carCircles, hazardsNear
+- `apps/game/src/vehicles/player-cars.ts` — 플레이어 탈것(M08-T01·T03): 세워 둔 차·자전거(스폰 프리셋·카셰어·공유자전거 거점)와 부른 것 — 물리 차체(physics.spawnVehicle, content/vehicles/*.json)를 | exports: SEDAN_PARAMS, BICYCLE_PARAMS, RideKind, KIND_LOOK, CarOrigin, PlayerCars, createPlayerCars
+- `apps/game/src/vehicles/share-spots.ts` — 카셰어·공유자전거 거점(M08-T02·T03 — 가상 브랜드 "SANPO Car"·"SANPO Cycle"): live L0 셀의 meta.json `interactables`(carShare·bikeDock) → | exports: ShareSpot, spotsOf, ShareSpots, createShareSpots
+- `apps/game/src/vehicles/traffic-guide.ts` — 운전 교통 안내(M08-T02 — 위반해도 벌점 없음, HUD 안내만): 차가 있는 차선을 lanes.bin(AI 교통과 같은 데이터)에서 찾아 | exports: LaneHit, laneAt, DriveGuide, createDriveGuide
+- `apps/game/src/vehicles/vehicle-audio.ts` — 탈것 소리 입력(M08-T04, ADR-0090): drive·cycle 중 physics vehicleState + traversal HUD → audio VehicleAudioState, 벨(HUD bell 횟수가 바뀌면 핸들 높이에서 울림). | exports: wheelSlip, vehicleAudioOf, createVehicleAudio
+- `apps/game/src/vehicles/wiring.ts` — 플레이어 차 배선(M08-T01): 차 관리자(player-cars) + 차 부르기(walk R·패드 D-pad ← — 가까운 차도 연석, curb-spot) + 스폰 프리셋 차(`vehicles`) + 계기판 HUD. | exports: VehicleWiring, createVehicleWiring
 - `apps/game/src/weather-mode.ts` — 날씨 모드(M09-T01, 10 §3): `?weather=auto|live|<기후표 상태 id>` > 골든뷰 weather > `?time=`(고정 시각 = 맑음 고정 — e2e·비교 결정론) > auto(기후표 마르코프). | exports: WeatherSpec, parseWeatherFlag, weatherSpecOf, applyWeatherSpec, startLiveWeather
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라·아바타(phase 20 확정) → render.setCamera·setAvatar(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
 - `apps/game/src/wiring/env.ts` — 배선: sim.environment()(태양·달·날씨, 카메라 위치) → render.setEnvironment. camera(65) 뒤·renderPrep(70) 앞. see docs/modules/game.md, docs/01-architecture.md §5 | exports: ENV_WIRING_PHASE, defaultClock, createEnvWiring
@@ -62,7 +71,7 @@
 - `apps/worker/src/validate.ts` — 요청 입력 검증: buildId 형식, /world 경로(경로 조작 차단), formatVersion 쿼리. see docs/13-deployment.md §4 | exports: BUILD_ID_RE, isValidBuildId, parseWorldPath, parseFormatVersion
 
 ## packages/audio
-- `packages/audio/src/api.ts` — @sanpo/audio 공개 계약(타입·인터페이스). see docs/modules/audio.md, docs/11-audio.md, ADR-0079 | exports: AudioBus, AudioMix, SfxId, AudioDeps, AudioEnv, FootstepState, NearTrain, PedSignal, AudioStats, AudioService
+- `packages/audio/src/api.ts` — @sanpo/audio 공개 계약(타입·인터페이스). see docs/modules/audio.md, docs/11-audio.md, ADR-0079 | exports: AudioBus, AudioMix, SfxId, AudioDeps, AudioEnv, FootstepState, NearTrain, PedSignal, VehicleAudioState, AudioStats, AudioService
 - `packages/audio/src/index.ts` — @sanpo/audio 공개 엔트리(L2): WebAudio 앰비언스·3D 사운드. api.ts 재수출 + create* 팩토리만. see docs/modules/audio.md | exports: * from './api.ts', createAudio
 - `packages/audio/src/internal/assets.ts` — 녹음 에셋(빌드 shared/audio — R2 공유 에셋, 지연 로딩): manifest 1회 + 파일별 decodeAudioData는 처음 필요할 때(첫 로드 예산 밖). | exports: AssetStore, createAssetStore
 - `packages/audio/src/internal/beds.ts` — 앰비언스 베드 재생(11 §2): 베드마다 루프 AudioBufferSourceNode + GainNode. 목표 이득은 setTargetAtTime(τ 0.8 s)으로만 바꾼다 | exports: BED_TAU_S, BedPlayer, createBedPlayer
@@ -71,10 +80,12 @@
 - `packages/audio/src/internal/footsteps.ts` — 발소리(11 §3, M09-T04 — ADR-0079): 지면 재질(JCOL_MATERIAL) → 발소리 세트, 보폭 시계(이동 거리 누적), 라운드로빈(직전 두 개 제외) + 피치 ±5 %. | exports: stepSetOf, strideM, StepEvent, StepClock
 - `packages/audio/src/internal/graph.ts` — 버스 그래프(11 §1): 버스별 GainNode → master → DynamicsCompressor → destination. 잔향 = 짧은 실외·긴 실내 ConvolverNode 2개(절차 IR), 존 가중으로 보냄 이득. | exports: DEFAULT_MIX, RAMP_TAU_S, BusGraph, createBusGraph
 - `packages/audio/src/internal/mixer.ts` — 앰비언스 베드 믹스(11 §2 시간·날씨 변조, M09-T04 — ADR-0079): 존 가중 × 낮/밤 × 계절 × 비·바람·고도 → 베드별 목표 이득(선형). | exports: BED_IDS, BedId, BedGains, monthJst, bedGains, msOfDayJst
+- `packages/audio/src/internal/output-clock.ts` — 오디오 출력 시계 감시(M08-T04 수락 "오디오 스레드 언더런 0"의 측정): 1 s마다 getOutputTimestamp()의 컨텍스트 시각 증가를 성능 시각 증가와 비교 — | exports: OutputClock
 - `packages/audio/src/internal/service.ts` — createAudio(11 §5): 사용자 제스처 전에는 AudioContext를 만들지 않는다(재생 시도 금지 — 모듈 카드 불변식). unlock() 뒤 engine.ts가 소리를 낸다. | exports: createAudio
 - `packages/audio/src/internal/synth/sfx.ts` — 합성 효과음(11 §2·§4, M09-T04 — ADR-0079): 개찰구 날개·카드 접촉·거부·역 차임·LCD 알림·문 차임·UI 클릭. | exports: SFX_TONES, sfxDuration, playSfx, noiseOf
 - `packages/audio/src/internal/synth/signal-tones.ts` — 음향식 보행 신호 유도음(11 §2, M09-T04 — ADR-0079): 일본식 "새 울음(피요)·뻐꾸기(깍꾸)" 계열을 매개변수 합성. | exports: TonePattern, ToneNote, ToneCycle, toneCycle, patternOfCode, notesBetween
-- `packages/audio/src/internal/synth/train.ts` — 열차 주행음 합성(11 §1 trainBus): 바퀴 굴림(저역 잡음) + 모터(톱니파 대역 통과, 속력 비례 음높이) + 레일 이음매 "타탄" | exports: RAIL_LEN_M, jointTimes, TrainVoice, createTrainVoice, createEngineVoice
+- `packages/audio/src/internal/synth/train.ts` — 열차 주행음 합성(11 §1 trainBus): 바퀴 굴림(저역 잡음) + 모터(톱니파 대역 통과, 속력 비례 음높이) + 레일 이음매 "타탄" | exports: RAIL_LEN_M, jointTimes, TrainVoice, createTrainVoice
+- `packages/audio/src/internal/synth/vehicle.ts` — 플레이어 탈것 소리(M08-T04, ADR-0090 — 11 §1 vehicleBus): 엔진(AudioWorklet engine-worklet.js, 불가하면 톱니 오실레이터) + 타이어 구름·젖은 노면 쉭·미끄럼 끽·바람 | exports: VehicleTargets, vehicleTargets, VehicleVoice, createVehicleVoice
 - `packages/audio/src/internal/voices.ts` — 3D 보이스 풀(11 §1 sfxBus): PannerNode(HRTF, inverse, ref 2 m, rolloff 1.2) — 동시 32개 상한, 넘치면 우선순위(이득 ÷ 거리²) 최저를 빼앗는다. | exports: MAX_VOICES, OCCLUDED_HZ, VoiceInfo, chooseVictim, priorityOf, Voice, VoicePool, createVoicePool
 - `packages/audio/src/internal/zones.ts` — 앰비언스 존 색인(11 §2, M09-T04 — ADR-0079): 셀 audio.json 다각형(셀 로컬 → WF) → 리스너 xz에서 종류별 가중. | exports: EDGE_M, WorldEmitter, ZONE_SAMPLES, ZoneIndex
 
@@ -116,12 +127,13 @@
 - `packages/input/src/internal/service.ts` — createInput: 디바이스 부착 + phase 0 시스템(원시 입력 → ActionState 스냅샷). see docs/modules/input.md | exports: INPUT_PHASE, createInput
 
 ## packages/physics
-- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, CharacterInput, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, StaticGroupDesc, PhysicsTransport, PhysicsDeps
+- `packages/physics/src/api.ts` — @sanpo/physics 공개 계약(타입·인터페이스). Jolt 객체는 워커 밖으로 나가지 않는다 — 메인은 명령 큐 + 보간 스냅샷만. | exports: BodyHandle, PhysicsIsolation, JoltBuild, Pose, CharacterInput, VehicleKind, CurvePoints, SedanParams, BicycleParams, VehicleInput, WheelState, VehicleState, PhysicsConfig, RayHit, PhysicsStats, PhysicsService, StaticGroupDesc, PhysicsTransport, PhysicsDeps
 - `packages/physics/src/index.ts` — @sanpo/physics 공개 엔트리(L2): Jolt 워커 물리. api.ts 재수출 + create* 팩토리만. see docs/modules/physics.md | exports: * from './api.ts', createInlineTransport, anchorOf, createPhysics, DEFAULT_PHYSICS_CONFIG, PHYSICS_PHASE
-- `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). 캐릭터 입력은 핸들당 마지막 것만(같은 프레임 덮어쓰기). | exports: CommandQueue, createCommandQueue
+- `packages/physics/src/internal/host/command-queue.ts` — 명령 큐: 한 프레임 동안 모은 명령을 다음 step 메시지로 한 번에(08 §1 "메인은 명령 큐"). 캐릭터·차량 입력은 핸들당 마지막 것만(같은 프레임 덮어쓰기). | exports: CommandQueue, createCommandQueue
 - `packages/physics/src/internal/host/snapshot-reader.ts` — 스냅샷 읽기·보간(08 §9): SAB는 seqlock으로 최신 버퍼를 복사, 폴백은 받은 프레임 그대로. 최근 몇 개를 시뮬레이션 시각 순으로 두고 | exports: SnapshotHistory, createSnapshotHistory, readSab
+- `packages/physics/src/internal/host/vehicle-reader.ts` — 차량 기록 읽기(M08-T01): 최신 스냅샷의 VEH_* 칸 → VehicleState(핸들별 객체 재사용 — 프레임마다 할당 없음). 보간 없음(HUD·바퀴·소리용). | exports: readVehicle, createVehicleReader
 - `packages/physics/src/internal/inline-transport.ts` — 같은 스레드 전송: 워커 대신 워커 코어를 직접 돌린다(Node 테스트·도구 — 브라우저 게임은 쓰지 않는다). flush() = 마지막 메시지 처리 완료. | exports: createInlineTransport
-- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, BODY_ESCALATOR, isIsolated, SLOT_BITS, slotOf, Command, RayHitMsg, ToWorker, FromWorker
+- `packages/physics/src/internal/protocol.ts` — 메인 ↔ 물리 워커 프로토콜(08 §9): 명령 묶음·스냅샷 배치. 메인·워커 공용 — Jolt 타입 없음. | exports: MAX_BODIES, BODY_STRIDE, META_STRIDE, HEADER_INTS, H_WRITE_INDEX, H_SEQ, MAX_VEHICLES, MAX_WHEELS, WHEEL_STRIDE, VEH_HEAD, VEH_STRIDE, VEH_ABS, VEH_TCS, VEH_SHIFTING, VEH_BASE, FRAME_F64, SNAPSHOT_BYTES, BODY_ALIVE, BODY_ACTIVE, BODY_GROUNDED, BODY_ESCALATOR, isIsolated, SLOT_BITS, slotOf, Command, RayHitMsg, ToWorker, FromWorker
 - `packages/physics/src/internal/service.ts` — createPhysics(08 §1·§9·§10): 워커(감독자) 또는 주입 전송 → init(앵커·SAB) → ready. 시스템 'physics'(phase 30)가 프레임마다 | exports: PHYSICS_PHASE, DEFAULT_PHYSICS_CONFIG, anchorOf, createPhysics
 - `packages/physics/src/internal/worker/bodies.ts` — 워커 바디 슬롯: 명령(상자·캐릭터·입력·삭제·순간이동) 적용 + 스냅샷 채우기. 슬롯 = 핸들 하위 비트(메인이 발급), 좌표 변환 WF ↔ PHYS는 여기서만. | exports: BodyCommand, BodySlots, createBodySlots
 - `packages/physics/src/internal/worker/cell-colliders.ts` — 셀 콜라이더 적재(08 §4): 셀마다 [높이장, JCOL 셰이프들] 작업 → 적재 큐(도착 순서, 가까운 셀부터 보내는 건 메인 배선). | exports: MAX_JOB_TRIS, PRIMITIVES_PER_JOB, meshSlice, CellColliders, createCellColliders
@@ -139,10 +151,14 @@
 - `packages/physics/src/internal/worker/snapshot-writer.ts` — 스냅샷 쓰기(08 §9): SAB 더블 버퍼(비활성 버퍼에 쓰고 writeIndex 교체 + seq 증가) 또는 폴백 postMessage(Transferable). | exports: SnapshotSink, sabViews, createSabSink, createPostSink
 - `packages/physics/src/internal/worker/static-groups.ts` — 이름 붙인 정적 묶음(M07-T04 — ADR-0073): 메인이 만든 승강장 바닥(삼각형 메시 — 레일 데이터에서)·홈도어(상자) → STATIC_WORLD 바디 1개씩. | exports: STATIC_BOX_STRIDE, StaticGroup, StaticGroups, createStaticGroups
 - `packages/physics/src/internal/worker/train-bodies.ts` — 열차 칸 바디(M07-T04, 08 §8 — ADR-0073): 메인 sim 열차(프레임마다 정확한 값) → step 명령 'trains'(core TRAIN_BODY_STRIDE 레코드) → | exports: carShapes, doorShapes, TrainBodies, createTrainBodies
+- `packages/physics/src/internal/worker/vehicle-bicycle.ts` — 플레이어 자전거(M08-T03 — 08 §7): 생활형 자전거 + 탄 사람 = VEHICLE 동적 강체(세로로 긴 상자, 무게중심 0.95 m) + VehicleConstraint(MotorcycleController 2륜·기울기). | exports: createBicycle
+- `packages/physics/src/internal/worker/vehicle-common.ts` — 플레이어 탈것 공용(M08-T01·T03): 몸체 인터페이스, 동적 차체 강체, VehicleConstraint 붙이기(원통 캐스트·스텝 리스너·마찰 콜백), 공기·구름 저항, 바퀴 읽기. | exports: J, WheelOut, VehicleBody, Aero, setCurve, spawnBody, attachConstraint, resist, forwardSpeed, readWheel, destroyBody
+- `packages/physics/src/internal/worker/vehicle-sedan.ts` — 플레이어 승용차(M08-T01 — 08 §6): VEHICLE 레이어 동적 강체(하부 상자 + 무게중심 낮춤) + Jolt VehicleConstraint(WheeledVehicleController, 원통 캐스트 접지). | exports: SedanBody, createSedan
+- `packages/physics/src/internal/worker/vehicles.ts` — 플레이어 차량 목록(M08-T01): 생성·입력·스텝 전 보조·노면 젖음·스냅샷 차량 기록(protocol VEH_*). 차체 강체 자체는 bodies 슬롯(kind 'veh')이 포즈를 쓴다. | exports: VehicleBody, Vehicles, createVehicles
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, StationFixtures, StationSign, RenderDebugLayer, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, PlayerVehicleDraw, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, StationFixtures, StationSign, RenderDebugLayer, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, NIGHT_LIGHT_POOL, NIGHT_LIGHTS_ACTIVE, createRenderContext
@@ -174,7 +190,7 @@
 - `packages/render/src/internal/materials/landmark.ts` — 랜드마크 머티리얼(M05-T05, overrides.mesh): 정점 `_LMAT`(파이프라인 overrides/spec.ts LMAT 순서) → 표 색·거칠기·금속도 + 종류별 절차 무늬 | exports: LANDMARK_KINDS, screenExposure, lines, createLandmarkMaterial
 - `packages/render/src/internal/materials/library.ts` — 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + 실내 큐브맵 배열(M03-T05) + manifest(그룹·타일 크기·평균색). | exports: MATERIAL_GROUPS, MaterialGroup, MAX_LAYERS, MAX_ROOMS, MaterialsManifest, LibraryState, LibraryStats, MaterialLibrary, createMaterialLibrary
 - `packages/render/src/internal/materials/noise.ts` — 셰이더 2D 값 노이즈(TSL): 지형 안티타일링·아스팔트 변형·물웅덩이 마스크(M03-T06). 입력 = 월드 고정 좌표(worldOffset 적용, m). | exports: noiseTexture, lattice, NoiseBank, noiseBank
-- `packages/render/src/internal/materials/precompile.ts` — 셰이더 선컴파일(06 §6): 고정 머티리얼 ID별 기본·HLOD 변형을 작은 더미 메시로 씬에 잠깐 붙여 `compileAsync` → 스트리밍 중 첫 사용 끊김 제거. | exports: yieldFrame, compileDetached, precompileMaterials
+- `packages/render/src/internal/materials/precompile.ts` — 셰이더 선컴파일(06 §6): 고정 머티리얼 ID별 기본·HLOD 변형을 작은 더미 메시로 씬에 잠깐 붙여 `compileAsync` → 스트리밍 중 첫 사용 끊김 제거. | exports: precompileBase, yieldFrame, compileDetached, precompileMaterials
 - `packages/render/src/internal/materials/prop.ts` — 소품 머티리얼(M05-T03, 07 §4): 절차 모델 정점색 × 인스턴스 색(자판기 가상 브랜드, 그 밖 흰색) — 전 종류 한 머티리얼·LOD당 풀 1개. | exports: createPropMaterial, createWireMaterial
 - `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼 + HLOD 변형(자식 페이드, M02-T05). 셀 머티리얼은 라이브러리 텍스처 배열을 쓴다(M03-T01, 적재 전 평균색). | exports: MaterialRegistry, PRECOMPILE_IDS, HLOD_MATERIAL_IDS, createMaterialRegistry
 - `packages/render/src/internal/materials/road.ts` — M_ROAD 변형(07 §4, M03-T06): 아스팔트 보수 패치·유분 얼룩·바랜 구간, 보도 명암·때, 공통 거시 명암. 추가 표본 없이 noiseBank 채널만. | exports: Variation, NO_VARIATION, macroTint, asphaltVariation, pavingVariation
@@ -185,7 +201,7 @@
 - `packages/render/src/internal/post/config.ts` — 품질 티어 → 후처리 효과(07 §9 표의 AO/GI/SSR 행 + 07 §7 나머지). 티어 선택·동적 해상도는 M03-T08, 여기는 표와 덮어쓰기만. | exports: POST_TIERS, resolvePost
 - `packages/render/src/internal/post/exposure.ts` — 자동 노출(07 §7): 씬 패스 HDR(하늘·공중원근 전)을 32² 격자로 읽어 로그 휘도 평균 → EMA → 노출 배율. 전부 GPU(컴퓨트 1회/프레임, | exports: REF_LUM, ADAPT, AutoExposure, createAutoExposure
 - `packages/render/src/internal/post/lut.ts` — 3D LUT 그레이딩(07 §7, M03-T07): 톤매핑·sRGB 뒤에 적용. 외부 .cube 대신 결정론 절차 LUT(라이선스 무관) — 약한 S 커브·채도 +6 %, | exports: LUT_SIZE, grade, createGradeLut
-- `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness]) | exports: PostPipeline, createDirectRender, PostOverlays, createPostPipeline
+- `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness]) | exports: PostPipeline, CompileTarget, createDirectRender, PostOverlays, createPostPipeline
 - `packages/render/src/internal/post/weather-sky.ts` — 날씨 하늘(M09-T02 — ADR-0077): 공중원근 뒤 하늘 화소에 2D 구름층(고도 1.6 km 평면, 값 잡음 fbm 4옥타브, 바람에 흐름) + 비·안개 연무(거리 지수). | exports: WeatherSkyUniforms, createWeatherSkyUniforms, updateWeatherSky, weatherSky, tslHash, cloudAlphaCpu
 - `packages/render/src/internal/props/blocks.ts` — 소품 블록·LOD 띠(M05-T03): 셀 소품을 64 m 블록으로 나눠 종류별 조각(셀 로컬 행렬·색)을 만들고, 블록 AABB 3D 거리로 LOD 띠(히스테리시스 2 m)를 정한다. | exports: FAR_M, DEFAULT_FAR_M, TypeSlice, Block, blocksOf, distanceTo, bandOf
 - `packages/render/src/internal/props/geo.ts` — 소품 절차 모델 조립기(M05-T03): 상자·원기둥(축 x/y/z)·삼각 기둥 → 정점색 BufferGeometry(위치·법선 f32, 색 f32 선형). | exports: PartBuilder
@@ -193,6 +209,7 @@
 - `packages/render/src/internal/props/pools.ts` — 소품 인스턴싱(M05-T03): 전역 풀 = LOD마다 InstancedMesh 1개(전 종류 합친 기하, 인스턴스 `_itype`) — 드로우콜 ≤ 3(수락 ≤ 종류 × 3). | exports: PROP_POOL_CAPACITY, PropFieldStats, PropField, mergeUpdateRange, createPropField
 - `packages/render/src/internal/quality.ts` — 품질 티어·동적 해상도(07 §9, M03-T08): 초기 티어 = detect-gpu(벤치마크 JSON 자체 호스팅 — 외부 CDN·CSP 없이) → 적용 후 60프레임 측정해 | exports: QualityDeps, QualityStats, QualityManager, tierFromDetect, createQualityManager
 - `packages/render/src/internal/renderer/backend-caps.ts` — 초기화 전 백엔드·깊이 기능 예측: WebGPU 어댑터 유무, WebGL2 EXT_clip_control(reversed-Z 필요조건). see docs/07-rendering.md §1, ADR-0006 | exports: BackendProbe, isSoftwareRenderer, probeWebgl2, probeBackend
+- `packages/render/src/internal/renderer/compile-scope.ts` — 선컴파일 대상 맞추기(ADR-0086): 후처리 경로에서 머티리얼은 씬 패스(렌더 타깃 + MRT, 속도 = TAAU의 지터 없는 투영)로만 그려진다. | exports: CompileScope, routeCompileToScenePass
 - `packages/render/src/internal/renderer/dynamic-resolution.ts` — 동적 해상도(07 §9, M03-T08): 프레임 시간 EMA로 렌더 스케일 ±0.05(0.5–1.0) — 목표 16.6 ms. | exports: DynResConfig, DYNRES_DEFAULTS, DynamicResolution, createDynamicResolution
 - `packages/render/src/internal/renderer/gpu-timer.ts` — GPU 타이머(M03 성능 표): WebGPU timestamp-query(three `trackTimestamp`)로 렌더 패스 GPU 시간을 모아 프레임당 평균(ms). | exports: GpuTimerStats, GpuTimer, createGpuTimer
 - `packages/render/src/internal/renderer/init.ts` — WebGPURenderer 초기화(WebGL2 폴백) + 깊이 전략 결정(reversed-Z 우선, 불가 시 logarithmic — ADR-0006). see docs/07-rendering.md §1 | exports: InitializedRenderer, resolveDepthMode, initRenderer
@@ -224,15 +241,18 @@
 - `packages/render/src/internal/trees/materials.ts` — 나무 머티리얼(M05-T04, 07 §4 M_FOLIAGE·M_IMPOSTOR): 인스턴싱은 InstancedMesh 대신 InstancedBufferGeometry 속성 `_ipos`(x, y, z 렌더 좌표, yaw)· | exports: TreeUniforms, createTreeUniforms, createBarkMaterial, FoliageLighting, createLeafMaterial, ImpostorLayout, createImpostorMaterial
 - `packages/render/src/internal/trees/pools.ts` — 나무 풀(M05-T04): Mesh + InstancedBufferGeometry(InstancedMesh 아님 — three r186은 InstancedMesh마다 노드 빌드를 따로 해서, 같은 머티리얼·속성 배치의 | exports: TreePool, impostorQuad, makeTreePool, writeTreePool
 - `packages/render/src/internal/trees/season.ts` — 나무 계절 표(M05-T04, 07 §8): dayOfYear(JST) → 수종별 잎 색(선형 RGB)·잎 밀도(0 = 낙엽, 1 = 무성). | exports: SPECIES_SLOTS, BARK_COLORS, seasonTable
-- `packages/render/src/internal/vehicles/builder.ts` — 차량 절차 모델 조립기(M06-T06, 자체 제작 — ADR-0066): 육면체(사다리꼴 상자)·상자·바퀴(축 x 원기둥 + 휠 살) → BufferGeometry | exports: VPART, VPart, Corner, VehicleBuilder
+- `packages/render/src/internal/vehicle-layer.ts` — 차량 레이어 API(M06-T06 교통 + M08-T01 플레이어 차): 머티리얼 1개 공유(그림자 티어 재컴파일 목록 vehicleMaterials), 처음 쓸 때 장면 밖 선컴파일 뒤 그리기. | exports: createVehicleLayer
+- `packages/render/src/internal/vehicles/bicycle-model.ts` — 생활형 자전거 + 탄 사람(M08-T03 — 자체 제작, 실존 제품·로고 없음): 낮은 프레임(스텝 스루), 앞 바구니, 흙받이, 체인 커버, 전조등·후미등, | exports: bar, bicycleModel
+- `packages/render/src/internal/vehicles/builder.ts` — 차량 절차 모델 조립기(M06-T06, 자체 제작 — ADR-0066): 육면체(사다리꼴 상자)·상자·바퀴(축 x 원기둥 + 휠 살) → BufferGeometry | exports: VehicleLod, VPART, VPart, Corner, VehicleBuilder
 - `packages/render/src/internal/vehicles/field.ts` — 차량 필드(M06-T06, ADR-0066): sim 교통 SAB(stride 8: x,y,z·yaw·속력·바퀴 회전·variant·flags) → 프레임마다 외삽(30 Hz 틱 사이 — 속력·바퀴) → | exports: VEHICLE_POOL_CAPACITY, VehicleFieldStats, VehicleField, createVehicleField
 - `packages/render/src/internal/vehicles/material.ts` — 차량 머티리얼(07 §4 M_VEHICLE, M06-T06 — ADR-0066): 클리어코트 도장(인스턴스 색)·어두운 유리·고정 부품(정점색), 바퀴 = 축 둘레 회전(인스턴스 회전 수), | exports: VehicleUniforms, createVehicleUniforms, createVehicleMaterial, nightFromSun
 - `packages/render/src/internal/vehicles/models.ts` — 차량 절차 모델(M06-T06, 자체 제작 — 실존 차명·로고·엠블럼·번호판 없음, ADR-0066): core VEHICLE_TYPES 7종(치수 공유) × LOD 0–2. | exports: VehicleLod, VEHICLE_LOD_M, buildVehicleGeometry, vehicleColors
+- `packages/render/src/internal/vehicles/players.ts` — 플레이어 차량(M08-T01): 물리 차체(카셰어·운전 중) 몇 대를 교통과 같은 가상 절차 모델(LOD0)·머티리얼로 — 인스턴스 1개짜리 메시 + 메시 변환(차체 자세 그대로, | exports: PlayerVehicleDraw, PlayerVehicles, createPlayerVehicles
 - `packages/render/src/internal/weather/rain.ts` — 빗줄기·눈(07 §8 비, M09-T01 — ADR-0076): 깊이 인지 화면 공간 층 — 카메라 둘레 원통 4겹(반경 2.2–18 m)에 칸마다 무작위 빗줄기를 두고, 화소 시선이 원통에 닿는 점의 | exports: RAIN_LAYERS, RainUniforms, RainField, createRainField, rainLayers
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06), 비 파문 노멀(M09-T01). | exports: EnvUniforms, createEnvUniforms, rainRipples, WetInput, WetOutput, applyWetness
 
 ## packages/sim
-- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, SimService, RailStaticLayout, SimDeps, HolidaysFile, SeasonTableFile
+- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, PlayerFootprint, SimService, RailStaticLayout, SimDeps, HolidaysFile, SeasonTableFile
 - `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts', createSim
 - `packages/sim/src/internal/clock/astronomy.ts` — 천문(10 §2, 01 §7): suncalc 2.x(도 단위, 방위 = 진북 기준 시계방향, 고도 = 대기차 보정 겉보기) → 도북 방위(수렴각 보정) → WF 단위 벡터. | exports: BodyPosition, dirWFFromGrid, sunPosition, moonPosition, clearSkyIlluminanceLux
 - `packages/sim/src/internal/clock/holidays.ts` — 일본 공휴일 표(10 §2, M09-T05): content/sim/holidays-jp.json(법 규칙 생성 2026–2035)을 createSim이 등록 → 운행일 요일 유형(dayTypeOf)이 휴일로 본다. | exports: setHolidays, isHolidayJst
@@ -248,6 +268,7 @@
 - `packages/sim/src/internal/crowd/lod-manager.ts` — 군중 LOD(10 §4.2, M06-T04 — ADR-0064): tier A(DetourCrowd, radiusA 안) ↔ tier B(흐름) 승강격. 히스테리시스 ± lodBandM(80 m ± 5) — | exports: outputPos, LodMoves, lodStep
 - `packages/sim/src/internal/crowd/nav-world.ts` — 내비 월드(M06-T03, ADR-0063): sim.worker 안 타일 Detour NavMesh(원점 0, 64 m 타일 = 파이프라인 nav.bin 타일 좌표 그대로) — | exports: CrossingRec, configureFilter, NavWorld, createNavWorld
 - `packages/sim/src/internal/crowd/route.ts` — 보행 경로의 횡단 분해(M06-T03, ADR-0063): 전체 필터(횡단 포함) 경로의 꺾은선에서 처음 들어가는 횡단보도 띠를 찾고, | exports: V3, CrossingHit, inBand, firstCrossing, keepLeftLat, crossingPoints
+- `packages/sim/src/internal/player-footprint.ts` — 플레이어 차·자전거 바닥 사각형(M08-T02): 교통 양보(사각형까지 거리)·군중 회피(축 위 원 장애물). 원점 = 차체 바닥 중심, 전방 = (−sin yaw, −cos yaw). | exports: footprintDistance, footprintGrid, footprintCircles
 - `packages/sim/src/internal/rail/motion-profile.ts` — 트립 운동(M07-T03, 10 §6.2, ADR-0071·0072): s(trip, t) = 시각의 순수 함수. 구간 곡선 = core tripLegs(시간표 컴파일러와 같은 입력 — | exports: DOOR_OPEN_AFTER_S, DOOR_CLOSED_BEFORE_S, DOOR_MOVE_S, TripMotion, tripMotion, MotionState, motionAt
 - `packages/sim/src/internal/rail/network.ts` — 철도 망 런타임(M07-T03, ADR-0072): rail.bin(RailNetwork) → 선로별 표본 보간. 칸 자세 = 앞·뒤 대차 위치(선로 위 s ± 대차 반간격)의 | exports: TrackRt, RailRt, createRailRt, pointAt, inTunnel, CarPose, carPose
 - `packages/sim/src/internal/rail/platforms.ts` — 승강장·홈도어(M07-T04, ADR-0073): rail.bin 승강장 고리(OSM) → 윗면 삼각형(귀 자르기) + 옆면(레일 높이까지) — render 메시·physics 바닥 공용. | exports: PSD_OFFSET_M, PSD_HEIGHT_M, PSD_GATE_M, triangulate, PlatformGeometry, platformGeometry, EDGE_STRIP_M, PsdStop, psdLayout, psdPiece
@@ -325,16 +346,20 @@
 - `packages/tile-format/src/internal/xxh64.ts` — XXH64(seed 0) — 섹션 해시·cells.idx hash32. BigInt 없이 u32 hi/lo 쌍 연산(파이프라인 처리량). see docs/05-tile-format.md §3, §5 | exports: xxh64Hex, xxh64Low32
 
 ## packages/traversal
-- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, LandingFailReason, LandingResult, LandingHud, TrainView, TrainParams, TrainHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
+- `packages/traversal/src/api.ts` — @sanpo/traversal 공개 계약: 컨텍스트·모드·서비스. freecam(M01-T06) + walk(M04-T03, physics 필요). see docs/modules/traversal.md, docs/09-traversal.md §6 | exports: TraversalContext, HazardCircle, EnterableVehicle, LandingFailReason, LandingResult, LandingHud, TrainView, TrainParams, TrainHud, DriveView, DriveParams, DriveHud, HudHints, ModePlayer, ModeOutput, ModeRequirement, TraversalMode, FreecamParams, FreecamSettings, WalkParams, WalkView, WalkSettings, TraversalSettings, TraversalOptions, TraversalService
 - `packages/traversal/src/index.ts` — @sanpo/traversal 공개 엔트리(L3): 이동 모드 상태기계·카메라 리그. api.ts 재수출 + create* 팩토리만. see docs/modules/traversal.md | exports: * from './api.ts', forwardOf, lookAtAngles, createTraversal, DEFAULT_TRAVERSAL_SETTINGS
 - `packages/traversal/src/internal/camera/attached-rig.ts` — AttachedRig(09 §3, M07-T05): 부모(열차 칸) 로컬 오프셋 + 부모 기준 시선(yaw·pitch) + 미세 진동(속력 비례 — 레일 이음매 상하·좌우 흔들림). | exports: ParentPose, localToWorld, worldToLocal, vibration, attachedCamera
 - `packages/traversal/src/internal/camera/boom.ts` — 3인칭 카메라 붐 충돌(09 §3 ThirdPersonRig, M04-T05, ADR-0045): 피벗 → 카메라 방향 sphereCast(반경 0.2 m, 워커 — 비동기 ≈ 1프레임). | exports: CAMERA_RADIUS_M, MAX_STEP_RAD, BoomState, createBoomState, resetBoom, stepToward, requestBoom, boomLength
+- `packages/traversal/src/internal/camera/chase-rig.ts` — ChaseRig(09 §3): 차량 뒤 distance·위 height, 방향 지연(차 진행 방향을 ω로 따라감)·위치 스프링(ω 6), 마우스로 둘러보기(손을 떼면 2 s 뒤 뒤로 복귀), | exports: ChaseSettings, DEFAULT_CHASE, ChaseState, createChaseState, chaseBoom, stepChase, lookAt
 - `packages/traversal/src/internal/camera/first-person-rig.ts` — FirstPersonRig(09 §3): 눈 = 발 + 눈높이(연석·계단 높이 변화는 스무딩) + 헤드밥(걸음 주기 수직·반주기 측면), 시선 스무딩. 순수 계산. see docs/09-traversal.md §3 | exports: LookState, FirstPersonState, BOB_AIR_GRACE_S, createLookState, createFirstPersonState, stepLook, followFeet, headBob, firstPersonCamera
 - `packages/traversal/src/internal/camera/free-guard.ts` — freecam 지오메트리 진입 방지(M06 사전 3): 교량 상판·건물 안에 카메라가 들어가 화면이 검게(블룸이 NaN을 번져 전체가) 되던 문제. | exports: CAMERA_RADIUS_M, FreeGuard, createFreeGuard, resetFreeGuard, stepFreeGuard
 - `packages/traversal/src/internal/camera/free-rig.ts` — FreeRig: 6DOF 관성 자유비행(요·피치, 롤 잠금) 순수 계산. WF float64. see docs/09-traversal.md §2 freecam, §3 | exports: FreeRigState, FreeRigIntent, createFreeRigState, clampPitch, forwardOf, rigQuat, lookAtAngles, stepFreeRig
 - `packages/traversal/src/internal/camera/third-person-rig.ts` — ThirdPersonRig(09 §3): 피벗 = 발 + 어깨 높이, 붐 = 오른쪽 어깨 0.4 m − 시선 × 거리 3.5 m(휠 1.5–6). 충돌은 boom.ts(sphereCast)가 붐 길이를 줄인다(M04-T05), | exports: zoomDistance, Boom, createBoom, thirdPersonBoom, thirdPersonCamera, avatarOpacity
 - `packages/traversal/src/internal/fsm.ts` — 이동 모드 상태기계: 등록·요구조건 검사·원자적 전환(exit → enter → mode/changed). see docs/09-traversal.md §1 | exports: ModeFsm, availableRequirements, createModeFsm
-- `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard
+- `packages/traversal/src/internal/ground-guard.ts` — 발밑 셀 미적재 보호(08 §4 groundMissing, M04-T06): 발 아래 L0 셀 콜라이더가 없으면 제자리 고정(hold — 중력·이동 없음), | exports: GroundGuard, groundGuard, carGroundGuard
+- `packages/traversal/src/internal/modes/drive-actions.ts` — drive 모드 상태·동작(M08-T01·T02): 상태, 버튼(등화·방향지시등·시점), 운전석 카메라, 하차 자리 찾기, 안전(보도 서행·AEB). | exports: DriveState, createState, handleButtons, cockpitCamera, requestExit, safety
+- `packages/traversal/src/internal/modes/drive-control.ts` — drive 조작 순수 함수(M08-T01): 운전자 입력(가속·제동·후진·정지 유지), 키보드 조향 램프, 기어 표시, 차 방위, 운전석 문 앞 탑승 판정. | exports: STOP_MS, entryTarget, yawOfCar, driverInput, rampSteer, gearLabel, RideSpec, RIDE_SPECS, AebCar, hazardAhead, aebRange
+- `packages/traversal/src/internal/modes/drive.ts` — drive 모드(09 §2 drive, M08-T01): 게임이 만든 물리 차량(DriveParams.vehicle)을 운전. input 'vehicle': W/RT 가속·S/LT 제동(멈추면 후진)·A/D·L스틱 조향 | exports: driverInput, entryTarget, rampSteer, yawOfCar, isDriveParams, createDriveMode
 - `packages/traversal/src/internal/modes/freecam.ts` — freecam 모드(드론/포토): input 'fly' 컨텍스트 → FreeRig 적분 → (physics 있으면) 지오메트리 진입 방지(free-guard.ts) → CameraState. | exports: FreecamMode, createFreecamMode
 - `packages/traversal/src/internal/modes/train.ts` — train 모드(09 §2 train, M07-T05): 탑승 중 카메라(AttachedRig) — 서기(문 옆)·좌석·전면 전망(선두 운전실), V 순환, 마우스 시선(칸 기준). | exports: isTrainParams, viewOffset, insideCar, DOOR_REACH_M, nearDoor, boardingTarget, alightSpot, createTrainMode
 - `packages/traversal/src/internal/modes/walk.ts` — walk 모드(09 §2 walk): physics 캐릭터(CharacterVirtual, 08 §5) + 1인칭/3인칭(V) 리그. input 'walk': WASD·L스틱 = 카메라 yaw 기준 수평 속도 | exports: isWalkParams, moveVelocity, WalkMode, createWalkMode
@@ -481,6 +506,7 @@
 - `tools/pipeline/src/stages/derive/rail/splines.ts` — 선로 스플라인(M07-T01, 04 §4.3): 꼭짓점 → 구심 Catmull-Rom → 0.5 m 등간격 표본(x, z, s, 구간 플래그) → 높이: | exports: RAIL_STEP_M, RAIL_TOP_M, TrackSamples, railHeights, trackSamples
 - `tools/pipeline/src/stages/derive/rail/tracks.ts` — 선로 조립(M07-T01): OSM 철도 선(노선 이름별, service 없는 본선만) → 끝점 공유로 이은 사슬 → 긴 사슬 = 선로. 방향 = 좌측통행: | exports: V2, VERTEX_FLAG, RawTrack, chainWays, lengthOf, signedOffset, buildTracks
 - `tools/pipeline/src/stages/derive/roads.ts` — 도로 분류(M05-T01): PLATEAU TrafficArea 폴리곤(셀 + 8-이웃, normalize가 셀 경계에서 자른 조각) → 성형용 1 m 래스터(차도 0·보행 1·없음 7)와 | exports: ROAD_CLASS, RoadSide, isWalk, roadRaster, insideRings, RoadIndex, roadIndex
+- `tools/pipeline/src/stages/derive/share-spots.ts` — 카셰어·공유자전거 거점(M08-T02·T03 — cell meta `interactables`): 위치만 OSM에서(브랜드는 게임의 가상 이름 — 실제 운영사·로고 없음). | exports: ShareSpotCtx, yawTowardRoad, footClear, footFlat, shareSpots
 - `tools/pipeline/src/stages/derive/sidewalks.ts` — 보행면 윗면(M05-T01): 보도·교통섬 폴리곤(이 셀 조각) → earcut → 삼각형을 2 m 격자 칸으로 잘라(볼록 조각 부채꼴) 높이 = 성형 윗면(쌍선형) + 6 mm. | exports: TOP_OFFSET_M, EDGE_PIECE_M, HeightAt, MeshBuf, emptyMesh, TopWriter, topWriter, addWalkTop
 - `tools/pipeline/src/stages/derive/stairs.ts` — 교량 계단(M05-T08): OSM `highway=steps` 선 중 한 끝 이상이 PLATEAU 교량 상판에 닿고 두 끝 높이(상판 또는 지형)가 0.5 m 이상 다른 것 → 계단 명세. | exports: StairSpec, Deck, decksOf, deckHeightAt, STAIR_MAX_RISE_M, stairsOf, landingOf, cutAtDeck, WalkwaySources, walkwaysOf
 - `tools/pipeline/src/stages/derive/terrain-shape.ts` — 지형 성형(M05-T01, 04 §4.3): 셀 + 여유 1 m 창에서 국소 연산만 — 이웃 셀과 공유하는 샘플은 같은 입력 → 같은 값(04 §6). | exports: SHAPE_PAD, CURB_M, CROSSFALL, CROWN_MAX_M, TOL_TIGHT_M, TOL_DEFAULT_M, ShapedGround, shapeGround

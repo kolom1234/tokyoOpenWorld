@@ -1,7 +1,7 @@
 // sim.worker 호스트(10 §1, M06-T01·T03): 감독자로 워커를 띄우고 SAB 인스턴스 버퍼를 넘긴다. 재시작되면 같은 SAB·파라미터로 다시 init하고
 // 적재해 둔 셀 nav.bin·lanes.bin(사본)을 다시 보낸다. 교통(M06-T05) = 두 번째 SAB(차량). 물리 직결(M06-T06) = (재)시작마다 새 MessageChannel — 한쪽은 워커, 한쪽은 link로. SAB가 없으면(교차 출처 격리 아님) 군중 없이 undefined — postMessage 복사 경로는 필요해지면(M08 설정) 추가.
 import type { Logger, Vec3, Vec3d, WorkerSupervisor } from '@sanpo/core';
-import type { SignalPlansFile, SimWorkerStats, TrafficParams } from '../../api.ts';
+import type { PlayerFootprint, SignalPlansFile, SimWorkerStats, TrafficParams } from '../../api.ts';
 import type { CrowdParams } from '../crowd/dummy.ts';
 import type { ClockSync } from './crowd-runtime.ts';
 import { allocInstanceSab, type InstanceReader, instanceReader } from './instance-buffer.ts';
@@ -33,7 +33,7 @@ export interface SimWorkerHost {
   readonly pedestrians: InstanceReader;
   readonly traffic: InstanceReader | undefined;
   setCenter(c: Readonly<Vec3d>): void;
-  setPlayer(pos: Readonly<Vec3d>, vel: Readonly<Vec3>, fwd?: Readonly<Vec3>): void;
+  setPlayer(pos: Readonly<Vec3d>, vel: Readonly<Vec3>, fwd?: Readonly<Vec3>, veh?: Readonly<PlayerFootprint>): void;
   setDensityScale(k: number): void;
   setClock(c: ClockSync): void;
   addCell(key: number, nav: ArrayBuffer | undefined, lanes: ArrayBuffer | undefined): void;
@@ -102,9 +102,15 @@ function hostApi(h: {
       h.setCenterLocal(c);
       h.post({ t: 'center', center: { ...c } });
     },
-    setPlayer(pos, vel, fwd) {
+    setPlayer(pos, vel, fwd, veh) {
       h.setCenterLocal(pos);
-      h.post({ t: 'player', pos: { ...pos }, vel: { ...vel }, ...(fwd ? { fwd: { ...fwd } } : {}) });
+      h.post({
+        t: 'player',
+        pos: { ...pos },
+        vel: { ...vel },
+        ...(fwd ? { fwd: { ...fwd } } : {}),
+        ...(veh ? { veh: { ...veh } } : {}),
+      });
     },
     setDensityScale: (scale) => h.post({ t: 'density', scale }),
     setClock(c) {

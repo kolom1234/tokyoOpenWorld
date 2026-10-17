@@ -26,3 +26,8 @@ GOLDEN_BASE_URL=https://tokyo-sanpo-staging.kolom1357.workers.dev GOLDEN_WORLD=a
 ## 역 동선 (ADR-0082)
 `pnpm stations` = `stations.spec.ts`(content/stations/access.json 모든 출구: 계단 F → 승강장 윗면 위·여유 ≥ 1 m → W 2 s → 승강장 F → 거리) + `route.spec.ts`(하라주쿠 → 신주쿠 열차 동선).
 실제 GPU Chrome 1600×900, 스크린샷 `test-results/golden/{stations,route}/`. staging은 `GOLDEN_BASE_URL=… GOLDEN_WORLD=api pnpm stations`.
+
+## 차량 주행 (M08)
+`pnpm drive` = `drive.spec.ts`: 스폰 프리셋 `drive-course`(평지 직선 311 m — lanes.bin 직선 차선 연쇄 + 1 m 간격 아래 레이로 턱 없음 확인), `traffic=0&crowd=0&debug=1`.
+세워 둔 카셰어 세단에 태워(`traversal.request('drive')`) 실제 키(W/S)로 0→100 km/h 시간, 60 km/h 풀 브레이크 거리(건조·`&wet=1`)를 rAF 표본으로 잰다.
+GPU 전력은 nvidia-smi 1 s 표본. 결과 `test-results/golden/drive/metrics.json`, stdout `[drive] …` 줄. dev 서버가 떠 있으면 `GOLDEN_BASE_URL=http://localhost:5173 pnpm drive`.

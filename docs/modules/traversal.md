@@ -32,7 +32,16 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 **ADR-0083**: `TraversalContext += landing?(cameraWF): Promise<LandingResult>`, `LandingResult = { ok: true; posWF } | { ok: false; reason: LandingFailReason }`(not-ready·no-ground·building·track·road·blocked·steep),
 `HudHints += landing?: LandingHud { seq; state: 'searching'|'failed'; reason? }` — freecam G(input `land`) → 성공이면 다음 프레임 `next: walk { exact, yaw = 카메라 }`, 실패면 hud.landing. 판정은 게임(apps/game `landing.ts`).
 `HudHints += boardable?`(walk — 칸 안 또는 문 열린 칸의 문 앞 1.3 m, `modes/train.ts nearDoor`, ADR-0084).
-미구현: `interactables`(M08), drive/cycle/transition 모드, phase 35(traversalPost).
+**M08-T01**(ADR-0087): drive 모드 — `DriveParams { vehicle: BodyHandle; kind: 'sedan'; driveSide?: 'right'|'left'(기본 우핸들); view?: DriveView('chase'|'cockpit') }`,
+`HudHints += drive?: DriveHud { vehicle, kind, view, speedKmh, rpm, gear('R'|'N'|'1'…), lights, indicator(−1|0|1), braking, reversing, abs, tcs, exit('ready'|'moving'|'searching'|'blocked') }; enterable?: 'sedan'`,
+`TraversalContext += vehicles?(): EnterableVehicle[] { vehicle, kind, posWF(차체 바닥 중심), yawRad, driveSide }` — walk 중 운전석 문 앞(차 로컬 x = 쪽 × 1.25, z = −0.35, 1.3 m 안) + F → drive(열차 탑승 다음).
+**M08-T02**(ADR-0088): `TraversalContext += hazards?(centerWF, radiusM): HazardCircle[] { x, z, r }`(게임 — 보행자 지금·0.5·1 s 예측, 교통 차·세워 둔 차 원), `DriveHud += aeb, sidewalk`.
+drive 안전: 진행 통로(반폭 + 원 + 0.45 m, 조향 곡률로 휨) 안 위험물이 max(정지 거리(반응 0.25 s·4.5 m/s²)+2 m, 1.5 s × v) 안이면 스로틀 0·제동 1(AEB), 서 있을 때 1.2 m 안이면 출발 막음,
+바퀴가 보도 재질(tile 7)이면 10 km/h 넘게 못 감. 기어 표시 = 변속 중(Jolt 0)엔 마지막 전진 기어.
+**M08-T03**(ADR-0089): cycle 모드 = drive 모드 같은 구현(`createDriveMode(settings, 'bicycle')` — `RIDE_SPECS`(drive-control.ts): 반길이·반폭·조향·휠베이스·1인칭 눈·추적 거리·하차 거리·보도 규칙·후진·방향지시등).
+자전거: S = 브레이크만(후진 없음), 방향지시등 없음, B 벨(`DriveHud.bell` 횟수), 보도 = 보행자 6 m 안일 때만 6 km/h, 탑승 = 왼쪽 0.6 m 안 F. `DriveParams.kind`·`DriveHud.kind`·`EnterableVehicle.kind`·`HudHints.enterable` = 'sedan' | 'bicycle',
+`HazardCircle.kind?: 'ped'`(정지 중 출발 막기는 보행자만).
+미구현: `interactables` 레지스트리(거점은 게임 vehicles/share-spots), transition 모드, phase 35(traversalPost).
 
 ## Invariants
 - 모드 1개 = 파일 1개(`internal/modes/<id>.ts`), 레지스트리 등록으로 확장(기존 모드 수정 금지).
@@ -50,7 +59,8 @@ forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad }; 
 
 ## Files
 api.ts, internal/(fsm, service — 승차 판정(walk 중 F + 칸 안)·모드 next 요청, settings, walk-placement — 착지점 하늘 레이, ground-guard — 발밑·앞 셀 적재 확인), internal/modes/(freecam, walk, train — 칸 카메라 시점·빨리감기·하차·경계역 자동 하차, M07-T05), internal/camera/(attached-rig — 부모 칸 로컬 오프셋·시선·미세 진동(M07-T05), free-rig, free-guard — freecam 지오메트리 진입 방지(구 캐스트 쓸기 + 6방향 레이 안쪽 판정, ADR-0059), first-person-rig — 시선 스무딩·발 높이 스프링·헤드밥, third-person-rig — 붐·아바타 페이드, boom — 부채꼴 sphereCast·회전 상한).
-예정: modes/(drive, cycle, train, transition), camera/(chase-rig, attached-rig), interactables.ts, interest.ts.
+modes/drive(M08-T01 — 운전자 입력: W 가속·S 제동/멈추면 후진·정지 유지 제동 0.3, 키보드 조향 램프 2.2/4 s⁻¹, 하차 레이 운전석 쪽 → 반대 → 뒤, 앞 셀 콜라이더 대기 = carGroundGuard), camera/chase-rig(뒤 5.5 m·위 2.2 m·피벗 1.6 m, 위치 ω 6·방향 ω 4, 둘러보기 2 s 뒤 복귀, 붐 = boom.ts 부채꼴 × 풀기 3배, FOV +5° @100 km/h).
+예정: modes/(cycle, transition), interactables.ts, interest.ts.
 
 ## Tests
 test/free-rig.test.ts(방향 규약·쿼터니언 = forwardOf·롤 잠금, lookAt 역함수, 관성 감쇠 수치, 휠 속도 범위, sprint, 고도 상한·지면 여유, 피치 제한),

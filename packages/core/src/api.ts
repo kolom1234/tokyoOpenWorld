@@ -267,6 +267,8 @@ export const VEHICLE_TYPES: readonly VehicleTypeInfo[] = [
   { name: 'minivan', lengthM: 4.7, widthM: 1.7, heightM: 1.86, share: 0.14 },
   { name: 'deliveryTruck', lengthM: 6.6, widthM: 2.1, heightM: 3.0, share: 0.08 },
   { name: 'bus', lengthM: 10.5, widthM: 2.5, heightM: 3.1, share: 0.04 },
+  /** 플레이어 자전거 + 탄 사람(M08-T03 — 교통 스폰 없음, share 0). */
+  { name: 'bicycle', lengthM: 1.8, widthM: 0.6, heightM: 1.8, share: 0 },
 ];
 /**
  * sim → physics 키네마틱 프레임(M06-T06, 08 §8 직결 MessagePort, 30 Hz): 플레이어 60 m 안 차량. data = 레코드 KINEMATIC_STRIDE f64 —

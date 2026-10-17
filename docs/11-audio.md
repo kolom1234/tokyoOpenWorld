@@ -11,6 +11,8 @@ AudioContext
  └─ master → DynamicsCompressor → destination
 ```
 - 첫 사용자 제스처 후 `AudioContext.resume()`.
+- vehicleBus 구현(M08-T04, ADR-0090): 녹음 없이 합성 — 엔진 AudioWorklet(가상 직렬 4기통 점화 펄스 + 배기 공명, rpm·부하 k-rate), 타이어 구름(재질)·젖은 노면 쉭·미끄럼 끽·바람(속력²)·실내 저역 통과,
+  자전거 체인·프리휠 딸깍·벨. 언더런 = 출력 시계 결손 카운터(`stats().clockGlitches`).
 - 거리 감쇠: `inverse`, refDistance 2 m, rolloff 1.2. 가려짐: 리스너–소스 레이캐스트(4 Hz) 차단 시 로우패스 1.2 kHz.
 
 ## 2. 앰비언스 존 (셀 `audio.json`)

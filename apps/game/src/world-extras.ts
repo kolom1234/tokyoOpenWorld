@@ -8,11 +8,13 @@ import type { SimService } from '@sanpo/sim';
 import type { StreamingService } from '@sanpo/streaming';
 import type { TraversalService } from '@sanpo/traversal';
 import ACCESS from '../../../content/stations/access.json';
+import { type WeatherOverride, withWeatherOverride } from './debug/wet-override.ts';
 import { evaluateSpot, findLanding, type LandingQueries, roadIndex } from './landing.ts';
 import type { SpawnPreset } from './spawn-presets.ts';
 import type { AccessFile } from './station/layout.ts';
 import { type PlatformTops, safeArrival } from './station/platform-geo.ts';
 import { stationSystem } from './station/wiring.ts';
+import { createVehicleWiring } from './vehicles/wiring.ts';
 import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
 import { type AudioFlags, audioForWorld } from './world-audio.ts';
 import type { LateState } from './world-late.ts';
@@ -83,6 +85,58 @@ function presetSpawnSystem(
   };
 }
 
+type ExtrasDeps = Parameters<typeof startWorldExtras>[0];
+type ExtrasServices = Parameters<typeof startWorldExtras>[1];
+
+/** n 애니메이션 프레임 뒤(rAF 없으면 0 ms 타이머). */
+function framesLater(n: number): Promise<void> {
+  const raf = globalThis.requestAnimationFrame ?? ((cb: () => void) => setTimeout(cb, 0));
+  return new Promise((r) => {
+    const tick = (k: number): void => void (k <= 0 ? r() : raf(() => tick(k - 1)));
+    tick(n);
+  });
+}
+
+/** 플레이어 차·자전거(M08-T01·T03): 세워 둔 탈것·거점·부르기·계기판. */
+function wireVehicles(deps: ExtrasDeps, v: ExtrasServices, late: LateState): void {
+  // 첫 표시 뒤 두 프레임 — shown.then에서 바로 시작하면 플레이어 탈것 선컴파일(동기 노드 빌드)이 첫 표시 표시·첫 프레임보다 먼저 돌았다(staging +1.7 s).
+  const shown = (late.shown ?? Promise.resolve()).then(() => framesLater(2));
+  const cars = createVehicleWiring({
+    doc: deps.canvas.ownerDocument,
+    render: v.render,
+    input: v.input,
+    traversal: v.traversal,
+    sim: v.sim,
+    physics: () => late.physics,
+    wetness: () => withWeatherOverride(v.sim.environment(), deps.weather).weather.wetness,
+    requestLanes: (key) => v.streaming.requestSections(key, ['lanes.bin']).then((p) => p.lanes),
+    requestMeta: (key) =>
+      v.streaming
+        .requestSections(key, ['meta.json'])
+        .then((p) => p.meta)
+        .catch(() => undefined),
+    onCellReady: (cb) => void v.cells.onCell((p) => cb(p.key, p.level)),
+    onEvicted: (cb) => void v.streaming.onEvicted(cb),
+    shown,
+    ...(deps.spawn ? { spawn: deps.spawn } : {}),
+  });
+  late.cars = cars.cars;
+  late.hazards = cars.hazards;
+  // 탈것 시스템·셰이더는 첫 표시 뒤(첫 표시 선컴파일과 다퉈 staging 첫 표시 +1.5 s — 실측).
+  let on = false;
+  void shown.then(() => {
+    on = true;
+  });
+  // 스케줄러는 systems()를 등록 때 한 번 읽는다 — 목록은 그대로 두고 update만 막는다.
+  const gated = cars.systems.map((sys) => ({
+    ...sys,
+    update: (f: Parameters<typeof sys.update>[0]) => {
+      if (on) sys.update(f);
+    },
+  }));
+  deps.scheduler.add({ systems: () => gated });
+}
+
 export function startWorldExtras(
   deps: {
     canvas: HTMLCanvasElement;
@@ -91,6 +145,8 @@ export function startWorldExtras(
     scheduler: Pick<Scheduler, 'add'>;
     debug?: boolean;
     spawn?: SpawnPreset;
+    /** `?wet=` 디버그 젖음(차 노면 마찰도 같은 값 — M08-T01 젖은 노면 제동 측정). */
+    weather?: WeatherOverride;
   },
   v: {
     render: RenderService;
@@ -104,7 +160,8 @@ export function startWorldExtras(
   baseUrl: string,
   late: LateState,
 ): AudioService | undefined {
-  const audio = audioForWorld(deps, v, baseUrl, () => late.physics);
+  const wetness = () => withWeatherOverride(v.sim.environment(), deps.weather).weather.wetness;
+  const audio = audioForWorld({ ...deps, wetness }, v, baseUrl, () => late.physics);
   const stations = stationSystem({
     doc: deps.canvas.ownerDocument,
     access: ACCESS as unknown as AccessFile,
@@ -118,6 +175,7 @@ export function startWorldExtras(
     ...(deps.debug ? { debug: true } : {}),
   });
   deps.scheduler.add({ systems: () => [stations] });
+  wireVehicles(deps, v, late);
   if (deps.spawn?.surface) {
     const ps = presetSpawnSystem(
       deps.spawn,

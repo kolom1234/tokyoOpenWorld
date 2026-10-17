@@ -7,12 +7,13 @@ import { loadCrowdAssets } from './crowd/assets.ts';
 import { createCrowdMaterial, outfitU } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
 import { nightU, updateNight } from './lighting/night.ts';
-import { compileDetached, precompileMaterials, yieldFrame } from './materials/precompile.ts';
+import { compileDetached, precompileBase, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
 import { createTrainMaterial } from './trains/material.ts';
 import { loadTreesInto, setTreeWind } from './trees/load.ts';
-import { createVehicleMaterial, nightFromSun } from './vehicles/material.ts';
+import { createVehicleLayer } from './vehicle-layer.ts';
+import { nightFromSun } from './vehicles/material.ts';
 
 export { RENDER_PHASE, RENDER_PREP_PHASE } from './frame.ts';
 
@@ -134,7 +135,14 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
   const { renderer, view, graph, log } = ctx;
   const t0 = performance.now();
   onProgress?.({ stage: 'atmosphere', done: 0, total: 1 });
-  await ctx.atmosphere.prepare(yieldFrame);
+  // 셀 머티리얼 기본 변형을 대기 LUT·장면 컴파일과 동시에(GPU 프로세스가 병렬로 만든다 — ADR-0086). 소프트웨어 래스터는 셀 컴파일이 짧아 생략.
+  const base = ctx.software
+    ? Promise.resolve()
+    : precompileBase(renderer, graph.scene, view.camera, ctx.materials).catch((e: unknown) =>
+        log.warn('base precompile', e),
+      );
+  await ctx.atmosphere.prepare(yieldFrame, () => ctx.compileScope.frame(() => ctx.post.warmup()));
+  await base;
   onProgress?.({ stage: 'atmosphere', done: 1, total: 1 });
   await yieldFrame();
   const t2 = performance.now();
@@ -163,21 +171,6 @@ async function precompileLate(ctx: RenderContext, onProgress?: (p: PrecompilePro
     restore();
   }
   ctx.log.info(`precompile (late) materials ${Math.round(performance.now() - t0)} ms`);
-}
-
-/** 차량 레이어(M06-T06): 처음 bind 때 머티리얼·풀 → 선컴파일(보이지 않는 인스턴스) → 그리기 시작. */
-async function bindVehicles(ctx: RenderContext, buf: SharedInstanceBuffer): Promise<void> {
-  if (!ctx.vehicles.stats().ready) {
-    const t0 = performance.now();
-    const material = createVehicleMaterial(ctx.vehicleUniforms);
-    ctx.vehicleMaterials.push(material);
-    ctx.vehicles.attach(material);
-    await compileDetached(ctx.renderer, ctx.vehicles.root, ctx.view.camera, ctx.graph.scene, () =>
-      ctx.vehicles.primeForCompile(),
-    );
-    ctx.log.info(`vehicles attached ${Math.round(performance.now() - t0)} ms`);
-  }
-  ctx.vehicles.bind(buf);
 }
 
 /** 열차 레이어(M07-T03): 처음 bind 때 머티리얼·풀 24 → 선컴파일(보이지 않는 인스턴스, 장면 밖) → 그리기 시작. */
@@ -258,7 +251,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
     depth: ctx.depth,
     ...staged.api,
     pedestrians: { bindShared: (buf) => ctx.crowd.bind(buf), setFarDensity: (k) => ctx.farCrowd.setDensity(k) },
-    vehicles: { bindShared: (buf) => bindVehicles(ctx, buf) },
+    vehicles: createVehicleLayer(ctx),
     trains: {
       bindShared: (buf) => bindTrains(ctx, buf),
       setStations: (d) => {

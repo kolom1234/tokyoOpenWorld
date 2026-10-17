@@ -21,6 +21,9 @@ Layer: L3 | Depends: core, geo, tile-format(lanes·nav 파서), @recast-navigati
 **M07-T04**(ADR-0073): `trainBodies(pos, r)` → 칸 물리 레코드(core TRAIN_BODY_STRIDE), `railStatic(): RailStaticLayout{platforms{positions, indices, topIndexCount}, panels, gates(f64 × 5: x,y,z,yaw,길이), gateStops}`, `psdGateOpen()`(문 열림 — 제자리 갱신 배열).
 **M06-T06**(ADR-0066): `connectPhysics(link: (port) => void)` — 워커 (재)시작마다 MessageChannel, 워커가 틱마다 플레이어 60 m 안 차량 `KinematicFrame`(core)을 물리로. 차종 치수 = core `VEHICLE_TYPES`. 교통 출력 중심 = 지나온 차선(trail ≤ 4)까지 거슬러 연속. 횡단보도 위 정차 금지(정지 지점 앞 35 m 안 횡단 띠 = 군중 내비 월드 `crossingsNear` → 띠 앞 1 m, 황색에 이미 띠 안이면 통과)·경로 미리보기 = 다음·그다음 + 후속 하나뿐인 조각(포털·연결로) 80 m. environment = 카메라(phase 10에서 기록) 위치를 1 km 격자로 스냅해 태양·달·조도(맑은 하늘 근사)·계절 dayOfYear, 날씨는 맑음 고정(M06).
 
+**M08-T02**(ADR-0088): `setPlayerVehicle(size: { lengthM, widthM } | null)` — 플레이어가 drive·cycle이면 link가 yaw와 함께 워커로(`player` 메시지 `veh: PlayerFootprint`).
+교통 `pedNear`의 플레이어 = 바닥 사각형(`player-footprint.ts footprintDistance` — NPC 차가 차 앞에서 선다), 군중 tier A = 반경 0.6 m 원 격자(≤ 12, `footprintGrid`)를 조향 없는 장애물 에이전트로(내비 위 원만 — DetourCrowd 최대 반경 0.6 그대로: 키우면 분리 동작이 바뀌어 겹침 34).
+
 ## Invariants
 - 모든 난수 = 시드 기반(`hash32(WORLD_SEED, cellId, kind, idx)`), 같은 시각·장소 = 같은 풍경.
 - 열차 위치는 시간의 순수 함수 `s(trip, t)`.

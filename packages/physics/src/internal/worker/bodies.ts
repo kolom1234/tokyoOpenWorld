@@ -14,13 +14,17 @@ import {
 } from '../protocol.ts';
 import type { CharacterBody, Characters } from './character.ts';
 import { OBJ } from './layers.ts';
+import type { Vehicles } from './vehicles.ts';
 import type { PhysicsWorld } from './world.ts';
 
-type Entry =
-  | { handle: number; kind: 'rigid'; id: InstanceType<PhysicsWorld['Jolt']['BodyID']> }
-  | { handle: number; kind: 'char'; c: CharacterBody };
+type BodyId = InstanceType<PhysicsWorld['Jolt']['BodyID']>;
+/** rigid = 상자, veh = 플레이어 차량 차체(바디는 vehicles가 소유 — 포즈만 여기서), char = CharacterVirtual. */
+type Entry = { handle: number; kind: 'rigid' | 'veh'; id: BodyId } | { handle: number; kind: 'char'; c: CharacterBody };
 
-export type BodyCommand = Exclude<Command, { c: 'removeCell' } | { c: 'rebase' } | { c: 'trains' } | { c: 'statics' }>;
+export type BodyCommand = Exclude<
+  Command,
+  { c: 'removeCell' } | { c: 'rebase' } | { c: 'trains' } | { c: 'statics' } | { c: 'wetness' }
+>;
 
 export interface BodySlots {
   apply(cmd: BodyCommand): void;
@@ -78,7 +82,7 @@ function writeEntry(
     f[o + 13] = 0;
     return;
   }
-  if (e.kind === 'rigid') {
+  if (e.kind !== 'char') {
     const b = w.bodies;
     put(f, o, b.GetPosition(e.id), b.GetRotation(e.id), b.GetLinearVelocity(e.id), b.GetAngularVelocity(e.id), anchor);
     f[o + 13] = BODY_ALIVE | (b.IsActive(e.id) ? BODY_ACTIVE : 0);
@@ -122,7 +126,7 @@ function teleport(
   yaw: number,
 ): void {
   const { Jolt, bodies, scratch } = w;
-  if (e?.kind === 'rigid') {
+  if (e && e.kind !== 'char') {
     bodies.SetPositionAndRotation(
       e.id,
       scratch.rvec3(p[0], p[1], p[2]),
@@ -145,14 +149,19 @@ function charInput(w: PhysicsWorld, e: Entry | undefined, c: Extract<Command, { 
 /** 앵커 재설정: 강체 −Δ(캐릭터는 characters.shift). */
 function shiftRigid(w: PhysicsWorld, slots: readonly (Entry | undefined)[], dx: number, dy: number, dz: number): void {
   for (const e of slots) {
-    if (e?.kind !== 'rigid') continue;
+    if (!e || e.kind === 'char') continue;
     const p = w.bodies.GetPosition(e.id);
     const [x, y, z] = [p.GetX() - dx, p.GetY() - dy, p.GetZ() - dz];
     w.bodies.SetPosition(e.id, w.scratch.rvec3(x, y, z), w.Jolt.EActivation_DontActivate);
   }
 }
 
-export function createBodySlots(w: PhysicsWorld, anchorWF: Readonly<Vec3d>, chars: Characters): BodySlots {
+export function createBodySlots(
+  w: PhysicsWorld,
+  anchorWF: Readonly<Vec3d>,
+  chars: Characters,
+  vehicles: Vehicles,
+): BodySlots {
   const { Jolt, bodies } = w;
   const slots: (Entry | undefined)[] = new Array(MAX_BODIES);
   let count = 0;
@@ -164,7 +173,8 @@ export function createBodySlots(w: PhysicsWorld, anchorWF: Readonly<Vec3d>, char
       bodies.RemoveBody(e.id);
       bodies.DestroyBody(e.id);
       Jolt.destroy(e.id);
-    } else chars.remove(e.handle);
+    } else if (e.kind === 'veh') vehicles.remove(e.handle);
+    else chars.remove(e.handle);
     slots[slot] = undefined;
     count--;
   };
@@ -176,19 +186,22 @@ export function createBodySlots(w: PhysicsWorld, anchorWF: Readonly<Vec3d>, char
     slots[slotOf(h)] = e;
     count++;
   };
-  const box = (c: Extract<Command, { c: 'box' }>): void => {
+  /** 생성 명령(상자·캐릭터·차량): 같은 슬롯의 옛 것을 지우고 새로. */
+  const spawn = (c: Extract<Command, { c: 'box' | 'character' | 'vehicle' }>): void => {
     remove(slotOf(c.h));
-    put(c.h, { handle: c.h, kind: 'rigid', id: createBox(w, c, phys(c.posWF)) });
+    const p = phys(c.posWF);
+    if (c.c === 'box') put(c.h, { handle: c.h, kind: 'rigid', id: createBox(w, c, p) });
+    else if (c.c === 'character') put(c.h, { handle: c.h, kind: 'char', c: chars.spawn(c.h, p, c.yaw) });
+    else put(c.h, { handle: c.h, kind: 'veh', id: vehicles.spawn(c.h, c.kind, p, c.yaw, c.params).id });
   };
   return {
     get count() {
       return count;
     },
     apply(c) {
-      if (c.c === 'box') box(c);
-      else if (c.c === 'character') {
-        remove(slotOf(c.h));
-        put(c.h, { handle: c.h, kind: 'char', c: chars.spawn(c.h, phys(c.posWF), c.yaw) });
+      if (c.c === 'box' || c.c === 'character' || c.c === 'vehicle') spawn(c);
+      else if (c.c === 'vehInput') {
+        if (own(c.h)) vehicles.setInput(c.h, c.input);
       } else if (c.c === 'charInput') charInput(w, own(c.h), c);
       else if (c.c === 'despawn') {
         if (own(c.h)) remove(slotOf(c.h));

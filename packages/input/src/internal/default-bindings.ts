@@ -9,7 +9,22 @@ const pad = (button: number, hold?: number): Binding =>
 const stick = (axis: number, scale = 1): Binding => ({ device: 'padAxis', axis, scale });
 
 /** 표준 매핑 버튼 번호. */
-const PAD = { A: 0, X: 2, Y: 3, LB: 4, RB: 5, LT: 6, RT: 7, SELECT: 8, L3: 10, R3: 11, UP: 12, DOWN: 13 } as const;
+const PAD = {
+  A: 0,
+  X: 2,
+  Y: 3,
+  LB: 4,
+  RB: 5,
+  LT: 6,
+  RT: 7,
+  SELECT: 8,
+  L3: 10,
+  R3: 11,
+  UP: 12,
+  DOWN: 13,
+  LEFT: 14,
+  RIGHT: 15,
+} as const;
 /** R스틱 최대 기울기 시선 속도(px/s 상당 — traversal 감도 0.0025 rad/px면 ≈ 2.25 rad/s). */
 export const PAD_LOOK_PX_PER_S = 900;
 /** D-pad ↑↓ = 휠(노치/s). */
@@ -52,13 +67,20 @@ export const DEFAULT_BINDINGS: BindingMap = {
     pace: [key('KeyX')],
     interact: [key('KeyF'), pad(PAD.X)],
     toggleView: [key('KeyV'), pad(PAD.R3)],
+    summon: [key('KeyR'), pad(PAD.LEFT)],
+    summonBike: [key('KeyB'), pad(PAD.RIGHT)],
   },
+  // 차량(M08-T01): 패드 D-pad ↑ = 전조등, ←/→ = 방향지시등(시선 휠 대신 — 운전 중 줌 없음).
   vehicle: {
     ...COMMON,
+    wheel: [{ device: 'mouseAxis', axis: 'wheel' }],
     moveX: [keyAxis('KeyA', 'KeyD'), stick(0)],
     moveY: [keyAxis('KeyS', 'KeyW'), { device: 'padButtonAxis', negative: PAD.LT, positive: PAD.RT }],
     handbrake: [key('Space'), pad(PAD.A)],
-    lights: [key('KeyL')],
+    lights: [key('KeyL'), pad(PAD.UP)],
+    indicatorLeft: [key('KeyQ'), pad(PAD.LEFT)],
+    indicatorRight: [key('KeyE'), pad(PAD.RIGHT)],
+    bell: [key('KeyB'), pad(PAD.Y)],
     interact: [key('KeyF'), pad(PAD.X)],
     toggleView: [key('KeyV'), pad(PAD.R3)],
     skip: [key('KeyT')],
