@@ -42,6 +42,11 @@ export interface WorkerContext {
   waitUntil(promise: Promise<unknown>): void;
 }
 
+/** AnalyticsEngineDataset 중 사용하는 부분(M11-T03 오류 보고). */
+export interface LogDataset {
+  writeDataPoint(p: { indexes?: string[]; blobs?: string[]; doubles?: number[] }): void;
+}
+
 export interface Env {
   ASSETS?: AssetsBinding;
   /** R2 월드 데이터 버킷. 없으면 `/world/*` 비활성(503). */
@@ -50,4 +55,6 @@ export interface Env {
   CONFIG?: ConfigKv;
   LIVE_WEATHER?: string;
   WORLD_BASE_URL?: string;
+  /** Workers Analytics Engine 데이터셋 `sanpo_errors`(M11-T03). 없으면 `/api/log`는 기록 없이 204. */
+  LOGS?: LogDataset;
 }

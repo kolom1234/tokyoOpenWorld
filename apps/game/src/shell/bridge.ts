@@ -55,6 +55,8 @@ export interface Shell {
   attach(world: WorldView): GameSystem[];
   /** 월드 로드 뒤: 빌드 루트(지도 global/map.pmtiles·크레딧). */
   setWorld(baseUrl: string, buildId: string): void;
+  /** setWorld로 받은 빌드 id(오류 보고 — M11-T03), 전에는 null. */
+  readonly buildId: string | null;
   readonly travel: TravelState;
   readonly discovery: DiscoveryState;
   readonly photo: PhotoControl;
@@ -246,8 +248,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     signal(false),
   );
   void save.init();
-  let buildId: string | null = null;
-  let worldBase: string | null = null;
+  const loaded = { buildId: null as string | null, base: null as string | null };
   const bridge: UiBridge = {
     hud,
     loading,
@@ -256,7 +257,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     settings,
     hasSave: save.hasSave,
     startPoints: startPoints(),
-    credits: (): Promise<CreditsModel> => loadCredits(buildId, worldBase),
+    credits: (): Promise<CreditsModel> => loadCredits(loaded.buildId, loaded.base),
     worldToMap: (p: Vec3d) => worldToMerc(p),
     map,
     photoUrl: (id) => photo.photoUrl(id),
@@ -273,6 +274,9 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     discovery,
     photo,
     save,
+    get buildId() {
+      return loaded.buildId;
+    },
     attach(w) {
       world = w;
       offs.push(settingsEffect(w, settings, opts), pause.autoPause(ui, opts.menus));
@@ -280,8 +284,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
       return [...systemsOf(doc, w, shell, hud), ...extra];
     },
     setWorld(baseUrl, id) {
-      buildId = id;
-      worldBase = baseUrl;
+      Object.assign(loaded, { buildId: id, base: baseUrl });
       map.setBase(baseUrl);
     },
     dispose() {

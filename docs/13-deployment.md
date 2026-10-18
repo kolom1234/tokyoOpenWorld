@@ -61,7 +61,7 @@
 | `GET /api/world/current?fv=1` | KV `CURRENT_BUILD:v1` → `{ buildId, formatVersion, baseUrl }` (Cache-Control max-age=60) |
 | `GET /world/<buildId>/<path>` | 평범한 GET: ① `caches.default` 조회 → ② 미스 시 R2 → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답만 `ctx.waitUntil(cache.put)`. Range·조건부 헤더가 있으면 캐시를 건너뛰고 `env.WORLD.get(key, { range, onlyIf })`가 206/304/412. 없으면 404(`max-age=300`). 진단 `X-Sanpo-Cache: HIT/MISS/BYPASS`(ADR-0026) |
 | `GET /api/weather` | `LIVE_WEATHER=true`일 때만(아니면 404). Open-Meteo 현재 날씨(도쿄역, m/s) → `{time, temperatureC, precipitationMm, weatherCode, cloudCover 0–1, windMs, windDirDeg, isDay}`, 10분 캐시, 상류 오류 502 |
-| `POST /api/log` | 오류 보고 1% 샘플링(M11, Workers Analytics Engine 선택) |
+| `POST /api/log` | 오류 보고(M11-T03, ADR-0098): 게임이 세션 1 % 샘플링 → 본문 ≤ 4 KB 허용 필드만·이메일/URL/긴 숫자 지움 → Workers Analytics Engine `LOGS`(prod `sanpo_errors`·staging `sanpo_errors_staging`) 한 점, 204. IP·UA·위치 미사용. 조회 `pnpm errors` |
 - buildId 형식 검증 정규식 `^[0-9]{8}-[0-9a-f]{7}-[0-9a-f]{8}$`, 경로 `..` 차단.
 
 ## 5. 확장(트래픽 증가 시) — Worker 우회

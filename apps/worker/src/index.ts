@@ -2,6 +2,7 @@
 import type { Env, WorkerContext } from './env.ts';
 import { json, withSecurityHeaders } from './headers.ts';
 import { handleWorldCurrent } from './routes/current.ts';
+import { handleLog } from './routes/log.ts';
 import { handleWeather } from './routes/weather.ts';
 import { handleWorldData } from './routes/world.ts';
 
@@ -16,6 +17,7 @@ async function route(request: Request, env: Env, ctx: WorkerContext | undefined)
   const { pathname } = new URL(request.url);
   const isWorld = pathname === '/world' || pathname.startsWith('/world/');
   if (pathname.startsWith('/api/') || isWorld) {
+    if (pathname === '/api/log') return handleLog(request, env);
     if (!READ_METHODS.has(request.method)) return json(405, { error: 'method_not_allowed' });
     if (pathname === '/api/health') return health(env);
     if (pathname === '/api/world/current') return handleWorldCurrent(request, env);

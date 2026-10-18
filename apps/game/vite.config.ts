@@ -1,4 +1,5 @@
 // 게임 번들 설정(Vite): dev 서버 격리 헤더 + /api·/world → wrangler dev 프록시 + world-mini 픽스처 서빙·복사 + 로컬 빌드(dev 전용). see docs/13-deployment.md §2–3, docs/modules/game.md
+import { execSync } from 'node:child_process';
 import { cpSync, createReadStream, existsSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, normalize, resolve } from 'node:path';
@@ -175,7 +176,20 @@ function gpuBenchmarks(): Plugin {
   };
 }
 
+/** 번들 버전(오류 보고 M11-T03): CI = GITHUB_SHA 앞 7자, 로컬 = git 짧은 해시, 실패 = 'dev'. */
+function bundleVersion(): string {
+  if (process.env.GITHUB_SHA) return process.env.GITHUB_SHA.slice(0, 7);
+  try {
+    return execSync('git rev-parse --short=7 HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+  } catch {
+    return 'dev';
+  }
+}
+
 export default defineConfig({
+  define: { __SANPO_VERSION__: JSON.stringify(bundleVersion()) },
   plugins: [worldMiniFixture(), localBuild(), basisTranscoder(), gpuBenchmarks(), creditsFiles()],
   // three addon(KTX2Loader)·takram의 `three` import를 WebGPU 빌드 + 호환 이름(src/three-compat.ts)으로 — WebGL 렌더러 번들 제외.
   resolve: { alias: [{ find: /^three$/, replacement: resolve(import.meta.dirname, 'src/three-compat.ts') }] },
