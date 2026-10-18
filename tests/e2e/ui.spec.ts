@@ -1,7 +1,7 @@
 // M10 UI 셸 e2e: 샌드박스(렌더 없음)에서 키보드·게임패드 메뉴 이동·언어 즉시 전환, world-mini 메뉴 모드에서 타이틀 → 새 산책 → HUD → 일시정지(게임 입력 끔).
 // 판정 = UI 상태(data-top·data-screen·포커스·입력 enabled)로 기다리고, 그림은 Node 쪽 PNG 분석(포커스 강조색·메뉴 어둡게). see docs/14-testing-perf.md §1
 import { expect, type Page, test } from '@playwright/test';
-import { STATE_TIMEOUT_MS, STATE_VIEW } from './game.ts';
+import { STATE_TIMEOUT_MS, STATE_VIEW, waitFrames } from './game.ts';
 import { decodePng, type RgbaImage } from './png.ts';
 
 const focusedId = (page: Page) => page.evaluate(() => document.activeElement?.id ?? '');
@@ -118,5 +118,8 @@ test('menu mode on world-mini: title → new walk → HUD → pause disables gam
   await page.keyboard.press('Escape');
   await expect(root).toHaveAttribute('data-top', 'hud');
   await expect.poll(enabled).toBe(true);
+  // 메뉴를 닫은 Esc가 다음 프레임 게임 입력(일시정지)으로 새면 다시 열린다 — 몇 프레임 뒤에도 HUD.
+  await waitFrames(page, 5);
+  await expect(root).toHaveAttribute('data-top', 'hud');
   expect(errors).toEqual([]);
 });
