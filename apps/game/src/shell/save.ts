@@ -51,7 +51,19 @@ export async function blobToDataUrl(b: Blob): Promise<string> {
   return `data:${b.type || 'application/octet-stream'};base64,${btoa(bin)}`;
 }
 
-const dataUrlToBlob = (u: string): Promise<Blob> => fetch(u).then((r) => r.blob());
+/** data URL → Blob(fetch 없이 — 배포 CSP `connect-src 'self'`는 data: fetch를 막는다). base64가 아니면 null. */
+export function dataUrlToBlob(u: string): Blob | null {
+  const m = /^data:([^;,]*);base64,(.*)$/s.exec(u);
+  if (!m) return null;
+  try {
+    const bin = atob(m[2] as string);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: m[1] || 'application/octet-stream' });
+  } catch {
+    return null;
+  }
+}
 
 export interface SaveStore {
   load(): Promise<SaveData | null>;
@@ -112,7 +124,10 @@ export async function importFile(f: Blob, store: SaveStore): Promise<SaveExport>
   const x = parseSaveExport(await f.text());
   if (!x) throw new Error('invalid save file');
   const thumbs = new Map<string, Blob>();
-  for (const [id, url] of Object.entries(x.thumbs)) thumbs.set(id, await dataUrlToBlob(url));
+  for (const [id, url] of Object.entries(x.thumbs)) {
+    const b = dataUrlToBlob(url);
+    if (b) thumbs.set(id, b);
+  }
   await store.write(x.save, thumbs);
   return x;
 }

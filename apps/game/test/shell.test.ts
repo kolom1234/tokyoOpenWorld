@@ -174,6 +174,20 @@ describe('photo mode (M10-T05)', () => {
 });
 
 describe('save (M10-T06)', () => {
+  it('dataUrlToBlob decodes base64 without fetch (deploy CSP connect-src blocks data:)', async () => {
+    const { dataUrlToBlob } = await import('../src/shell/save.ts');
+    const orig = globalThis.fetch;
+    globalThis.fetch = (() => Promise.reject(new Error('CSP'))) as typeof fetch;
+    try {
+      const b = dataUrlToBlob('data:image/jpeg;base64,/9j/');
+      expect(b?.type).toBe('image/jpeg');
+      expect([...new Uint8Array(await (b as Blob).arrayBuffer())]).toEqual([0xff, 0xd8, 0xff]);
+      expect(dataUrlToBlob('data:text/plain,hi')).toBeNull();
+      expect(dataUrlToBlob('data:image/png;base64,@@@')).toBeNull();
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
   it('export → import round-trips the collection through a store', async () => {
     const { applyCollection, blobToDataUrl, exportBlob, importFile } = await import('../src/shell/save.ts');
     const { createDiscovery } = await import('../src/shell/pois.ts');
