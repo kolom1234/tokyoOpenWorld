@@ -5,6 +5,7 @@ import { spawnPreset } from '../spawn-presets.ts';
 import type { WorldView } from '../world-view.ts';
 import { fastTravel } from './fast-travel.ts';
 import type { PauseControl } from './pause.ts';
+import type { PhotoControl } from './photo.ts';
 import { START_POINTS, type TravelState } from './travel.ts';
 
 export interface CommandContext {
@@ -12,6 +13,7 @@ export interface CommandContext {
   world(): WorldView | undefined;
   pause: PauseControl;
   travel: Pick<TravelState, 'isUnlocked' | 'poiPos'>;
+  photo: Pick<PhotoControl, 'set' | 'shoot' | 'store' | 'pickFocus'>;
 }
 
 /** 스폰 프리셋으로 빠른 이동(승강장 프리셋 제외 — 역 배선 전용). */
@@ -62,8 +64,10 @@ export function createCommands(ctx: CommandContext): UiCommands {
     },
     setTime: () => {},
     setWeather: () => {},
-    takePhoto: () => Promise.reject(new Error('photo mode: M10-T05')),
-    setPhotoParams: () => {},
+    takePhoto: (scale) => ctx.photo.shoot(scale),
+    setPhotoParams: (p) => ctx.photo.set(p),
+    storePhoto: (thumb) => ctx.photo.store(thumb),
+    pickFocus: (x, y) => ctx.photo.pickFocus(x, y),
     exportSave: () => Promise.reject(new Error('save: M10-T06')),
     importSave: () => Promise.reject(new Error('save: M10-T06')),
   };

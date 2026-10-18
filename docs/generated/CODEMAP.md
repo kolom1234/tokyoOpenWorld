@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 584개.
+> 파일 587개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -34,6 +34,7 @@
 - `apps/game/src/shell/map-source.ts` — 지도 데이터 소스(M10-T03): 월드 빌드 global/map.pmtiles(파일 전체 — 수 MB, 처음 필요할 때 한 번) → 타일 MVT 디코드 → UI MapTileData. WF → 메르카토르는 @sanpo/geo. | exports: worldToMerc, createMapSource
 - `apps/game/src/shell/options.ts` — 셸 옵션: 메뉴 모드(타이틀·포인터 잠금 풀림 = 일시정지) 여부와 저장소. 개발·테스트 URL(?debug=1·?view=·?spawn=·?mode=·?probe=)은 메뉴 없이 곧바로 게임. | exports: menusEnabled, storageOf
 - `apps/game/src/shell/pause.ts` — 메뉴 일시정지(M10-T01): 게임 입력 끔(input.setEnabled) + 포인터 잠금 풀기 + 사용자 시계(custom)면 시계 멈춤. 재개 = 반대(+ 제스처 안이면 포인터 잠금 다시). | exports: PauseControl, createPause
+- `apps/game/src/shell/photo.ts` — 포토 모드(M10-T05, 12 §5): 들어가면 freecam(지금 카메라 자세)·시계 정지·날씨 보관, 파라미터 = 시간 이동(±12 h)·날씨 프리셋·노출 EV·초점 거리 mm(→ FOV)·조리개(→ DOF)·초점 거리 m, | exports: fovOfFocal, dofOf, PhotoPhotoRecord, PhotoControl, createPhoto
 - `apps/game/src/shell/places.ts` — HUD 지명(M10-T02): live L0 셀 meta.json placeNames(e-Stat 町丁 — 셀 로컬 폴리곤) → WF 폴리곤 색인 → 점-폴리곤 조회(포함 중 가장 작은 면적 — 飛び地·안쪽 町). | exports: pointInPolygon, PlaceIndex, createPlaceIndex
 - `apps/game/src/shell/pois.ts` — 도감 명소(M10-T04, ADR-0094): content/poi/pois.json(자체 설명·반경·종류) + content/poi/wikidata.json(이름·좌표 CC0) → DiscoveryModel·발견 판정(sim createPoiService, 2 s 체류). | exports: resolveName, PoiEntry, poiEntries, DiscoveryRecord, DiscoveryState, createDiscovery
 - `apps/game/src/shell/settings.ts` — 설정 저장(localStorage `sanpo.settings.v1` — 부팅 때 동기로 읽어 품질·언어를 첫 화면부터 적용)과 서비스 적용(품질·FOV·감도·모션·키·볼륨). | exports: SETTINGS_KEY, loadSettings, saveSettings, tierOf, mixOf, bindingsWithKeys, SettingsTargets, applySettings
@@ -171,7 +172,7 @@
 - `packages/physics/src/internal/worker/world.ts` — Jolt 월드(08 §1): JoltInterface + PhysicsSystem + BodyInterface, 고정 스텝. 좌표 = PHYS(WF − 앵커, +Y 위 — 중력 기본값 그대로). | exports: PhysicsWorld, createWorld
 
 ## packages/render
-- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, PlayerVehicleDraw, TrainLayer, TrainStationsData, PrecompileProgress, RenderService, StationFixtures, StationSign, RenderDebugLayer, RenderDeps
+- `packages/render/src/api.ts` — @sanpo/render 공개 계약. M01-T06 최소 부분집합(초기화·셀 추가/제거·카메라·원점 재설정·통계) + M02-T05 HLOD 자식 전환·선컴파일 + M03 머티리얼 라이브러리. | exports: RenderBackend, DepthMode, QualityTier, PostEffects, GpuPassTime, RenderConfig, MaterialLibraryStats, RenderStats, AvatarAssetUrls, TreeAssetUrls, SignageAssetUrls, CrowdAssetUrls, InstanceLayer, VehicleLayer, PlayerVehicleDraw, TrainLayer, TrainStationsData, PrecompileProgress, PhotoSettings, ScreenshotOptions, RenderService, StationFixtures, StationSign, RenderDebugLayer, RenderDeps
 - `packages/render/src/index.ts` — @sanpo/render 공개 엔트리(L3): WebGPU 렌더러·머티리얼·조명·대기·포스트. api.ts 재수출 + create* 팩토리만. see docs/modules/render.md | exports: * from './api.ts', createRender
 - `packages/render/src/internal/config.ts` — render 기본 설정(07 §1 깊이·원평면, 01-architecture §7 원점 재설정). 오버라이드는 createRender deps.config → mergeConfig. | exports: DEFAULT_RENDER_CONFIG
 - `packages/render/src/internal/context.ts` — 렌더 내부 컨텍스트: 초기화된 렌더러 + 씬 그래프 + 머티리얼 + 시점 + 셀 집합. createRender(service.ts)·프레임 시스템(frame.ts)이 공유한다. | exports: RenderContext, NIGHT_LIGHT_POOL, NIGHT_LIGHTS_ACTIVE, createRenderContext
@@ -402,6 +403,7 @@
 - `packages/ui/src/internal/nav/focus.ts` — 공간 내비게이션(키보드 화살표·게임패드 D-pad): 지금 포커스 사각형에서 방향 쪽 후보 중 가장 가까운 것. 순수 함수(DOM 없음 — 테스트). | exports: NavDir, Rect, pickNext, dirOfKey
 - `packages/ui/src/internal/nav/nav.ts` — 메뉴 내비게이션 드라이버(DOM): 화살표·게임패드 → 공간 포커스 이동, ←→ = 조절(data-nav-adjust), Esc·B = 뒤로, A = 선택, LB·RB = 탭, Start. | exports: NavHandlers, NAV_SELECTOR, focusables, focusFirst, createNav
 - `packages/ui/src/internal/nav/pad.ts` — 메뉴용 게임패드 읽기(표준 매핑): D-pad·L스틱 → 방향(처음 0.35 s 뒤 0.12 s마다 반복), A 선택, B 뒤로, Start, LB·RB 탭. 순수 상태 갱신(테스트) + 폴링은 nav.ts. | exports: PadEvent, PadSnapshot, PadState, initPadState, dirOf, stepPad
+- `packages/ui/src/internal/photo/grade.ts` — 포토 그레이딩(M10-T05): 화이트밸런스(곱하기 색조)·비네팅(방사형 곱하기)·필름 그레인(결정론 잡음 타일 overlay). 미리보기(CSS 층)와 저장(2D 캔버스 합성)이 같은 값을 쓴다. | exports: wbColor, css, vignetteAlpha, grainAlpha, noiseTile, noiseDataUrl, gradePhoto
 - `packages/ui/src/internal/sandbox/mock-bridge.ts` — 목 UiBridge(`?ui-sandbox=1` 스토리 페이지·단위 테스트): 가짜 로딩 진행, HUD 모드 순환, 고정 크레딧. 게임 없이 화면을 본다. | exports: MOCK_HUD, MockBridge, createMockBridge
 - `packages/ui/src/internal/screens/boot.tsx` — 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류. | exports: BootScreen
 - `packages/ui/src/internal/screens/credits.tsx` — 크레딧: 데이터·에셋 출처(bridge.credits — 빌드 credits.json/ATTRIBUTION) + ODbL 안내 + 가상 디자인 고지 + OSS 라이선스 목록. | exports: CreditsScreen
@@ -411,6 +413,7 @@
 - `packages/ui/src/internal/screens/log.tsx` — 도감(M10-T04, 12 §2 Discovery Log): 분류 탭(전체·랜드마크·거리·공원·신사·전망), 명소 격자(미발견 = ???), 고르면 오른쪽에 이름·설명(자체 작성 3개 언어)·발견 시각(JST)·날씨·사진. | exports: jstDate, LogScreen
 - `packages/ui/src/internal/screens/map.tsx` — 전체 지도(M) — M10-T03: 지도 캔버스(map/controller — 팬·줌·60 fps) + 빠른 이동 목록(발견한 곳만 이동 — 포커스하면 지도가 그곳으로) + 레이어(지명·역) + 출처 상시 표기. | exports: MapScreen
 - `packages/ui/src/internal/screens/menus.tsx` — 타이틀(이어하기·새 산책(시작 지점)·설정·크레딧)과 일시정지(계속·지도·도감·포토·설정·타이틀로) 메뉴. | exports: ScreenNav, MenuScreen, TitleScreen, PauseScreen
+- `packages/ui/src/internal/screens/photo.tsx` — 포토 모드(P) — M10-T05, 12 §5: 자유 카메라(WASD·E/Q·마우스 끌기)로 구도, 오른쪽 패널 = 시간(±12 h)·날씨·노출·화이트밸런스·초점 거리(mm)·조리개·초점(오른쪽 클릭)·비네팅·그레인·3분할·배율(×1/×2), | exports: DEFAULT_PHOTO, PhotoScreen
 - `packages/ui/src/internal/screens/settings.tsx` — 설정 화면: 탭(그래픽·카메라·모션·조작·소리·일반) — 바뀌면 곧바로 bridge.settings(게임이 적용·저장). 키 재바인딩 = 누를 때까지 대기(data-capturing). | exports: SETTINGS_TABS, SettingsTab, SettingsScreen
 - `packages/ui/src/internal/settings.ts` — 설정 기본값·정규화(저장본·가져오기 값의 범위·형식 검사). 저장은 게임(localStorage — 부팅 때 동기로 읽어 품질·언어 적용). | exports: DEFAULT_SETTINGS, normalizeSettings, langFromNavigator
 - `packages/ui/src/internal/theme.ts` — UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = 시스템 일·한 고딕(⚠️ Noto 서브셋 자체 호스팅은 후속 — docs/12 §1). | exports: THEME_CSS, injectTheme

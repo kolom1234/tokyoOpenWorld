@@ -158,3 +158,17 @@ describe('field guide (M10-T04)', () => {
     expect(resolveName('derived:가나', 'ko', wd)).toBe('가나');
   });
 });
+
+describe('photo mode (M10-T05)', () => {
+  it('maps focal length to FOV and aperture to depth of field', async () => {
+    const { dofOf, fovOfFocal } = await import('../src/shell/photo.ts');
+    expect(fovOfFocal(24)).toBeCloseTo(53.13, 1);
+    expect(fovOfFocal(200)).toBeLessThan(7);
+    expect(dofOf({ aperture: 22, focusM: 10 })).toBeNull();
+    expect(dofOf({ aperture: 2, focusM: null })).toBeNull();
+    const d = dofOf({ aperture: 2, focusM: 10 });
+    expect(d?.focusM).toBe(10);
+    expect(d?.rangeM).toBeCloseTo(2.5, 6);
+    expect(d?.bokeh).toBeCloseTo(2, 6);
+  });
+});

@@ -154,3 +154,19 @@ describe('map view (M10-T03)', () => {
     expect(v.zoom).toBeCloseTo(15.16, 6);
   });
 });
+
+describe('photo grading (M10-T05)', () => {
+  it('white balance tints warm/cool, photo screen keeps the game running', async () => {
+    const { wbColor, vignetteAlpha, grainAlpha } = await import('../src/internal/photo/grade.ts');
+    const { isPlaying } = await import('../src/internal/app.tsx');
+    expect(wbColor(0)).toEqual([255, 255, 255]);
+    const warm = wbColor(1);
+    expect(warm[2]).toBeLessThan(warm[0]);
+    const cool = wbColor(-1);
+    expect(cool[0]).toBeLessThan(cool[2]);
+    expect(vignetteAlpha(2)).toBeCloseTo(0.75, 6);
+    expect(grainAlpha(-1)).toBe(0);
+    expect(isPlaying('photo')).toBe(true);
+    expect(isPlaying('pause')).toBe(false);
+  });
+});

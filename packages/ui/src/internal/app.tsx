@@ -10,6 +10,7 @@ import { FadeLayer, HudLayer } from './screens/hud.tsx';
 import { LogScreen } from './screens/log.tsx';
 import { MapScreen } from './screens/map.tsx';
 import { PauseScreen, type ScreenNav, TitleScreen } from './screens/menus.tsx';
+import { PhotoScreen } from './screens/photo.tsx';
 import { SETTINGS_TABS, SettingsScreen, type SettingsTab } from './screens/settings.tsx';
 import { injectTheme } from './theme.ts';
 
@@ -34,11 +35,8 @@ export function nextStack(
   }
 }
 
-/** 게임이 돌아가는(입력을 받는) 화면인가. */
-export const isPlaying = (s: ScreenId): boolean => s === 'hud';
-
-/** 아직 구현 전 화면(T03–T05) — 열지 않는다. */
-const PLACEHOLDER: ReadonlySet<ScreenId> = new Set<ScreenId>(['photo']);
+/** 게임이 돌아가는(입력을 받는) 화면인가 — 포토 모드는 자유 카메라를 움직인다(시계는 게임이 멈춘다). */
+export const isPlaying = (s: ScreenId): boolean => s === 'hud' || s === 'photo';
 
 function App(p: {
   bridge: UiBridge;
@@ -71,6 +69,7 @@ function App(p: {
       ) : null}
       {top === 'credits' ? <CreditsScreen bridge={b} back={p.nav.back} pad={pad} /> : null}
       {top === 'log' ? <LogScreen bridge={b} back={p.nav.back} pad={pad} /> : null}
+      {top === 'photo' ? <PhotoScreen bridge={b} back={p.nav.back} pad={pad} /> : null}
       {top === 'map' ? (
         <MapScreen
           bridge={b}
@@ -96,7 +95,6 @@ export function mountUi(root: HTMLElement, bridge: UiBridge, opts: UiOptions = {
   const helpOpen = signal(true);
   const screen = computed<ScreenId>(() => stack.value[stack.value.length - 1] ?? 'boot');
   const go = (op: Parameters<typeof nextStack>[1], s?: ScreenId) => {
-    if (s && PLACEHOLDER.has(s)) return;
     stack.value = nextStack(stack.value, op, s);
   };
   const nav: ScreenNav = {

@@ -8,6 +8,7 @@ import { createCrowdMaterial, outfitU } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
 import { nightU, updateNight } from './lighting/night.ts';
 import { compileDetached, precompileBase, precompileMaterials, yieldFrame } from './materials/precompile.ts';
+import { dofBokehU, dofFocusU, dofRangeU, exposureBiasU } from './post/photo.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
 import { createTrainMaterial } from './trains/material.ts';
@@ -63,6 +64,30 @@ function statsOf(ctx: RenderContext): RenderStats {
     trains: ctx.trains.stats(),
     weather: { rain: ctx.rain.stats(), wetness: ctx.envUniforms.wetness.value, direct: ctx.atmosphere.light.color.r },
     night: { level: nightU.value, ...ctx.nightLights.stats() },
+  };
+}
+
+/** 포토 모드(M10-T05): 노출 보정·DOF(그래프 재구성)·고해상도 캡처. */
+function photoApi(ctx: RenderContext): Pick<RenderService, 'setPhoto' | 'screenshot'> {
+  return {
+    setPhoto(p) {
+      exposureBiasU.value = 2 ** (p?.exposureEv ?? 0);
+      if (p?.dof) {
+        dofFocusU.value = p.dof.focusM;
+        dofRangeU.value = p.dof.rangeM;
+        dofBokehU.value = p.dof.bokeh;
+      }
+      const want = !!p?.dof && !ctx.software;
+      if (want === ctx.photo.dof) return;
+      ctx.photo.dof = want;
+      ctx.rebuildPost();
+    },
+    screenshot(o) {
+      if (ctx.capture) return Promise.reject(new Error('screenshot: already capturing'));
+      return new Promise((resolve, reject) => {
+        ctx.capture = { scale: o.scale, framesLeft: Math.max(1, o.settleFrames ?? 8), resolve, reject };
+      });
+    },
   };
 }
 
@@ -246,6 +271,7 @@ export async function createRender(deps: RenderDeps): Promise<RenderService> {
   return {
     renderOriginWF: view.renderOriginWF,
     setQuality: (tier) => ctx.quality.setTier(tier),
+    ...photoApi(ctx),
     detectQuality: () => ctx.quality.detect(),
     backend: ctx.backend,
     depth: ctx.depth,

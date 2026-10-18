@@ -136,6 +136,20 @@ export const THEME_CSS = `
 .log-desc{line-height:1.7}
 .photo-strip{display:flex;flex-wrap:wrap;gap:.4em}
 .photo-strip img,.photo-missing{width:9em;height:5.1em;object-fit:cover;border-radius:6px;background:#222}
+.screen.photo{pointer-events:none}
+.photo-overlays,.photo-overlays>div{position:absolute;inset:0;pointer-events:none}
+.photo-wb{mix-blend-mode:multiply;transition:opacity .2s}
+.photo-vignette{background:radial-gradient(ellipse at center,rgba(0,0,0,0) 45%,rgba(0,0,0,var(--va,0)) 100%)}
+.photo-grain{mix-blend-mode:overlay;background-repeat:repeat}
+.photo-grid i{position:absolute;background:rgba(255,255,255,.5)}
+.photo-grid i:nth-child(-n+2){top:0;bottom:0;width:1px}
+.photo-grid i:nth-child(1){left:33.333%}.photo-grid i:nth-child(2){left:66.666%}
+.photo-grid i:nth-child(n+3){left:0;right:0;height:1px}
+.photo-grid i:nth-child(3){top:33.333%}.photo-grid i:nth-child(4){top:66.666%}
+.screen.menu.photo-panel{inset:0 0 0 auto;width:min(25em,38vw);padding:1.1em;gap:.5em;justify-content:flex-start;align-items:stretch;background:rgba(14,18,26,.86);pointer-events:auto}
+.photo-rows{overflow:auto;flex:1}
+.photo-panel .row-control .choice,.photo-panel .row-control .slider{min-width:10.5em}
+.photo-panel .nav-hint{position:static;margin-top:.3em}
 .map-screen .nav-hint{left:0;right:auto;width:calc(100% - min(22em,34vw));color:#444;bottom:2.4em}
 `;
 

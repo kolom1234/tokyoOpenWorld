@@ -22,6 +22,7 @@ RenderStats += weather: { rain: { count, density, snow }, wetness, direct }  // 
 setStationFixtures(f: StationFixtures { boxes: f64 × 8(cx,cy,cz,hx,hy,hz,yaw,색 번호); flaps: f64 × 8(…, 접힘 쪽 ±1); signs?: StationSign[] { posWF, yawRad, widthM, heightM, icon: gate|stairs|exit|station, title, sub } — 가상 디자인 글자 판(stations/signs.ts 아틀라스 1장·메시 1개, ADR-0084) } | null); setGateFlaps(open: Float32Array /* 통로별 0..1 */)  // M07-T06 역 시설(개찰구·울타리·계단 표식, WF — stations/fixtures.ts), ADR-0081
 RenderStats += night: { level, cells, lights, active, sprites }  // M09-T03 밤 정도·lights.bin 셀·광원 수·켠 클러스터 광원(풀 1024)·발광 스프라이트, ADR-0078
 RenderStats += signs: { instances, visible, pools, ready }; RenderService += loadSignage(urls: SignageAssetUrls{atlas}): Promise<void>  // M05-T06 ADR-0054 — 첫 표시 뒤, 파사드 간판 띠도 같은 아틀라스
+RenderService += setPhoto(PhotoSettings{exposureEv, dof: {focusM, rangeM, bokeh}|null} | null), screenshot(ScreenshotOptions{scale 1|2, settleFrames 8}): Promise<Blob>  // M10-T05(ADR-0095): 노출 유니폼·DOF는 포토 모드에서만 그래프 재구성, 캡처 = 픽셀 비율 × scale로 수렴 프레임 뒤 toBlob
 RenderService += setQuality(tier), detectQuality(): Promise<QualityTier>  // 버스 'quality/changed'도 적용(되먹임 없음), 자기 변경은 방출. 소프트웨어 래스터 = detect-gpu 생략 → low
 QualityTier = @sanpo/core 재수출
 RenderService extends SystemProvider {            // systems: renderPrep(70), render(80)
@@ -50,7 +51,7 @@ RenderService extends SystemProvider {            // systems: renderPrep(70), re
   dispose(): void;
 }
 ```
-미구현(M03~): `setQuality`, `layers`, `screenshot`, `deps.assets`(머티리얼은 `loadMaterials(url)`로 대체).
+미구현(M03~): `layers`, `deps.assets`(머티리얼은 `loadMaterials(url)`로 대체).
 
 ## Invariants
 - 건물 파사드 메시마다 깊이 프리패스 쌍둥이(같은 지오메트리, renderOrder −1, colorWrite false). HLOD는 페이드 중인 셀만 alphaHash 변형(`syncHlodMaterials`, renderPrep) — ADR-0039.

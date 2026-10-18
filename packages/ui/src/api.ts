@@ -183,6 +183,8 @@ export interface SettingsModel {
 
 export interface PhotoParams {
   timeOffsetH: number;
+  /** 날씨 프리셋 상태 id(null = 지금 날씨 그대로). */
+  weather: string | null;
   exposureEv: number;
   /** 화이트밸런스 −1(차갑게)…+1(따뜻하게). */
   whiteBalance: number;
@@ -244,8 +246,14 @@ export interface UiCommands {
   fastTravel(placeId: string): Promise<void>;
   setTime(ms: number): void;
   setWeather(mode: string, preset?: string): void;
+  /** 원본 캡처 PNG(×1|×2 — 화이트밸런스·비네팅·그레인은 UI가 합성). */
   takePhoto(scale: 1 | 2): Promise<Blob>;
-  setPhotoParams(p: PhotoParams | null): void;
+  /** 포토 모드 파라미터(null = 나가기). 들어가지 못하면(탈것·열차 중) false. */
+  setPhotoParams(p: PhotoParams | null): boolean;
+  /** 썸네일 보관 + 가까운 발견 명소(250 m)에 연결 → 사진 id·명소 이름. */
+  storePhoto(thumb: Blob): Promise<{ id: string; poiName: LocalName | null }>;
+  /** 화면 점(0…1)까지 거리 m(오른쪽 클릭 초점) — 없으면 null. */
+  pickFocus(x: number, y: number): Promise<number | null>;
   exportSave(): Promise<Blob>;
   importSave(f: File): Promise<void>;
 }

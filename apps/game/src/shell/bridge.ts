@@ -24,6 +24,7 @@ import { hudStateOf, topPrompt } from './hud-state.ts';
 import { INITIAL_LOADING, loadingOfBoot } from './loading.ts';
 import { createMapSource, worldToMerc } from './map-source.ts';
 import { createPause } from './pause.ts';
+import { createPhoto, type PhotoControl } from './photo.ts';
 import { createPlaceIndex, type PlaceIndex } from './places.ts';
 import { createDiscovery, type DiscoveryState } from './pois.ts';
 import { applySettings, loadSettings, saveSettings } from './settings.ts';
@@ -53,6 +54,7 @@ export interface Shell {
   setWorld(baseUrl: string, buildId: string): void;
   readonly travel: TravelState;
   readonly discovery: DiscoveryState;
+  readonly photo: PhotoControl;
   dispose(): void;
 }
 
@@ -128,6 +130,7 @@ function watchPlaces(w: WorldView, places: PlaceIndex): true {
 function hudSystem(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudModel>): GameSystem {
   let acc = HUD_INTERVAL_S;
   let groundS = 0;
+  let prevTop = '';
   let sig = '';
   const places = createPlaceIndex();
   let watching = false;
@@ -143,7 +146,11 @@ function hudSystem(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudMod
         const st = w.bootStage();
         shell.loading.value = { ...shell.loading.peek(), ...loadingOfBoot(st.boot, st.live) };
       }
-      if (shell.ui.screen.peek() === 'hud' && w.input.enabled) {
+      // HUD로 막 돌아온 프레임은 건너뛴다 — 포토 모드(입력 켜짐)를 닫은 Esc가 같은 프레임 일시정지로 새지 않게.
+      const top = shell.ui.screen.peek();
+      const settled = top === 'hud' && prevTop === 'hud';
+      prevTop = top;
+      if (settled && w.input.enabled) {
         const a = w.input.state;
         if (a.justPressed('pause')) shell.ui.open('pause');
         else if (a.justPressed('map')) shell.ui.open('map');
@@ -187,17 +194,43 @@ function settingsEffect(w: WorldView, settings: Signal<SettingsModel>, opts: She
   });
 }
 
+/** 셸 부품(일시정지·빠른 이동·지도·도감·포토) — 월드는 getter(attach 뒤). */
+function createParts(doc: Document, settings: Signal<SettingsModel>, world: () => WorldView | undefined) {
+  const places = signal<readonly TravelPlace[]>([]);
+  const travel = createTravelState(places);
+  const discoveries = signal<readonly DiscoveryModel[]>([]);
+  const discovery = createDiscovery(doc, discoveries, (e) => travel.addPoi(e.id, e.name, e.posWF));
+  return {
+    pause: createPause(doc, world),
+    places,
+    travel,
+    map: createMapSource(),
+    discoveries,
+    discovery,
+    photo: createPhoto(doc, world, discovery, () => settings.peek().fovDeg),
+  };
+}
+
+/** attach 때 등록하는 시스템(HUD·빠른 이동 발견·명소 발견). */
+function systemsOf(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudModel>): GameSystem[] {
+  return [
+    hudSystem(doc, w, shell, hud),
+    shell.travel.system(() => w.traversal.player.posWF),
+    shell.discovery.system({
+      player: () => w.traversal.player.posWF,
+      mode: () => w.traversal.mode,
+      timeMs: () => w.sim.clock.gameTimeMs,
+      weather: () => w.sim.weather.stateId,
+    }),
+  ];
+}
+
 export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions): Shell {
   const settings = signal(loadSettings(opts.storage, doc.defaultView?.navigator.languages));
   const loading = signal<LoadingModel>(INITIAL_LOADING);
   const hud = signal<HudModel>(EMPTY_HUD);
   let world: WorldView | undefined;
-  const pause = createPause(doc, () => world);
-  const places = signal<readonly TravelPlace[]>([]);
-  const travel = createTravelState(places);
-  const map = createMapSource();
-  const discoveries = signal<readonly DiscoveryModel[]>([]);
-  const discovery = createDiscovery(doc, discoveries, (e) => travel.addPoi(e.id, e.name, e.posWF));
+  const { pause, places, travel, map, discoveries, discovery, photo } = createParts(doc, settings, () => world);
   let buildId: string | null = null;
   const bridge: UiBridge = {
     hud,
@@ -210,7 +243,8 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     credits: (): Promise<CreditsModel> => loadCredits(buildId),
     worldToMap: (p: Vec3d) => worldToMerc(p),
     map,
-    commands: createCommands({ doc, world: () => world, pause, travel }),
+    photoUrl: (id) => photo.photoUrl(id),
+    commands: createCommands({ doc, world: () => world, pause, travel, photo }),
   };
   const ui = mountUi(root, bridge, { menus: opts.menus });
   const offs: (() => void)[] = [];
@@ -221,19 +255,11 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     settings,
     travel,
     discovery,
+    photo,
     attach(w) {
       world = w;
       offs.push(settingsEffect(w, settings, opts), pause.autoPause(ui, opts.menus));
-      return [
-        hudSystem(doc, w, shell, hud),
-        travel.system(() => w.traversal.player.posWF),
-        discovery.system({
-          player: () => w.traversal.player.posWF,
-          mode: () => w.traversal.mode,
-          timeMs: () => w.sim.clock.gameTimeMs,
-          weather: () => w.sim.weather.stateId,
-        }),
-      ];
+      return systemsOf(doc, w, shell, hud);
     },
     setWorld(baseUrl, id) {
       buildId = id;
