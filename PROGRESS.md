@@ -5,8 +5,10 @@ Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10
 ## Current Task: M10-T05 Photo mode
 - Done in this session (#25): M10-T01 UI 셸(ADR-0091), T02 HUD·지명(ADR-0092), T03 지도·미니맵(ADR-0093), T04 도감(ADR-0094 — Wikidata 이름·좌표 + 자체 설명 3개 언어 + `poi-review` 위키백과 겹침 검수, sim createPoiService 2 s 체류, 도감 화면).
   로컬 테스트 빌드 `test-places-m10`(6셀 + map.pmtiles — MVP 재빌드 때 지움). OSM 필터에 natural=water 추가(재정규화 필요 — MVP 재빌드 때 `normalize --layer osm`).
-- In progress: 없음. ⚠️ "20곳 모두 발견 가능" 실제 GPU 봇 확인은 MVP 재빌드 뒤(명소마다 빠른 이동 → 2 s → 발견).
-- Next step (정확히 한 걸음): render `screenshot({scale})` API 설계 — docs/07 §7(포토모드) 읽기.
+- In progress: M10-T05 포토 모드 — render 쪽만 시작(커밋 wip): post/photo.ts(exposureBiasU·DOF 유니폼·applyDof·CaptureRequest), pipeline.ts(노출 배율 곱·overlays.dof면 DOF), context.ts(photo·capture·rebuildPost), frame.ts(캡처 중 픽셀 비율 × scale·finishCapture → canvas.toBlob·품질 관리자 건너뜀).
+  남은 일: api.ts에 `setPhoto({exposureEv, dof|null})`·`screenshot({scale, settleFrames})` 추가 + service.ts 구현 + 모듈 카드, 게임 shell(포토 진입 = freecam·시계 정지·FOV/시간/날씨, WB·비네팅·그레인 2D 합성, PNG 다운로드, 썸네일 → 도감 attachPhoto, 메모리 nvidia-smi 측정), UI screens/photo.tsx(PLACEHOLDER에서 'photo' 제거).
+  ⚠️ "20곳 모두 발견 가능" 실제 GPU 봇 확인은 MVP 재빌드 뒤.
+- Next step (정확히 한 걸음): packages/render/src/api.ts RenderService에 setPhoto·screenshot 타입 추가 → service.ts 구현(frames 대기 = ctx.capture = {scale, framesLeft: 8, resolve, reject}).
 - Blockers: 없음. ODPT 키 없음(M10 무관).
 
 ## Recently Completed

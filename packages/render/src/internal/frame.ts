@@ -12,10 +12,16 @@ export const RENDER_PHASE = 80;
 const scratchSize = new Vector2();
 
 /** CSS 크기·DPR이 바뀐 경우에만 드로잉 버퍼 크기 갱신. */
-function syncSize(renderer: WebGPURenderer, camera: PerspectiveCamera, canvas: HTMLCanvasElement, maxDpr: number) {
+function syncSize(
+  renderer: WebGPURenderer,
+  camera: PerspectiveCamera,
+  canvas: HTMLCanvasElement,
+  maxDpr: number,
+  scale = 1,
+) {
   const w = Math.max(1, canvas.clientWidth);
   const h = Math.max(1, canvas.clientHeight);
-  const dpr = Math.min(globalThis.devicePixelRatio ?? 1, maxDpr);
+  const dpr = Math.min(globalThis.devicePixelRatio ?? 1, maxDpr) * scale;
   if (renderer.getPixelRatio() !== dpr) renderer.setPixelRatio(dpr);
   const size = renderer.getSize(scratchSize);
   if (size.x !== w || size.y !== h) {
@@ -87,6 +93,14 @@ function syncWeather(ctx: RenderContext, dtS: number, rebased: boolean): void {
   });
 }
 
+/** 수렴 프레임이 다 지나면 같은 작업 안에서 캔버스 스냅숏(toBlob은 호출 시점 그림) — 다음 프레임 크기 복원. */
+function finishCapture(ctx: RenderContext): void {
+  const c = ctx.capture;
+  if (!c || --c.framesLeft > 0) return;
+  ctx.capture = null;
+  ctx.canvas.toBlob((b) => (b ? c.resolve(b) : c.reject(new Error('screenshot: empty canvas'))), 'image/png');
+}
+
 export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw: GameSystem } {
   const { renderer, view, cells, library, hlod, counters } = ctx;
   const moved = createMotionProbe(view.camera);
@@ -95,7 +109,7 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
     id: 'renderPrep',
     phase: RENDER_PREP_PHASE,
     update(f) {
-      syncSize(renderer, view.camera, ctx.canvas, ctx.cfg.maxPixelRatio);
+      syncSize(renderer, view.camera, ctx.canvas, ctx.cfg.maxPixelRatio, ctx.capture?.scale ?? 1);
       let rebased = false;
       view.prepare((origin) => {
         cells.placeAll(origin);
@@ -120,7 +134,9 @@ export function createFrameSystems(ctx: RenderContext): { prep: GameSystem; draw
     phase: RENDER_PHASE,
     update(f) {
       ctx.compileScope.frame(() => ctx.post.render(f.dtReal));
-      ctx.quality.onFrame(f.dtReal);
+      // 캡처 중(고해상도 프레임)은 품질 관리자가 느린 프레임으로 보고 티어를 내리지 않게 건너뛴다.
+      if (ctx.capture) finishCapture(ctx);
+      else ctx.quality.onFrame(f.dtReal);
       ctx.gpuTimer.afterFrame();
       counters.frames++;
     },

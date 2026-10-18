@@ -18,6 +18,7 @@ import { createMaterialLibrary, type MaterialLibrary } from './materials/library
 import { createPropMaterial } from './materials/prop.ts';
 import { createMaterialRegistry, type MaterialRegistry } from './materials/registry.ts';
 import { resolvePost } from './post/config.ts';
+import type { CaptureRequest, PhotoRenderState } from './post/photo.ts';
 import { createDirectRender, createPostPipeline, type PostPipeline } from './post/pipeline.ts';
 import { createWeatherSkyUniforms, type WeatherSkyUniforms } from './post/weather-sky.ts';
 import { createPropField, type PropField } from './props/pools.ts';
@@ -88,6 +89,12 @@ export interface RenderContext {
   readonly shadows: SunShadows | undefined;
   /** 티어 변경 때 교체된다(quality.ts). */
   post: PostPipeline;
+  /** 포토 모드(M10-T05): DOF를 그래프에 넣을지 — 바뀌면 rebuildPost. */
+  readonly photo: PhotoRenderState;
+  /** 고해상도 캡처 요청(프레임 시스템이 처리). */
+  capture: CaptureRequest | null;
+  /** 지금 티어·렌더 스케일 그대로 후처리 그래프를 다시 만든다(포토 DOF 켜고 끄기). */
+  rebuildPost(): void;
   /** 선컴파일 = 씬 패스 대상(ADR-0086). 프레임 렌더는 `compileScope.frame`으로 감싼다. */
   readonly compileScope: CompileScope;
   readonly quality: QualityManager;
@@ -267,7 +274,8 @@ function weatherState(): Pick<RenderContext, 'rain' | 'sky' | 'weather'> {
 }
 
 /** 품질·선컴파일 범위는 ctx를 받아 만든다(뒤에서 채움). */
-type ContextUnderConstruction = Omit<RenderContext, 'quality' | 'compileScope'> & {
+type ContextUnderConstruction = Omit<RenderContext, 'quality' | 'compileScope' | 'rebuildPost'> & {
+  rebuildPost?: () => void;
   quality?: QualityManager;
   compileScope?: CompileScope;
 };
@@ -283,6 +291,12 @@ function finishContext(
   const { renderer, cfg } = ctx;
   // 선컴파일 = 씬 패스 대상(ADR-0086 — 캔버스 변형은 첫 프레임에 다시 동기 컴파일), 티어 변경 뒤에도 지금 post.
   ctx.compileScope = routeCompileToScenePass(renderer, () => ctx.post.compileTarget());
+  ctx.rebuildPost = () => {
+    const scale = ctx.quality?.stats().renderScale ?? 1;
+    ctx.post.dispose();
+    ctx.post = makePost(ctx.quality?.tier ?? cfg.quality);
+    ctx.post.setRenderScale(scale);
+  };
   ctx.quality = attachQuality(ctx, deps, hw, (tier) => {
     ctx.shadows?.setTier(tier);
     ctx.post.dispose();
@@ -315,9 +329,13 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const wx = weatherState();
   // 날씨 합성(빗줄기·구름·연무)은 하드웨어만 — 소프트웨어 래스터(CI) 픽셀 비교 결정론·비용.
   const overlays = software ? {} : { rain: wx.rain.uniforms, sky: wx.sky };
+  const photo: PhotoRenderState = { dof: false };
   const makePost = (tier: QualityTier): PostPipeline =>
     post
-      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, overlays)
+      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, {
+          ...overlays,
+          ...(photo.dof ? { dof: true } : {}),
+        })
       : createDirectRender(renderer, graph.scene, view.camera);
   const ctx: ContextUnderConstruction = {
     cfg,
@@ -340,6 +358,8 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
     env: post ? attachEnvProbe(graph.scene, atmosphere.light) : { dispose() {} },
     shadows: post && cfg.shadows ? enableSunShadows(renderer, atmosphere.light, cfg.quality, casters) : undefined,
     post: makePost(cfg.quality),
+    photo,
+    capture: null,
     gpuTimer: createGpuTimer(renderer, cfg.gpuTiming),
     counters: { frames: 0, fading: 0, sceneVersion: 0, shadowUpdates: 0 },
     ...wx,
