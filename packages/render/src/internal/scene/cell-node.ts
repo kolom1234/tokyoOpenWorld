@@ -6,6 +6,7 @@ import { createHlodFades } from '../materials/hlod.ts';
 import type { MaterialRegistry } from '../materials/registry.ts';
 import type { HlodSwitch } from './hlod-switch.ts';
 import { toRender } from './origin.ts';
+import { releaseRenderObjects } from './release.ts';
 import { type LayerRoot, SLOT_ROOT } from './scene-graph.ts';
 
 /** glTF 속성 이름(DecodedMesh 규약) → three 속성 이름. 나머지는 소문자(`_BLDG` → `_bldg`). */
@@ -158,7 +159,10 @@ export function placeCellNode(node: CellRenderNode, renderOriginWF: Readonly<Vec
 }
 
 export function disposeCellNode(node: CellRenderNode): void {
-  for (const g of node.groups) g.removeFromParent();
+  for (const g of node.groups) {
+    g.removeFromParent();
+    releaseRenderObjects(g);
+  }
   for (const m of node.meshes) m.geometry.dispose();
 }
 

@@ -99,3 +99,4 @@ M01-T06 최소 구현(초기화·reversed-Z·방향광·셀 메시·원점 재�
 - `reversedDepthBuffer`·`logarithmicDepthBuffer`는 생성자 옵션(이후 readonly). WebGL2는 `EXT_clip_control` 없으면 three가 조용히 표준 깊이로 폴백 → `backend-caps.ts`로 미리 판정.
 - WebGPU는 `snorm8x3`·`unorm16x3` 정점 형식이 없다 → three가 업로드 시 4성분으로 패딩(WebGPUAttributeUtils). 밀집 3성분 배열을 그대로 넘겨도 된다.
 - takram atmosphere의 WebGPU 노드명은 `@takram/three-atmosphere/webgpu` 타입 정의 확인 후 사용.
+- 장면에서 영구히 빼는 메시는 `scene/release.ts releaseRenderObjects`(하위 트리에 'dispose' 이벤트)를 거친다 — three r186 RenderObject는 geometry.dispose()로는 캐시에서 빠지지 않아 공유 머티리얼 리스너가 메시·정점 배열을 붙잡는다(M11-T02 소크: 셀 해제마다 누수, 힙 +92 MB/분).
