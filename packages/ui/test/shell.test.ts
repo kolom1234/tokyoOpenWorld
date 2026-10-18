@@ -128,3 +128,29 @@ describe('hud info (M10-T02)', () => {
     expect(distText(10, 'imperial')).toBe('33 ft');
   });
 });
+
+describe('map view (M10-T03)', () => {
+  it('screen ↔ mercator round-trips with rotation; tiles cover the view', async () => {
+    const { toMerc, toScreen, tilesInView, tileZoomFor, metersPerPx } = await import('../src/internal/map/view.ts');
+    const v = { cx: 0.888, cy: 0.394, zoom: 16, rotation: 0.7, w: 800, h: 600 };
+    const [mx, my] = toMerc(v, 123, 456);
+    const [sx, sy] = toScreen(v, mx, my);
+    expect(sx).toBeCloseTo(123, 6);
+    expect(sy).toBeCloseTo(456, 6);
+    expect(toScreen(v, v.cx, v.cy)).toEqual([400, 300]);
+    const tiles = tilesInView({ ...v, rotation: 0 }, 16);
+    expect(tiles.length).toBeGreaterThanOrEqual(12);
+    expect(tileZoomFor(18.4, 13, 16)).toBe(16);
+    expect(tileZoomFor(12, 13, 16)).toBe(13);
+    expect(metersPerPx({ ...v, cy: 0.5 })).toBeCloseTo(40_075_016.7 / (256 * 2 ** 16), 3);
+  });
+  it('map pan/zoom steps from held keys', async () => {
+    const { stepView } = await import('../src/internal/map/controller.ts');
+    const v = { cx: 0.5, cy: 0.5, zoom: 15, rotation: 0, w: 100, h: 100 };
+    const none = { px: 0, py: 0, zoom: 0 };
+    expect(stepView(v, { keys: new Set(), drag: null }, 0.1, none)).toBe(false);
+    expect(stepView(v, { keys: new Set(['KeyD', 'KeyE']), drag: null }, 0.1, none)).toBe(true);
+    expect(v.cx).toBeGreaterThan(0.5);
+    expect(v.zoom).toBeCloseTo(15.16, 6);
+  });
+});

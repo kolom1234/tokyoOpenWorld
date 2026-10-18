@@ -74,6 +74,9 @@ const tkc = writeTkc(header, [{ type: 'terrain.mesh', sources: ['gsi-dem'], data
 indexEntries.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash32: tkcHash32(tkc) });  // → writeCellsIndex
 ```
 
+**지도(M10-T03, ADR-0093 — src/api-map.ts, api.ts가 재수출)**: `MvtFeature{type 1|2|3, geometry: number[][], properties, id?}`, `MvtLayer{name, extent, features}`, `encodeMvt(layers) → Uint8Array`, `decodeMvt(bytes) → MvtLayer[]`(MVT 2.1),
+`writePmtiles(tiles: {z,x,y,data}[], {header: {minZoom,maxZoom,bounds,center}, metadata}) → Promise<Uint8Array>`(PMTiles v3 — 루트 gzip ≤ 16 KiB 넘치면 잎 디렉터리, 타일 gzip), `readPmtiles(buf) → PmtilesArchive{header, metadata, tile(z,x,y)}`(파일 전체 메모리), `zxyToTileId(z,x,y)`(힐버트 — 공식 구현과 테스트 대조).
+
 ## Invariants
 - 리틀엔디언, 섹션 16바이트 정렬, 오프셋은 파일 절대값. 헤더 JSON 고정 키 순서, 섹션 `type` 사전순, sources 정렬·중복 제거 → 결정론(05 §3.1).
 - 미지 섹션·추가 헤더 필드는 읽기 시 무시(범위·정렬 검사는 적용). `formatVersion` 불일치 → `version`, flags ≠ 0 → `flags`.
@@ -84,10 +87,10 @@ indexEntries.push({ level: 0, ix, iz, flags: 0, byteLength: tkc.byteLength, hash
 
 ## Files
 src/api.ts(계약·레지스트리·모델), src/index.ts, src/internal/: tkc-writer.ts, tkc-reader.ts, header-check.ts(구조 검사·정규 직렬화), sections.ts(레지스트리 조회·해시·정렬),
-cells-index.ts, jcol.ts, lanes.ts, heightfield.ts, props.ts(M05-T03), trees.ts(M05-T04), gzip.ts, xxh64.ts, bytes.ts(LE 읽기/쓰기). 모델 타입은 Hard Rule 4에 따라 api.ts에(별도 model.ts 없음).
+cells-index.ts, jcol.ts, lanes.ts, heightfield.ts, props.ts(M05-T03), trees.ts(M05-T04), gzip.ts, xxh64.ts, bytes.ts(LE 읽기/쓰기), mvt/(pbf — varint 읽기·쓰기, mvt — MVT 인코드·디코드, pmtiles — v3 쓰기·읽기, M10-T03). 모델 타입은 Hard Rule 4에 따라 api.ts에(별도 model.ts 없음).
 
 ## Tests
-test/tkc.test.ts(round-trip 바이트 동일·결정론·정렬·손상 거부·미지 섹션), schema.test.ts(ajv: cell-header·cell-meta), binary.test.ts(cells.idx·JCOL·lanes·heightfield·gzip), hash.test.ts(XXH64 골든), props.test.ts(props.inst 왕복·손상 거부), trees.test.ts(trees.inst 왕복·손상 거부). 픽스처는 합성(test/fixtures.ts).
+test/tkc.test.ts(round-trip 바이트 동일·결정론·정렬·손상 거부·미지 섹션), schema.test.ts(ajv: cell-header·cell-meta), binary.test.ts(cells.idx·JCOL·lanes·heightfield·gzip), hash.test.ts(XXH64 골든), props.test.ts(props.inst 왕복·손상 거부), trees.test.ts(trees.inst 왕복·손상 거부), map.test.ts(MVT 왕복, PMTiles → 우리·공식 `pmtiles` 4.5.0 리더(devDependency) 같은 타일, 힐버트 id, 잎 디렉터리). 픽스처는 합성(test/fixtures.ts).
 
 ## Status
 구현 완료 (M01-T04). M01-T05: terrain.height 공통 기준(ADR-0018). props.inst = M05-T03(ADR-0051). trees.inst = M05-T04. lights.bin = M09-T03(ADR-0078, streaming 디코드 → CellPayload.lights).

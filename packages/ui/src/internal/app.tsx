@@ -7,6 +7,7 @@ import { createNav, type NavHandlers } from './nav/nav.ts';
 import { BootScreen } from './screens/boot.tsx';
 import { CreditsScreen } from './screens/credits.tsx';
 import { FadeLayer, HudLayer } from './screens/hud.tsx';
+import { MapScreen } from './screens/map.tsx';
 import { PauseScreen, type ScreenNav, TitleScreen } from './screens/menus.tsx';
 import { SETTINGS_TABS, SettingsScreen, type SettingsTab } from './screens/settings.tsx';
 import { injectTheme } from './theme.ts';
@@ -36,7 +37,7 @@ export function nextStack(
 export const isPlaying = (s: ScreenId): boolean => s === 'hud';
 
 /** 아직 구현 전 화면(T03–T05) — 열지 않는다. */
-const PLACEHOLDER: ReadonlySet<ScreenId> = new Set<ScreenId>(['map', 'log', 'photo']);
+const PLACEHOLDER: ReadonlySet<ScreenId> = new Set<ScreenId>(['log', 'photo']);
 
 function App(p: {
   bridge: UiBridge;
@@ -53,7 +54,7 @@ function App(p: {
   return (
     <div class="ui-root" data-top={top} data-lang={lang.value}>
       {top === 'boot' ? <BootScreen loading={b.loading.value} /> : null}
-      {top === 'hud' ? <HudLayer hud={hud} settings={b.settings.value} helpOpen={p.helpOpen.value} /> : null}
+      {top === 'hud' ? <HudLayer bridge={b} hud={hud} settings={b.settings.value} helpOpen={p.helpOpen.value} /> : null}
       {top === 'title' ? <TitleScreen bridge={b} nav={p.nav} pad={pad} /> : null}
       {top === 'pause' ? <PauseScreen nav={p.nav} pad={pad} /> : null}
       {top === 'settings' ? (
@@ -68,6 +69,17 @@ function App(p: {
         />
       ) : null}
       {top === 'credits' ? <CreditsScreen bridge={b} back={p.nav.back} pad={pad} /> : null}
+      {top === 'map' ? (
+        <MapScreen
+          bridge={b}
+          back={p.nav.back}
+          pad={pad}
+          travel={(id) => {
+            p.nav.play();
+            void b.commands.fastTravel(id);
+          }}
+        />
+      ) : null}
       <FadeLayer fade={hud.fade} />
     </div>
   );

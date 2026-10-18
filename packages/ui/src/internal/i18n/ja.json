@@ -175,5 +175,18 @@
   "hud.drive.sidewalk": "歩道 — 徐行",
   "hud.train.next": "次は {station}",
   "hud.train.stopped": "{station} に停車中",
-  "hud.train.inMin": "約{n}分"
+  "hud.train.inMin": "約{n}分",
+  "map.title": "地図",
+  "map.travel": "ファストトラベル",
+  "map.locked": "未訪問",
+  "map.lockedNote": "一度訪れた場所にだけ移動できます。",
+  "map.kind.station": "駅",
+  "map.kind.place": "スポット",
+  "map.kind.poi": "名所",
+  "map.layers.places": "地名",
+  "map.layers.rail": "駅・鉄道",
+  "map.missing": "このワールドには地図データがありません",
+  "map.controls": "WASD 移動 · Q/E 拡大・縮小 · マウスでドラッグ・ホイール · 一覧で Enter = 移動",
+  "map.controlsPad": "右スティック 移動 · LT/RT 拡大・縮小 · Ⓐ 移動 · Ⓑ 閉じる",
+  "map.attribution": "© OpenStreetMap contributors (ODbL) · 3D都市モデル: 国土交通省 PLATEAU · 国土地理院 · 地名: e-Stat"
 }

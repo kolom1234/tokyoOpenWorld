@@ -2,6 +2,7 @@
 import type { CellId, CellKey, CellLevel, Vec3d } from '@sanpo/core';
 import type { AudioZones } from './api-audio.ts';
 
+export * from './api-map.ts';
 export * from './api-nav.ts';
 
 // ── 포맷 상수 (05 §3, §5–7) ──

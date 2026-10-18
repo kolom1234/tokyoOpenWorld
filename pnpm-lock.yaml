@@ -220,6 +220,9 @@ importers:
       ajv:
         specifier: 8.20.0
         version: 8.20.0
+      pmtiles:
+        specifier: 4.5.0
+        version: 4.5.0
 
   packages/traversal:
     dependencies:
@@ -1351,6 +1354,9 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
+  pmtiles@4.5.0:
+    resolution: {integrity: sha512-CBeD4SoUluFziGdy/8k7FOjQxQy486n+929W/tWophauvMICpkZ26vGBWhDt/6b1FZQWNaf4jFdT/5+q0Wii5w==}
+
   postcss@8.5.28:
     resolution: {integrity: sha512-RRuzqDtt5Y9h3quz5hWhK+TPnsmVs6WwSU6LkJMeY4HstUEDuYTG8UJSdawMRzmzAtV+KEoG8N3Qg2qLy5vM/A==}
     engines: {node: ^10 || ^12 || >=14}
@@ -2464,6 +2470,10 @@ snapshots:
   playwright@1.63.0:
     dependencies:
       playwright-core: 1.63.0
+
+  pmtiles@4.5.0:
+    dependencies:
+      fflate: 0.8.3
 
   postcss@8.5.28:
     dependencies:

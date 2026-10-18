@@ -2,14 +2,15 @@
 Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10-ui`)
 
 ## Current Milestone: M10 UI/UX (T01 → T02 → T03 → T04 → T05 → T06)
-## Current Task: M10-T03 Map & minimap
-- Done in this session (#25): M10-T01 UI 셸(ADR-0091), M10-T02 HUD·지명(ADR-0092 — e-Stat 소지역 + 우편번호 가나 → 셀 meta placeNames, HUD 지명·시각·날씨·기온·탈것 계기·열차 다음 역·무입력 흐림).
-  로컬 테스트 빌드 `test-places-m10`(6셀 — 지명 확인용, MVP 재빌드 때 지움). 원천 data/raw/{estat-small-area,japanpost-kenall}(lock sha256 기록).
+## Current Task: M10-T04 POI discovery & log
+- Done in this session (#25): M10-T01 UI 셸(ADR-0091), T02 HUD·지명(ADR-0092), T03 지도·미니맵(ADR-0093 — tile-format MVT·PMTiles, `pnpm pipeline map`, UI Canvas2D 미니맵·전체 지도·빠른 이동 목록).
+  로컬 테스트 빌드 `test-places-m10`(6셀 + map.pmtiles — MVP 재빌드 때 지움). OSM 필터에 natural=water 추가(재정규화 필요 — MVP 재빌드 때 `normalize --layer osm`).
 - In progress: 없음.
-- Next step (정확히 한 걸음): `tools/pipeline/src/stages/map-tiles.ts`(정규화 데이터 → MVT → PMTiles) 설계 — docs/05 §1 `global/map.pmtiles`.
+- Next step (정확히 한 걸음): content/poi 20곳 정의(Wikidata Q-id) + 이름·좌표 추출 스크립트(`tools/pipeline` — CC0).
 - Blockers: 없음. ODPT 키 없음(M10 무관).
 
 ## Recently Completed
+- M10-T03 Map & minimap(2026-10-18) — PMTiles v3(MVT z13–16, MVP ≈ 1.44 MB·타일 223), 게임 map-source(처음 필요할 때 전체 받기), UI 래스터 캐시·미니맵(원형·북쪽 고정/회전)·전체 지도(팬·줌·레이어·빠른 이동 7곳, 발견한 곳만). 수락(실제 GPU 21–25 W): 미니맵 0.016 ms/프레임 ✅, 전체 지도 p50 60 fps·p95 16.8 ms ✅. ADR-0093
 - M10-T02 HUD & place names(2026-10-18) — `normalize --layer areas`(shp·dbf 자체 리더, 구 6곳 133 町丁, 읽기 누락 0) → 셀 meta placeNames, 게임 shell/places(점-폴리곤), UI hud-info. 수락(실제 GPU): 경계 갱신 32–77 ms ≤ 0.5 s ✅, HUD 시그널 ≤ 10 Hz(걷기 3.2 Hz) ✅, 22 W 상한. ADR-0092
 - M10-T01 UI shell(2026-10-18, PR 진행 중) — @sanpo/ui(Preact 10.29.8·signals 2.11.2): 화면 스택·i18n 3개 언어·공간 내비게이션(화살표·D-pad·A/B/Start/LB·RB), 설정 5탭, input `setBindings·setAxisScale·setEnabled`, traversal `configure()·motionEffects`,
   게임 shell/(bridge·commands·hud-state·settings·pause·fast-travel·loading·credits·options). 수락: 3개 언어 전환(단위 i18n 동등성 + e2e 즉시 전환) ✅, 키보드·게임패드 내비게이션(e2e 가짜 패드) ✅. ADR-0091

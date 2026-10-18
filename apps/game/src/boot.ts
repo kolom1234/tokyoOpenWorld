@@ -376,6 +376,7 @@ export async function boot(
     log.child('boot').info('world', w);
   }).then(async (loaded) => {
     if (loaded === undefined || world === undefined) return;
+    shell?.setWorld(loaded.baseUrl, loaded.buildId);
     const preset = spawnPreset(flags.spawn);
     if (flags.spawn !== undefined && !preset) log.child('boot').warn(`spawn preset 없음: ${flags.spawn}`);
     const shown = await world.showWorld(preset && !golden ? withSpawn(loaded, preset) : loaded);

@@ -175,5 +175,18 @@
   "hud.drive.sidewalk": "보도 — 서행",
   "hud.train.next": "다음 {station}",
   "hud.train.stopped": "{station} 정차 중",
-  "hud.train.inMin": "약 {n}분"
+  "hud.train.inMin": "약 {n}분",
+  "map.title": "지도",
+  "map.travel": "빠른 이동",
+  "map.locked": "아직 안 가 봤어요",
+  "map.lockedNote": "한 번 가 본 곳으로만 빠르게 이동할 수 있어요.",
+  "map.kind.station": "역",
+  "map.kind.place": "장소",
+  "map.kind.poi": "명소",
+  "map.layers.places": "지명",
+  "map.layers.rail": "역·철도",
+  "map.missing": "이 월드에는 지도 데이터가 없어요",
+  "map.controls": "WASD 이동 · Q/E 확대·축소 · 마우스 끌기·휠 · 목록에서 Enter = 이동",
+  "map.controlsPad": "R스틱 이동 · LT/RT 확대·축소 · Ⓐ 이동 · Ⓑ 닫기",
+  "map.attribution": "© OpenStreetMap contributors (ODbL) · 3D都市モデル: 国土交通省 PLATEAU · 国土地理院 · 地名: e-Stat"
 }

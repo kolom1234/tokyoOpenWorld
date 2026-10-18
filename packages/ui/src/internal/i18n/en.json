@@ -175,5 +175,18 @@
   "hud.drive.sidewalk": "Sidewalk — go slow",
   "hud.train.next": "Next: {station}",
   "hud.train.stopped": "Stopped at {station}",
-  "hud.train.inMin": "about {n} min"
+  "hud.train.inMin": "about {n} min",
+  "map.title": "Map",
+  "map.travel": "Fast travel",
+  "map.locked": "Not visited yet",
+  "map.lockedNote": "You can only fast-travel to places you have visited.",
+  "map.kind.station": "Station",
+  "map.kind.place": "Place",
+  "map.kind.poi": "Landmark",
+  "map.layers.places": "Place names",
+  "map.layers.rail": "Stations & rail",
+  "map.missing": "This world has no map data",
+  "map.controls": "WASD pan · Q/E zoom · drag & wheel · Enter on a place to travel",
+  "map.controlsPad": "Right stick pan · LT/RT zoom · Ⓐ travel · Ⓑ close",
+  "map.attribution": "© OpenStreetMap contributors (ODbL) · 3D都市モデル: 国土交通省 PLATEAU · 国土地理院 · 地名: e-Stat"
 }

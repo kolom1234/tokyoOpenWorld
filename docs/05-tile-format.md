@@ -17,7 +17,7 @@ shared/vehicles/*.glb         차량 (교통/플레이어)
 global/rail.bin               전 노선 선로 스플라인·역·정차위치
 global/timetables/<lineId>.json  컴파일된 운행표 (GTFS 또는 합성)
 global/poi-index.json         전체 POI 목록 (지도·도감)
-global/map.pmtiles            2D 지도 벡터 타일 (미니맵/전체지도)
+global/map.pmtiles            2D 지도 벡터 타일 (미니맵/전체지도 — PMTiles v3, MVT z13–16, 레이어 water·park·building·road·rail·station·place, `pnpm pipeline map` — ADR-0093)
 odbl/osm-derived.gpkg         ODbL 공개용 파생 DB
 credits.json                  출처 표기
 ```

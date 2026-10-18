@@ -1,9 +1,10 @@
 // HUD(게임 중): 도움말(H)·상호작용 안내·알림·역 근접 안내·지면 대기·검은 막. id(#station-prompt 등) = e2e·봇이 읽는다(옛 임시 DOM과 같음).
 // 갱신 = bridge.hud 시그널(게임이 ≤ 10 Hz로 바꿈) — 매 프레임 DOM을 건드리지 않는다.
 import { useEffect, useState } from 'preact/hooks';
-import type { GuideModel, HudModel, Msg, SettingsModel } from '../../api.ts';
+import type { GuideModel, HudModel, Msg, SettingsModel, UiBridge } from '../../api.ts';
 import { t } from '../i18n/t.ts';
 import { keyLabel, keyOf } from '../keys.ts';
+import { Minimap } from '../map/minimap.tsx';
 import { helpItems } from './help.ts';
 import { HudInfo, useIdle } from './hud-info.tsx';
 
@@ -78,13 +79,14 @@ function Notice(p: { hud: HudModel; keys: Record<string, string> }) {
   );
 }
 
-export function HudLayer(p: { hud: HudModel; settings: SettingsModel; helpOpen: boolean }) {
+export function HudLayer(p: { bridge: UiBridge; hud: HudModel; settings: SettingsModel; helpOpen: boolean }) {
   const h = p.hud;
   const keys = keyParams(p.settings, h.gamepad);
   const idle = useIdle(p.settings.hudFade, `${h.posWF.x | 0},${h.posWF.z | 0},${h.yawRad.toFixed(2)},${h.mode}`);
   return (
     <div class="screen hud" data-screen="hud" data-mode={h.mode} data-idle={idle ? '1' : '0'}>
       <HudInfo hud={h} settings={p.settings} idle={idle} />
+      <Minimap bridge={p.bridge} rotate={p.settings.minimapRotate} idle={idle} />
       {h.guide ? (
         <div id="station-guide" class="guide" role="status">
           {guideText(h.guide, p.settings.units, keys)}

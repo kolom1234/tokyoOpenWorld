@@ -214,6 +214,28 @@ export interface CreditsModel {
   oss: readonly OssEntry[];
 }
 
+/** 지도 타일 피처(MVT 디코드 결과 — 좌표 = 타일 정수 0…extent). type 1 점·2 선·3 면. */
+export interface MapFeatureData {
+  layer: string;
+  type: 1 | 2 | 3;
+  geometry: number[][];
+  props: Record<string, string | number | boolean>;
+}
+export interface MapTileData {
+  extent: number;
+  features: MapFeatureData[];
+}
+
+/** 지도 데이터(빌드 global/map.pmtiles — 게임이 읽어 디코드). 좌표 = 웹 메르카토르 정규(0…1, y 아래). */
+export interface MapSource {
+  readonly state: ReadonlySignal<'idle' | 'loading' | 'ready' | 'missing'>;
+  readonly minZoom: number;
+  readonly maxZoom: number;
+  /** 처음 필요할 때 받기 시작(여러 번 불러도 한 번). */
+  load(): void;
+  tile(z: number, x: number, y: number): Promise<MapTileData | null>;
+}
+
 export type StartChoice = { kind: 'continue' } | { kind: 'new'; at: string };
 
 export interface UiCommands {
@@ -239,7 +261,9 @@ export interface UiBridge {
   /** 타이틀 "새 산책" 시작 지점(스폰 프리셋 id·이름). */
   startPoints: readonly { id: string; name: LocalName }[];
   credits(): Promise<CreditsModel>;
+  /** WF → 웹 메르카토르 정규 좌표(0…1, y 아래). */
   worldToMap(posWF: Vec3d): { x: number; y: number };
+  map: MapSource;
   commands: UiCommands;
 }
 

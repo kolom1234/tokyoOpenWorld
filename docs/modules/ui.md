@@ -8,7 +8,7 @@ DOM 오버레이 UI 전부(부팅·타이틀·HUD·지도·도감·포토모드�
 ## Public API
 ```ts
 mountUi(root, bridge: UiBridge, opts?: UiOptions { menus; initial?: ScreenId[] }): UiHandle { screen: ReadonlySignal<ScreenId>; open(s); close(); toggleHelp(); dispose() }
-UiBridge { hud: ReadonlySignal<HudModel>; loading: ReadonlySignal<LoadingModel>; discoveries; places: ReadonlySignal<TravelPlace[]>; settings: Signal<SettingsModel>;
+UiBridge { hud: ReadonlySignal<HudModel>; loading: ReadonlySignal<LoadingModel>; discoveries; places: ReadonlySignal<TravelPlace[]>; settings: Signal<SettingsModel>; map: MapSource { state; minZoom; maxZoom; load(); tile(z,x,y): Promise<MapTileData|null> };
            hasSave: ReadonlySignal<boolean>; startPoints: {id, name: LocalName}[]; credits(): Promise<CreditsModel>; worldToMap(posWF); commands: UiCommands }
 UiCommands { pause(on); start(StartChoice {continue | new at}); fastTravel(id); setTime(ms); setWeather(mode, preset?); takePhoto(scale 1|2): Promise<Blob>; setPhotoParams(p|null); exportSave(); importSave(f) }
 ScreenId = boot|title|hud|pause|settings|credits|map|log|photo;  LoadingModel { stage caps|manifest|shaders|spawn|ready|error; progress; detail: Msg|null; webgpu; isolated; error }
@@ -32,7 +32,8 @@ DEFAULT_SETTINGS, normalizeSettings(raw, fallbackLang), langFromNavigator(langs)
 ## Files
 api.ts, index.ts, internal/(app — 화면 스택·mountUi, settings — 기본값·정규화, keys — 키 이름·재바인딩 맞바꿈, theme — CSS 문자열, i18n/(ko·ja·en.json, t.ts), nav/(focus — 공간 이동 순수, pad — 메뉴 패드 엣지·반복, nav — DOM 드라이버),
 components/controls(버튼·선택·슬라이더·켬끔), screens/(boot, menus — 타이틀·일시정지, settings, credits, hud — 도움말·안내·알림·막, hud-info — 지명·시각·날씨·기온·계기·다음 역·무입력 5 s 흐림, help — 모드별 줄), sandbox/mock-bridge).
-예정: map/(pmtiles-source, canvas-renderer, styles, minimap, fullmap), screens/(map, discovery, photo), save/(store, migrations).
+map/(view — 메르카토르 ↔ 화면·회전 순수, styles, tile-cache — 512 px 래스터·LRU 96·pump 예산, canvas-renderer — 타일·부모 대체·라벨 겹침 제거·표식·화살표, minimap — 원형 200 px·HUD 갱신 때만, controller — 전체 지도 팬·줌 루프), screens/map(빠른 이동 목록·레이어·출처 상시).
+예정: screens/(discovery, photo), save/(store, migrations).
 
 ## Tests
 test/shell.test.ts: i18n 키·치환 자리 동등성·라벨 누락, 공간 이동, 패드 엣지·반복·열 때 눌린 Start 무시, 화면 스택, 키 재바인딩(맞바꿈·고정 키 거부), 설정 정규화·브라우저 언어, 도움말 줄(모드·재바인딩·패드).

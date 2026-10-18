@@ -92,6 +92,13 @@ export function createMockBridge(opts: { settings?: Partial<SettingsModel>; read
     ],
     credits: () => Promise.resolve(MOCK_CREDITS),
     worldToMap: (p) => ({ x: p.x, y: p.z }),
+    map: {
+      state: signal<'idle' | 'loading' | 'ready' | 'missing'>('missing'),
+      minZoom: 13,
+      maxZoom: 16,
+      load: () => {},
+      tile: () => Promise.resolve(null),
+    },
     commands: {
       pause: (on) => {
         paused.push(on);

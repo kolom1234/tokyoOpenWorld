@@ -22,9 +22,11 @@ import { createCommands, startPoints } from './commands.ts';
 import { loadCredits } from './credits.ts';
 import { hudStateOf, topPrompt } from './hud-state.ts';
 import { INITIAL_LOADING, loadingOfBoot } from './loading.ts';
+import { createMapSource, worldToMerc } from './map-source.ts';
 import { createPause } from './pause.ts';
 import { createPlaceIndex, type PlaceIndex } from './places.ts';
 import { applySettings, loadSettings, saveSettings } from './settings.ts';
+import { createTravelState, type TravelState } from './travel.ts';
 
 const HUD_INTERVAL_S = 0.1;
 const GROUND_SHOW_S = 0.2;
@@ -37,7 +39,6 @@ export interface ShellOptions {
   /** `?quality=`·골든뷰 = 티어 고정. */
   fixedQuality: boolean;
   fixedFov: boolean;
-  buildId?: () => string | null;
 }
 
 export interface Shell {
@@ -47,6 +48,9 @@ export interface Shell {
   readonly settings: Signal<SettingsModel>;
   /** createWorldView 직후: 설정 적용·HUD·열기 단축키 배선. 반환 = 등록할 시스템. */
   attach(world: WorldView): GameSystem[];
+  /** 월드 로드 뒤: 빌드 루트(지도 global/map.pmtiles·크레딧). */
+  setWorld(baseUrl: string, buildId: string): void;
+  readonly travel: TravelState;
   dispose(): void;
 }
 
@@ -147,11 +151,11 @@ function hudSystem(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudMod
       if (acc < HUD_INTERVAL_S) return;
       acc = 0;
       const h = hudOf(doc, w, groundS, places);
-      // 위치·시각은 매번 바뀐다 — 지도 기호용으로 0.5 m·1분 단위만 비교.
+      // 위치·시각은 매번 바뀐다 — 미니맵용 0.1 m·0.01 rad·1분 단위만 비교(움직이면 10 Hz, 멈추면 갱신 없음).
       const key = JSON.stringify({
         ...h,
-        posWF: [Math.round(h.posWF.x * 2), Math.round(h.posWF.z * 2)],
-        yawRad: Math.round(h.yawRad * 20),
+        posWF: [Math.round(h.posWF.x * 10), Math.round(h.posWF.z * 10)],
+        yawRad: Math.round(h.yawRad * 100),
         timeMs: Math.floor(h.timeMs / 60_000),
       });
       if (key === sig) return;
@@ -187,17 +191,22 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
   const hud = signal<HudModel>(EMPTY_HUD);
   let world: WorldView | undefined;
   const pause = createPause(doc, () => world);
+  const places = signal<readonly TravelPlace[]>([]);
+  const travel = createTravelState(places);
+  const map = createMapSource();
+  let buildId: string | null = null;
   const bridge: UiBridge = {
     hud,
     loading,
     discoveries: signal<readonly DiscoveryModel[]>([]),
-    places: signal<readonly TravelPlace[]>([]),
+    places,
     settings,
     hasSave: computed(() => false),
     startPoints: startPoints(),
-    credits: (): Promise<CreditsModel> => loadCredits(opts.buildId?.() ?? null),
-    worldToMap: (p: Vec3d) => ({ x: p.x, y: p.z }),
-    commands: createCommands({ doc, world: () => world, pause }),
+    credits: (): Promise<CreditsModel> => loadCredits(buildId),
+    worldToMap: (p: Vec3d) => worldToMerc(p),
+    map,
+    commands: createCommands({ doc, world: () => world, pause, travel }),
   };
   const ui = mountUi(root, bridge, { menus: opts.menus });
   const offs: (() => void)[] = [];
@@ -206,10 +215,15 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     ui,
     loading,
     settings,
+    travel,
     attach(w) {
       world = w;
       offs.push(settingsEffect(w, settings, opts), pause.autoPause(ui, opts.menus));
-      return [hudSystem(doc, w, shell, hud)];
+      return [hudSystem(doc, w, shell, hud), travel.system(() => w.traversal.player.posWF)];
+    },
+    setWorld(baseUrl, id) {
+      buildId = id;
+      map.setBase(baseUrl);
     },
     dispose() {
       for (const off of offs) off();
