@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 601개.
+> 파일 603개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -453,6 +453,7 @@
 - `tools/pipeline/src/cli-assets.ts` — CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), characters(Rocketbox → 플레이어 아바타·군중 팩, ADR-0057), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06). | exports: AssetCtx, materials, trees, signage, characters, audio
 - `tools/pipeline/src/cli-map.ts` — CLI 지도·지명·도감 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles + global/odbl/ ODbL 파생 DB), | exports: MapCtx, areaCellKeys, normalizeAreasLayer, map, poiWikidata, poiReview
 - `tools/pipeline/src/cli-rail.ts` — CLI 철도 단계(cli.ts에서 분리, M07): fetch(N02·ODPT GTFS → data/raw, sha256 lock), rail(OSM 철도 정규화 → 노선 파생 → global/rail.bin), | exports: RailCtx, fetchSources, rail, timetables
+- `tools/pipeline/src/cli-release.ts` — CLI 공개 운영(M11-T06, cli.ts 400줄 제한으로 분리): `current --env dev|prod [--build-id <id>]` — 활성 빌드 포인터 보기/바꾸기(롤백 = 직전 buildId로, 파일 재업로드 없음). | exports: current
 - `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 - `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
 - `tools/pipeline/src/lib/gltf.ts` — 셀 glb 섹션 인코드/디코드: gltf-transform 문서 → EXT_meshopt_compression + KHR_mesh_quantization glb. see docs/05-tile-format.md §4 (glb), docs/adr/0018-cell-mesh-build.md | exports: GlbArray, GlbAttribute, GlbPrimitive, GlbMesh, DecodedGlb, encodeGlb, decodeGlb
@@ -611,6 +612,7 @@
 - `tools/pipeline/src/stages/normalize-terrain.ts` — normalize 단계(지형): GSI DEM1A(주) + DEM5A(결측 채움) → GDAL 재투영(EPSG:6677, 1 m) → 잔여 결측 보간 → data/normalized/terrain/dem_1m.tif. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: NormalizeTerrainInput, GradeReport, NormalizeTerrainResult, gridOfBounds, normalizeTerrain, writeTerrainMeta, hasDemSources
 - `tools/pipeline/src/stages/poi/fetch.ts` — 도감 원천(M10-T04, ADR-0094): `poi-wikidata` = Wikidata 라벨·별칭·좌표(P625, CC0) → content/poi/wikidata.json, `poi-review` = 위키백과(ja·en·ko 사이트링크) 본문과 설명 겹침 → content/poi/review.json. | exports: PoiContent, WikidataPoi, readPois, fetchWikidata, ReviewEntry, reviewDescriptions
 - `tools/pipeline/src/stages/poi/text-check.ts` — 도감 설명 자체 작성 검사(M10-T04, ADR-0094): 위키백과 본문과의 최장 공통 부분 문자열·8-gram 공유율, 홍보 문구 목록. 순수 함수 — 네트워크 단계(review)와 오프라인 단위 테스트가 같이 쓴다. | exports: PoiLang, POI_LANGS, LCS_MAX, NGRAM_MAX, PROMO_WORDS, normalizeText, longestCommonSubstring, sharedNgramRatio, promoHits, sha256, OverlapResult, overlap
+- `tools/pipeline/src/stages/publish/current.ts` — 활성 빌드 포인터(M11-T06 — 롤백 1분 이내): KV `CURRENT_BUILD:v<fv>`만 바꾼다(파일 재업로드 없음). 대상은 이미 퍼블리시된(`BUILDS:v<fv>` 목록에 있는) 빌드만. | exports: PointerState, readPointer, setCurrentBuild
 - `tools/pipeline/src/stages/publish/publish.ts` — publish: data/build/<buildId> → R2 `world/<buildId>/**`(동시성·재시도) → 매니페스트 → 검증(S3 HEAD 또는 Worker HEAD) → KV 빌드 목록·(선택) 현재 포인터. | exports: CURRENT_KEY, BUILDS_KEY, FILES_KEY, BuildEntry, PublishFile, PublishReport, mapLimit, buildFiles, checkBuildDir, PublishInput, publishBuild, verifyViaWorker, selectGc, GcInput, gcBuilds
 - `tools/pipeline/src/stages/publish/targets.ts` — 퍼블리시 대상(env → R2 버킷·KV 네임스페이스)을 apps/worker/wrangler.jsonc에서 읽는다(바인딩 정의의 단일 출처). | exports: PublishEnv, PublishTarget, stripJsonc, readTargets, Clients, createClients
 - `tools/pipeline/src/stages/publish/uploaders.ts` — 퍼블리시 업로더 2종: `s3`(R2 S3 호환 API, SigV4 — 단일 PUT·멀티파트·HEAD 검증) / `api`(Cloudflare REST, API 토큰 — wrangler와 같은 엔드포인트). | exports: MULTIPART_THRESHOLD, PART_SIZE, ObjectPut, Uploader, S3Options, createS3Uploader, ApiOptions, createApiUploader, KvClient, createKvClient, resolveAccountId

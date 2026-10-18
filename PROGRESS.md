@@ -4,8 +4,8 @@ Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-harde
 ## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅, T04 ✅, T01 ✅(⚠️ 기록) → T02 → T06)
 ## Current Task: M11-T02 Soak & leak test
 - Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097), M11-T03 오류 보고(ADR-0098 — staging 수락), 무료 한도 일일 점검 워크플로(usage.yml — main 병합 뒤부터 실행), M11-T04 접근성(ADR-0099), M11-T01 성능(ADR-0100 — `pnpm perf`).
-- In progress: T02.
-- Next step (정확히 한 걸음): `tests/golden/soak.spec.ts`(1시간 도보→열차→차량→자유비행 반복, 힙·GPU 메모리 추세, 워커 재시작) 백그라운드 실행.
+- In progress: T02 1시간 소크 실행 중(`pnpm soak`, SANPO_LOCAL_BUILD=20261018-89ce0aa-aa09c5ca — 3분 시험: 2바퀴·열차 1·재시작 0·힙 최대 1,379 MB). T06 준비: `pipeline current`(롤백 리허설 staging 4–13 s), docs/13 §9 공개 절차·체크리스트.
+- Next step (정확히 한 걸음): 소크 결과 기록 → MVP 재빌드(normalize --layer areas → docker build·hlod·materials·audio → map → validate) → dev publish·staging 배포 → GOLDEN_BOOT staging 첫 로드 → T06 사용자 확인 대기.
 - Blockers: 🔶 **국토지리원 측량법 제30조 사용 승인(사용자 신청)** — production 공개(T06) 전 필수(03 §6.1, ADR-0097). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 - 다음 MVP 재빌드 때 반영할 것: 로마자 지명(셀 meta), `map --build-id` ODbL 묶음(global/odbl/). DOF 전환 실측은 T01 perf 하네스에서.
 
