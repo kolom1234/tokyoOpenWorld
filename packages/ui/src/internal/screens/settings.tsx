@@ -1,6 +1,13 @@
 // 설정 화면: 탭(그래픽·카메라·모션·조작·소리·일반) — 바뀌면 곧바로 bridge.settings(게임이 적용·저장). 키 재바인딩 = 누를 때까지 대기(data-capturing).
 import { useEffect, useState } from 'preact/hooks';
-import { LANGS, REBIND_ACTIONS, type RebindAction, type SettingsModel, type UiBridge } from '../../api.ts';
+import {
+  COLOR_VISIONS,
+  LANGS,
+  REBIND_ACTIONS,
+  type RebindAction,
+  type SettingsModel,
+  type UiBridge,
+} from '../../api.ts';
 import { Choice, MenuButton, Row, Slider, Toggle } from '../components/controls.tsx';
 import { t } from '../i18n/t.ts';
 import { DEFAULT_KEYS, keyLabel, keyOf, rebindKeys } from '../keys.ts';
@@ -17,14 +24,24 @@ const pct = (v: number) => `${Math.round(v * 100)}%`;
 function GraphicsTab(p: { s: SettingsModel; set: Patch }) {
   const tiers = ['auto', 'low', 'medium', 'high', 'ultra'] as const;
   return (
-    <Row label={t('settings.quality')} hint={t('settings.qualityHint')}>
-      <Choice
-        id="set-quality"
-        value={p.s.quality}
-        options={tiers.map((v) => ({ value: v, label: t(`quality.${v}`) }))}
-        onChange={(quality) => p.set({ quality })}
-      />
-    </Row>
+    <>
+      <Row label={t('settings.quality')} hint={t('settings.qualityHint')}>
+        <Choice
+          id="set-quality"
+          value={p.s.quality}
+          options={tiers.map((v) => ({ value: v, label: t(`quality.${v}`) }))}
+          onChange={(quality) => p.set({ quality })}
+        />
+      </Row>
+      <Row label={t('settings.colorVision')} hint={t('settings.colorVisionHint')}>
+        <Choice
+          id="set-color-vision"
+          value={p.s.colorVision}
+          options={COLOR_VISIONS.map((v) => ({ value: v, label: t(`colorVision.${v}`) }))}
+          onChange={(colorVision) => p.set({ colorVision })}
+        />
+      </Row>
+    </>
   );
 }
 
@@ -133,6 +150,9 @@ function AudioTab(p: { s: SettingsModel; set: Patch }) {
       ))}
       <Row label={t('settings.muted')}>
         <Toggle id="set-muted" value={p.s.muted} onChange={(muted) => p.set({ muted })} />
+      </Row>
+      <Row label={t('settings.captions')} hint={t('settings.captionsHint')}>
+        <Toggle id="set-captions" value={p.s.captions} onChange={(captions) => p.set({ captions })} />
       </Row>
     </>
   );

@@ -233,5 +233,19 @@
   "save.exported": "Exported — check your downloads folder",
   "save.imported": "Imported — applied to the field guide, map and settings",
   "save.invalid": "This file isn't a Tokyo Sanpo save, or it is damaged",
-  "save.failed": "Failed: {e}"
+  "save.failed": "Failed: {e}",
+  "settings.colorVision": "Color vision",
+  "settings.colorVisionHint": "Adjusts color contrast for color vision deficiency types.",
+  "colorVision.off": "Off",
+  "colorVision.protan": "Protanopia (red)",
+  "colorVision.deutan": "Deuteranopia (green)",
+  "colorVision.tritan": "Tritanopia (blue)",
+  "settings.captions": "Sound captions",
+  "settings.captionsHint": "Shows important sounds such as station and door chimes as text.",
+  "caption.stationChime": "[Station chime]",
+  "caption.doorChime": "[Door chime]",
+  "caption.lcdChime": "[Train info chime]",
+  "caption.gate": "[Ticket gate: card touch]",
+  "caption.gateDenied": "[Ticket gate: can't pass]",
+  "caption.bicycleBell": "[Bicycle bell]"
 }

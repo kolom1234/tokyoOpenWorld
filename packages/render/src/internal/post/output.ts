@@ -1,9 +1,10 @@
 // 후처리 출력 단(07 §7): 출력 변환(AgX·sRGB, renderOutput) → 3D LUT → Sharpen, 포토 DOF 출력 교체(M10 잔여 — pipeline.ts에서 분리).
 import { lut3D } from 'three/examples/jsm/tsl/display/Lut3DNode.js';
 import { sharpen } from 'three/examples/jsm/tsl/display/SharpenNode.js';
-import { renderOutput, texture3D, uniform } from 'three/tsl';
+import { renderOutput, texture3D, uniform, vec4 } from 'three/tsl';
 import type { RenderPipeline, Node as TslNode } from 'three/webgpu';
 import type { PostEffects } from '../../api.ts';
+import { colorVisionU } from './color-vision.ts';
 import { createGradeLut, LUT_SIZE } from './lut.ts';
 
 type V4 = TslNode<'vec4'>;
@@ -21,7 +22,8 @@ export function outputSwitch(
 ): { lut: ReturnType<typeof createGradeLut> | undefined; setDof(on: boolean): void } {
   const lut = fx.lut ? createGradeLut() : undefined;
   const finish = (h: V4): V4 => {
-    let out: V4 = renderOutput(h);
+    // 색각 보정(M11-T04): 선형 HDR에 행렬(끔 = 단위 행렬).
+    let out: V4 = renderOutput(vec4(colorVisionU.mul(h.rgb), h.a) as unknown as V4);
     if (lut) out = lut3D(out, texture3D(lut), LUT_SIZE, uniform(1)) as unknown as V4;
     if (fx.sharpen) out = sharpen(out, 0.15) as unknown as V4;
     return out;

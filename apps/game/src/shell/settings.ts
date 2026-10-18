@@ -18,16 +18,19 @@ export const SETTINGS_KEY = 'sanpo.settings.v1';
 /** traversal 기본 감도(rad/px) — 설정 배율 1. */
 const BASE_LOOK_RAD_PER_PX = 0.0025;
 
+/** 저장된 설정(없으면 기본 — 언어 = 브라우저 언어, 모션 민감 = OS `prefers-reduced-motion`(M11-T04)). */
 export function loadSettings(
   storage: Pick<Storage, 'getItem'> | undefined,
   navLangs?: readonly string[],
+  prefersReducedMotion = false,
 ): SettingsModel {
   const lang = langFromNavigator(navLangs);
+  const fresh = () => normalizeSettings(prefersReducedMotion ? { reduceMotion: true } : {}, lang);
   try {
     const raw = storage?.getItem(SETTINGS_KEY);
-    return normalizeSettings(raw ? JSON.parse(raw) : {}, lang);
+    return raw ? normalizeSettings(JSON.parse(raw), lang) : fresh();
   } catch {
-    return normalizeSettings({}, lang);
+    return fresh();
   }
 }
 
@@ -71,7 +74,7 @@ export function bindingsWithKeys(keys: SettingsModel['keys'], base: BindingMap =
 }
 
 export interface SettingsTargets {
-  render: Pick<RenderService, 'setQuality'>;
+  render: Pick<RenderService, 'setQuality' | 'setColorVision'>;
   traversal: Pick<TraversalService, 'configure'>;
   input: Pick<InputService, 'setBindings' | 'setAxisScale'>;
   audio: () => Pick<AudioService, 'setMix'> | undefined;
@@ -85,6 +88,7 @@ export interface SettingsTargets {
 export function applySettings(t: SettingsTargets, s: SettingsModel, prev?: SettingsModel): void {
   const tier = tierOf(s);
   if (!t.fixedQuality && tier && (!prev || prev.quality !== s.quality)) t.render.setQuality(tier);
+  if (!prev || prev.colorVision !== s.colorVision) t.render.setColorVision(s.colorVision);
   t.traversal.configure({
     ...(t.fixedFov ? {} : { fovDeg: s.fovDeg }),
     lookRadPerPx: BASE_LOOK_RAD_PER_PX * s.lookSensitivity,

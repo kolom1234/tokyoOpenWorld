@@ -103,6 +103,15 @@ describe('keys & settings', () => {
     expect(s.keys).toEqual({});
     expect('junk' in s).toBe(false);
     expect(normalizeSettings(null, 'ja').lang).toBe('ja');
+    // M11-T04 접근성: 색각 보정·자막(모르는 값 → 기본).
+    expect(normalizeSettings({ colorVision: 'deutan', captions: true })).toMatchObject({
+      colorVision: 'deutan',
+      captions: true,
+    });
+    expect(normalizeSettings({ colorVision: 'x', captions: 'y' })).toMatchObject({
+      colorVision: 'off',
+      captions: false,
+    });
     expect(langFromNavigator(['ja-JP', 'en'])).toBe('ja');
     expect(langFromNavigator(['fr-FR'])).toBe('en');
   });

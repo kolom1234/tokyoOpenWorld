@@ -8,6 +8,7 @@ import { createCrowdMaterial, outfitU } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
 import { nightU, updateNight } from './lighting/night.ts';
 import { compileDetached, precompileBase, precompileMaterials, yieldFrame } from './materials/precompile.ts';
+import { setColorVision } from './post/color-vision.ts';
 import { dofBokehU, dofFocusU, dofRangeU, exposureBiasU } from './post/photo.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
@@ -68,8 +69,9 @@ function statsOf(ctx: RenderContext): RenderStats {
 }
 
 /** 포토 모드(M10-T05): 노출 보정·DOF(출력 노드 교체 — 재구성 없음)·고해상도 캡처. */
-function photoApi(ctx: RenderContext): Pick<RenderService, 'setPhoto' | 'screenshot'> {
+function photoApi(ctx: RenderContext): Pick<RenderService, 'setPhoto' | 'screenshot' | 'setColorVision'> {
   return {
+    setColorVision,
     setPhoto(p) {
       exposureBiasU.value = 2 ** (p?.exposureEv ?? 0);
       if (p?.dof) {

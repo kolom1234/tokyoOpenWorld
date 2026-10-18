@@ -73,6 +73,8 @@ const EMPTY_HUD: HudModel = {
   prompt: null,
   notice: null,
   noticeSeq: 0,
+  caption: null,
+  captionSeq: 0,
   guide: null,
   drive: null,
   train: null,
@@ -99,6 +101,8 @@ function hudOf(doc: Document, w: WorldView, groundS: number, places: PlaceIndex)
     prompt: topPrompt(s),
     notice: s.notice,
     noticeSeq: s.noticeSeq,
+    caption: s.caption,
+    captionSeq: s.captionSeq,
     guide: s.guide,
     groundLoading: groundS >= GROUND_SHOW_S,
     fade: s.fade ? 1 : 0,
@@ -232,8 +236,14 @@ function systemsOf(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudMod
   ];
 }
 
+/** 저장된 설정 또는 기본(브라우저 언어·OS 모션 줄이기). */
+function initialSettings(doc: Document, storage: Storage | undefined): SettingsModel {
+  const win = doc.defaultView;
+  return loadSettings(storage, win?.navigator.languages, win?.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+}
+
 export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions): Shell {
-  const settings = signal(loadSettings(opts.storage, doc.defaultView?.navigator.languages));
+  const settings = signal(initialSettings(doc, opts.storage));
   const loading = signal<LoadingModel>(INITIAL_LOADING);
   const hud = signal<HudModel>(EMPTY_HUD);
   let world: WorldView | undefined;

@@ -23,6 +23,7 @@ setStationFixtures(f: StationFixtures { boxes: f64 × 8(cx,cy,cz,hx,hy,hz,yaw,�
 RenderStats += night: { level, cells, lights, active, sprites }  // M09-T03 밤 정도·lights.bin 셀·광원 수·켠 클러스터 광원(풀 1024)·발광 스프라이트, ADR-0078
 RenderStats += signs: { instances, visible, pools, ready }; RenderService += loadSignage(urls: SignageAssetUrls{atlas}): Promise<void>  // M05-T06 ADR-0054 — 첫 표시 뒤, 파사드 간판 띠도 같은 아틀라스
 RenderService += setPhoto(PhotoSettings{exposureEv, dof: {focusM, rangeM, bokeh}|null} | null), screenshot(ScreenshotOptions{scale 1|2, settleFrames 8}): Promise<Blob>  // M10-T05(ADR-0095): 노출 유니폼·DOF는 포토 모드에서만 출력 노드 교체(post `setDof` — 같은 씬 패스·TAAU, 처음 켤 때 DOF 출력 생성·재사용, 전체 재구성 없음 — M11 세션), 캡처 = 픽셀 비율 × scale로 수렴 프레임 뒤 toBlob
+RenderService += setColorVision(ColorVision 'off'|'protan'|'deutan'|'tritan')  // M11-T04: 출력 단 색 행렬 유니폼(post/color-vision.ts — Machado 2009 + daltonize), 직접 렌더 제외
 RenderService += setQuality(tier), detectQuality(): Promise<QualityTier>  // 버스 'quality/changed'도 적용(되먹임 없음), 자기 변경은 방출. 소프트웨어 래스터 = detect-gpu 생략 → low
 QualityTier = @sanpo/core 재수출
 RenderService extends SystemProvider {            // systems: renderPrep(70), render(80)

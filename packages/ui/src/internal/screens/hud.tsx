@@ -79,6 +79,25 @@ function Notice(p: { hud: HudModel; keys: Record<string, string> }) {
   );
 }
 
+const CAPTION_MS = 2500;
+
+/** 효과음 자막(M11-T04): 설정이 켜져 있을 때만, 새 자막마다 2.5 s. */
+function Caption(p: { hud: HudModel; on: boolean }) {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (!p.hud.caption || !p.on) return;
+    setShown(true);
+    const id = setTimeout(() => setShown(false), CAPTION_MS);
+    return () => clearTimeout(id);
+  }, [p.hud.captionSeq]);
+  if (!shown || !p.on || !p.hud.caption) return null;
+  return (
+    <div id="sanpo-caption" class="caption" role="status">
+      {tk(p.hud.caption, {})}
+    </div>
+  );
+}
+
 export function HudLayer(p: { bridge: UiBridge; hud: HudModel; settings: SettingsModel; helpOpen: boolean }) {
   const h = p.hud;
   const keys = keyParams(p.settings, h.gamepad);
@@ -98,6 +117,7 @@ export function HudLayer(p: { bridge: UiBridge; hud: HudModel; settings: Setting
         </div>
       ) : null}
       <Notice hud={h} keys={keys} />
+      <Caption hud={h} on={p.settings.captions} />
       {h.groundLoading ? (
         <div class="ground-loading" role="status">
           {t('hud.groundLoading')}

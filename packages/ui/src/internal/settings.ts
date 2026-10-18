@@ -1,6 +1,7 @@
 // 설정 기본값·정규화(저장본·가져오기 값의 범위·형식 검사). 저장은 게임(localStorage — 부팅 때 동기로 읽어 품질·언어 적용).
 import type { QualityTier } from '@sanpo/core';
 import {
+  COLOR_VISIONS,
   LANGS,
   type Lang,
   REBIND_ACTIONS,
@@ -25,6 +26,8 @@ export const DEFAULT_SETTINGS: SettingsModel = {
   minimapRotate: false,
   uiScale: 1,
   showHelp: true,
+  colorVision: 'off',
+  captions: false,
   keys: {},
 };
 
@@ -79,6 +82,8 @@ export function normalizeSettings(raw: unknown, fallbackLang: Lang = DEFAULT_SET
     minimapRotate: bool(o.minimapRotate, d.minimapRotate),
     uiScale: num(o.uiScale, 0.8, 1.5, d.uiScale),
     showHelp: bool(o.showHelp, d.showHelp),
+    colorVision: oneOf(o.colorVision, COLOR_VISIONS, d.colorVision),
+    captions: bool(o.captions, d.captions),
     keys: keysOf(o.keys),
   };
 }
