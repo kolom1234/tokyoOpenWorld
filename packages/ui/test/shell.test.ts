@@ -170,3 +170,53 @@ describe('photo grading (M10-T05)', () => {
     expect(isPlaying('pause')).toBe(false);
   });
 });
+
+describe('save schema (M10-T06)', () => {
+  it('migrates an old v1 save to v2', async () => {
+    const { migrateSave, SAVE_VERSION } = await import('../src/internal/save/migrations.ts');
+    const v1 = {
+      v: 1,
+      posWF: { x: 190, y: 32, z: -1200 },
+      yaw: 1.5,
+      mode: 'walk',
+      discovered: ['meiji-jingu', 'yoyogi-park', 42],
+      photos: [{ id: 'p1', atMs: 5 }],
+      stats: {},
+      gameTimeMs: 1000,
+    };
+    const s = migrateSave(v1);
+    expect(SAVE_VERSION).toBe(2);
+    expect(s?.v).toBe(2);
+    expect(s?.yawRad).toBe(1.5);
+    expect(s?.discoveries.map((d) => d.id)).toEqual(['meiji-jingu', 'yoyogi-park']);
+    expect(s?.discoveries[0]?.atMs).toBe(1000);
+    expect(s?.photos[0]).toEqual({ id: 'p1', atMs: 5, poiId: null });
+    expect(s?.unlocked).toContain('harajuku-gate');
+  });
+  it('rejects garbage and future versions, sanitizes bad fields', async () => {
+    const { migrateSave } = await import('../src/internal/save/migrations.ts');
+    expect(migrateSave(null)).toBeNull();
+    expect(migrateSave('x')).toBeNull();
+    expect(migrateSave({ v: 99 })).toBeNull();
+    const s = migrateSave({ v: 2, posWF: { x: 'a' }, mode: 'drive', discoveries: [{ id: '<script>' }], photos: 7 });
+    expect(s?.posWF).toEqual({ x: 0, y: 0, z: 0 });
+    expect(s?.mode).toBe('walk');
+    expect(s?.discoveries).toEqual([]);
+    expect(s?.photos).toEqual([]);
+  });
+  it('parses an export file and drops non-image thumbnails', async () => {
+    const { parseSaveExport } = await import('../src/internal/save/migrations.ts');
+    const file = {
+      format: 'tokyo-sanpo-save',
+      save: { v: 2, unlocked: ['omotesando'] },
+      settings: { lang: 'ja', fovDeg: 90 },
+      thumbs: { p1: 'data:image/jpeg;base64,AAAA', p2: 'javascript:alert(1)' },
+    };
+    const x = parseSaveExport(JSON.stringify(file));
+    expect(x?.save.unlocked).toEqual(['omotesando']);
+    expect(x?.settings.lang).toBe('ja');
+    expect(Object.keys(x?.thumbs ?? {})).toEqual(['p1']);
+    expect(parseSaveExport('{"format":"other"}')).toBeNull();
+    expect(parseSaveExport('not json')).toBeNull();
+  });
+});

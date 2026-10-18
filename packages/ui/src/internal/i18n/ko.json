@@ -226,5 +226,12 @@
   "photo.saved": "저장했어요({w}×{h})",
   "photo.savedPoi": "저장했어요({w}×{h}) — 도감 「{name}」에 추가",
   "photo.failed": "저장하지 못했어요: {e}",
-  "photo.notice.walkOnly": "포토 모드는 걷거나 자유 비행 중에 쓸 수 있어요 — 탈것에서 내린 뒤 다시 P"
+  "photo.notice.walkOnly": "포토 모드는 걷거나 자유 비행 중에 쓸 수 있어요 — 탈것에서 내린 뒤 다시 P",
+  "save.hint": "발견한 명소·사진·빠른 이동 목록·설정을 파일로 옮길 수 있어요(자동 저장 60초마다).",
+  "save.export": "세이브 내보내기",
+  "save.import": "세이브 가져오기",
+  "save.exported": "내보냈어요 — 다운로드 폴더를 확인하세요",
+  "save.imported": "가져왔어요 — 도감·지도·설정에 반영했어요",
+  "save.invalid": "이 파일은 도쿄 산보 세이브가 아니거나 손상됐어요",
+  "save.failed": "실패했어요: {e}"
 }

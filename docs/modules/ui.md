@@ -17,6 +17,7 @@ Msg { key; params?: Record<string, string|number|LocalName> }  // 안내 글의 
 GuideModel { kind gate|stairs|platformExit; station; exit: LocalName; distanceM; arrowDeg }
 SettingsModel { v 1; lang; quality auto|tier; fovDeg 50–100; headBob; reduceMotion; lookSensitivity 0.25–3; invertY; volume {master 0–1.5, ambience, sfx, vehicle, train, ui}; muted; hudFade; units; minimapRotate; uiScale 0.8–1.5; showHelp; keys: Partial<Record<RebindAction, code>> }
 RebindAction = interact|toggleView|freeCam|sprint|pace|summon|summonBike|land|lights|skip|map|photo;  LANGS, REBIND_ACTIONS
+SaveData{v 2; savedAt; posWF; yawRad; mode; gameTimeMs; discoveries; unlocked; photos; stats}, SaveExport, migrateSave(raw) → SaveData|null, parseSaveExport(text) → SaveExport|null, SAVE_VERSION 2  // M10-T06 ADR-0096
 DEFAULT_SETTINGS, normalizeSettings(raw, fallbackLang), langFromNavigator(langs), DEFAULT_KEYS, keyLabel(code), createMockBridge(opts) (샌드박스·테스트)
 재수출: signal, computed, effect, batch, Signal, ReadonlySignal(@preact/signals — 게임이 같은 인스턴스로 브리지를 만든다)
 ```
@@ -33,7 +34,7 @@ DEFAULT_SETTINGS, normalizeSettings(raw, fallbackLang), langFromNavigator(langs)
 api.ts, index.ts, internal/(app — 화면 스택·mountUi, settings — 기본값·정규화, keys — 키 이름·재바인딩 맞바꿈, theme — CSS 문자열, i18n/(ko·ja·en.json, t.ts), nav/(focus — 공간 이동 순수, pad — 메뉴 패드 엣지·반복, nav — DOM 드라이버),
 components/controls(버튼·선택·슬라이더·켬끔), screens/(boot, menus — 타이틀·일시정지, settings, credits, hud — 도움말·안내·알림·막, hud-info — 지명·시각·날씨·기온·계기·다음 역·무입력 5 s 흐림, help — 모드별 줄), sandbox/mock-bridge).
 map/(view — 메르카토르 ↔ 화면·회전 순수, styles, tile-cache — 512 px 래스터·LRU 96·pump 예산, canvas-renderer — 타일·부모 대체·라벨 겹침 제거·표식·화살표, minimap — 원형 200 px·HUD 갱신 때만, controller — 전체 지도 팬·줌 루프), screens/map(빠른 이동 목록·레이어·출처 상시), screens/log(도감 — 분류 탭·격자·상세·사진 칸, M10-T04), screens/photo + photo/grade(포토 모드 — 파라미터 패널·미리보기 CSS 층·셔터 = 원본 → WB·비네팅·그레인 합성 → PNG 다운로드 + 썸네일, M10-T05).
-예정: save/(store, migrations).
+save/migrations(v1 → v2 표·정리·내보내기 파일 검사 — 저장소는 게임), screens/save-section(설정 → 일반 내보내기·가져오기).
 
 ## Tests
 test/shell.test.ts: i18n 키·치환 자리 동등성·라벨 누락, 공간 이동, 패드 엣지·반복·열 때 눌린 Start 무시, 화면 스택, 키 재바인딩(맞바꿈·고정 키 거부), 설정 정규화·브라우저 언어, 도움말 줄(모드·재바인딩·패드).

@@ -2,14 +2,15 @@
 Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10-ui`)
 
 ## Current Milestone: M10 UI/UX (T01 → T02 → T03 → T04 → T05 → T06)
-## Current Task: M10-T06 Save/load & credits
-- Done in this session (#25): M10-T01 UI 셸(ADR-0091), T02 HUD·지명(ADR-0092), T03 지도·미니맵(ADR-0093), T04 도감(ADR-0094), T05 포토 모드(ADR-0095).
-  로컬 테스트 빌드 `test-places-m10`(6셀 + map.pmtiles — MVP 재빌드 때 지움). OSM 필터에 natural=water 추가(재정규화 필요 — MVP 재빌드 때 `normalize --layer osm`).
-- In progress: 없음. ⚠️ "20곳 모두 발견 가능" 실제 GPU 봇 확인은 MVP 재빌드 뒤.
-- Next step (정확히 한 걸음): ui `save/migrations.ts`(스키마 v1·마이그레이션 표) + 게임 세이브 저장소(IndexedDB idb-keyval) 설계 — docs/12 §4.
+## Current Task: M10 마무리 — MVP 재빌드·dev publish·staging·실제 GPU 확인(스크린샷 3개 언어·명소 20곳 봇·HUD 비용)
+- Done in this session (#25): M10-T01–T06(ADR-0091–0096) — 셸·HUD 지명·지도·도감·포토·세이브/크레딧.
+  로컬 테스트 빌드 `test-places-m10`(6셀 + map.pmtiles — MVP 재빌드 때 지움). OSM 필터에 natural=water 추가(재정규화 필요).
+- In progress: 없음.
+- Next step (정확히 한 걸음): 컨테이너 `normalize --layer osm` → `normalize --layer areas` → `build` → `hlod` → `map` → `validate`.
 - Blockers: 없음. ODPT 키 없음(M10 무관).
 
 ## Recently Completed
+- M10-T06 Save/load & credits(2026-10-18) — 세이브 v2(IndexedDB, v1 마이그레이션·내보내기/가져오기·자동 저장 60 s·모음 복원·이어하기), 크레딧 자동 생성(/credits.json = lock 전 원천 + ATTRIBUTION, /oss-licenses.json = 런타임 의존 24개). 수락: 구 스키마 마이그레이션 테스트 ✅, 크레딧 lock 전 소스 ✅(테스트). ADR-0096
 - M10-T05 Photo mode(2026-10-18) — render `setPhoto`(노출 유니폼·DOF 포토 때만 그래프 재구성)·`screenshot({scale})`, 게임 포토 진입(freecam·시계 정지·날씨/시간/FOV·오른쪽 클릭 초점), UI 패널·WB/비네팅/그레인 합성·PNG 다운로드·썸네일 → 도감. 수락(실제 GPU): 3840×2160 저장 ✅, GPU 메모리 +756 MB → +47 MB 회수 ✅. ⚠️ DOF 켤 때 셰이더 재컴파일 4.8 s. ADR-0095
 - M10-T04 POI discovery & log(2026-10-18) — 명소 20곳(content/poi — Wikidata CC0 이름·좌표, 설명 자체 작성), `poi-wikidata`·`poi-review`(60개 통과 — 위키백과 대조 46, 최장 공통 ja·ko 8자·en 34자), sim PoiService, 도감 화면·지도 회색 점·발견 명소 빠른 이동. ADR-0094
 - M10-T03 Map & minimap(2026-10-18) — PMTiles v3(MVT z13–16, MVP ≈ 1.44 MB·타일 223), 게임 map-source(처음 필요할 때 전체 받기), UI 래스터 캐시·미니맵(원형·북쪽 고정/회전)·전체 지도(팬·줌·레이어·빠른 이동 7곳, 발견한 곳만). 수락(실제 GPU 21–25 W): 미니맵 0.016 ms/프레임 ✅, 전체 지도 p50 60 fps·p95 16.8 ms ✅. ADR-0093

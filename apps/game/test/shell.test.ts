@@ -172,3 +172,68 @@ describe('photo mode (M10-T05)', () => {
     expect(d?.bokeh).toBeCloseTo(2, 6);
   });
 });
+
+describe('save (M10-T06)', () => {
+  it('export → import round-trips the collection through a store', async () => {
+    const { applyCollection, blobToDataUrl, exportBlob, importFile } = await import('../src/shell/save.ts');
+    const { createDiscovery } = await import('../src/shell/pois.ts');
+    const { createTravelState } = await import('../src/shell/travel.ts');
+    const { signal, DEFAULT_SETTINGS } = await import('@sanpo/ui');
+    const mem = new Map<string, unknown>();
+    const thumbsMem = new Map<string, Blob>();
+    const store = {
+      load: async () => (mem.get('save') as never) ?? null,
+      write: async (s: unknown, t?: ReadonlyMap<string, Blob>) => {
+        mem.set('save', s);
+        for (const [k, v] of t ?? []) thumbsMem.set(k, v);
+      },
+      thumbs: async (ids: readonly string[]) =>
+        new Map(ids.flatMap((id) => (thumbsMem.has(id) ? [[id, thumbsMem.get(id) as Blob]] : []))),
+    };
+    const thumb = new Blob([new Uint8Array([0xff, 0xd8, 0xff])], { type: 'image/jpeg' });
+    expect(await blobToDataUrl(thumb)).toBe('data:image/jpeg;base64,/9j/');
+    const photos: { id: string; thumb: Blob; url: string; atMs: number; poiId: string | null }[] = [];
+    const photo = {
+      photos: () => photos,
+      restore: (l: { id: string; thumb: Blob; atMs: number; poiId: string | null }[]) => {
+        for (const r of l) photos.push({ ...r, url: 'blob:x' });
+      },
+    };
+    const save = {
+      v: 2 as const,
+      savedAt: 1,
+      posWF: { x: 1, y: 2, z: 3 },
+      yawRad: 0.5,
+      mode: 'walk' as const,
+      gameTimeMs: 10,
+      discoveries: [{ id: 'meiji-jingu', atMs: 9, weather: 'rain', photoIds: ['p1'] }],
+      unlocked: ['omotesando'],
+      photos: [{ id: 'p1', atMs: 9, poiId: 'meiji-jingu' }],
+      stats: { walkedM: 120 },
+    };
+    const settings = signal({ ...DEFAULT_SETTINGS, lang: 'ja' as const });
+    photo.restore([{ id: 'p1', thumb, atMs: 9, poiId: 'meiji-jingu' }]);
+    const parts = (doc: Document) => {
+      const places = signal([] as never[]);
+      const travel = createTravelState(places as never);
+      return {
+        discovery: createDiscovery(doc, signal([] as never[]) as never, () => {}),
+        travel,
+        photo: photo as never,
+        settings,
+        places,
+      };
+    };
+    const a = parts({} as Document);
+    const blob = await exportBlob(save, a, store);
+    photos.length = 0;
+    const x = await importFile(blob, store);
+    expect(x.settings.lang).toBe('ja');
+    const b = parts({} as Document);
+    await applyCollection(x.save, b, store);
+    expect(b.discovery.records().map((r) => r.id)).toEqual(['meiji-jingu']);
+    expect(b.travel.isUnlocked('omotesando')).toBe(true);
+    expect(b.travel.isUnlocked('poi:meiji-jingu')).toBe(true);
+    expect(photos.map((p) => p.id)).toEqual(['p1']);
+  });
+});

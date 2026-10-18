@@ -150,6 +150,8 @@ export const THEME_CSS = `
 .photo-rows{overflow:auto;flex:1}
 .photo-panel .row-control .choice,.photo-panel .row-control .slider{min-width:10.5em}
 .photo-panel .nav-hint{position:static;margin-top:.3em}
+.save-section{margin-top:1em;padding-top:.6em;border-top:1px solid var(--line)}
+.save-section h3{margin:.2em 0}
 .map-screen .nav-hint{left:0;right:auto;width:calc(100% - min(22em,34vw));color:#444;bottom:2.4em}
 `;
 

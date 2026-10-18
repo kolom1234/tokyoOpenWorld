@@ -238,6 +238,29 @@ export interface MapSource {
   tile(z: number, x: number, y: number): Promise<MapTileData | null>;
 }
 
+/** 세이브 v2(12 §4 — M10-T06 ADR-0096): 위치·시각·발견 기록·빠른 이동·사진 메타(썸네일 Blob은 IndexedDB `photo/<id>` 따로). */
+export interface SaveData {
+  v: 2;
+  /** 저장 실제 시각(epoch ms). */
+  savedAt: number;
+  posWF: Vec3d;
+  yawRad: number;
+  mode: 'walk' | 'freecam';
+  gameTimeMs: number;
+  discoveries: { id: string; atMs: number; weather: string; photoIds: string[] }[];
+  unlocked: string[];
+  photos: { id: string; atMs: number; poiId: string | null }[];
+  stats: { walkedM: number };
+}
+
+/** 내보내기 파일(JSON): 세이브 + 설정 + 사진 썸네일(data URL). */
+export interface SaveExport {
+  format: 'tokyo-sanpo-save';
+  save: SaveData;
+  settings: SettingsModel;
+  thumbs: Record<string, string>;
+}
+
 export type StartChoice = { kind: 'continue' } | { kind: 'new'; at: string };
 
 export interface UiCommands {

@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 587개.
+> 파일 591개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -27,7 +27,7 @@
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면(e2e data-* — 화면에서는 UI 로딩 화면이 대신) + @sanpo/ui 셸 마운트 → boot(), 실패 시 오류 화면.
 - `apps/game/src/shell/bridge.ts` — UiBridge 구현(M10-T01): 시그널(HUD 10 Hz·로딩·설정) + 명령(일시정지·시작·빠른 이동) + @sanpo/ui 마운트. 월드는 attach 뒤에 붙는다(그 전 명령은 무시). | exports: ShellOptions, Shell, createShell
 - `apps/game/src/shell/commands.ts` — UiBridge 명령 구현(M10): 일시정지·시작(새 산책 = 시작 지점 빠른 이동)·빠른 이동. 이후 태스크가 사진·세이브·시간·날씨를 더한다. | exports: CommandContext, travelToPreset, travelToPos, startPoints, createCommands
-- `apps/game/src/shell/credits.ts` — 크레딧 모델(M10-T01 최소): content/ATTRIBUTION.json(동적 import — 첫 로드 밖). M10-T06에서 빌드 credits.json·OSS 목록 자동 생성으로 바뀐다. | exports: creditsOf, loadCredits
+- `apps/game/src/shell/credits.ts` — 크레딧 모델(M10-T06, ADR-0096): 게임 빌드가 내보낸 /credits.json(sources.lock 모든 원천 + ATTRIBUTION)·/oss-licenses.json(런타임 의존 라이선스)을 처음 열 때 받는다. | exports: creditsOf, loadCredits
 - `apps/game/src/shell/fast-travel.ts` — 빠른 이동(타이틀 시작 지점·지도 — M10): 검은 막 → walk 재진입(먼 기준점 = 그 아래 지면을 콜라이더 적재 뒤 찾는다, ADR-0084 경로) → 착지 확인 → 막 걷기. | exports: TravelTarget, FastTravelDeps, arrived, fastTravel
 - `apps/game/src/shell/hud-state.ts` — HUD 안내 상태(문서당 하나): 상호작용 안내(출처별 칸 — 우선순위 순), 알림(seq), 역 근접 안내, 검은 막. 게임 배선이 쓰고 shell/bridge가 10 Hz로 UI(@sanpo/ui HUD)에 넘긴다. | exports: PROMPT_SLOTS, PromptSlot, HudState, hudStateOf, setPrompt, topPrompt, pushNotice, setGuide, setFade, setDrive, setTrain
 - `apps/game/src/shell/loading.ts` — 부팅 상태 → UI 로딩 화면(LoadingModel): StatusView(e2e data-* 속성 — 화면에서는 숨김)를 감싸 같은 호출을 시그널로도 보낸다. 순수 매핑 함수는 테스트. | exports: INITIAL_LOADING, loadingOfWorld, loadingOfBoot, loadingView
@@ -37,6 +37,7 @@
 - `apps/game/src/shell/photo.ts` — 포토 모드(M10-T05, 12 §5): 들어가면 freecam(지금 카메라 자세)·시계 정지·날씨 보관, 파라미터 = 시간 이동(±12 h)·날씨 프리셋·노출 EV·초점 거리 mm(→ FOV)·조리개(→ DOF)·초점 거리 m, | exports: fovOfFocal, dofOf, PhotoPhotoRecord, PhotoControl, createPhoto
 - `apps/game/src/shell/places.ts` — HUD 지명(M10-T02): live L0 셀 meta.json placeNames(e-Stat 町丁 — 셀 로컬 폴리곤) → WF 폴리곤 색인 → 점-폴리곤 조회(포함 중 가장 작은 면적 — 飛び地·안쪽 町). | exports: pointInPolygon, PlaceIndex, createPlaceIndex
 - `apps/game/src/shell/pois.ts` — 도감 명소(M10-T04, ADR-0094): content/poi/pois.json(자체 설명·반경·종류) + content/poi/wikidata.json(이름·좌표 CC0) → DiscoveryModel·발견 판정(sim createPoiService, 2 s 체류). | exports: resolveName, PoiEntry, poiEntries, DiscoveryRecord, DiscoveryState, createDiscovery
+- `apps/game/src/shell/save.ts` — 세이브(M10-T06, 12 §4, ADR-0096): IndexedDB(idb-keyval) `save/v2` = SaveData, `photo/<id>` = 썸네일 Blob. 모음(발견·빠른 이동·사진)은 부팅 때 늘 복원, 이어하기는 위치·시각까지. | exports: SAVE_KEY, SaveParts, snapshotOf, blobToDataUrl, SaveStore, createSaveStore, applyCollection, exportBlob, importFile, autosaveSystem, SaveCommands, createSaveCommands
 - `apps/game/src/shell/settings.ts` — 설정 저장(localStorage `sanpo.settings.v1` — 부팅 때 동기로 읽어 품질·언어를 첫 화면부터 적용)과 서비스 적용(품질·FOV·감도·모션·키·볼륨). | exports: SETTINGS_KEY, loadSettings, saveSettings, tierOf, mixOf, bindingsWithKeys, SettingsTargets, applySettings
 - `apps/game/src/shell/travel.ts` — 빠른 이동 대상(M10-T03, 12 §2 "발견한 역만"): 스폰 프리셋 중 역 개찰구·장소(승강장·시험 코스·거점 = 개발용 제외). 타이틀 시작 지점 3곳은 처음부터 열림, | exports: START_POINTS, TRAVEL_DEFS, travelPlaces, TravelState, createTravelState
 - `apps/game/src/spawn-presets.ts` — URL 스폰 프리셋(ADR-0084 — M10 지도 전 임시): `?spawn=<id>` → content/spawn-presets.json의 위치·방위로 월드 스폰을 바꾼다 | exports: SpawnPreset, SPAWN_PRESETS, spawnPreset, withSpawn
@@ -388,8 +389,8 @@
 - `packages/traversal/src/internal/walk-placement.ts` — walk 착지점: 후보(기준점 → 6·12·24·48 m 링 × 8방위)마다 하늘(1,200 m)에서 수직 레이 → 첫 충돌이 TERRAIN(지면)인 가장 앞 후보. | exports: TERRAIN_LAYER, spotCandidates, findStreetSpot
 
 ## packages/ui
-- `packages/ui/src/api.ts` — @sanpo/ui 공개 계약(타입·인터페이스). 게임 상태는 UiBridge(apps/game 구현)로만 읽고 쓴다. see docs/modules/ui.md, docs/12-ui-ux.md §7 | exports: Lang, LANGS, LocalName, Msg, ScreenId, LoadingStage, LoadingModel, GuideModel, DriveModel, TrainModel, HudModel, PoiCategory, DiscoveryModel, TravelPlace, Units, VolumeSettings, RebindAction, REBIND_ACTIONS, SettingsModel, PhotoParams, CreditEntry, OssEntry, CreditsModel, MapFeatureData, MapTileData, MapSource, StartChoice, UiCommands, UiBridge, UiOptions, UiHandle
-- `packages/ui/src/index.ts` — @sanpo/ui 공개 엔트리(L4): Preact HUD/메뉴/지도. api.ts 재수출 + mountUi·create* 팩토리 + 시그널(게임이 같은 인스턴스로 UiBridge를 만든다). see docs/modules/ui.md | exports: batch, computed, effect, ReadonlySignal, Signal, signal, * from './api.ts', mountUi, DEFAULT_KEYS, keyLabel, createMockBridge, DEFAULT_SETTINGS, langFromNavigator, normalizeSettings
+- `packages/ui/src/api.ts` — @sanpo/ui 공개 계약(타입·인터페이스). 게임 상태는 UiBridge(apps/game 구현)로만 읽고 쓴다. see docs/modules/ui.md, docs/12-ui-ux.md §7 | exports: Lang, LANGS, LocalName, Msg, ScreenId, LoadingStage, LoadingModel, GuideModel, DriveModel, TrainModel, HudModel, PoiCategory, DiscoveryModel, TravelPlace, Units, VolumeSettings, RebindAction, REBIND_ACTIONS, SettingsModel, PhotoParams, CreditEntry, OssEntry, CreditsModel, MapFeatureData, MapTileData, MapSource, SaveData, SaveExport, StartChoice, UiCommands, UiBridge, UiOptions, UiHandle
+- `packages/ui/src/index.ts` — @sanpo/ui 공개 엔트리(L4): Preact HUD/메뉴/지도. api.ts 재수출 + mountUi·create* 팩토리 + 시그널(게임이 같은 인스턴스로 UiBridge를 만든다). see docs/modules/ui.md | exports: batch, computed, effect, ReadonlySignal, Signal, signal, * from './api.ts', mountUi, DEFAULT_KEYS, keyLabel, createMockBridge, migrateSave, parseSaveExport, SAVE_VERSION, DEFAULT_SETTINGS, langFromNavigator, normalizeSettings
 - `packages/ui/src/internal/app.tsx` — UI 루트: 화면 스택(boot → title|hud, hud 위에 pause·settings·…), 언어·배율 적용, 메뉴 동안 게임 일시정지(bridge.commands.pause), 내비게이션 드라이버. | exports: nextStack, isPlaying, mountUi
 - `packages/ui/src/internal/components/controls.tsx` — 메뉴 컨트롤: 버튼·선택(◀ ▶)·슬라이더·켬/끔. 모두 data-nav(공간 내비게이션) + 조절형은 data-nav-adjust(←→ = navadjust 이벤트). | exports: MenuButton, Row, Choice, Toggle, Slider, NavHint
 - `packages/ui/src/internal/i18n/t.ts` — i18n: 평면 키(`area.key`) → 현재 언어 문자열, `{name}` 치환. 키 집합은 ko·ja·en 동일(테스트). 없는 키 = 키 그대로(개발 중 눈에 띄게). | exports: DICTS, lang, isLocalName, pick, t, tm
@@ -405,6 +406,7 @@
 - `packages/ui/src/internal/nav/pad.ts` — 메뉴용 게임패드 읽기(표준 매핑): D-pad·L스틱 → 방향(처음 0.35 s 뒤 0.12 s마다 반복), A 선택, B 뒤로, Start, LB·RB 탭. 순수 상태 갱신(테스트) + 폴링은 nav.ts. | exports: PadEvent, PadSnapshot, PadState, initPadState, dirOf, stepPad
 - `packages/ui/src/internal/photo/grade.ts` — 포토 그레이딩(M10-T05): 화이트밸런스(곱하기 색조)·비네팅(방사형 곱하기)·필름 그레인(결정론 잡음 타일 overlay). 미리보기(CSS 층)와 저장(2D 캔버스 합성)이 같은 값을 쓴다. | exports: wbColor, css, vignetteAlpha, grainAlpha, noiseTile, noiseDataUrl, gradePhoto
 - `packages/ui/src/internal/sandbox/mock-bridge.ts` — 목 UiBridge(`?ui-sandbox=1` 스토리 페이지·단위 테스트): 가짜 로딩 진행, HUD 모드 순환, 고정 크레딧. 게임 없이 화면을 본다. | exports: MOCK_HUD, MockBridge, createMockBridge
+- `packages/ui/src/internal/save/migrations.ts` — 세이브 스키마·마이그레이션(M10-T06, 12 §4): 버전 필드 + 단계별 함수 표. v1 = 12 §4 초안 모양(발견 id 배열·사진 메타), v2 = 지금(발견 기록·빠른 이동·사진 명소 연결). | exports: SAVE_VERSION, migrateSave, parseSaveExport
 - `packages/ui/src/internal/screens/boot.tsx` — 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류. | exports: BootScreen
 - `packages/ui/src/internal/screens/credits.tsx` — 크레딧: 데이터·에셋 출처(bridge.credits — 빌드 credits.json/ATTRIBUTION) + ODbL 안내 + 가상 디자인 고지 + OSS 라이선스 목록. | exports: CreditsScreen
 - `packages/ui/src/internal/screens/help.ts` — 조작 도움말(H — 왼쪽 아래): 모드별 [키, 동작] 줄. 재바인딩한 키는 설정에서, 패드가 있으면 패드 글자. 순수 함수(테스트). | exports: HelpItem, helpItems
@@ -414,6 +416,7 @@
 - `packages/ui/src/internal/screens/map.tsx` — 전체 지도(M) — M10-T03: 지도 캔버스(map/controller — 팬·줌·60 fps) + 빠른 이동 목록(발견한 곳만 이동 — 포커스하면 지도가 그곳으로) + 레이어(지명·역) + 출처 상시 표기. | exports: MapScreen
 - `packages/ui/src/internal/screens/menus.tsx` — 타이틀(이어하기·새 산책(시작 지점)·설정·크레딧)과 일시정지(계속·지도·도감·포토·설정·타이틀로) 메뉴. | exports: ScreenNav, MenuScreen, TitleScreen, PauseScreen
 - `packages/ui/src/internal/screens/photo.tsx` — 포토 모드(P) — M10-T05, 12 §5: 자유 카메라(WASD·E/Q·마우스 끌기)로 구도, 오른쪽 패널 = 시간(±12 h)·날씨·노출·화이트밸런스·초점 거리(mm)·조리개·초점(오른쪽 클릭)·비네팅·그레인·3분할·배율(×1/×2), | exports: DEFAULT_PHOTO, PhotoScreen
+- `packages/ui/src/internal/screens/save-section.tsx` — 설정 → 일반 → 세이브(M10-T06): 내보내기(JSON 다운로드 — 세이브·설정·사진 썸네일)·가져오기(파일 고르기 — 키보드·패드는 버튼이 숨은 file input을 연다). | exports: SaveSection
 - `packages/ui/src/internal/screens/settings.tsx` — 설정 화면: 탭(그래픽·카메라·모션·조작·소리·일반) — 바뀌면 곧바로 bridge.settings(게임이 적용·저장). 키 재바인딩 = 누를 때까지 대기(data-capturing). | exports: SETTINGS_TABS, SettingsTab, SettingsScreen
 - `packages/ui/src/internal/settings.ts` — 설정 기본값·정규화(저장본·가져오기 값의 범위·형식 검사). 저장은 게임(localStorage — 부팅 때 동기로 읽어 품질·언어 적용). | exports: DEFAULT_SETTINGS, normalizeSettings, langFromNavigator
 - `packages/ui/src/internal/theme.ts` — UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = 시스템 일·한 고딕(⚠️ Noto 서브셋 자체 호스팅은 후속 — docs/12 §1). | exports: THEME_CSS, injectTheme
@@ -422,6 +425,7 @@
 - `scripts/check-asset-size.ts` — 정적 에셋 한도 게이트(`pnpm check:assets [dir]`): 파일당 25 MiB, 파일 수 20,000(Workers Free). see docs/13-deployment.md §2
 - `scripts/check-records.ts` — PR 기록 누락 게이트(`pnpm check:records --base <ref>`): api.ts↔모듈 카드(실패), 코드↔PROGRESS.md(경고). see docs/16-context-protocol.md §3
 - `scripts/check-size.ts` — 크기 제한 게이트(`pnpm check:size`): TS 파일 400줄·함수 60줄, 모듈 카드 150줄, docs 400줄, CLAUDE.md 200줄. see docs/15-conventions.md §2
+- `scripts/lib/credits.ts` — 크레딧 자동 생성(M10-T06, 03 §8, ADR-0096): data/sources.lock.json 모든 원천 + content/ATTRIBUTION.json(에셋·텍스트) → credits.json, 게임 런타임 의존(전이 포함) package.json → oss-licenses.json. | exports: LockSource, AttributionEntry, CreditData, OssPackage, creditsData, ossPackages, buildCredits
 - `scripts/lib/files.ts` — 저장소 파일 워커(node_modules·dist·데이터 산출물 제외) + CI 출력 헬퍼. scripts/check-* 공용. | exports: listFiles, report
 - `scripts/lib/records-rules.ts` — PR 기록 누락 검사 규칙(순수 함수): api.ts ↔ 모듈 카드, 코드 ↔ PROGRESS.md. see docs/16-context-protocol.md §3–4 | exports: RecordsReport, isCodePath, checkRecords
 - `scripts/lib/size-rules.ts` — 파일·함수·문서 크기 제한 규칙(순수 함수). see docs/15-conventions.md §2, docs/14-testing-perf.md §5 | exports: SIZE_LIMITS, SizeViolation, countLines, isTestPath, bodyLines, findLongFunctions, checkSourceText, docLimitFor, checkDocText

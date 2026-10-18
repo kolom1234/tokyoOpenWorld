@@ -43,7 +43,7 @@ URL 스폰 프리셋 `?spawn=<id>`(content/spawn-presets.json — 개발·테스
 
 ## 4. 세이브
 - IndexedDB(`idb-keyval`) 키: `save/v1` = `{ posWF, yaw, mode, discovered: string[], photos: PhotoMeta[], stats, gameTimeMs }`. 설정은 localStorage `sanpo.settings.v1`(부팅 때 동기 — render 티어·첫 화면 언어, ADR-0091).
-- 자동 저장 60 s 간격 + 모드 전환 시. JSON 내보내기/가져오기(설정 화면).
+- M10-T06(ADR-0096): 실제 키 `save/v2`(SaveData — 발견 기록·빠른 이동·사진 명소 연결)·`photo/<id>` 썸네일, v1 → v2 마이그레이션. 자동 저장 60 s 간격 + 모드 전환 시(메뉴 모드만). JSON 내보내기/가져오기(설정 → 일반). 크레딧 = 게임 빌드가 sources.lock·ATTRIBUTION·런타임 의존에서 `/credits.json`·`/oss-licenses.json` 생성.
 - 스키마 버전 필드 + 마이그레이션 함수 테이블(`src/internal/save/migrations.ts`).
 
 ## 5. 포토모드

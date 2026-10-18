@@ -226,5 +226,12 @@
   "photo.saved": "Saved ({w}×{h})",
   "photo.savedPoi": "Saved ({w}×{h}) — added to “{name}” in the field guide",
   "photo.failed": "Could not save: {e}",
-  "photo.notice.walkOnly": "Photo mode works while walking or flying — get off first, then press P again"
+  "photo.notice.walkOnly": "Photo mode works while walking or flying — get off first, then press P again",
+  "save.hint": "Move your landmarks, photos, fast-travel list and settings as a file (autosave every 60 s).",
+  "save.export": "Export save",
+  "save.import": "Import save",
+  "save.exported": "Exported — check your downloads folder",
+  "save.imported": "Imported — applied to the field guide, map and settings",
+  "save.invalid": "This file isn't a Tokyo Sanpo save, or it is damaged",
+  "save.failed": "Failed: {e}"
 }

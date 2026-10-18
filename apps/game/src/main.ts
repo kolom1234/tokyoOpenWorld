@@ -54,6 +54,7 @@ if (q.get('ui-sandbox') === '1') {
   root.classList.add('behind-ui');
   const shell = createShell(document, uiRoot(), {
     menus: menusEnabled(flags, q),
+    save: menusEnabled(flags, q) || q.get('save') === '1',
     storage: storageOf(),
     fixedQuality: flags.quality !== undefined || flags.view !== undefined,
     fixedFov: flags.view !== undefined,

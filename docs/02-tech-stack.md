@@ -16,7 +16,7 @@
 | 태양·달 위치 | `suncalc` | 2.0.2 | BSD-2 | 검증된 천문 계산 |
 | 절차적 나무 | `@dgreenheck/ez-tree` | 1.1.0 | MIT | 파이프라인에서 수종별 나무 메시 생성(런타임 의존 아님) |
 | UI | `preact` + `@preact/signals` | 10.29.8 / 2.11.2 | MIT | 작은 번들, 시그널로 HUD 갱신 최소화 |
-| 로컬 저장 | `idb-keyval` | 6.3.0 | Apache-2.0 | IndexedDB 간단 래퍼(세이브/설정) |
+| 로컬 저장 | `idb-keyval` | 6.3.0 | Apache-2.0 | IndexedDB 간단 래퍼(세이브 — apps/game `shell/save.ts`, 설정은 localStorage ADR-0091) |
 | 워커 RPC | `comlink` | 4.4.2 | Apache-2.0 | 타입 안전 워커 명령 채널 (대용량은 SAB 직접) |
 | GPU 티어 | `@pmndrs/detect-gpu` | 6.0.23 | MIT | 초기 품질 티어 추정(render, M03-T08) — 벤치마크 JSON은 apps/game이 `/detect-gpu/`로 자체 호스팅(기본 unpkg는 CSP·외부 의존) |
 | 디버그 | `stats-gl`, `lil-gui` | 4.2.3 / 0.21.0 | MIT | `?debug=1`에서만 동적 import |

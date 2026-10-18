@@ -6,6 +6,7 @@ import { t } from '../i18n/t.ts';
 import { DEFAULT_KEYS, keyLabel, keyOf, rebindKeys } from '../keys.ts';
 import { DEFAULT_SETTINGS } from '../settings.ts';
 import { MenuScreen } from './menus.tsx';
+import { SaveSection } from './save-section.tsx';
 
 export const SETTINGS_TABS = ['graphics', 'camera', 'controls', 'audio', 'general'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
@@ -137,7 +138,7 @@ function AudioTab(p: { s: SettingsModel; set: Patch }) {
   );
 }
 
-function GeneralTab(p: { s: SettingsModel; set: Patch }) {
+function GeneralTab(p: { s: SettingsModel; set: Patch; bridge: UiBridge }) {
   return (
     <>
       <Row label={t('settings.lang')}>
@@ -174,6 +175,7 @@ function GeneralTab(p: { s: SettingsModel; set: Patch }) {
       <Row label={t('settings.minimapRotate')}>
         <Toggle value={p.s.minimapRotate} onChange={(minimapRotate) => p.set({ minimapRotate })} />
       </Row>
+      <SaveSection bridge={p.bridge} />
     </>
   );
 }
@@ -214,7 +216,7 @@ export function SettingsScreen(p: {
         {p.tab === 'camera' ? <CameraTab s={s} set={set} /> : null}
         {p.tab === 'controls' ? <ControlsTab s={s} set={set} /> : null}
         {p.tab === 'audio' ? <AudioTab s={s} set={set} /> : null}
-        {p.tab === 'general' ? <GeneralTab s={s} set={set} /> : null}
+        {p.tab === 'general' ? <GeneralTab s={s} set={set} bridge={p.bridge} /> : null}
       </div>
       <div class="menu-row">
         <MenuButton

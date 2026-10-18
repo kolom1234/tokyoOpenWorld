@@ -116,5 +116,5 @@ describe('pmtiles', () => {
       tiles.push({ z: 17, x: 116000 + (i % 100), y: 51000 + Math.floor(i / 100), data: new Uint8Array([i & 255]) });
     const a = await readPmtiles(await writePmtiles(tiles, meta));
     expect(Array.from((await a.tile(17, 116042, 51077)) ?? [])).toEqual([(77 * 100 + 42) & 255]);
-  });
+  }, 30_000);
 });

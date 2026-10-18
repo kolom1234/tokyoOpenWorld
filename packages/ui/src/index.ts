@@ -4,4 +4,5 @@ export * from './api.ts';
 export { mountUi } from './internal/app.tsx';
 export { DEFAULT_KEYS, keyLabel } from './internal/keys.ts';
 export { createMockBridge } from './internal/sandbox/mock-bridge.ts';
+export { migrateSave, parseSaveExport, SAVE_VERSION } from './internal/save/migrations.ts';
 export { DEFAULT_SETTINGS, langFromNavigator, normalizeSettings } from './internal/settings.ts';

@@ -18,7 +18,7 @@ import {
   type UiHandle,
 } from '@sanpo/ui';
 import type { WorldView } from '../world-view.ts';
-import { createCommands, startPoints } from './commands.ts';
+import { createCommands, startPoints, travelToPos } from './commands.ts';
 import { loadCredits } from './credits.ts';
 import { hudStateOf, topPrompt } from './hud-state.ts';
 import { INITIAL_LOADING, loadingOfBoot } from './loading.ts';
@@ -27,6 +27,7 @@ import { createPause } from './pause.ts';
 import { createPhoto, type PhotoControl } from './photo.ts';
 import { createPlaceIndex, type PlaceIndex } from './places.ts';
 import { createDiscovery, type DiscoveryState } from './pois.ts';
+import { autosaveSystem, createSaveCommands, createSaveStore, type SaveCommands } from './save.ts';
 import { applySettings, loadSettings, saveSettings } from './settings.ts';
 import { createTravelState, type TravelState } from './travel.ts';
 
@@ -37,6 +38,8 @@ const L0_CELL_M = 256;
 
 export interface ShellOptions {
   menus: boolean;
+  /** IndexedDB 세이브(자동 저장·이어하기 — 메뉴 모드). */
+  save: boolean;
   storage: Storage | undefined;
   /** `?quality=`·골든뷰 = 티어 고정. */
   fixedQuality: boolean;
@@ -55,6 +58,7 @@ export interface Shell {
   readonly travel: TravelState;
   readonly discovery: DiscoveryState;
   readonly photo: PhotoControl;
+  readonly save: SaveCommands;
   dispose(): void;
 }
 
@@ -231,6 +235,16 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
   const hud = signal<HudModel>(EMPTY_HUD);
   let world: WorldView | undefined;
   const { pause, places, travel, map, discoveries, discovery, photo } = createParts(doc, settings, () => world);
+  const store = opts.save ? createSaveStore() : null;
+  const parts = { discovery, travel, photo, settings };
+  const save = createSaveCommands(
+    store,
+    parts,
+    () => world,
+    (pos, yaw) => travelToPos(doc, world, pos, yaw),
+    signal(false),
+  );
+  void save.init();
   let buildId: string | null = null;
   const bridge: UiBridge = {
     hud,
@@ -238,13 +252,13 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     discoveries,
     places,
     settings,
-    hasSave: computed(() => false),
+    hasSave: save.hasSave,
     startPoints: startPoints(),
     credits: (): Promise<CreditsModel> => loadCredits(buildId),
     worldToMap: (p: Vec3d) => worldToMerc(p),
     map,
     photoUrl: (id) => photo.photoUrl(id),
-    commands: createCommands({ doc, world: () => world, pause, travel, photo }),
+    commands: createCommands({ doc, world: () => world, pause, travel, photo, save }),
   };
   const ui = mountUi(root, bridge, { menus: opts.menus });
   const offs: (() => void)[] = [];
@@ -256,10 +270,12 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     travel,
     discovery,
     photo,
+    save,
     attach(w) {
       world = w;
       offs.push(settingsEffect(w, settings, opts), pause.autoPause(ui, opts.menus));
-      return systemsOf(doc, w, shell, hud);
+      const extra = store ? [autosaveSystem(w, parts, store, () => ui.screen.peek() === 'hud')] : [];
+      return [...systemsOf(doc, w, shell, hud), ...extra];
     },
     setWorld(baseUrl, id) {
       buildId = id;
