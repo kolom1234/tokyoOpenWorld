@@ -68,8 +68,8 @@ async function withRetry<T>(what: string, fn: () => Promise<T>, log: Logger): Pr
 
 /** 공유 에셋: 머티리얼 KTX2 배열·manifest(M03-T01, materials --build-id가 설치), 오디오 Opus·manifest(M09-T04, audio --build-id). */
 const SHARED_FILE_RE = /^shared\/(materials\/[A-Za-z0-9_-]+\.(json|ktx2)|audio\/[A-Za-z0-9_-]+\.(json|ogg))$/;
-/** 전역 파일(M07): 철도 망·시간표. */
-const GLOBAL_FILE_RE = /^global\/(rail\.bin|timetables\/[A-Za-z0-9_-]+\.json)$/;
+/** 전역 파일(M07): 철도 망·시간표, 지도(M10-T03 map.pmtiles). */
+const GLOBAL_FILE_RE = /^global\/(rail\.bin|map\.pmtiles|timetables\/[A-Za-z0-9_-]+\.json)$/;
 
 /** 퍼블리시 대상: world.json, cells.idx, L<n>/**.tkc, shared/materials/*(보고서·작업 파일 제외). 정렬된 상대 경로. */
 export function buildFiles(dir: string): string[] {
