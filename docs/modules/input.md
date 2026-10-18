@@ -12,6 +12,7 @@ InputService extends SystemProvider {   // system 'input', phase 0
   readonly state: ActionState; readonly context: InputContext; readonly pointerLocked: boolean; readonly gamepadConnected: boolean;
   setContext(c); rebind(a: Action, b: Binding, context?); bindings(): BindingMap; dispose();
   setBindings(m: BindingMap); setAxisScale(a: AxisAction, k); setEnabled(on); readonly enabled;   // M10-T01(ADR-0091): 설정 키 재바인딩·시선 반전·메뉴 동안 끄기(EMPTY_STATE)
+  setPointerLockOnClick(on);   // M10-T05: false = 캔버스 클릭으로 Pointer Lock 안 함(포토 모드 — 드래그·우클릭·패널에 커서 필요). 기본 true
 }
 ActionState { axis(a: AxisAction): number; pressed(a: ButtonAction): boolean; justPressed(a: ButtonAction): boolean }
 InputContext = 'walk' | 'vehicle' | 'fly' | 'ui'
@@ -39,4 +40,4 @@ test/action-map.test.ts: 축(WASD/E/Q)·컨텍스트별 바인딩, 스냅샷 불
 test/gamepad.test.ts: 원형 데드존·재조정, 스틱 이동·R스틱 초당 시선, 버튼 에지, Select+Y 조합, 트리거 축, 연결 해제, 키+스틱 합 자르기.
 
 ## Status
-M01-T06 최소(키보드·마우스·컨텍스트), M04-T03 게임패드(ADR-0043), M10-T01 setBindings·setAxisScale·setEnabled·Start = 일시정지(ADR-0091).
+M01-T06 최소(키보드·마우스·컨텍스트), M04-T03 게임패드(ADR-0043), M10-T01 setBindings·setAxisScale·setEnabled·Start = 일시정지(ADR-0091), M10-T05 setPointerLockOnClick(포토 모드).

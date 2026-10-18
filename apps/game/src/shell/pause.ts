@@ -15,6 +15,7 @@ export function createPause(doc: Document, world: () => WorldView | undefined): 
   let paused = false;
   let resumeClock: ClockMode | undefined;
   let intentional = false;
+  let screenUi: UiHandle | undefined;
   return {
     get paused() {
       return paused;
@@ -41,6 +42,8 @@ export function createPause(doc: Document, world: () => WorldView | undefined): 
         resumeClock = undefined;
       }
       // 재개 버튼(클릭·Enter)은 사용자 제스처 → 잠금 요청이 받아들여진다. 패드는 거부(조용히 무시 — 캔버스 클릭으로 잠금).
+      // 포토 모드는 커서가 있어야 한다(패널·끌기·우클릭 초점) — 일시정지 → 포토 모드면 잠그지 않는다.
+      if (screenUi?.screen.peek() === 'photo') return;
       const canvas = doc.getElementById('view');
       try {
         const r = canvas?.requestPointerLock?.() as unknown as Promise<void> | undefined;
@@ -50,6 +53,7 @@ export function createPause(doc: Document, world: () => WorldView | undefined): 
       }
     },
     autoPause(ui, menus) {
+      screenUi = ui;
       if (!menus) return () => undefined;
       const onChange = () => {
         if (doc.pointerLockElement) return;

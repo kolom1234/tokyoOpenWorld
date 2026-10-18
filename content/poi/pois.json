@@ -97,7 +97,7 @@
       "id": "takeshita-street",
       "wikidata": "Q3179287",
       "kind": "street",
-      "radiusM": 60,
+      "radiusM": 80,
       "name": { "ja": "label", "en": "label", "ko": "derived:다케시타 거리" },
       "description": {
         "ko": "역 앞에서 시작하는 짧은 내리막 골목. 작은 가게가 이어져 있고 젊은 방문객이 많다.",

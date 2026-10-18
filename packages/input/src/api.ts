@@ -90,6 +90,8 @@ export interface InputService extends SystemProvider {
   /** false = 모든 액션 0(메뉴·일시정지 — UI가 키를 갖는다). 컨텍스트는 그대로 바뀐다(M10-T01). */
   setEnabled(on: boolean): void;
   readonly enabled: boolean;
+  /** false = 캔버스 클릭으로 Pointer Lock을 걸지 않는다(포토 모드 — 끌기·우클릭·패널에 커서가 필요, M10-T05). 기본 true. */
+  setPointerLockOnClick(on: boolean): void;
   /** DOM 리스너 해제. */
   dispose(): void;
 }

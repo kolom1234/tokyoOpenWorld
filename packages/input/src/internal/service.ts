@@ -52,7 +52,6 @@ export function createInput(deps: InputDeps): InputService {
   const mouse = attachMouse(deps.target, raw);
   const gamepad = win ? attachGamepad(win) : undefined;
   const log = deps.log.child('input');
-
   const system: GameSystem = {
     id: 'input',
     phase: INPUT_PHASE,
@@ -97,6 +96,9 @@ export function createInput(deps: InputDeps): InputService {
     },
     setEnabled: (on) => gate.setEnabled(on),
     setAxisScale: (a, k) => gate.setAxisScale(a, k),
+    setPointerLockOnClick: (on) => {
+      mouse.lockOnClick = on;
+    },
     dispose: () => system.dispose(),
     systems: () => [system],
   };

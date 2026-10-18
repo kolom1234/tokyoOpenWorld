@@ -83,6 +83,7 @@ function enter(w: WorldView): Saved | null {
 
 function leave(w: WorldView, s: Saved, fovDeg: number): void {
   w.render.setPhoto(null);
+  w.input.setPointerLockOnClick(true);
   w.traversal.configure({ fovDeg });
   w.sim.clock.setMode(
     s.clock
@@ -134,6 +135,9 @@ export function createPhoto(
           pushNotice(doc, { key: 'photo.notice.walkOnly' });
           return false;
         }
+        // 걷다가 P — 포인터 잠금을 풀고 클릭 잠금도 끈다: 패널·끌기·우클릭 초점에 커서가 필요(풀림은 화면이 photo라 자동 일시정지 안 함).
+        w.input.setPointerLockOnClick(false);
+        if (doc.pointerLockElement) doc.exitPointerLock();
       }
       apply(w, p, saved);
       return true;

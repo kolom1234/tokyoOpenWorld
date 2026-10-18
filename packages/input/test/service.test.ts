@@ -19,12 +19,15 @@ function fakeDom() {
     ownerDocument: doc,
     addEventListener: on,
     removeEventListener: () => {},
-    requestPointerLock: () => {},
+    locks: 0,
+    requestPointerLock() {
+      this.locks++;
+    },
   };
   const fire = (type: string, e: object) => {
     for (const fn of listeners.get(type) ?? []) fn({ target: null, preventDefault() {}, ...e });
   };
-  return { target: target as unknown as HTMLElement, fire };
+  return { target: target as unknown as HTMLElement, fire, locks: () => target.locks };
 }
 
 const frame = (dtReal = 1 / 60) => ({ dtReal, dtSim: dtReal, frame: 0, nowMs: 0 }) as never;
@@ -61,5 +64,18 @@ describe('createInput gate (M10-T01)', () => {
     expect(input.state.justPressed('interact')).toBe(true);
     expect(input.state.axis('moveY')).toBe(-1);
     expect(input.bindings().walk.interact).toEqual([{ device: 'key', code: 'KeyJ' }]);
+  });
+
+  it('setPointerLockOnClick(false) stops click-to-lock; true restores it (photo mode, M10-T05)', () => {
+    const d = fakeDom();
+    const input = createInput({ target: d.target, log: createLogger({ level: 'error' }) });
+    d.fire('click', {});
+    expect(d.locks()).toBe(1);
+    input.setPointerLockOnClick(false);
+    d.fire('click', {});
+    expect(d.locks()).toBe(1);
+    input.setPointerLockOnClick(true);
+    d.fire('click', {});
+    expect(d.locks()).toBe(2);
   });
 });

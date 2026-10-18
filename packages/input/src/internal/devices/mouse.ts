@@ -3,6 +3,8 @@ import { buttonDown, buttonUp, mouseMove, type RawInput, wheel } from '../raw-in
 
 export interface MouseDevice {
   readonly locked: boolean;
+  /** false = 클릭해도 잠그지 않는다(드래그 조작만). */
+  lockOnClick: boolean;
   detach(): void;
 }
 
@@ -13,8 +15,9 @@ export interface MouseDevice {
 export function attachMouse(target: HTMLElement, raw: RawInput): MouseDevice {
   const doc = target.ownerDocument;
   const locked = (): boolean => doc.pointerLockElement === target;
+  let lockOnClick = true;
   const onClick = (): void => {
-    if (locked()) return;
+    if (locked() || !lockOnClick) return;
     // 사용자 제스처 없는 호출·지원 안 함은 거부(Promise reject 또는 예외) → 드래그 조작으로 대체.
     try {
       const p = target.requestPointerLock() as unknown as Promise<void> | undefined;
@@ -50,6 +53,12 @@ export function attachMouse(target: HTMLElement, raw: RawInput): MouseDevice {
   return {
     get locked() {
       return locked();
+    },
+    get lockOnClick() {
+      return lockOnClick;
+    },
+    set lockOnClick(on: boolean) {
+      lockOnClick = on;
     },
     detach() {
       target.removeEventListener('click', onClick);

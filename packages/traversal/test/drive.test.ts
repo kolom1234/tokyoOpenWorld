@@ -31,6 +31,7 @@ function fakeInput() {
     setBindings: () => undefined,
     setAxisScale: () => undefined,
     setEnabled: () => undefined,
+    setPointerLockOnClick: () => undefined,
     enabled: true,
     bindings: () => ({ walk: {}, vehicle: {}, fly: {}, ui: {} }),
     dispose: () => undefined,
