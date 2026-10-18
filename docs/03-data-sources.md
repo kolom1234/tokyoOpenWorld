@@ -15,7 +15,8 @@
 | `gsi-photo` | 지리원 타일 전국최신사진(seamlessphoto) | 국토지리원 | **검증 전용**(M05-T02 횡단보도 위치 대조 z18, `checks/markings-photo.ts` — 게임 데이터에 굽지 않음). 원거리 지면 알베도 참고는 미사용 | 동 규약. 표기 `出典：地理院タイル（全国最新写真）` |
 | `osm-kanto` | OpenStreetMap 간토 추출본 (Geofabrik `kanto-260929.osm.pbf` 고정판, `normalize --layer osm`) | OSM 기여자 | 도로 속성(차선·일방통행·제한속도), 신호, 철도 선로 상세, 플랫폼, 나무, 공원, POI 이름, 건물 층수 보완, 카셰어·공유자전거 거점 위치(M08 — amenity=car_sharing·노면 주차장·bicycle_rental, 위치만 — 운영사 이름·브랜드 미사용) | **ODbL 1.0**. 표기 `© OpenStreetMap contributors`. 파생 DB 공개 의무 → §4 참조 |
 | `ksj-n02` | 국토수치정보 철도 데이터(N02, **2025년도판** `N02-25_GML.zip`, `pnpm pipeline fetch --source ksj-n02` — sha256 lock) | 국토교통성 | 노선 식별 대조(OSM 선로 ↔ 노선·사업자, 평균 4.7–9.5 m), 역 위치 | **CC BY 4.0**(2020년도판 이후 오픈 데이터 — 다운로드 페이지 표기). 표기 `出典：国土数値情報（鉄道データ）（国土交通省）を加工して作成` |
-| `estat-small-area` | 국세조사 소지역(町丁・字) 경계 2020 | e-Stat | HUD 지명 표시(○○区 ○○町 ○丁目) | 정부표준이용규약(CC BY 4.0 호환). 표기 `出典：政府統計の総合窓口(e-Stat)` |
+| `estat-small-area` | 국세조사 소지역(町丁・字) 경계 2020 | e-Stat | HUD 지명 표시(○○区 ○○町 ○丁目) — 구 6곳(港·新宿·目黒·世田谷·渋谷·中野) shp(JGD2011 경위도), `normalize --layer areas`(M10-T02) → 셀 meta placeNames | 정부표준이용규약(CC BY 4.0 호환). 표기 `出典：政府統計の総合窓口(e-Stat)` |
+| `japanpost-kenall` | 우편번호 데이터(도쿄도 `13tokyo.zip`, 읽기 가나 소문자판) | 일본우편 | 町名 읽기 가나 → 지명 로마자(헵번식)·한글(일본어 표기법) 자동 생성(M10-T02) | 일본우편은 우편번호 데이터에 한해 저작권을 주장하지 않음·자유 배포 가능(다운로드 페이지). 표기(관례) `郵便番号データ：日本郵便株式会社` |
 
 - **저장소 커밋 예외(M01-T07)**: `tests/fixtures/`에 `plateau-shibuya`·`gsi-dem`·`osm-kanto`(M05-T02 노면 표시 파생, ODbL)의 소형 가공물만 커밋한다 — `world-mini`(빌드된 L0 셀 4개), `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1 m 창 1셀). 폴더마다 `ATTRIBUTION.json`, 전체 ≤ 6 MB(M05-T02에서 5 → 6). 그 밖의 원천·중간·빌드 데이터는 커밋 금지(CLAUDE.md 규칙 7). 상세 `tests/fixtures/README.md`.
 

@@ -51,7 +51,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 | `terrain` | GSI DEM1A(1 m, 주) → 결측만 DEM5A(5 m) → 잔여 결측 역거리 보간 | `readers/dem.ts` + GDAL | `dem_1m.tif`(EPSG:6677, 1A bilinear·5A bicubic 재표본, 픽셀 중심 = 정수 PRJ = 정수 WF) |
 | `osm` | OSM PBF | `OsmReader` (osmium export → GeoJSONSeq) | 도로 중심선(lanes, oneway, maxspeed, width, layer, bridge, tunnel), 신호·횡단보도 노드, 철도(railway=*, service, electrified), 플랫폼, landuse/leisure, 이름 |
 | `rail` | KSJ N02 + OSM railway | `RailReader` | 노선ID, 운영사, 트랙 폴리라인(선로별), 역·플랫폼 |
-| `areas` | e-Stat 소지역 | `BoundaryReader` | 町丁目 폴리곤 + 이름(ja, 로마자) |
+| `areas` | e-Stat 소지역 2020(구 6곳 shp) + 우편번호 KEN_ALL 가나 | `stages/areas/`(shp·dbf 리더 — GDAL 없음) | 町丁目 바깥 링(WF, 1.5 m 단순화) + 이름 ja·en(헵번식)·ko(일본어 표기법) → `data/normalized/areas/places.json` → build가 셀 meta `placeNames`(셀 사각형과 겹치는 링, 셀 로컬) — ADR-0092 |
 
 **PlateauReader 구현**: 자체 스트리밍 CityGML 파서(SAX, `saxes`) 채택 — ADR-0007(nusamai는 면 종류·도로 기능·UV를 병합해 잃음). 인터페이스 `PlateauReader.read(file): AsyncIterable<NormalizedFeature>` 고정 → 구현 교체 가능(`--reader nusamai`는 비교용).
 좌표는 1 mm 반올림, 셀 파일 안은 id 정렬, gzip 헤더 고정(mtime 0, OS 255) → 바이트 동일. 입력 파일은 대상 셀을 덮는 3차 메시(`jisMesh3CodesInBBox`)로 고른다.

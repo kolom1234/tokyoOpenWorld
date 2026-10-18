@@ -109,3 +109,37 @@ describe('fast travel', () => {
     expect(arrived(far as never, { x: 200, y: 30, z: -1200 })).toBe(false);
   });
 });
+
+describe('place index (M10-T02)', () => {
+  it('finds the smallest containing polygon in cell-local → WF and forgets evicted cells', async () => {
+    const { createPlaceIndex, pointInPolygon } = await import('../src/shell/places.ts');
+    const idx = createPlaceIndex();
+    const big = {
+      code: 'A',
+      nameI18n: { ja: 'A', en: 'A', ko: 'A' },
+      polygonLocal: [
+        [0, 0],
+        [100, 0],
+        [100, 100],
+        [0, 100],
+      ] as [number, number][],
+    };
+    const small = {
+      code: 'B',
+      nameI18n: { ja: 'B', en: 'B', ko: 'B' },
+      polygonLocal: [
+        [40, 40],
+        [60, 40],
+        [60, 60],
+        [40, 60],
+      ] as [number, number][],
+    };
+    idx.add(7, 256, -256, { placeNames: [big, small] });
+    expect(idx.at(256 + 50, -256 + 50)?.en).toBe('B');
+    expect(idx.at(256 + 10, -256 + 10)?.en).toBe('A');
+    expect(idx.at(0, 0)).toBeNull();
+    idx.remove(7);
+    expect(idx.at(256 + 50, -256 + 50)).toBeNull();
+    expect(pointInPolygon(Float64Array.from([0, 0, 10, 0, 10, 10, 0, 10]), 5, 5)).toBe(true);
+  });
+});

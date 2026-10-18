@@ -74,6 +74,30 @@ export const THEME_CSS = `
   border-bottom:3px solid var(--accent)}
 .ui-root .ground-loading{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);padding:.3em .9em;border-radius:999px;background:rgba(0,0,0,.55);font-size:.85em}
 .fade{position:absolute;inset:0;background:#000;pointer-events:none;transition:opacity .3s}
+.hud-corner{position:absolute;top:12px;padding:.35em .8em;border-radius:8px;background:rgba(0,0,0,.38);text-shadow:0 0 3px rgba(0,0,0,.7);transition:opacity .8s}
+.hud-place{left:12px;font-size:1.05em;font-weight:600;letter-spacing:.02em}
+.hud-place:empty{display:none}
+.hud-clock{right:12px;display:flex;gap:.7em;align-items:baseline}
+.hud-clock .clock{font:600 1.25em/1 ui-monospace,monospace}
+.idle{opacity:.22}
+.help{transition:opacity .8s}
+.gauge{position:absolute;right:12px;bottom:12px;min-width:13em;padding:.6em .9em;border-radius:10px;background:rgba(0,0,0,.5);font-size:.9em}
+.gauge-main{display:flex;align-items:baseline;gap:.6em}
+.gauge-speed{font:600 2.3em/1 system-ui,sans-serif}
+.gauge-gear{margin-left:auto;font:600 1.4em system-ui}
+.blink{color:#555;font-size:1.2em}
+.blink.on{color:#3f3;animation:sanpo-blink .66s steps(1) infinite}
+@keyframes sanpo-blink{50%{opacity:0}}
+.rpm{height:5px;margin:.35em 0;border-radius:3px;background:#333}
+.rpm-fill{height:5px;border-radius:3px;background:#7cf}
+.rpm-fill.red{background:#f55}
+.lamps{display:flex;flex-wrap:wrap;gap:.3em;font-size:.75em}
+.lamp{padding:0 .4em;border-radius:3px;background:#333;color:#888}
+.lamp.on.blue{background:#9df;color:#000}.lamp.on.amber{background:#fc4;color:#000}.lamp.on.red{background:#f66;color:#000}
+.gauge-guide{display:flex;flex-wrap:wrap;gap:.6em;margin-top:.4em;font-size:.82em}
+.gauge-guide .red{color:#f55}.gauge-guide .amber{color:#fd5}
+.train-panel{position:absolute;right:12px;bottom:12px;padding:.5em .9em;border-radius:10px;background:rgba(0,0,0,.5)}
+.train-line{color:var(--accent);font-size:.82em}
 `;
 
 export function injectTheme(doc: Document): void {

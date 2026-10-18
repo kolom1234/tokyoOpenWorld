@@ -1,6 +1,7 @@
 // UiBridge 구현(M10-T01): 시그널(HUD 10 Hz·로딩·설정) + 명령(일시정지·시작·빠른 이동) + @sanpo/ui 마운트. 월드는 attach 뒤에 붙는다(그 전 명령은 무시).
 // 게임 로직 없음 — traversal·sim·input 상태를 모으고 명령을 서비스 호출로 옮긴다. see docs/modules/game.md
-import type { GameSystem, Vec3d } from '@sanpo/core';
+import { type CellKey, type GameSystem, unpackCellKey, type Vec3d } from '@sanpo/core';
+import { cellOf } from '@sanpo/geo';
 import {
   type CreditsModel,
   computed,
@@ -22,10 +23,13 @@ import { loadCredits } from './credits.ts';
 import { hudStateOf, topPrompt } from './hud-state.ts';
 import { INITIAL_LOADING, loadingOfBoot } from './loading.ts';
 import { createPause } from './pause.ts';
+import { createPlaceIndex, type PlaceIndex } from './places.ts';
 import { applySettings, loadSettings, saveSettings } from './settings.ts';
 
 const HUD_INTERVAL_S = 0.1;
 const GROUND_SHOW_S = 0.2;
+/** L0 셀 크기(m — 05 §1). */
+const L0_CELL_M = 256;
 
 export interface ShellOptions {
   menus: boolean;
@@ -65,13 +69,17 @@ const EMPTY_HUD: HudModel = {
   gamepad: false,
 };
 
-function hudOf(doc: Document, w: WorldView, groundS: number): HudModel {
+function hudOf(doc: Document, w: WorldView, groundS: number, places: PlaceIndex): HudModel {
   const s = hudStateOf(doc);
   const t = w.traversal;
   const p = t.player.posWF;
   return {
     ...EMPTY_HUD,
     mode: t.mode,
+    place: places.at(p.x, p.z),
+    tempC: w.sim.weather.params.temperatureC ?? null,
+    drive: s.drive,
+    train: s.train,
     timeMs: w.sim.clock.gameTimeMs,
     weather: w.sim.weather.stateId,
     prompt: topPrompt(s),
@@ -86,16 +94,45 @@ function hudOf(doc: Document, w: WorldView, groundS: number): HudModel {
   };
 }
 
+/** 셀 meta.json → 지명 색인(이미 있으면 생략). */
+function loadPlaces(w: WorldView, places: PlaceIndex, key: CellKey): void {
+  const s = w.streaming;
+  if (!s || places.has(key)) return;
+  const { ix, iz } = unpackCellKey(key);
+  // 빈 항목으로 먼저 표시(요청 중 중복 방지) → 메타가 오면 교체.
+  places.add(key, ix * L0_CELL_M, iz * L0_CELL_M, { placeNames: [] });
+  void s
+    .requestSections(key, ['meta.json'])
+    .then((r) => {
+      if (r.meta) places.add(key, ix * L0_CELL_M, iz * L0_CELL_M, r.meta);
+    })
+    .catch(() => undefined);
+}
+
+/** live L0 셀 → meta.json placeNames 색인(해제되면 뺀다). 구독 전에 붙은 셀은 발밑 셀 보충(placesFallback)이 채운다. */
+function watchPlaces(w: WorldView, places: PlaceIndex): true {
+  w.wiring?.onCell((p) => {
+    if (p.level === 0) loadPlaces(w, places, p.key);
+  });
+  w.streaming?.onEvicted((key) => places.remove(key));
+  return true;
+}
+
 /** HUD 시그널을 10 Hz로(바뀐 값만) + 로딩 단계 + 열기 단축키(지도·포토·일시정지). */
 function hudSystem(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudModel>): GameSystem {
   let acc = HUD_INTERVAL_S;
   let groundS = 0;
   let sig = '';
+  const places = createPlaceIndex();
+  let watching = false;
   return {
     id: 'shell.hud',
     phase: 96,
     update(f) {
       groundS = w.traversal.hud.groundLoading ? groundS + f.dtReal : 0;
+      if (!watching && w.wiring && w.streaming) watching = watchPlaces(w, places);
+      const p = w.traversal.player.posWF;
+      if (watching && acc === 0) loadPlaces(w, places, cellOf(0, p.x, p.z));
       if (shell.loading.peek().stage !== 'ready' && shell.loading.peek().stage !== 'error') {
         const st = w.bootStage();
         shell.loading.value = { ...shell.loading.peek(), ...loadingOfBoot(st.boot, st.live) };
@@ -109,7 +146,7 @@ function hudSystem(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudMod
       acc += f.dtReal;
       if (acc < HUD_INTERVAL_S) return;
       acc = 0;
-      const h = hudOf(doc, w, groundS);
+      const h = hudOf(doc, w, groundS, places);
       // 위치·시각은 매번 바뀐다 — 지도 기호용으로 0.5 m·1분 단위만 비교.
       const key = JSON.stringify({
         ...h,

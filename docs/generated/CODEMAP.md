@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 552개.
+> 파일 560개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -29,10 +29,11 @@
 - `apps/game/src/shell/commands.ts` — UiBridge 명령 구현(M10): 일시정지·시작(새 산책 = 시작 지점 빠른 이동)·빠른 이동. 이후 태스크가 사진·세이브·시간·날씨를 더한다. | exports: START_POINTS, CommandContext, travelToPreset, startPoints, createCommands
 - `apps/game/src/shell/credits.ts` — 크레딧 모델(M10-T01 최소): content/ATTRIBUTION.json(동적 import — 첫 로드 밖). M10-T06에서 빌드 credits.json·OSS 목록 자동 생성으로 바뀐다. | exports: creditsOf, loadCredits
 - `apps/game/src/shell/fast-travel.ts` — 빠른 이동(타이틀 시작 지점·지도 — M10): 검은 막 → walk 재진입(먼 기준점 = 그 아래 지면을 콜라이더 적재 뒤 찾는다, ADR-0084 경로) → 착지 확인 → 막 걷기. | exports: TravelTarget, FastTravelDeps, arrived, fastTravel
-- `apps/game/src/shell/hud-state.ts` — HUD 안내 상태(문서당 하나): 상호작용 안내(출처별 칸 — 우선순위 순), 알림(seq), 역 근접 안내, 검은 막. 게임 배선이 쓰고 shell/bridge가 10 Hz로 UI(@sanpo/ui HUD)에 넘긴다. | exports: PROMPT_SLOTS, PromptSlot, HudState, hudStateOf, setPrompt, topPrompt, pushNotice, setGuide, setFade
+- `apps/game/src/shell/hud-state.ts` — HUD 안내 상태(문서당 하나): 상호작용 안내(출처별 칸 — 우선순위 순), 알림(seq), 역 근접 안내, 검은 막. 게임 배선이 쓰고 shell/bridge가 10 Hz로 UI(@sanpo/ui HUD)에 넘긴다. | exports: PROMPT_SLOTS, PromptSlot, HudState, hudStateOf, setPrompt, topPrompt, pushNotice, setGuide, setFade, setDrive, setTrain
 - `apps/game/src/shell/loading.ts` — 부팅 상태 → UI 로딩 화면(LoadingModel): StatusView(e2e data-* 속성 — 화면에서는 숨김)를 감싸 같은 호출을 시그널로도 보낸다. 순수 매핑 함수는 테스트. | exports: INITIAL_LOADING, loadingOfWorld, loadingOfBoot, loadingView
 - `apps/game/src/shell/options.ts` — 셸 옵션: 메뉴 모드(타이틀·포인터 잠금 풀림 = 일시정지) 여부와 저장소. 개발·테스트 URL(?debug=1·?view=·?spawn=·?mode=·?probe=)은 메뉴 없이 곧바로 게임. | exports: menusEnabled, storageOf
 - `apps/game/src/shell/pause.ts` — 메뉴 일시정지(M10-T01): 게임 입력 끔(input.setEnabled) + 포인터 잠금 풀기 + 사용자 시계(custom)면 시계 멈춤. 재개 = 반대(+ 제스처 안이면 포인터 잠금 다시). | exports: PauseControl, createPause
+- `apps/game/src/shell/places.ts` — HUD 지명(M10-T02): live L0 셀 meta.json placeNames(e-Stat 町丁 — 셀 로컬 폴리곤) → WF 폴리곤 색인 → 점-폴리곤 조회(포함 중 가장 작은 면적 — 飛び地·안쪽 町). | exports: pointInPolygon, PlaceIndex, createPlaceIndex
 - `apps/game/src/shell/settings.ts` — 설정 저장(localStorage `sanpo.settings.v1` — 부팅 때 동기로 읽어 품질·언어를 첫 화면부터 적용)과 서비스 적용(품질·FOV·감도·모션·키·볼륨). | exports: SETTINGS_KEY, loadSettings, saveSettings, tierOf, mixOf, bindingsWithKeys, SettingsTargets, applySettings
 - `apps/game/src/spawn-presets.ts` — URL 스폰 프리셋(ADR-0084 — M10 지도 전 임시): `?spawn=<id>` → content/spawn-presets.json의 위치·방위로 월드 스폰을 바꾼다 | exports: SpawnPreset, SPAWN_PRESETS, spawnPreset, withSpawn
 - `apps/game/src/start-view.ts` — 시작 시점: 기본 = walk(09 §1 — world.json 스폰에서 걷기 시작, M05 결정 1). 로딩 중·`?mode=freecam`·골든뷰 = freecam | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose, startWalkParams, presetFreecamPose
@@ -44,9 +45,9 @@
 - `apps/game/src/station/wiring.ts` — 역 배선(M07-T06 — ADR-0081): content/stations/access.json → 렌더 개찰구·표식 + 물리 캐비닛·울타리, 걷기로 통로를 지나면 카드 접촉·날개 열림/닫힘 합성음과 플랩 애니메이션, | exports: StationDeps, flapOpen, stationSystem
 - `apps/game/src/status-view.ts` — 부트 상태 화면: 기능 감지·월드 상태를 표로 표시(+ e2e용 data-* 속성). HUD는 @sanpo/ui로 대체(M08). see docs/modules/game.md | exports: RowState, StatusRow, describeCaps, describeWorld, describeRenderer, StatusView, mountStatusView
 - `apps/game/src/three-compat.ts` — Vite alias `three` → 이 모듈(vite.config.ts): three addon(KTX2Loader)·takram 대기는 `three`에서 import하지만 게임은 WebGPU 빌드만 번들한다. | exports: * from 'three/webgpu', WebGLCubeRenderTarget, WebGLRenderer
-- `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainLcdSystem
+- `apps/game/src/train-lcd.ts` — 차내 안내 화면(M07-T05 — 09 §2 train "LCD 풍, 다국어"): 열차 탑승 중 화면 위쪽 LCD 풍 패널(노선색 띠·방향·다음 역/정차 역·도착까지·문 쪽·경계역 안내), | exports: TrainLcdData, lcdText, trainModel, trainLcdSystem
 - `apps/game/src/vehicles/curb-spot.ts` — 차 부르기 자리(09 §1 drive "인접 차도 가장자리", M08-T01/T02): 플레이어 주변 3×3 셀 차선 중 연석 쪽(laneIdx 0 — 좌측통행 맨 왼쪽) 일반 도로 차선, | exports: CURB_SEARCH_M, CurbSpot, curbSpotInChunk, findCurbSpot
-- `apps/game/src/vehicles/drive-hud.ts` — 운전 계기판·탑승 안내(임시 DOM HUD — M10 @sanpo/ui가 대체): drive 중 오른쪽 아래 속도(km/h)·기어·RPM 막대·등화(전조등·방향지시등)·ABS/TCS, | exports: gaugeHtml, guideHtml, driveHudSystem
+- `apps/game/src/vehicles/drive-hud.ts` — 운전 계기·탑승 안내(M08 임시 DOM → M10-T02 UI HUD): drive·cycle 중 계기 모델(속도·기어·RPM·등화·ABS/TCS/AEB·제한 속도·정지선·역주행·보도)을 shell/hud-state로, | exports: driveModel, driveHudSystem
 - `apps/game/src/vehicles/hazards.ts` — AEB 위험물(M08-T02): sim 출력 버퍼(메인에서 읽기만) → 원 목록. 보행자 = 지금 + 0.5·1.0 s 뒤(걷는 방향·속력 — anim 소수 × 10 m/s), | exports: carCircles, hazardsNear
 - `apps/game/src/vehicles/player-cars.ts` — 플레이어 탈것(M08-T01·T03): 세워 둔 차·자전거(스폰 프리셋·카셰어·공유자전거 거점)와 부른 것 — 물리 차체(physics.spawnVehicle, content/vehicles/*.json)를 | exports: SEDAN_PARAMS, BICYCLE_PARAMS, RideKind, KIND_LOOK, CarOrigin, PlayerCars, createPlayerCars
 - `apps/game/src/vehicles/share-spots.ts` — 카셰어·공유자전거 거점(M08-T02·T03 — 가상 브랜드 "SANPO Car"·"SANPO Cycle"): live L0 셀의 meta.json `interactables`(carShare·bikeDock) → | exports: ShareSpot, spotsOf, ShareSpots, createShareSpots
@@ -390,6 +391,7 @@
 - `packages/ui/src/internal/screens/boot.tsx` — 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류. | exports: BootScreen
 - `packages/ui/src/internal/screens/credits.tsx` — 크레딧: 데이터·에셋 출처(bridge.credits — 빌드 credits.json/ATTRIBUTION) + ODbL 안내 + 가상 디자인 고지 + OSS 라이선스 목록. | exports: CreditsScreen
 - `packages/ui/src/internal/screens/help.ts` — 조작 도움말(H — 왼쪽 아래): 모드별 [키, 동작] 줄. 재바인딩한 키는 설정에서, 패드가 있으면 패드 글자. 순수 함수(테스트). | exports: HelpItem, helpItems
+- `packages/ui/src/internal/screens/hud-info.tsx` — HUD 정보(M10-T02, 12 §2): 왼쪽 위 지명, 오른쪽 위 시각(JST)·날씨·기온, 탈것 계기(속도·기어·RPM·등화·안내), 열차 다음 역. | exports: jstClock, speedText, useIdle, HudInfo
 - `packages/ui/src/internal/screens/hud.tsx` — HUD(게임 중): 도움말(H)·상호작용 안내·알림·역 근접 안내·지면 대기·검은 막. id(#station-prompt 등) = e2e·봇이 읽는다(옛 임시 DOM과 같음). | exports: keyParams, arrowOf, guideText, distText, HudLayer, FadeLayer
 - `packages/ui/src/internal/screens/menus.tsx` — 타이틀(이어하기·새 산책(시작 지점)·설정·크레딧)과 일시정지(계속·지도·도감·포토·설정·타이틀로) 메뉴. | exports: ScreenNav, MenuScreen, TitleScreen, PauseScreen
 - `packages/ui/src/internal/screens/settings.tsx` — 설정 화면: 탭(그래픽·카메라·모션·조작·소리·일반) — 바뀌면 곧바로 bridge.settings(게임이 적용·저장). 키 재바인딩 = 누를 때까지 대기(data-capturing). | exports: SETTINGS_TABS, SettingsTab, SettingsScreen
@@ -440,6 +442,11 @@
 - `tools/pipeline/src/readers/plateau/types.ts` — PLATEAU 리더 공통 계약: 정규화 레코드 타입 + `PlateauReader` 인터페이스(구현 교체 가능). see docs/04-data-pipeline.md §4.2, docs/adr/0007-plateau-reader.md | exports: SurfaceKind, RoadFunction, RingsWF, SurfaceRecord, BuildingRecord, RoadRecord, BridgeRecord, NormalizedFeature, PlateauReadOptions, PlateauReader
 - `tools/pipeline/src/spike/plateau-spike.ts` — M01-T02 스파이크 CLI: A안(nusamai)·B안(citygml-sax)을 같은 3×3 셀로 돌려 비교한다. 결과 요약은 docs/adr/0007-plateau-reader.md | exports: SPIKE_CELLS
 - `tools/pipeline/src/spike/spike-metrics.ts` — M01-T02 스파이크 비교 지표: 보존(gml:id·속성·면 종류·텍스처·도로 기능), 좌표 일치, 규모. see docs/adr/0007-plateau-reader.md | exports: RunStats, compareOutputs
+- `tools/pipeline/src/stages/areas/assign.ts` — 셀 meta placeNames(M10-T02): 정규화 町丁 링 중 셀 사각형(256 m)과 겹치는 것 → 셀 로컬(x, z) 폴리곤(링 전체 — HUD 점-폴리곤 조회, 이웃 셀과 중복 허용). | exports: AREAS_SOURCES, readPlaces, placeNamesForCell
+- `tools/pipeline/src/stages/areas/kana.ts` — 가나 읽기 → 로마자(헵번식, 장음 표기 생략)·한글(국립국어원 일본어 표기법: 어두 무성음 = 예사소리, 어중 = 거센소리, 장음 생략, ン = ㄴ받침, ッ = ㅅ받침). | exports: toFullKatakana, morae, kanaToRomaji, kanaToHangul
+- `tools/pipeline/src/stages/areas/names.ts` — 지명 3개 언어(M10-T02): e-Stat 町丁 이름(道玄坂２丁目) + 우편번호 KEN_ALL 가나 읽기 → ja「渋谷区 道玄坂二丁目」· en「Dogenzaka 2-chome, Shibuya」· ko「시부야구 도겐자카 2초메」. 순수 함수(테스트). | exports: kanjiNumber, splitTown, parseNumber, variantKey, townKey, Readings, parseKenAll, placeName
+- `tools/pipeline/src/stages/areas/normalize.ts` — `pnpm pipeline normalize --layer areas`(M10-T02): e-Stat 소지역 2020(구별 shp, JGD2011 경위도) + KEN_ALL 가나 → data/normalized/areas/places.json | exports: PlaceRecord, BoundsWF, simplifyRing, AreasResult, normalizeAreas, writeAreas
+- `tools/pipeline/src/stages/areas/shapefile.ts` — 최소 Shapefile 리더(e-Stat 소지역 경계 — M10-T02): .shp 폴리곤(유형 5, 링 여러 개) + .dbf 문자·숫자 필드(Shift_JIS). GDAL 없이 Node에서. | exports: ShpPolygon, readShpPolygons, DbfRecord, readDbf
 - `tools/pipeline/src/stages/audio/analyze.ts` — 오디오 분석(M09-T04 — ADR-0079): 루프 구간 고르기용 "지속 음조" 점수와 발소리 온셋. | exports: FFT_SIZE, HOP, monoOf, fft, spectrogramDb, tonalTrack, rmsEnvelope, onsetsOf
 - `tools/pipeline/src/stages/audio/fetch.ts` — 오디오 원천 받기 + sha256 고정(data/sources.lock.json `freesound-audio`.sha256 맵) — materials/fetch.ts와 같은 규칙: 불일치 = 중단, 미기록 = --update-lock일 때만 기록. | exports: AUDIO_LOCK_ID, AudioLock, FetchAudioInput, fetchAudioSources
 - `tools/pipeline/src/stages/audio/ffmpeg.ts` — ffmpeg 입출력(컨테이너 — tools/pipeline/Dockerfile M09-T04): 원천 → f32 PCM 48 kHz, PCM → Opus(OGG). | exports: AUDIO_RATE, Pcm, decodePcm, encodeOpus
@@ -447,8 +454,9 @@
 - `tools/pipeline/src/stages/audio/loop.ts` — 앰비언스 루프(M09-T04 — ADR-0079): 원천에서 지속 음조·큰 순간음이 가장 적은 구간을 골라 등전력 교차로 이음매 없는 루프를 만든다. | exports: LOOP_XFADE_S, BED_TARGET_DBFS, LoopPick, pickLoopWindow, makeLoop, normalizeRms
 - `tools/pipeline/src/stages/audio/run.ts` — 오디오 단계(M09-T04 — ADR-0079): content/audio/library.json → 원천 받기(sha256 lock) → 베드 루프·발소리 조각 → Opus(OGG) + manifest.json | exports: BuildAudioInput, OutputReport, buildAudio, installAudio
 - `tools/pipeline/src/stages/audio/steps.ts` — 발소리 조각(M09-T04 — ADR-0079): 녹음에서 온셋을 찾아 한 걸음씩 잘라(앞 15 ms·최대 0.42 s·끝 40 ms 페이드) 피크 −3 dBFS로 맞추고, | exports: StepSheet, sliceSteps
+- `tools/pipeline/src/stages/build/area-input.ts` — 영역 빌드 입력(assemble.ts 400줄 제한으로 분리). see docs/04-data-pipeline.md | exports: AreaBuildInput
 - `tools/pipeline/src/stages/build/area-reader.ts` — 영역 빌드 입력 읽기: 정규화 층 파일(셀별 ndjson.gz) + 8-이웃 캐시(도로 조각·건물 발자국·교량·계단·道路標示). assemble.ts buildArea가 쓴다. | exports: readLayer, aroundReader, railNetworkFor
-- `tools/pipeline/src/stages/build/assemble-util.ts` — 셀 조립 보조(assemble.ts에서 분리 — 400줄 한도): 스트림 합치기·AABB·창 자르기. | exports: mergeStreams, withOverrideCollider, outward, union, yRange, crop, unionBounds
+- `tools/pipeline/src/stages/build/assemble-util.ts` — 셀 조립 보조(assemble.ts에서 분리 — 400줄 한도): 스트림 합치기·AABB·창 자르기. | exports: mergeStreams, withOverrideCollider, outward, union, yRange, crop, unionBounds, roadSources
 - `tools/pipeline/src/stages/build/assemble.ts` — L0 셀 조립: 지형 성형(M05-T01) → terrain.mesh + terrain.height + buildings.mesh + roads.mesh(보도·연석) + collision.bin + meta.json → TKC, | exports: BUILD_MARGIN, CellBuildInput, CellParts, buildCell, AreaBuildInput, unionBounds, buildArea, CellBuildStats
 - `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, boundsOf, quantizePositions, buildBuildings
 - `tools/pipeline/src/stages/build/cell-extras.ts` — 셀 조립 보조(assemble.ts 400줄 제한): meta.json 인코딩·lights.bin(M09-T03)·audio.json(M09-T04). see docs/05-tile-format.md §4 | exports: encodeMeta, lightsOf, audioOf

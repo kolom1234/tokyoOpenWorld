@@ -4,9 +4,8 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { type CellKey, type Logger, unpackCellKey } from '@sanpo/core';
 import {
-  type CellMeta,
   type CellsIndexEntry,
-  gzip,
+  type MetaPlaceName,
   type RailNetwork,
   type TkcSectionInput,
   tkcHash32,
@@ -16,6 +15,7 @@ import {
 } from '@sanpo/tile-format';
 import { terrainLookup } from '../../lib/mesh-lookup.ts';
 import type { BridgeRecord, BuildingRecord, RoadRecord } from '../../readers/plateau/types.ts';
+import { AREAS_SOURCES, placeNamesForCell, readPlaces } from '../areas/assign.ts';
 import { burnOuterEdges, outerEdgesAround } from '../derive/edge-burn.ts';
 import { type FootprintSource, footprintGrid, footprintSources } from '../derive/footprints.ts';
 import type { LocalGrid } from '../derive/grid.ts';
@@ -27,8 +27,18 @@ import { walkwaysOf } from '../derive/stairs.ts';
 import { SHAPE_PAD, type ShapedGround, shapeGround } from '../derive/terrain-shape.ts';
 import { paintVegetation } from '../derive/vegetation.ts';
 import { OSM_SOURCE, type OsmRecord } from '../normalize-osm.ts';
+import type { AreaBuildInput } from './area-input.ts';
 import { aroundReader, railNetworkFor, readLayer } from './area-reader.ts';
-import { crop, mergeStreams, outward, union, unionBounds, withOverrideCollider, yRange } from './assemble-util.ts';
+import {
+  crop,
+  mergeStreams,
+  outward,
+  roadSources,
+  union,
+  unionBounds,
+  withOverrideCollider,
+  yRange,
+} from './assemble-util.ts';
 import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
 import { audioOf, encodeMeta, lightsOf } from './cell-extras.ts';
 import { type CellBuildStats, cellStats } from './cell-stats.ts';
@@ -46,7 +56,7 @@ import {
 } from './dem-window.ts';
 import { encodeTerrainHeight } from './heightfield.ts';
 import { type LanesCellStats, lanesCell } from './lanes-cell.ts';
-import { type AreaDef, worldJson } from './manifest.ts';
+import { worldJson } from './manifest.ts';
 import { type NavCellOutput, navCell } from './nav-cell.ts';
 import { LANDMARK_MATERIAL, type OverrideCellOutput, type OverrideSet, overrideCell } from './overrides/index.ts';
 import { type PropCellOutput, propsCell } from './props-cell.ts';
@@ -95,6 +105,8 @@ export interface CellBuildInput {
   groundAround?: (x: number, z: number) => number | undefined;
   /** 철도 망(M07-T01) — overrides.mesh 선로 메시. */
   rail?: RailNetwork;
+  /** 셀 meta placeNames(M10-T02 — e-Stat 町丁, 셀 로컬). */
+  placeNames?: MetaPlaceName[];
 }
 
 /** 성형(M05-T01): 넓은 창 → 성형 높이(여유 1 창)·`_SURF`·RTIN 허용 오차(257²). */
@@ -157,10 +169,6 @@ function propCell(
   });
 }
 
-function roadSources(records: readonly RoadRecord[]): string[] {
-  return [...new Set(records.map((r) => r.source))].sort();
-}
-
 export interface CellParts {
   sc: ReturnType<typeof shapeCell>;
   terrain: Awaited<ReturnType<typeof buildTerrainGeometry>>;
@@ -177,11 +185,12 @@ export interface CellParts {
 
 async function cellSections(input: CellBuildInput, p: CellParts): Promise<TkcSectionInput[]> {
   const { bld, roads, own, col, props } = p;
-  const metaSources = bld.sources.length > 0 ? bld.sources : [...input.metaFallbackSources];
+  const base = bld.sources.length > 0 ? bld.sources : [...input.metaFallbackSources];
+  const metaSources = input.placeNames?.length ? [...base, ...AREAS_SOURCES] : base;
   const meta = {
     buildings: bld.meta,
     pois: [],
-    placeNames: [],
+    placeNames: input.placeNames ?? [],
     signals: [],
     interactables: props?.interactables ?? [],
   };
@@ -313,29 +322,7 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   return { tkc, stats: cellStats(input.key, tkc.byteLength, parts, decalTris, marks?.stats ?? null) };
 }
 
-export interface AreaBuildInput {
-  area: AreaDef;
-  cells: readonly CellKey[];
-  buildId: string;
-  /** `data/normalized`. */
-  normalizedDir: string;
-  /** `data/build/<buildId>` — 실행마다 비우고 다시 쓴다. */
-  outDir: string;
-  plateauSources: readonly string[];
-  log: Logger;
-  /** 테스트용: GDAL 없이 DEM 창 주입. */
-  dem?: DemWindow;
-  /** 소품 카탈로그(M05-T03, content/props/catalog.json). */
-  props?: PropCatalog;
-  /** 랜드마크 오버라이드(M05-T05, content/overrides). */
-  overrides?: OverrideSet;
-  /** OSM 횡단 선 보정(M06 사전 2, content/markings). */
-  crossingCorrections?: MarkingInput['corrections'];
-  /** 철도(M07-T01): 있으면 global/rail.bin을 먼저 만들고 셀 overrides.mesh에 선로 메시. */
-  rail?: { repoRoot: string; derivedDir: string };
-}
-
-/** 영역 빌드: 셀 TKC(행 = iz, 열 = ix 순) + cells.idx + world.json. */
+export type { AreaBuildInput };
 export { unionBounds };
 
 export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]> {
@@ -350,6 +337,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       join(outDir, '.work'),
     ));
   const files = aroundReader(input.normalizedDir);
+  const places = readPlaces(input.normalizedDir);
   rmSync(outDir, { recursive: true, force: true });
   const rail = await railNetworkFor(input, outDir);
   const index: CellsIndexEntry[] = [];
@@ -380,6 +368,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
           }
         : {}),
       metaFallbackSources: input.plateauSources,
+      placeNames: placeNamesForCell(places, ix * CELL_SIZE_M, iz * CELL_SIZE_M, CELL_SIZE_M),
     });
     const dir = join(outDir, 'L0', String(ix));
     mkdirSync(dir, { recursive: true });

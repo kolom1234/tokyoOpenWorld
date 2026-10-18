@@ -58,6 +58,8 @@ if (q.get('ui-sandbox') === '1') {
     fixedQuality: flags.quality !== undefined || flags.view !== undefined,
     fixedFov: flags.view !== undefined,
   });
+  // e2e·실제 GPU 측정 핸들(HUD 시그널 갱신 빈도·화면 상태 — 디버그 모드만).
+  if (flags.debug) Object.assign(globalThis, { __SANPO_SHELL__: shell });
   const view = loadingView(mountStatusView(root), shell.loading);
   boot(view, flags, shell).catch((e: unknown) => {
     view.showError(`부트 실패: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);

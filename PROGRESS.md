@@ -2,14 +2,15 @@
 Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10-ui`)
 
 ## Current Milestone: M10 UI/UX (T01 → T02 → T03 → T04 → T05 → T06)
-## Current Task: M10-T02 HUD & place names
-- Done in this session (#25): M10-T01 UI 셸(ADR-0091) — Preact 화면 스택(부팅·타이틀·일시정지·설정·크레딧·HUD), ko·ja·en, 키보드·마우스·게임패드 내비게이션, 메뉴 모드(개발 URL은 곧바로 HUD),
-  설정(품질·FOV·감도·모션 민감·시선 반전·키 재바인딩·볼륨·언어·UI 배율 — localStorage `sanpo.settings.v1`), 임시 HUD(도움말 H·역 안내·안내·알림) 흡수, 새 산책 시작 지점 = 빠른 이동, `?ui-sandbox=1`.
-- In progress: M10-T02 — e-Stat 소지역(2020, 6개 구 shp) + 우편번호 KEN_ALL(가나 읽기) 원천을 data/raw에 받음(sha256은 lock 갱신 예정). 다음: 파이프라인 `areas` 단계 → 셀 meta placeNames → HUD 지명.
-- Next step (정확히 한 걸음): `tools/pipeline/src/stages/areas/`(shp·dbf 리더 + 가나 → 로마자·한글) 작성.
+## Current Task: M10-T03 Map & minimap
+- Done in this session (#25): M10-T01 UI 셸(ADR-0091), M10-T02 HUD·지명(ADR-0092 — e-Stat 소지역 + 우편번호 가나 → 셀 meta placeNames, HUD 지명·시각·날씨·기온·탈것 계기·열차 다음 역·무입력 흐림).
+  로컬 테스트 빌드 `test-places-m10`(6셀 — 지명 확인용, MVP 재빌드 때 지움). 원천 data/raw/{estat-small-area,japanpost-kenall}(lock sha256 기록).
+- In progress: 없음.
+- Next step (정확히 한 걸음): `tools/pipeline/src/stages/map-tiles.ts`(정규화 데이터 → MVT → PMTiles) 설계 — docs/05 §1 `global/map.pmtiles`.
 - Blockers: 없음. ODPT 키 없음(M10 무관).
 
 ## Recently Completed
+- M10-T02 HUD & place names(2026-10-18) — `normalize --layer areas`(shp·dbf 자체 리더, 구 6곳 133 町丁, 읽기 누락 0) → 셀 meta placeNames, 게임 shell/places(점-폴리곤), UI hud-info. 수락(실제 GPU): 경계 갱신 32–77 ms ≤ 0.5 s ✅, HUD 시그널 ≤ 10 Hz(걷기 3.2 Hz) ✅, 22 W 상한. ADR-0092
 - M10-T01 UI shell(2026-10-18, PR 진행 중) — @sanpo/ui(Preact 10.29.8·signals 2.11.2): 화면 스택·i18n 3개 언어·공간 내비게이션(화살표·D-pad·A/B/Start/LB·RB), 설정 5탭, input `setBindings·setAxisScale·setEnabled`, traversal `configure()·motionEffects`,
   게임 shell/(bridge·commands·hud-state·settings·pause·fast-travel·loading·credits·options). 수락: 3개 언어 전환(단위 i18n 동등성 + e2e 즉시 전환) ✅, 키보드·게임패드 내비게이션(e2e 가짜 패드) ✅. ADR-0091
 - M08 Vehicles T01–T04(2026-10-17~18, PR #23) — 세단(Jolt WheeledVehicleController·ABS·TCS·마찰 콜백)·drive 모드(추적·우핸들 운전석)·카셰어 SANPO Car(가상), AEB(보행자 예측·교통 차)·보도 서행·교통/군중이 플레이어 탈것 인지·신호·역주행·제한속도 HUD 안내(벌점 없음),

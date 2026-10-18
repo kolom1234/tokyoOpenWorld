@@ -1035,6 +1035,34 @@
       },
       "files": [],
       "modified": true
+    },
+    {
+      "id": "estat-small-area",
+      "kind": "data",
+      "title": "2020年国勢調査 小地域(町丁・字等)境界データ — HUD 지명(M10-T02, 셀 meta placeNames)",
+      "url": "https://www.e-stat.go.jp/gis",
+      "license": "Gov-Standard-Terms-2.0 (CC-BY-4.0 compatible)",
+      "attribution": {
+        "ja": "出典：政府統計の総合窓口(e-Stat)（国勢調査 小地域境界データ）を加工して作成",
+        "en": "Source: e-Stat Portal Site of Official Statistics of Japan (Census small-area boundaries), processed",
+        "ko": "출처: 일본 정부통계 종합창구(e-Stat) 국세조사 소지역 경계 데이터를 가공하여 작성"
+      },
+      "files": [],
+      "modified": true
+    },
+    {
+      "id": "japanpost-kenall",
+      "kind": "data",
+      "title": "郵便番号データ(東京都) — 町名 읽기 가나 → 지명 로마자·한글 표기(M10-T02)",
+      "url": "https://www.post.japanpost.jp/zipcode/",
+      "license": "Japan-Post-Zipcode (no copyright claimed, free redistribution)",
+      "attribution": {
+        "ja": "郵便番号データ：日本郵便株式会社",
+        "en": "Postal code data: Japan Post Co., Ltd.",
+        "ko": "우편번호 데이터: 일본우편주식회사"
+      },
+      "files": [],
+      "modified": true
     }
   ]
 }

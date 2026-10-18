@@ -5,6 +5,7 @@ import type { GuideModel, HudModel, Msg, SettingsModel } from '../../api.ts';
 import { t } from '../i18n/t.ts';
 import { keyLabel, keyOf } from '../keys.ts';
 import { helpItems } from './help.ts';
+import { HudInfo, useIdle } from './hud-info.tsx';
 
 /** 안내 글의 키 자리(`{kInteract}` 등) — 지금 바인딩(패드면 패드 글자). */
 export function keyParams(s: Pick<SettingsModel, 'keys'>, pad: boolean): Record<string, string> {
@@ -40,17 +41,17 @@ export function distText(m: number, units: SettingsModel['units']): string {
   return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
 }
 
-function Help(p: { hud: HudModel; s: SettingsModel; open: boolean }) {
+function Help(p: { hud: HudModel; s: SettingsModel; open: boolean; idle: boolean }) {
   if (!p.s.showHelp) return null;
   if (!p.open)
     return (
-      <div id="sanpo-help" class="help collapsed">
+      <div id="sanpo-help" class={`help collapsed ${p.idle ? 'idle' : ''}`}>
         <kbd>H</kbd> {t('help.collapsed')}
       </div>
     );
   const items = helpItems(p.hud.mode, p.s, p.hud.gamepad);
   return (
-    <div id="sanpo-help" class="help" data-mode={p.hud.mode}>
+    <div id="sanpo-help" class={`help ${p.idle ? 'idle' : ''}`} data-mode={p.hud.mode}>
       {items.map((i) => (
         <div key={i.action + i.keys} class="help-item">
           <kbd>{i.keys}</kbd>
@@ -80,8 +81,10 @@ function Notice(p: { hud: HudModel; keys: Record<string, string> }) {
 export function HudLayer(p: { hud: HudModel; settings: SettingsModel; helpOpen: boolean }) {
   const h = p.hud;
   const keys = keyParams(p.settings, h.gamepad);
+  const idle = useIdle(p.settings.hudFade, `${h.posWF.x | 0},${h.posWF.z | 0},${h.yawRad.toFixed(2)},${h.mode}`);
   return (
-    <div class="screen hud" data-screen="hud" data-mode={h.mode}>
+    <div class="screen hud" data-screen="hud" data-mode={h.mode} data-idle={idle ? '1' : '0'}>
+      <HudInfo hud={h} settings={p.settings} idle={idle} />
       {h.guide ? (
         <div id="station-guide" class="guide" role="status">
           {guideText(h.guide, p.settings.units, keys)}
@@ -98,7 +101,7 @@ export function HudLayer(p: { hud: HudModel; settings: SettingsModel; helpOpen: 
           {t('hud.groundLoading')}
         </div>
       ) : null}
-      <Help hud={h} s={p.settings} open={p.helpOpen} />
+      <Help hud={h} s={p.settings} open={p.helpOpen} idle={idle} />
     </div>
   );
 }

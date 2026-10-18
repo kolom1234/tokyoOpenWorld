@@ -115,3 +115,16 @@ describe('keys & settings', () => {
     expect(pad.some((i) => i.action === 'action.map')).toBe(false);
   });
 });
+
+describe('hud info (M10-T02)', () => {
+  it('formats JST clock, speed units and guide arrows', async () => {
+    const { jstClock, speedText } = await import('../src/internal/screens/hud-info.tsx');
+    const { arrowOf, distText } = await import('../src/internal/screens/hud.tsx');
+    expect(jstClock(Date.parse('2026-05-15T03:04:00Z'))).toBe('12:04');
+    expect(speedText(100, 'imperial')).toEqual({ value: '62', unit: 'mph' });
+    expect(speedText(42.4, 'metric')).toEqual({ value: '42', unit: 'km/h' });
+    expect(arrowOf(90)).toBe('←');
+    expect(distText(1234, 'metric')).toBe('1.2 km');
+    expect(distText(10, 'imperial')).toBe('33 ft');
+  });
+});

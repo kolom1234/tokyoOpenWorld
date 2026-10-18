@@ -11,6 +11,7 @@ import { FORMAT_VERSION } from '@sanpo/tile-format';
 import * as assetStages from './cli-assets.ts';
 import * as railStages from './cli-rail.ts';
 import { createPlateauReader } from './readers/plateau/index.ts';
+import { normalizeAreas, writeAreas } from './stages/areas/normalize.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
 import { readOverrides } from './stages/build/overrides/index.ts';
@@ -130,6 +131,16 @@ async function normalize(args: string[]): Promise<void> {
   if (layer === 'all' || layer === 'terrain') await normalizeTerrainLayer(cells);
   if (layer === 'all' || layer === 'osm') await normalizeOsmLayer(cells);
   if (layer === 'all' || layer === 'rail') await normalizeRail(REPO_ROOT, lockSources(), cells, log.child('rail'));
+  if (layer === 'all' || layer === 'areas') normalizeAreasLayer(cells);
+}
+
+/** e-Stat 소지역 + KEN_ALL 가나 → data/normalized/areas/places.json(M10-T02 — Node만, GDAL 없음). */
+function normalizeAreasLayer(cells: CellKey[]): void {
+  const csv = new TextDecoder('shift_jis').decode(
+    readFileSync(join(REPO_ROOT, 'data/raw/japanpost-kenall/extracted/13TOKYO.CSV')),
+  );
+  const r = normalizeAreas(join(REPO_ROOT, 'data/raw/estat-small-area/extracted'), csv, unionBounds(cells));
+  writeAreas(join(REPO_ROOT, 'data/normalized/areas'), r, log.child('areas'));
 }
 
 /** OSM 간토 PBF → data/normalized/osm(컨테이너 전용, osmium). */

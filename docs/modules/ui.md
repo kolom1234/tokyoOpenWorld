@@ -31,11 +31,11 @@ DEFAULT_SETTINGS, normalizeSettings(raw, fallbackLang), langFromNavigator(langs)
 
 ## Files
 api.ts, index.ts, internal/(app — 화면 스택·mountUi, settings — 기본값·정규화, keys — 키 이름·재바인딩 맞바꿈, theme — CSS 문자열, i18n/(ko·ja·en.json, t.ts), nav/(focus — 공간 이동 순수, pad — 메뉴 패드 엣지·반복, nav — DOM 드라이버),
-components/controls(버튼·선택·슬라이더·켬끔), screens/(boot, menus — 타이틀·일시정지, settings, credits, hud — 도움말·안내·알림·막, help — 모드별 줄), sandbox/mock-bridge).
+components/controls(버튼·선택·슬라이더·켬끔), screens/(boot, menus — 타이틀·일시정지, settings, credits, hud — 도움말·안내·알림·막, hud-info — 지명·시각·날씨·기온·계기·다음 역·무입력 5 s 흐림, help — 모드별 줄), sandbox/mock-bridge).
 예정: map/(pmtiles-source, canvas-renderer, styles, minimap, fullmap), screens/(map, discovery, photo), save/(store, migrations).
 
 ## Tests
 test/shell.test.ts: i18n 키·치환 자리 동등성·라벨 누락, 공간 이동, 패드 엣지·반복·열 때 눌린 Start 무시, 화면 스택, 키 재바인딩(맞바꿈·고정 키 거부), 설정 정규화·브라우저 언어, 도움말 줄(모드·재바인딩·패드).
 
 ## Status
-M10-T01 셸(ADR-0091): 부팅·타이틀(새 산책 시작 지점)·일시정지·설정(그래픽·카메라·모션·조작·소리·일반)·크레딧(ATTRIBUTION 최소)·HUD(도움말·역 안내·안내·알림·지면 대기·막), `?ui-sandbox=1`. → T02 HUD 지명·시각·계기, T03 지도, T04 도감, T05 포토, T06 세이브·크레딧 자동.
+M10-T01 셸(ADR-0091): 부팅·타이틀(새 산책 시작 지점)·일시정지·설정(그래픽·카메라·모션·조작·소리·일반)·크레딧(ATTRIBUTION 최소)·HUD(도움말·역 안내·안내·알림·지면 대기·막), `?ui-sandbox=1`. T02 HUD 지명(e-Stat, ADR-0092)·시각·날씨·기온·탈것 계기·열차 다음 역·흐림. → T03 지도, T04 도감, T05 포토, T06 세이브·크레딧 자동.
