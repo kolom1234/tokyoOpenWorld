@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildCredits, creditsData, ossPackages } from '../lib/credits.ts';
+import { buildCredits, creditsData, ossNotices, ossPackages } from '../lib/credits.ts';
 
 const ROOT = join(import.meta.dirname, '../..');
 
@@ -44,5 +44,13 @@ describe('credits', () => {
     expect(names.some((n) => n.startsWith('@sanpo/'))).toBe(false);
     expect(oss.find((o) => o.name === 'preact')?.license).toBe('MIT');
     expect(oss.every((o) => o.license !== 'UNKNOWN')).toBe(true);
+  });
+  it('ships every runtime dependency license text (M11-T05 — MIT/BSD/Apache/OFL notice condition)', () => {
+    const txt = ossNotices(join(ROOT, 'apps/game'));
+    for (const o of ossPackages(join(ROOT, 'apps/game')))
+      expect(txt).toContain(`${o.name}@${o.version} — ${o.license}`);
+    expect(txt).toContain('Permission is hereby granted, free of charge');
+    expect(txt).toContain('SIL OPEN FONT LICENSE');
+    expect(txt).toContain('Apache License');
   });
 });

@@ -61,6 +61,7 @@ export const THEME_CSS = `
 .credits-body{width:min(52em,92vw);max-height:68vh;overflow:auto;padding:.6em 1.2em;border:1px solid var(--line);border-radius:10px;background:rgba(10,13,20,.6)}
 .credit-list,.oss-list{list-style:none;padding:0;margin:0}
 .credit-list li{display:flex;flex-direction:column;padding:.45em 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.credit-list a{color:var(--accent)}
 .credit-list small,.oss-list li{color:var(--muted);font-size:.82em;word-break:break-all}
 .hud{pointer-events:none}
 .help{position:absolute;left:12px;bottom:12px;max-width:min(30em,46vw);padding:.5em .7em;border-radius:8px;background:rgba(0,0,0,.42);

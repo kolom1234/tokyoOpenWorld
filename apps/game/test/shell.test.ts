@@ -173,6 +173,15 @@ describe('photo mode (M10-T05)', () => {
   });
 });
 
+describe('credits ODbL link (M11-T05)', () => {
+  it('links the build ODbL package for API/local worlds, not fixtures', async () => {
+    const { odblEntry } = await import('../src/shell/credits.ts');
+    expect(odblEntry('/world/20261019-abc')?.url).toBe('/world/20261019-abc/global/odbl/README.txt');
+    expect(odblEntry('/fixtures/world-mini')).toBeNull();
+    expect(odblEntry(null)).toBeNull();
+  });
+});
+
 describe('photo cap (12 §5 — 200)', () => {
   it('keeps the newest 200 photos and detaches evicted ones from the guide', async () => {
     const { capPhotos, MAX_PHOTOS } = await import('../src/shell/photo.ts');

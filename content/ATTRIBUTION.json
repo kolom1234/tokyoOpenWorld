@@ -716,6 +716,20 @@
       "modified": true
     },
     {
+      "id": "odpt-tokyometro",
+      "kind": "data",
+      "title": "東京メトロ GTFS（ODPT）— 銀座線の時刻表。未取得（開発者キー待ち）: 公開時点の銀座線は列車なし、公開後のアップデートで追加",
+      "url": "https://developer.odpt.org/",
+      "license": "ODPT Basic License",
+      "attribution": {
+        "ja": "東京メトロ銀座線の時刻表データは未収録です（公開後のアップデートで追加予定）",
+        "en": "Tokyo Metro Ginza Line timetable data is not included yet (planned for a post-launch update)",
+        "ko": "도쿄메트로 긴자선 시간표 데이터는 아직 없습니다(공개 후 업데이트로 추가 예정)"
+      },
+      "files": [],
+      "modified": false
+    },
+    {
       "id": "synthetic-timetables",
       "kind": "data",
       "title": "JR 야마노테·사이쿄·쇼난신주쿠 합성(근사) 시간표 — 자체 작성 시간대 간격·정차 시간(content/sim/synthetic-lines.json) + 선로 곡선 주행 시간(M07-T02, ADR-0008·0071). 실제 시간표 아님. GTFS 테스트 픽스처(가상 사업자·가상 시각)",

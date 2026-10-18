@@ -137,17 +137,19 @@ function creditsFiles(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const path = (req.url ?? '').split('?')[0];
-        if (path !== '/credits.json' && path !== '/oss-licenses.json') return next();
+        if (path !== '/credits.json' && path !== '/oss-licenses.json' && path !== '/oss-licenses.txt') return next();
         const c = make();
-        res.setHeader('Content-Type', 'application/json');
+        const txt = path.endsWith('.txt');
+        res.setHeader('Content-Type', txt ? 'text/plain; charset=utf-8' : 'application/json');
         res.setHeader('Cache-Control', 'no-cache');
-        res.end(path === '/credits.json' ? c.credits : c.oss);
+        res.end(txt ? c.ossText : path === '/credits.json' ? c.credits : c.oss);
       });
     },
     generateBundle() {
       const c = make();
       this.emitFile({ type: 'asset', fileName: 'credits.json', source: c.credits });
       this.emitFile({ type: 'asset', fileName: 'oss-licenses.json', source: c.oss });
+      this.emitFile({ type: 'asset', fileName: 'oss-licenses.txt', source: c.ossText });
     },
   };
 }

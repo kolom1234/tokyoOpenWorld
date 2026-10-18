@@ -247,6 +247,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
   );
   void save.init();
   let buildId: string | null = null;
+  let worldBase: string | null = null;
   const bridge: UiBridge = {
     hud,
     loading,
@@ -255,7 +256,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     settings,
     hasSave: save.hasSave,
     startPoints: startPoints(),
-    credits: (): Promise<CreditsModel> => loadCredits(buildId),
+    credits: (): Promise<CreditsModel> => loadCredits(buildId, worldBase),
     worldToMap: (p: Vec3d) => worldToMerc(p),
     map,
     photoUrl: (id) => photo.photoUrl(id),
@@ -280,6 +281,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     },
     setWorld(baseUrl, id) {
       buildId = id;
+      worldBase = baseUrl;
       map.setBase(baseUrl);
     },
     dispose() {

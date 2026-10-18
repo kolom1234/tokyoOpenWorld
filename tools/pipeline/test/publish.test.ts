@@ -140,9 +140,15 @@ describe('publish', () => {
       writeFileSync(join(dir, 'world.json'), '{}');
       mkdirSync(join(dir, 'global'), { recursive: true });
       writeFileSync(join(dir, 'global', 'map.pmtiles'), 'x');
+      mkdirSync(join(dir, 'global', 'odbl'), { recursive: true });
+      for (const f of ['osm-derived.geojsonseq.gz', 'osm-crossing-corrections.json', 'README.txt', 'scratch.bin'])
+        writeFileSync(join(dir, 'global', 'odbl', f), 'x');
       writeFileSync(join(dir, 'map-report.json'), '{}');
       expect(buildFiles(dir)).toEqual([
         'global/map.pmtiles',
+        'global/odbl/README.txt',
+        'global/odbl/osm-crossing-corrections.json',
+        'global/odbl/osm-derived.geojsonseq.gz',
         'shared/materials/albedo.ktx2',
         'shared/materials/manifest.json',
         'world.json',
