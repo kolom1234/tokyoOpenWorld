@@ -115,9 +115,9 @@ export function createCellNode(
     if (mesh === undefined) continue;
     const group = new Group();
     group.name = `${p.id}/${slot}`;
-    // 정적 셀(M11-T01): 매 프레임 장면 행렬 갱신 순회에서 뺀다 — 배치·원점 재설정 때만 placeCellNode가 갱신(CPU 프로파일 updateMatrixWorld 6.7 %).
+    // 정적 셀(M11-T01): 로컬 행렬은 배치·원점 재설정 때만(placeCellNode). 월드 행렬 순회(matrixWorldAutoUpdate)는 그대로 —
+    // 끄면 CI 정지 떨림 e2e(TAAU)가 0.40 → 0.43 %로 나빠졌다(스테이징 셀 재부모화 뒤 월드 행렬이 늦게 맞는 것으로 추정).
     group.matrixAutoUpdate = false;
-    group.matrixWorldAutoUpdate = false;
     for (const prim of mesh.primitives) {
       const hlod = slot === 'hlod';
       const material = hlod ? materials.getHlod(prim.materialId) : materials.get(prim.materialId);
@@ -154,8 +154,6 @@ export function placeCellNode(node: CellRenderNode, renderOriginWF: Readonly<Vec
   for (const g of node.groups) {
     toRender(g.position, node.originWF, renderOriginWF);
     g.updateMatrix();
-    // 레이어 루트는 단위 변환(장면 직속) — 부모 행렬을 다시 계산하지 않고 이 그룹과 자식만.
-    g.updateMatrixWorld(true);
   }
 }
 
