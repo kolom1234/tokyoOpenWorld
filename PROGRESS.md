@@ -1,15 +1,16 @@
 # PROGRESS
 Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-hardening`, PR #25 draft)
 
-## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅, T04 ✅ → T01 → T02 → T06)
-## Current Task: M11-T01 Performance pass
-- Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097), M11-T03 오류 보고(ADR-0098 — staging 수락), 무료 한도 일일 점검 워크플로(usage.yml — main 병합 뒤부터 실행), M11-T04 접근성(ADR-0099).
-- In progress: T01.
-- Next step (정확히 한 걸음): `### M11-T01` → docs/14 §2 예산 → `pnpm perf` 하네스(tests/golden/perf.spec.ts — 3경로·DOF 전환·GPU W) + 대기 LUT 빌드 굽기.
+## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅, T04 ✅, T01 ✅(⚠️ 기록) → T02 → T06)
+## Current Task: M11-T02 Soak & leak test
+- Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097), M11-T03 오류 보고(ADR-0098 — staging 수락), 무료 한도 일일 점검 워크플로(usage.yml — main 병합 뒤부터 실행), M11-T04 접근성(ADR-0099), M11-T01 성능(ADR-0100 — `pnpm perf`).
+- In progress: T02.
+- Next step (정확히 한 걸음): `tests/golden/soak.spec.ts`(1시간 도보→열차→차량→자유비행 반복, 힙·GPU 메모리 추세, 워커 재시작) 백그라운드 실행.
 - Blockers: 🔶 **국토지리원 측량법 제30조 사용 승인(사용자 신청)** — production 공개(T06) 전 필수(03 §6.1, ADR-0097). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 - 다음 MVP 재빌드 때 반영할 것: 로마자 지명(셀 meta), `map --build-id` ODbL 묶음(global/odbl/). DOF 전환 실측은 T01 perf 하네스에서.
 
 ## Recently Completed
+- M11-T01 Performance(2026-10-19) — `pnpm perf`(실제 GPU 1440p High, vsync 해제: 도보·자동 주행·신주쿠 비행 + DOF + 부팅 → docs/generated/perf-latest.md), core `Scheduler.timings`, `?perf=1`. 수정: 셀 그룹·야간 광원 풀 1024개 매 프레임 행렬 갱신 제외(도보 p50 19.1 → 15 ms). 첫 표시 = 셰이더 컴파일(LUT 65–420 ms → LUT 굽기 기각, 재방문 3.2–4.0 s). DOF 첫 켜기 2.0–3.5 s(전 4.8 s). ⚠️ 프레임 p50 14.6–24.9·p95 30–46 ms(GPU 한계 ≈ 34 W), 메인 p95 17–39 ms(render CPU — three WebGPU 드로우콜 비용 + GPU 대기), sim p95 12.8 ms, 기준 GPU 2종 미측정. ADR-0100
 - M11-T04 Accessibility(2026-10-19) — e2e `ui-scale.spec.ts`(배율 150 %: 메뉴 7 × 3개 언어 × 1024×768·1280×720 + HUD 운전·알림·열차·자막 — 문제 0, 지원 밖 800×500 대조 37건), HUD·지도 배치 em화(겹침 수정), 모션 민감 = OS 기본값 + UI 애니메이션 끔, 효과음 자막(`captions.ts`), render `setColorVision`(Machado + daltonize). ADR-0099
 - M11-T03 Error reporting(2026-10-19) — Worker `POST /api/log`(허용 필드·이메일/URL/긴 숫자 지움·IP/UA/위치 미사용) → Workers Analytics Engine(prod `sanpo_errors`·staging `sanpo_errors_staging`), 게임 `error-report.ts`(세션 1 %·3건·`?report=force`), `pnpm errors`(SQL API). 수락: staging 666dc839에 인위적 오류 2건 → 쿼리 2그룹 ✅. + `usage.yml`/`scripts/cf-usage.ts`(무료 한도 70 % 이슈 — 첫 측정 ours 최대 R2 18.3 %, account KV 쓰기 925 %는 다른 프로젝트). ADR-0098
 - M11-T05 License audit(2026-10-19) — 원문 재확인 표 03 §6.1(PLATEAU FAQ 手続き不要·상업 가능 ✅, KSJ N02 CC BY 4.0 ✅, Open-Meteo 비상업·production 호출 0 ✅, Freesound 22개 CC0 ✅, Rocketbox MIT ✅, 폰트 OFL ✅, npm 26개 GPL·NC 0 ✅, GSI DEM 🔶 측량법 제30조 사용 승인 신청 필요), ODbL 파생 DB `global/odbl/`(map 단계)·크레딧 링크, `/oss-licenses.txt` LICENSE 원문, 상표 스캔 CI 테스트(0건), 긴자선 미수록 크레딧 명시. ADR-0097
@@ -85,7 +86,6 @@ Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-harde
 - [ci] e2e = 부트·렌더 스모크·디코드·정지 떨림·물리(워커·셀 콜라이더)·걷기(`walk.spec.ts`) — WebGL2/SwiftShader. WebGPU 경로·실제 성능·골목 카메라·3G 보행은 로컬 실제 GPU 스크립트(세션 scratchpad `walkbot/campen/throttle.mjs`)로 확인. staging `smoke.sh`는 아직 `/fixtures/world-mini/world.json`을 검사하지 않는다.
 - [e2e] 클라우드 세션 Chromium은 Playwright 번들 버전과 달라 `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium pnpm test:e2e`로 실행. 실행 전 떠 있는 `vite preview`가 있으면 `reuseExistingServer`로 **옛 빌드**를 테스트하니 먼저 종료할 것.
 - [perf] 초기 다운로드(첫 표시 시점 전송량, staging `GOLDEN_BOOT=1`) 21.3 MB(M05-T01 보도·콜라이더로 +8 MB, ADR-0033 12.7–13.4 MB) — 예산 60 MB. L0 셀이 커질수록(소품·나무·표시) 늘어난다 → 태스크마다 기록.
-- [perf] `pnpm perf`(자동 비행 경로·perf-latest.md)는 아직 없음 → 이번 수치는 Playwright + 실제 Chrome 스크립트(세션 scratchpad) 측정. perf 하네스 태스크에서 재현.
 - [render] 셀 추가 프레임의 GPU 업로드(다음 render에서 발생): 큰 L1 셀 1개(≈ 7 MB)가 그 프레임 render를 5–10 ms 늘린다(프레임 드롭은 없음, 18.3 ms 최대). 업로드 분할·HLOD 셀 크기는 `pnpm perf`(M02-T07~) 뒤 판단(ADR-0025). 첫 프레임 render 33–57 ms(초기 업로드) 1회.
 - [render] L0 셀은 페이드 인 없이 즉시 나타나고 부모 그룹이 0.3 s 디더로 사라진다(겹침 0.3 s, 점묘). freecam 관심점엔 forward가 없어 뷰 쐐기 우선순위 미적용(traversal 개선 시).
 - [game] 게임 번들(three 포함) ≈ 1.05 MB(gzip 300 KB) → Vite 500 kB 경고. 코드 분할은 M03(후처리·대기 추가 시) 재검토.
