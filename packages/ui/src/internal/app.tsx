@@ -7,6 +7,7 @@ import { createNav, type NavHandlers } from './nav/nav.ts';
 import { BootScreen } from './screens/boot.tsx';
 import { CreditsScreen } from './screens/credits.tsx';
 import { FadeLayer, HudLayer } from './screens/hud.tsx';
+import { LogScreen } from './screens/log.tsx';
 import { MapScreen } from './screens/map.tsx';
 import { PauseScreen, type ScreenNav, TitleScreen } from './screens/menus.tsx';
 import { SETTINGS_TABS, SettingsScreen, type SettingsTab } from './screens/settings.tsx';
@@ -37,7 +38,7 @@ export function nextStack(
 export const isPlaying = (s: ScreenId): boolean => s === 'hud';
 
 /** 아직 구현 전 화면(T03–T05) — 열지 않는다. */
-const PLACEHOLDER: ReadonlySet<ScreenId> = new Set<ScreenId>(['log', 'photo']);
+const PLACEHOLDER: ReadonlySet<ScreenId> = new Set<ScreenId>(['photo']);
 
 function App(p: {
   bridge: UiBridge;
@@ -69,6 +70,7 @@ function App(p: {
         />
       ) : null}
       {top === 'credits' ? <CreditsScreen bridge={b} back={p.nav.back} pad={pad} /> : null}
+      {top === 'log' ? <LogScreen bridge={b} back={p.nav.back} pad={pad} /> : null}
       {top === 'map' ? (
         <MapScreen
           bridge={b}

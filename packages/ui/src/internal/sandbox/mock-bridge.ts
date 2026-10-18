@@ -55,6 +55,33 @@ const MOCK_CREDITS: CreditsModel = {
   oss: [{ name: 'preact', version: '10.29.8', license: 'MIT' }],
 };
 
+const MOCK_DISCOVERIES: DiscoveryModel[] = [
+  {
+    id: 'shibuya-scramble',
+    name: { ko: '시부야 스크램블 교차점', ja: '渋谷スクランブル交差点', en: 'Shibuya Crossing' },
+    category: 'street',
+    posWF: { x: -20, y: 0, z: 10 },
+    description: {
+      ko: '보행자 신호가 켜지면 사방에서 한꺼번에 길을 건너는 큰 교차로.',
+      ja: '歩行者信号が青になると、四方から一斉に人が渡り始める大きな交差点。',
+      en: 'A wide intersection where pedestrians cross in every direction at once.',
+    },
+    discoveredAtMs: Date.parse('2026-05-15T12:04:00+09:00'),
+    weather: 'clear',
+    photoIds: [],
+  },
+  {
+    id: 'meiji-jingu',
+    name: { ko: '메이지 신궁', ja: '明治神宮', en: 'Meiji Jingū' },
+    category: 'shrine',
+    posWF: { x: 0, y: 0, z: -1800 },
+    description: { ko: '-', ja: '-', en: '-' },
+    discoveredAtMs: null,
+    weather: null,
+    photoIds: [],
+  },
+];
+
 export interface MockBridge extends UiBridge {
   hudSignal: Signal<HudModel>;
   loadingSignal: Signal<LoadingModel>;
@@ -78,7 +105,7 @@ export function createMockBridge(opts: { settings?: Partial<SettingsModel>; read
     paused,
     hud,
     loading,
-    discoveries: signal<readonly DiscoveryModel[]>([]),
+    discoveries: signal<readonly DiscoveryModel[]>(MOCK_DISCOVERIES),
     places: signal<readonly TravelPlace[]>([]),
     settings: signal<SettingsModel>({ ...DEFAULT_SETTINGS, ...opts.settings }),
     hasSave: signal(true),

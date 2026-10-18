@@ -1,4 +1,5 @@
-// CLI 지도·지명 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles). Node만(GDAL·osmium 불필요).
+// CLI 지도·지명·도감 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles),
+// poi-wikidata(Wikidata → content/poi/wikidata.json)·poi-review(위키백과 겹침 → content/poi/review.json). Node만(GDAL·osmium 불필요).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -7,6 +8,7 @@ import { normalizeAreas, writeAreas } from './stages/areas/normalize.ts';
 import { unionBounds } from './stages/build/assemble-util.ts';
 import type { AreaDef } from './stages/build/manifest.ts';
 import { runMap } from './stages/map/index.ts';
+import { fetchWikidata, reviewDescriptions } from './stages/poi/fetch.ts';
 
 export interface MapCtx {
   repoRoot: string;
@@ -43,4 +45,15 @@ export async function map(ctx: MapCtx, args: string[], buildIdOf: () => string):
     cells: areaCellKeys(ctx.readArea(values.area)),
     log: ctx.log.child('map'),
   });
+}
+
+/** `poi-wikidata` — 도감 명소 Wikidata 라벨·별칭·좌표(CC0). */
+export async function poiWikidata(ctx: MapCtx): Promise<void> {
+  await fetchWikidata(ctx.repoRoot, ctx.log.child('poi'));
+}
+
+/** `poi-review` — 설명 자체 작성 검수(위키백과 겹침·홍보 문구). 실패가 있으면 종료 코드 1. */
+export async function poiReview(ctx: MapCtx): Promise<void> {
+  const r = await reviewDescriptions(ctx.repoRoot, ctx.log.child('poi'));
+  if (r.some((e) => !e.pass)) process.exitCode = 1;
 }

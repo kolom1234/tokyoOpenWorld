@@ -188,5 +188,19 @@
   "map.missing": "이 월드에는 지도 데이터가 없어요",
   "map.controls": "WASD 이동 · Q/E 확대·축소 · 마우스 끌기·휠 · 목록에서 Enter = 이동",
   "map.controlsPad": "R스틱 이동 · LT/RT 확대·축소 · Ⓐ 이동 · Ⓑ 닫기",
-  "map.attribution": "© OpenStreetMap contributors (ODbL) · 3D都市モデル: 国土交通省 PLATEAU · 国土地理院 · 地名: e-Stat"
+  "map.attribution": "© OpenStreetMap contributors (ODbL) · 3D都市モデル: 国土交通省 PLATEAU · 国土地理院 · 地名: e-Stat",
+  "log.title": "도감",
+  "log.count": "{n} / {total} 발견",
+  "log.cat.all": "전체",
+  "log.cat.landmark": "랜드마크",
+  "log.cat.street": "거리",
+  "log.cat.park": "공원",
+  "log.cat.shrine": "신사·절",
+  "log.cat.view": "전망",
+  "log.unknown": "???",
+  "log.unknownHint": "아직 발견하지 않은 곳이에요. 지도에 회색 점으로 표시돼요 — 가까이 가서 잠시 머물러 보세요.",
+  "log.discoveredAt": "{date} {time} 발견 · {weather}",
+  "log.photos": "사진",
+  "log.noPhotos": "포토 모드(P)로 찍은 사진이 여기에 모여요.",
+  "hud.notice.discovered": "새 명소를 발견했어요: {name}"
 }

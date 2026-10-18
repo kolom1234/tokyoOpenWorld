@@ -17,6 +17,7 @@
 | `ksj-n02` | 국토수치정보 철도 데이터(N02, **2025년도판** `N02-25_GML.zip`, `pnpm pipeline fetch --source ksj-n02` — sha256 lock) | 국토교통성 | 노선 식별 대조(OSM 선로 ↔ 노선·사업자, 평균 4.7–9.5 m), 역 위치 | **CC BY 4.0**(2020년도판 이후 오픈 데이터 — 다운로드 페이지 표기). 표기 `出典：国土数値情報（鉄道データ）（国土交通省）を加工して作成` |
 | `estat-small-area` | 국세조사 소지역(町丁・字) 경계 2020 | e-Stat | HUD 지명 표시(○○区 ○○町 ○丁目) — 구 6곳(港·新宿·目黒·世田谷·渋谷·中野) shp(JGD2011 경위도), `normalize --layer areas`(M10-T02) → 셀 meta placeNames | 정부표준이용규약(CC BY 4.0 호환). 표기 `出典：政府統計の総合窓口(e-Stat)` |
 | `japanpost-kenall` | 우편번호 데이터(도쿄도 `13tokyo.zip`, 읽기 가나 소문자판) | 일본우편 | 町名 읽기 가나 → 지명 로마자(헵번식)·한글(일본어 표기법) 자동 생성(M10-T02) | 일본우편은 우편번호 데이터에 한해 저작권을 주장하지 않음·자유 배포 가능(다운로드 페이지). 표기(관례) `郵便番号データ：日本郵便株式会社` |
+| `wikidata-poi` | Wikidata 항목 20개(도감 명소 — 라벨·별칭·좌표 P625·위키백과 사이트링크, `pnpm pipeline poi-wikidata` → `content/poi/wikidata.json` 커밋) | Wikidata | 도감 명소 이름(ja·en·ko 라벨/별칭 — ko 라벨이 없으면 일본어 이름을 직접 옮겨 적음 `derived:`)·좌표(M10-T04) | **CC0 1.0**(표기 의무 없음 — 크레딧에 관례 표기). 설명문은 위키백과 등에서 가져오지 않고 3개 언어 모두 자체 작성(`content/poi/pois.json`, 검수 `poi-review` → `content/poi/review.json`, ADR-0094) |
 
 - **저장소 커밋 예외(M01-T07)**: `tests/fixtures/`에 `plateau-shibuya`·`gsi-dem`·`osm-kanto`(M05-T02 노면 표시 파생, ODbL)의 소형 가공물만 커밋한다 — `world-mini`(빌드된 L0 셀 4개), `plateau-mini`(CityGML 건물 5동·도로 3개 원문 발췌 + DEM 1 m 창 1셀). 폴더마다 `ATTRIBUTION.json`, 전체 ≤ 6 MB(M05-T02에서 5 → 6). 그 밖의 원천·중간·빌드 데이터는 커밋 금지(CLAUDE.md 규칙 7). 상세 `tests/fixtures/README.md`.
 

@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 578개.
+> 파일 583개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -26,7 +26,7 @@
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면(e2e data-* — 화면에서는 UI 로딩 화면이 대신) + @sanpo/ui 셸 마운트 → boot(), 실패 시 오류 화면.
 - `apps/game/src/shell/bridge.ts` — UiBridge 구현(M10-T01): 시그널(HUD 10 Hz·로딩·설정) + 명령(일시정지·시작·빠른 이동) + @sanpo/ui 마운트. 월드는 attach 뒤에 붙는다(그 전 명령은 무시). | exports: ShellOptions, Shell, createShell
-- `apps/game/src/shell/commands.ts` — UiBridge 명령 구현(M10): 일시정지·시작(새 산책 = 시작 지점 빠른 이동)·빠른 이동. 이후 태스크가 사진·세이브·시간·날씨를 더한다. | exports: CommandContext, travelToPreset, startPoints, createCommands
+- `apps/game/src/shell/commands.ts` — UiBridge 명령 구현(M10): 일시정지·시작(새 산책 = 시작 지점 빠른 이동)·빠른 이동. 이후 태스크가 사진·세이브·시간·날씨를 더한다. | exports: CommandContext, travelToPreset, travelToPos, startPoints, createCommands
 - `apps/game/src/shell/credits.ts` — 크레딧 모델(M10-T01 최소): content/ATTRIBUTION.json(동적 import — 첫 로드 밖). M10-T06에서 빌드 credits.json·OSS 목록 자동 생성으로 바뀐다. | exports: creditsOf, loadCredits
 - `apps/game/src/shell/fast-travel.ts` — 빠른 이동(타이틀 시작 지점·지도 — M10): 검은 막 → walk 재진입(먼 기준점 = 그 아래 지면을 콜라이더 적재 뒤 찾는다, ADR-0084 경로) → 착지 확인 → 막 걷기. | exports: TravelTarget, FastTravelDeps, arrived, fastTravel
 - `apps/game/src/shell/hud-state.ts` — HUD 안내 상태(문서당 하나): 상호작용 안내(출처별 칸 — 우선순위 순), 알림(seq), 역 근접 안내, 검은 막. 게임 배선이 쓰고 shell/bridge가 10 Hz로 UI(@sanpo/ui HUD)에 넘긴다. | exports: PROMPT_SLOTS, PromptSlot, HudState, hudStateOf, setPrompt, topPrompt, pushNotice, setGuide, setFade, setDrive, setTrain
@@ -35,6 +35,7 @@
 - `apps/game/src/shell/options.ts` — 셸 옵션: 메뉴 모드(타이틀·포인터 잠금 풀림 = 일시정지) 여부와 저장소. 개발·테스트 URL(?debug=1·?view=·?spawn=·?mode=·?probe=)은 메뉴 없이 곧바로 게임. | exports: menusEnabled, storageOf
 - `apps/game/src/shell/pause.ts` — 메뉴 일시정지(M10-T01): 게임 입력 끔(input.setEnabled) + 포인터 잠금 풀기 + 사용자 시계(custom)면 시계 멈춤. 재개 = 반대(+ 제스처 안이면 포인터 잠금 다시). | exports: PauseControl, createPause
 - `apps/game/src/shell/places.ts` — HUD 지명(M10-T02): live L0 셀 meta.json placeNames(e-Stat 町丁 — 셀 로컬 폴리곤) → WF 폴리곤 색인 → 점-폴리곤 조회(포함 중 가장 작은 면적 — 飛び地·안쪽 町). | exports: pointInPolygon, PlaceIndex, createPlaceIndex
+- `apps/game/src/shell/pois.ts` — 도감 명소(M10-T04, ADR-0094): content/poi/pois.json(자체 설명·반경·종류) + content/poi/wikidata.json(이름·좌표 CC0) → DiscoveryModel·발견 판정(sim createPoiService, 2 s 체류). | exports: resolveName, PoiEntry, poiEntries, DiscoveryRecord, DiscoveryState, createDiscovery
 - `apps/game/src/shell/settings.ts` — 설정 저장(localStorage `sanpo.settings.v1` — 부팅 때 동기로 읽어 품질·언어를 첫 화면부터 적용)과 서비스 적용(품질·FOV·감도·모션·키·볼륨). | exports: SETTINGS_KEY, loadSettings, saveSettings, tierOf, mixOf, bindingsWithKeys, SettingsTargets, applySettings
 - `apps/game/src/shell/travel.ts` — 빠른 이동 대상(M10-T03, 12 §2 "발견한 역만"): 스폰 프리셋 중 역 개찰구·장소(승강장·시험 코스·거점 = 개발용 제외). 타이틀 시작 지점 3곳은 처음부터 열림, | exports: START_POINTS, TRAVEL_DEFS, travelPlaces, TravelState, createTravelState
 - `apps/game/src/spawn-presets.ts` — URL 스폰 프리셋(ADR-0084 — M10 지도 전 임시): `?spawn=<id>` → content/spawn-presets.json의 위치·방위로 월드 스폰을 바꾼다 | exports: SpawnPreset, SPAWN_PRESETS, spawnPreset, withSpawn
@@ -264,8 +265,8 @@
 - `packages/render/src/internal/weather/wetness.ts` — 전역 환경 유니폼(EnvUniforms, 07 §3) + 노면 젖음(07 §8 비): 흡수성 표면 어두워짐, 거칠기↓, 수평면 물웅덩이(M03-T06), 비 파문 노멀(M09-T01). | exports: EnvUniforms, createEnvUniforms, rainRipples, WetInput, WetOutput, applyWetness
 
 ## packages/sim
-- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, PlayerFootprint, SimService, RailStaticLayout, SimDeps, HolidaysFile, SeasonTableFile
-- `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts', createSim
+- `packages/sim/src/api.ts` — @sanpo/sim 공개 계약. M03-T03: 월드 시계 + 천문(태양·달 → EnvironmentState). M06-T01: sim.worker(30 Hz) + SAB 보행자 인스턴스 버퍼. | exports: CrowdParams, TrafficParams, CrowdAgentsParams, WeatherStateDef, WeatherClimateFile, WeatherMode, LiveWeatherSample, WeatherService, SignalPlansFile, SignalState, SimWorkerStats, DayType, TimeScale, ClockMode, WorldClock, PlayerFootprint, SimService, RailStaticLayout, SimDeps, HolidaysFile, SeasonTableFile, PoiDef, PoiService
+- `packages/sim/src/index.ts` — @sanpo/sim 공개 엔트리(L3): 시계·날씨·군중·교통·열차. api.ts 재수출 + create* 팩토리만. see docs/modules/sim.md | exports: * from './api.ts', createPoiService, POI_DWELL_S, createSim
 - `packages/sim/src/internal/clock/astronomy.ts` — 천문(10 §2, 01 §7): suncalc 2.x(도 단위, 방위 = 진북 기준 시계방향, 고도 = 대기차 보정 겉보기) → 도북 방위(수렴각 보정) → WF 단위 벡터. | exports: BodyPosition, dirWFFromGrid, sunPosition, moonPosition, clearSkyIlluminanceLux
 - `packages/sim/src/internal/clock/holidays.ts` — 일본 공휴일 표(10 §2, M09-T05): content/sim/holidays-jp.json(법 규칙 생성 2026–2035)을 createSim이 등록 → 운행일 요일 유형(dayTypeOf)이 휴일로 본다. | exports: setHolidays, isHolidayJst
 - `packages/sim/src/internal/clock/world-clock.ts` — 월드 시계(10 §2): realtime / custom(시작 시각 + 배속, 프레임 dtReal 누적) / frozen. 요일 유형은 04:00 JST 운행일 경계. | exports: dayTypeOf, ClockCore, createWorldClock
@@ -281,6 +282,7 @@
 - `packages/sim/src/internal/crowd/nav-world.ts` — 내비 월드(M06-T03, ADR-0063): sim.worker 안 타일 Detour NavMesh(원점 0, 64 m 타일 = 파이프라인 nav.bin 타일 좌표 그대로) — | exports: CrossingRec, configureFilter, NavWorld, createNavWorld
 - `packages/sim/src/internal/crowd/route.ts` — 보행 경로의 횡단 분해(M06-T03, ADR-0063): 전체 필터(횡단 포함) 경로의 꺾은선에서 처음 들어가는 횡단보도 띠를 찾고, | exports: V3, CrossingHit, inBand, firstCrossing, keepLeftLat, crossingPoints
 - `packages/sim/src/internal/player-footprint.ts` — 플레이어 차·자전거 바닥 사각형(M08-T02): 교통 양보(사각형까지 거리)·군중 회피(축 위 원 장애물). 원점 = 차체 바닥 중심, 전방 = (−sin yaw, −cos yaw). | exports: footprintDistance, footprintGrid, footprintCircles
+- `packages/sim/src/internal/poi/poi-service.ts` — POI 발견 판정(M10-T04, 10 §7): 반경 안에 연속 2 s 머물면 발견(freecam 제외 — 걷기·탈것·열차). 메인 스레드 순수 상태(1회 update = POI 수만큼 거리 계산). | exports: POI_DWELL_S, createPoiService
 - `packages/sim/src/internal/rail/motion-profile.ts` — 트립 운동(M07-T03, 10 §6.2, ADR-0071·0072): s(trip, t) = 시각의 순수 함수. 구간 곡선 = core tripLegs(시간표 컴파일러와 같은 입력 — | exports: DOOR_OPEN_AFTER_S, DOOR_CLOSED_BEFORE_S, DOOR_MOVE_S, TripMotion, tripMotion, MotionState, motionAt
 - `packages/sim/src/internal/rail/network.ts` — 철도 망 런타임(M07-T03, ADR-0072): rail.bin(RailNetwork) → 선로별 표본 보간. 칸 자세 = 앞·뒤 대차 위치(선로 위 s ± 대차 반간격)의 | exports: TrackRt, RailRt, createRailRt, pointAt, inTunnel, CarPose, carPose
 - `packages/sim/src/internal/rail/platforms.ts` — 승강장·홈도어(M07-T04, ADR-0073): rail.bin 승강장 고리(OSM) → 윗면 삼각형(귀 자르기) + 옆면(레일 높이까지) — render 메시·physics 바닥 공용. | exports: PSD_OFFSET_M, PSD_HEIGHT_M, PSD_GATE_M, triangulate, PlatformGeometry, platformGeometry, EDGE_STRIP_M, PsdStop, psdLayout, psdPiece
@@ -405,6 +407,7 @@
 - `packages/ui/src/internal/screens/help.ts` — 조작 도움말(H — 왼쪽 아래): 모드별 [키, 동작] 줄. 재바인딩한 키는 설정에서, 패드가 있으면 패드 글자. 순수 함수(테스트). | exports: HelpItem, helpItems
 - `packages/ui/src/internal/screens/hud-info.tsx` — HUD 정보(M10-T02, 12 §2): 왼쪽 위 지명, 오른쪽 위 시각(JST)·날씨·기온, 탈것 계기(속도·기어·RPM·등화·안내), 열차 다음 역. | exports: jstClock, speedText, useIdle, HudInfo
 - `packages/ui/src/internal/screens/hud.tsx` — HUD(게임 중): 도움말(H)·상호작용 안내·알림·역 근접 안내·지면 대기·검은 막. id(#station-prompt 등) = e2e·봇이 읽는다(옛 임시 DOM과 같음). | exports: keyParams, arrowOf, guideText, distText, HudLayer, FadeLayer
+- `packages/ui/src/internal/screens/log.tsx` — 도감(M10-T04, 12 §2 Discovery Log): 분류 탭(전체·랜드마크·거리·공원·신사·전망), 명소 격자(미발견 = ???), 고르면 오른쪽에 이름·설명(자체 작성 3개 언어)·발견 시각(JST)·날씨·사진. | exports: jstDate, LogScreen
 - `packages/ui/src/internal/screens/map.tsx` — 전체 지도(M) — M10-T03: 지도 캔버스(map/controller — 팬·줌·60 fps) + 빠른 이동 목록(발견한 곳만 이동 — 포커스하면 지도가 그곳으로) + 레이어(지명·역) + 출처 상시 표기. | exports: MapScreen
 - `packages/ui/src/internal/screens/menus.tsx` — 타이틀(이어하기·새 산책(시작 지점)·설정·크레딧)과 일시정지(계속·지도·도감·포토·설정·타이틀로) 메뉴. | exports: ScreenNav, MenuScreen, TitleScreen, PauseScreen
 - `packages/ui/src/internal/screens/settings.tsx` — 설정 화면: 탭(그래픽·카메라·모션·조작·소리·일반) — 바뀌면 곧바로 bridge.settings(게임이 적용·저장). 키 재바인딩 = 누를 때까지 대기(data-capturing). | exports: SETTINGS_TABS, SettingsTab, SettingsScreen
@@ -431,7 +434,7 @@
 - `tools/pipeline/src/checks/rail-photo.ts` — M07-T01 수락: 선로 중심선 vs GSI 항공사진(seamlessphoto z18 ≈ 0.49 m/px, 검증 전용 — photo-tiles.ts) ≤ 1 m. | exports: TOLERANCE_M, symmetryCenter
 - `tools/pipeline/src/checks/terrain-gsi.ts` — M01-T03 수락 검증: dem_1m.tif 표고 vs 地理院地図 표시값(GSI 표고 API) 비교 + GDAL/@sanpo/geo 투영 일치 확인. 네트워크 필요(CI 제외).
 - `tools/pipeline/src/cli-assets.ts` — CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), characters(Rocketbox → 플레이어 아바타·군중 팩, ADR-0057), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06). | exports: AssetCtx, materials, trees, signage, characters, audio
-- `tools/pipeline/src/cli-map.ts` — CLI 지도·지명 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles). Node만(GDAL·osmium 불필요). | exports: MapCtx, areaCellKeys, normalizeAreasLayer, map
+- `tools/pipeline/src/cli-map.ts` — CLI 지도·지명·도감 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles), | exports: MapCtx, areaCellKeys, normalizeAreasLayer, map, poiWikidata, poiReview
 - `tools/pipeline/src/cli-rail.ts` — CLI 철도 단계(cli.ts에서 분리, M07): fetch(N02·ODPT GTFS → data/raw, sha256 lock), rail(OSM 철도 정규화 → 노선 파생 → global/rail.bin), | exports: RailCtx, fetchSources, rail, timetables
 - `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 - `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
@@ -588,6 +591,8 @@
 - `tools/pipeline/src/stages/normalize-osm.ts` — normalize --layer osm(M05-T02, 04 §4.1–4.2): Geofabrik 간토 PBF(sources.lock sha256) → osmium extract(영역 + 500 m, smart) → tags-filter(M05 쓰임 태그) | exports: OSM_SOURCE, OSM_FILTERS, OsmGeom, OsmRecord, ringsOf, cellsOf, OsmNormalizeInput, normalizeOsm, sha256File, normalizeOsmFromLock
 - `tools/pipeline/src/stages/normalize-plateau.ts` — normalize 단계(PLATEAU): CityGML → WF 레코드 → L0 셀 버킷 → data/normalized/{buildings,roads,bridges,markings}/<cellId>.ndjson.gz. see docs/04-data-pipeline.md §4.2 | exports: PlateauLayer, PlateauSourceRoot, NormalizePlateauInput, NormalizePlateauResult, plateauFilesForCells, normalizePlateau
 - `tools/pipeline/src/stages/normalize-terrain.ts` — normalize 단계(지형): GSI DEM1A(주) + DEM5A(결측 채움) → GDAL 재투영(EPSG:6677, 1 m) → 잔여 결측 보간 → data/normalized/terrain/dem_1m.tif. see docs/04-data-pipeline.md §4.2(terrain), §6 | exports: NormalizeTerrainInput, GradeReport, NormalizeTerrainResult, gridOfBounds, normalizeTerrain, writeTerrainMeta, hasDemSources
+- `tools/pipeline/src/stages/poi/fetch.ts` — 도감 원천(M10-T04, ADR-0094): `poi-wikidata` = Wikidata 라벨·별칭·좌표(P625, CC0) → content/poi/wikidata.json, `poi-review` = 위키백과(ja·en·ko 사이트링크) 본문과 설명 겹침 → content/poi/review.json. | exports: PoiContent, WikidataPoi, readPois, fetchWikidata, ReviewEntry, reviewDescriptions
+- `tools/pipeline/src/stages/poi/text-check.ts` — 도감 설명 자체 작성 검사(M10-T04, ADR-0094): 위키백과 본문과의 최장 공통 부분 문자열·8-gram 공유율, 홍보 문구 목록. 순수 함수 — 네트워크 단계(review)와 오프라인 단위 테스트가 같이 쓴다. | exports: PoiLang, POI_LANGS, LCS_MAX, NGRAM_MAX, PROMO_WORDS, normalizeText, longestCommonSubstring, sharedNgramRatio, promoHits, sha256, OverlapResult, overlap
 - `tools/pipeline/src/stages/publish/publish.ts` — publish: data/build/<buildId> → R2 `world/<buildId>/**`(동시성·재시도) → 매니페스트 → 검증(S3 HEAD 또는 Worker HEAD) → KV 빌드 목록·(선택) 현재 포인터. | exports: CURRENT_KEY, BUILDS_KEY, FILES_KEY, BuildEntry, PublishFile, PublishReport, mapLimit, buildFiles, checkBuildDir, PublishInput, publishBuild, verifyViaWorker, selectGc, GcInput, gcBuilds
 - `tools/pipeline/src/stages/publish/targets.ts` — 퍼블리시 대상(env → R2 버킷·KV 네임스페이스)을 apps/worker/wrangler.jsonc에서 읽는다(바인딩 정의의 단일 출처). | exports: PublishEnv, PublishTarget, stripJsonc, readTargets, Clients, createClients
 - `tools/pipeline/src/stages/publish/uploaders.ts` — 퍼블리시 업로더 2종: `s3`(R2 S3 호환 API, SigV4 — 단일 PUT·멀티파트·HEAD 검증) / `api`(Cloudflare REST, API 토큰 — wrangler와 같은 엔드포인트). | exports: MULTIPART_THRESHOLD, PART_SIZE, ObjectPut, Uploader, S3Options, createS3Uploader, ApiOptions, createApiUploader, KvClient, createKvClient, resolveAccountId

@@ -25,6 +25,7 @@ import { INITIAL_LOADING, loadingOfBoot } from './loading.ts';
 import { createMapSource, worldToMerc } from './map-source.ts';
 import { createPause } from './pause.ts';
 import { createPlaceIndex, type PlaceIndex } from './places.ts';
+import { createDiscovery, type DiscoveryState } from './pois.ts';
 import { applySettings, loadSettings, saveSettings } from './settings.ts';
 import { createTravelState, type TravelState } from './travel.ts';
 
@@ -51,6 +52,7 @@ export interface Shell {
   /** 월드 로드 뒤: 빌드 루트(지도 global/map.pmtiles·크레딧). */
   setWorld(baseUrl: string, buildId: string): void;
   readonly travel: TravelState;
+  readonly discovery: DiscoveryState;
   dispose(): void;
 }
 
@@ -194,11 +196,13 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
   const places = signal<readonly TravelPlace[]>([]);
   const travel = createTravelState(places);
   const map = createMapSource();
+  const discoveries = signal<readonly DiscoveryModel[]>([]);
+  const discovery = createDiscovery(doc, discoveries, (e) => travel.addPoi(e.id, e.name, e.posWF));
   let buildId: string | null = null;
   const bridge: UiBridge = {
     hud,
     loading,
-    discoveries: signal<readonly DiscoveryModel[]>([]),
+    discoveries,
     places,
     settings,
     hasSave: computed(() => false),
@@ -216,10 +220,20 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     loading,
     settings,
     travel,
+    discovery,
     attach(w) {
       world = w;
       offs.push(settingsEffect(w, settings, opts), pause.autoPause(ui, opts.menus));
-      return [hudSystem(doc, w, shell, hud), travel.system(() => w.traversal.player.posWF)];
+      return [
+        hudSystem(doc, w, shell, hud),
+        travel.system(() => w.traversal.player.posWF),
+        discovery.system({
+          player: () => w.traversal.player.posWF,
+          mode: () => w.traversal.mode,
+          timeMs: () => w.sim.clock.gameTimeMs,
+          weather: () => w.sim.weather.stateId,
+        }),
+      ];
     },
     setWorld(baseUrl, id) {
       buildId = id;

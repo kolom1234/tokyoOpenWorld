@@ -1063,6 +1063,37 @@
       },
       "files": [],
       "modified": true
+    },
+    {
+      "id": "wikidata-poi",
+      "kind": "data",
+      "title": "Wikidata — 도감 명소 20곳 이름·별칭·좌표(M10-T04, content/poi/wikidata.json)",
+      "url": "https://www.wikidata.org/",
+      "license": "CC0-1.0",
+      "attribution": {
+        "ja": "名所の名称・座標：Wikidata（CC0）",
+        "en": "Landmark names and coordinates: Wikidata (CC0)",
+        "ko": "명소 이름·좌표: Wikidata (CC0)"
+      },
+      "files": [
+        "content/poi/wikidata.json"
+      ],
+      "modified": false
+    },
+    {
+      "id": "poi-descriptions",
+      "kind": "text",
+      "title": "도감 명소 설명(한·일·영) — 프로젝트 자체 작성(M10-T04, content/poi/pois.json, 검수 content/poi/review.json)",
+      "license": "Project-Original",
+      "attribution": {
+        "ja": "名所の説明文：TOKYO SANPO 独自執筆",
+        "en": "Landmark descriptions: written by the Tokyo Sanpo project",
+        "ko": "명소 설명: Tokyo Sanpo 자체 작성"
+      },
+      "files": [
+        "content/poi/pois.json"
+      ],
+      "modified": false
     }
   ]
 }

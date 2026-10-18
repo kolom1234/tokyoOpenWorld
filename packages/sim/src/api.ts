@@ -321,3 +321,20 @@ export interface HolidaysFile {
 export interface SeasonTableFile {
   keys: { day: number; foliageTint: number; bloom: number; leafDensity: number; outfitPalette: number }[];
 }
+
+// ── POI 발견(M10-T04, 10 §7 — ADR-0094) ──
+
+/** 발견 판정용 명소(위치·반경만 — 이름·설명은 content/poi, UI 쪽). */
+export interface PoiDef {
+  id: string;
+  posWF: Vec3d;
+  radiusM: number;
+}
+
+export interface PoiService {
+  readonly discovered: ReadonlySet<string>;
+  /** 세이브에서 복원. 모르는 id는 무시. */
+  restore(ids: readonly string[]): void;
+  /** 이번 프레임 새로 발견한 id들(반경 안 연속 dwell s, mode freecam·idle 제외). */
+  update(posWF: Readonly<Vec3d>, mode: string, dtS: number): string[];
+}

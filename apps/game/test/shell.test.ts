@@ -143,3 +143,18 @@ describe('place index (M10-T02)', () => {
     expect(pointInPolygon(Float64Array.from([0, 0, 10, 0, 10, 10, 0, 10]), 5, 5)).toBe(true);
   });
 });
+
+describe('field guide (M10-T04)', () => {
+  it('builds 20 POIs with 3-language names from Wikidata rules', async () => {
+    const { poiEntries, resolveName } = await import('../src/shell/pois.ts');
+    const list = poiEntries();
+    expect(list).toHaveLength(20);
+    for (const e of list) for (const l of ['ja', 'en', 'ko'] as const) expect(e.name[l], `${e.id}:${l}`).toBeTruthy();
+    const cat = list.find((e) => e.id === 'cat-street');
+    expect(cat?.name.ja).toBe('キャットストリート');
+    const wd = { id: 'x', labels: { ja: 'J', en: 'E' }, aliases: { ja: ['別名 (説明)'] }, lat: 0, lon: 0 };
+    expect(resolveName('alias:別名 (説明)', 'ja', wd)).toBe('別名');
+    expect(resolveName('alias:nope', 'ja', wd)).toBe('J');
+    expect(resolveName('derived:가나', 'ko', wd)).toBe('가나');
+  });
+});

@@ -2,14 +2,15 @@
 Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10-ui`)
 
 ## Current Milestone: M10 UI/UX (T01 → T02 → T03 → T04 → T05 → T06)
-## Current Task: M10-T04 POI discovery & log
-- Done in this session (#25): M10-T01 UI 셸(ADR-0091), T02 HUD·지명(ADR-0092), T03 지도·미니맵(ADR-0093 — tile-format MVT·PMTiles, `pnpm pipeline map`, UI Canvas2D 미니맵·전체 지도·빠른 이동 목록).
+## Current Task: M10-T05 Photo mode
+- Done in this session (#25): M10-T01 UI 셸(ADR-0091), T02 HUD·지명(ADR-0092), T03 지도·미니맵(ADR-0093), T04 도감(ADR-0094 — Wikidata 이름·좌표 + 자체 설명 3개 언어 + `poi-review` 위키백과 겹침 검수, sim createPoiService 2 s 체류, 도감 화면).
   로컬 테스트 빌드 `test-places-m10`(6셀 + map.pmtiles — MVP 재빌드 때 지움). OSM 필터에 natural=water 추가(재정규화 필요 — MVP 재빌드 때 `normalize --layer osm`).
-- In progress: 없음.
-- Next step (정확히 한 걸음): content/poi 20곳 정의(Wikidata Q-id) + 이름·좌표 추출 스크립트(`tools/pipeline` — CC0).
+- In progress: 없음. ⚠️ "20곳 모두 발견 가능" 실제 GPU 봇 확인은 MVP 재빌드 뒤(명소마다 빠른 이동 → 2 s → 발견).
+- Next step (정확히 한 걸음): render `screenshot({scale})` API 설계 — docs/07 §7(포토모드) 읽기.
 - Blockers: 없음. ODPT 키 없음(M10 무관).
 
 ## Recently Completed
+- M10-T04 POI discovery & log(2026-10-18) — 명소 20곳(content/poi — Wikidata CC0 이름·좌표, 설명 자체 작성), `poi-wikidata`·`poi-review`(60개 통과 — 위키백과 대조 46, 최장 공통 ja·ko 8자·en 34자), sim PoiService, 도감 화면·지도 회색 점·발견 명소 빠른 이동. ADR-0094
 - M10-T03 Map & minimap(2026-10-18) — PMTiles v3(MVT z13–16, MVP ≈ 1.44 MB·타일 223), 게임 map-source(처음 필요할 때 전체 받기), UI 래스터 캐시·미니맵(원형·북쪽 고정/회전)·전체 지도(팬·줌·레이어·빠른 이동 7곳, 발견한 곳만). 수락(실제 GPU 21–25 W): 미니맵 0.016 ms/프레임 ✅, 전체 지도 p50 60 fps·p95 16.8 ms ✅. ADR-0093
 - M10-T02 HUD & place names(2026-10-18) — `normalize --layer areas`(shp·dbf 자체 리더, 구 6곳 133 町丁, 읽기 누락 0) → 셀 meta placeNames, 게임 shell/places(점-폴리곤), UI hud-info. 수락(실제 GPU): 경계 갱신 32–77 ms ≤ 0.5 s ✅, HUD 시그널 ≤ 10 Hz(걷기 3.2 Hz) ✅, 22 W 상한. ADR-0092
 - M10-T01 UI shell(2026-10-18, PR 진행 중) — @sanpo/ui(Preact 10.29.8·signals 2.11.2): 화면 스택·i18n 3개 언어·공간 내비게이션(화살표·D-pad·A/B/Start/LB·RB), 설정 5탭, input `setBindings·setAxisScale·setEnabled`, traversal `configure()·motionEffects`,

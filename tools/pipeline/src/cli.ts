@@ -365,6 +365,8 @@ const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   rail: (args) => railStages.rail(rail, args, () => makeBuildId(REPO_ROOT)),
   timetables: (args) => railStages.timetables(rail, args, () => makeBuildId(REPO_ROOT)),
   map: (args) => mapStages.map(mapCtx, args, () => makeBuildId(REPO_ROOT)),
+  'poi-wikidata': () => mapStages.poiWikidata(mapCtx),
+  'poi-review': () => mapStages.poiReview(mapCtx),
   normalize,
   build,
   'hlod-prep': hlodPrep,

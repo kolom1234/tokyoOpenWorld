@@ -264,6 +264,8 @@ export interface UiBridge {
   /** WF → 웹 메르카토르 정규 좌표(0…1, y 아래). */
   worldToMap(posWF: Vec3d): { x: number; y: number };
   map: MapSource;
+  /** 도감 사진 썸네일 URL(blob:, 포토 모드 — 없으면 빈 칸). */
+  photoUrl?(id: string): string | undefined;
   commands: UiCommands;
 }
 

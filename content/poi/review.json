@@ -1,0 +1,850 @@
+{
+  "$comment": "도감 설명 자체 작성 검수 — `pnpm pipeline poi-review`(위키백과 본문과 최장 공통 부분 문자열·8-gram 공유율·홍보 문구). 설명을 고치면 다시 실행.",
+  "checkedAt": "2026-10-18",
+  "entries": [
+    {
+      "id": "shibuya-scramble",
+      "lang": "ko",
+      "sha256": "f13435867c0d8b50f8acb40f7e9a76790afb28c001ff92fe03c1984c47203012",
+      "wikipedia": {
+        "title": "시부야 스크램블 교차점",
+        "revid": 40779286,
+        "chars": 1266
+      },
+      "lcs": 3,
+      "lcsText": "교차로",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "shibuya-scramble",
+      "lang": "ja",
+      "sha256": "c068f15999021b89ea509be636455024a11303addec397b78aaed3e3ff2ca119",
+      "wikipedia": {
+        "title": "渋谷スクランブル交差点",
+        "revid": 111100758,
+        "chars": 10671
+      },
+      "lcs": 7,
+      "lcsText": "の人が行き交う",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "shibuya-scramble",
+      "lang": "en",
+      "sha256": "8b74857f7785d4d338c09b5ccbb054c42b0b994b20608fb8f7dfbc83e22f1579",
+      "wikipedia": {
+        "title": "Shibuya Crossing",
+        "revid": 1379436288,
+        "chars": 4338
+      },
+      "lcs": 18,
+      "lcsText": " pedestrians cross",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "hachiko-statue",
+      "lang": "ko",
+      "sha256": "677c91f489fe29d0f93343d78340c10e667a73ffe98d887cfdc1e30134b17c07",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "hachiko-statue",
+      "lang": "ja",
+      "sha256": "39e5f643c2099070f9c2e8120ae81370bb3632226dcb2f5b24aa5b3b76162b4b",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "hachiko-statue",
+      "lang": "en",
+      "sha256": "7ba2ecb83cfc53261b2c002fd7d6d8f8ba7e36200b421d4d286cdbde46e834e5",
+      "wikipedia": {
+        "title": "Statue of Hachikō",
+        "revid": 1380358887,
+        "chars": 1796
+      },
+      "lcs": 16,
+      "lcsText": "a bronze statue ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "center-gai",
+      "lang": "ko",
+      "sha256": "25b27eaa69525a586b488d50db7784ecc78f508532d93b3603cce32957ac78ca",
+      "wikipedia": {
+        "title": "시부야 센터 거리",
+        "revid": 39187116,
+        "chars": 1309
+      },
+      "lcs": 3,
+      "lcsText": "간판이",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "center-gai",
+      "lang": "ja",
+      "sha256": "94ec9bd66f0eb3ca4bbefbd1b9b03c708f8f35125ff167cf3b45c17563adfdc0",
+      "wikipedia": {
+        "title": "渋谷センター街",
+        "revid": 110770843,
+        "chars": 1726
+      },
+      "lcs": 5,
+      "lcsText": "が密集して",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "center-gai",
+      "lang": "en",
+      "sha256": "b51dcc0d6332c65c4345d9b79437339902b994436b34d17c8fa37dc59dbce8f9",
+      "wikipedia": {
+        "title": "Center Gai",
+        "revid": 1366853464,
+        "chars": 646
+      },
+      "lcs": 10,
+      "lcsText": "a narrow s",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "miyashita-park",
+      "lang": "ko",
+      "sha256": "3479b9887f413d300a4ba53c1601a90c22bdd3223f0b29483ca9d3060bfa692f",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "miyashita-park",
+      "lang": "ja",
+      "sha256": "df85142d9b7b82567bc9458f85c681a7dddf0c24adef48129aaaee25f9336e80",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "miyashita-park",
+      "lang": "en",
+      "sha256": "eb6168b61af9fde13c29857c0385b6bb8e9162ddcf3d9c953db66841a4bde608",
+      "wikipedia": {
+        "title": "Miyashita Park",
+        "revid": 1369636529,
+        "chars": 1675
+      },
+      "lcs": 9,
+      "lcsText": "side the ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-park",
+      "lang": "ko",
+      "sha256": "1c8c93aed27d22bc668a82b7f24bc91fdb03aab37ca24ef20a092ffb3f68aef8",
+      "wikipedia": {
+        "title": "요요기 공원",
+        "revid": 40978524,
+        "chars": 1986
+      },
+      "lcs": 4,
+      "lcsText": "넓은공원",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-park",
+      "lang": "ja",
+      "sha256": "2451f07b2db731295a354a293dddd940909a7e8631f5d6599fd7af0f50239992",
+      "wikipedia": {
+        "title": "代々木公園",
+        "revid": 111309754,
+        "chars": 4164
+      },
+      "lcs": 3,
+      "lcsText": "にある",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-park",
+      "lang": "en",
+      "sha256": "095756a31703ec8fdc3b31ae95b61444b70adadc3e9b5899789748f433b465e0",
+      "wikipedia": {
+        "title": "Yoyogi Park",
+        "revid": 1357298932,
+        "chars": 2401
+      },
+      "lcs": 9,
+      "lcsText": " park in ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "meiji-jingu",
+      "lang": "ko",
+      "sha256": "48c7232d68dd27b7706f871caf408c88832286e2a54e4ac6e81eefc992d7584a",
+      "wikipedia": {
+        "title": "메이지 신궁",
+        "revid": 41722625,
+        "chars": 9272
+      },
+      "lcs": 3,
+      "lcsText": "도리이",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "meiji-jingu",
+      "lang": "ja",
+      "sha256": "7bec37c099d02c46c716a97eb3b47524cf05da648f203955edf9c0a534d2e7a0",
+      "wikipedia": {
+        "title": "明治神宮",
+        "revid": 110055366,
+        "chars": 15838
+      },
+      "lcs": 4,
+      "lcsText": "囲まれた",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "meiji-jingu",
+      "lang": "en",
+      "sha256": "a9ad90ae58f4648d48bbe9d33b5828e88217ac725e8b0db37c8f5a7c98ee8feb",
+      "wikipedia": {
+        "title": "Meiji Shrine",
+        "revid": 1366834031,
+        "chars": 5297
+      },
+      "lcs": 15,
+      "lcsText": " a large forest",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-gymnasium",
+      "lang": "ko",
+      "sha256": "bc370b08a01d3c8c86a82354c5ca88502beaada2393402865187c0bc94cb0b5b",
+      "wikipedia": {
+        "title": "국립 요요기 경기장",
+        "revid": 41441752,
+        "chars": 260
+      },
+      "lcs": 5,
+      "lcsText": "1964년",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-gymnasium",
+      "lang": "ja",
+      "sha256": "e1bee59bd94b6b6c7dddd765a65df079d0abac65999f3ed1d9f2a4b9f148262d",
+      "wikipedia": {
+        "title": "国立代々木競技場",
+        "revid": 111193305,
+        "chars": 10824
+      },
+      "lcs": 6,
+      "lcsText": "1964年の",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-gymnasium",
+      "lang": "en",
+      "sha256": "b643e1d5ece44397503f8c7a01db2b556232a56f7b52da6663b8265fb7d9efc8",
+      "wikipedia": {
+        "title": "Yoyogi National Stadium",
+        "revid": 1372266338,
+        "chars": 6603
+      },
+      "lcs": 14,
+      "lcsText": " for the 1964 ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "takeshita-street",
+      "lang": "ko",
+      "sha256": "3b2caaddd22880a2c324daffff0110ab76dd76280667b71c733089f4deef9237",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "takeshita-street",
+      "lang": "ja",
+      "sha256": "126f4f3db2a6948cfc1056b0d68d39ba58813948b8aa83d9070180a66d5f4e76",
+      "wikipedia": {
+        "title": "竹下通り",
+        "revid": 111228322,
+        "chars": 2024
+      },
+      "lcs": 3,
+      "lcsText": "の通り",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "takeshita-street",
+      "lang": "en",
+      "sha256": "61dc52b6f43f6f367bb130a373a19ab76ce7c5dca2c15596e35b7bfc44591089",
+      "wikipedia": {
+        "title": "Takeshita Street",
+        "revid": 1301556759,
+        "chars": 0
+      },
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "omotesando",
+      "lang": "ko",
+      "sha256": "b3e3b7c33842c8a7b7e31fa59a3f25da3ad8e020dac3bfbfe8aa46ec5350e9be",
+      "wikipedia": {
+        "title": "오모테산도",
+        "revid": 39146397,
+        "chars": 464
+      },
+      "lcs": 2,
+      "lcsText": "하는",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "omotesando",
+      "lang": "ja",
+      "sha256": "c2b7184720d0fc5b4b1ba1df77cf00d2d264130afed63580e871917c6613bb59",
+      "wikipedia": {
+        "title": "表参道 (原宿)",
+        "revid": 107264841,
+        "chars": 6711
+      },
+      "lcs": 6,
+      "lcsText": "参道として整",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "omotesando",
+      "lang": "en",
+      "sha256": "527d0a1b0d53a5ba4d88dfceea865ce7e4cde01dd48bc4252c2ea97817699db5",
+      "wikipedia": {
+        "title": "Omotesandō",
+        "revid": 1216697357,
+        "chars": 1652
+      },
+      "lcs": 20,
+      "lcsText": " tree lined avenue l",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "cat-street",
+      "lang": "ko",
+      "sha256": "0d0d9bedc771806e434ef1f79e16d9687b1ccfc3ee24696ca826b173dc7b4c79",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "cat-street",
+      "lang": "ja",
+      "sha256": "08ca4389bb74b5e468b46733232728ce293183ce27391c421cd0b89d2589a898",
+      "wikipedia": {
+        "title": "旧渋谷川遊歩道路",
+        "revid": 110104928,
+        "chars": 765
+      },
+      "lcs": 3,
+      "lcsText": "の渋谷",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "cat-street",
+      "lang": "en",
+      "sha256": "cef7d1d3f4f63a13e3a47ee8e29d71cfbef7c4b249dc23542afc42c0695ca3d4",
+      "wikipedia": {
+        "title": "Cat Street, Tokyo",
+        "revid": 1366853299,
+        "chars": 869
+      },
+      "lcs": 11,
+      "lcsText": "t over the ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "togo-shrine",
+      "lang": "ko",
+      "sha256": "2de32dcaeab274c6ea49e5afa989179954648bc4090f71512dc98f7d40fe7502",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "togo-shrine",
+      "lang": "ja",
+      "sha256": "047327af3d7dc1c0e7e1442970b8542a2a637e18efd67a08acf38b5a3e0b175b",
+      "wikipedia": {
+        "title": "東郷神社 (渋谷区)",
+        "revid": 103972244,
+        "chars": 1569
+      },
+      "lcs": 3,
+      "lcsText": "やかな",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "togo-shrine",
+      "lang": "en",
+      "sha256": "d2d11cca5332598a852ae95f7ffa1bb2d65d2e455f5c4355ee7b1bc1a7e3f73e",
+      "wikipedia": {
+        "title": "Tōgō Shrine",
+        "revid": 1367137409,
+        "chars": 1233
+      },
+      "lcs": 9,
+      "lcsText": " a small ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "national-stadium",
+      "lang": "ko",
+      "sha256": "9fd1792515063b8814d63fa8a22facd6e6a924a5eec226728bfda192423e466e",
+      "wikipedia": {
+        "title": "도쿄 국립 경기장",
+        "revid": 42409109,
+        "chars": 741
+      },
+      "lcs": 5,
+      "lcsText": "2020년",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "national-stadium",
+      "lang": "ja",
+      "sha256": "2ae8aee0bef4d2da2043340a614a82b00d214a7c29e64cfc9e595472d90fb035",
+      "wikipedia": {
+        "title": "国立競技場",
+        "revid": 110837538,
+        "chars": 8644
+      },
+      "lcs": 8,
+      "lcsText": "スタジアム202",
+      "ngram": 0.024,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "national-stadium",
+      "lang": "en",
+      "sha256": "99a0d9a61c79339e912de9f0fcfe9d654cbf349d04efc6ede1aa830367275995",
+      "wikipedia": {
+        "title": "Japan National Stadium",
+        "revid": 1378899630,
+        "chars": 9226
+      },
+      "lcs": 14,
+      "lcsText": " for the 2020 ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "shinjuku-gyoen",
+      "lang": "ko",
+      "sha256": "03a3218df4ba8daafb864952e7f400bf20fe7468203fc6f01de9a6d9668fc4a4",
+      "wikipedia": {
+        "title": "신주쿠 교엔",
+        "revid": 39192995,
+        "chars": 224
+      },
+      "lcs": 2,
+      "lcsText": "일본",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "shinjuku-gyoen",
+      "lang": "ja",
+      "sha256": "8de95a3405d48e7d086d730e271d299f244c3b14b689ba9d482e6740712d6889",
+      "wikipedia": {
+        "title": "新宿御苑",
+        "revid": 109739585,
+        "chars": 5496
+      },
+      "lcs": 5,
+      "lcsText": "フランス式",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "shinjuku-gyoen",
+      "lang": "en",
+      "sha256": "81fc43e0b075b79f707f65515bf50a5534d7bdd0c979252d8d9ce7c11c149665",
+      "wikipedia": {
+        "title": "Shinjuku Gyo-en",
+        "revid": 1361161207,
+        "chars": 4451
+      },
+      "lcs": 19,
+      "lcsText": " english landscape ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "tocho",
+      "lang": "ko",
+      "sha256": "0f674e4c619fd7bf5c8f03a97b7368c5766122c03e85298370d3689f7016512a",
+      "wikipedia": {
+        "title": "도쿄도청사",
+        "revid": 39836336,
+        "chars": 2223
+      },
+      "lcs": 3,
+      "lcsText": "두개의",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "tocho",
+      "lang": "ja",
+      "sha256": "d041ad19638a962e3321fe7e80ef1a782ace4f70ecce90434a6c78655f84b7eb",
+      "wikipedia": {
+        "title": "東京都庁舎",
+        "revid": 109822404,
+        "chars": 12768
+      },
+      "lcs": 5,
+      "lcsText": "都庁の建物",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "tocho",
+      "lang": "en",
+      "sha256": "20f0b0b285c67d90ca0666970ec2cae921e52cf5de2a5195370e9740b1727198",
+      "wikipedia": {
+        "title": "Tokyo Metropolitan Government Building",
+        "revid": 1345442265,
+        "chars": 2297
+      },
+      "lcs": 34,
+      "lcsText": " metropolitan government building ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "omoide-yokocho",
+      "lang": "ko",
+      "sha256": "f9cd5344c36367c63946839f33ce1e43ab90cab26bbb5533378b0b437cdd7ef6",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "omoide-yokocho",
+      "lang": "ja",
+      "sha256": "11975bf564bfef4c5f50c16a1554c65715251c85c25252ce78b39969ce7d0e42",
+      "wikipedia": {
+        "title": "新宿西口商店街",
+        "revid": 107984456,
+        "chars": 565
+      },
+      "lcs": 5,
+      "lcsText": "な飲食店が",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "omoide-yokocho",
+      "lang": "en",
+      "sha256": "6feac280563b7fe82c67198604b7d795fd563355318807e0ad136b3c0cdfc78f",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "hanazono-shrine",
+      "lang": "ko",
+      "sha256": "ce6ba18b84cc7ee62e8f7b92d123237beff9dbd468457bb56ad632b191f32197",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "hanazono-shrine",
+      "lang": "ja",
+      "sha256": "b712b4cc5c8a8f488203a2dccf36811bcd5ec0ee7ec333d445cf505c5b949e1a",
+      "wikipedia": {
+        "title": "花園神社",
+        "revid": 108375426,
+        "chars": 3109
+      },
+      "lcs": 5,
+      "lcsText": "にある神社",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "hanazono-shrine",
+      "lang": "en",
+      "sha256": "9ae8ee031c4ebef4236d50dd1f7900131cbcce752dc39eb09f1494539109779a",
+      "wikipedia": {
+        "title": "Hanazono Shrine",
+        "revid": 1366832817,
+        "chars": 1859
+      },
+      "lcs": 10,
+      "lcsText": " festival ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "shinjuku-chuo-park",
+      "lang": "ko",
+      "sha256": "246e1a3a6699851166ef15d135521dd4d1ae9c77427d4bd31bdd96ad1a8ac4c1",
+      "wikipedia": {
+        "title": "신주쿠 중앙공원",
+        "revid": 40306833,
+        "chars": 1375
+      },
+      "lcs": 4,
+      "lcsText": "고층빌딩",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "shinjuku-chuo-park",
+      "lang": "ja",
+      "sha256": "0335b4d44ef3001a1e9a471c70458ad4897e165b83491aadc34ab1828173fb92",
+      "wikipedia": {
+        "title": "新宿中央公園",
+        "revid": 111332554,
+        "chars": 2277
+      },
+      "lcs": 6,
+      "lcsText": "高層ビル群の",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "shinjuku-chuo-park",
+      "lang": "en",
+      "sha256": "a76af888e0dd444581bd45d240bec77dfa7ae73a7a4509749b2eb8f6653330f9",
+      "wikipedia": {
+        "title": "Shinjuku Central Park",
+        "revid": 1367609707,
+        "chars": 2150
+      },
+      "lcs": 17,
+      "lcsText": "y office workers ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-hachimangu",
+      "lang": "ko",
+      "sha256": "abd255de98140fca01e18654741841ef4f056b15b70b38c21cb60e2fa8354c68",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-hachimangu",
+      "lang": "ja",
+      "sha256": "6b1f8881c293638eb9d18f1cc001605f458733de220a450cf636884f13574790",
+      "wikipedia": {
+        "title": "代々木八幡宮",
+        "revid": 106148776,
+        "chars": 1476
+      },
+      "lcs": 5,
+      "lcsText": "にある神社",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "yoyogi-hachimangu",
+      "lang": "en",
+      "sha256": "9c95e86d22c653e5f0d48705a6bda03bf7365046f202accedc801313d096e176",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "konno-hachimangu",
+      "lang": "ko",
+      "sha256": "db7c52c481cd5cd76d9502a2372d7afe3202d3c13397587238c9fdd683b0d552",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "konno-hachimangu",
+      "lang": "ja",
+      "sha256": "86ad6e03af58a1ac3452b3589f314fa332ca7f0b01803be2c474082247d8812f",
+      "wikipedia": {
+        "title": "金王八幡宮",
+        "revid": 106494981,
+        "chars": 1386
+      },
+      "lcs": 3,
+      "lcsText": "にある",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "konno-hachimangu",
+      "lang": "en",
+      "sha256": "fc96edbeb4060b579a039697b9f25903820cad99243b6b6b1e3d15ccafb58e39",
+      "wikipedia": null,
+      "lcs": 0,
+      "lcsText": "",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "tokyo-gymnasium",
+      "lang": "ko",
+      "sha256": "69a50716c523b0a7afa9b1ca60593a635e43ee18adf779432707a9d467705bff",
+      "wikipedia": {
+        "title": "도쿄 체육관",
+        "revid": 41441690,
+        "chars": 103
+      },
+      "lcs": 3,
+      "lcsText": "체육관",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "tokyo-gymnasium",
+      "lang": "ja",
+      "sha256": "8fac01477993aa259239472432e5a8c95e0a9e2d35da7260b2558acae9c3218f",
+      "wikipedia": {
+        "title": "東京体育館",
+        "revid": 111254039,
+        "chars": 4167
+      },
+      "lcs": 5,
+      "lcsText": "されている",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    },
+    {
+      "id": "tokyo-gymnasium",
+      "lang": "en",
+      "sha256": "351c5afd9a5545b9b44a9e874ad2863fa1fe040033058edc3b9dbf503809de28",
+      "wikipedia": {
+        "title": "Tokyo Metropolitan Gymnasium",
+        "revid": 1375120590,
+        "chars": 3790
+      },
+      "lcs": 15,
+      "lcsText": "a large indoor ",
+      "ngram": 0,
+      "promo": [],
+      "pass": true
+    }
+  ]
+}

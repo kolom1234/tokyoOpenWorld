@@ -188,5 +188,19 @@
   "map.missing": "This world has no map data",
   "map.controls": "WASD pan · Q/E zoom · drag & wheel · Enter on a place to travel",
   "map.controlsPad": "Right stick pan · LT/RT zoom · Ⓐ travel · Ⓑ close",
-  "map.attribution": "© OpenStreetMap contributors (ODbL) · 3D都市モデル: 国土交通省 PLATEAU · 国土地理院 · 地名: e-Stat"
+  "map.attribution": "© OpenStreetMap contributors (ODbL) · 3D都市モデル: 国土交通省 PLATEAU · 国土地理院 · 地名: e-Stat",
+  "log.title": "Field guide",
+  "log.count": "{n} / {total} found",
+  "log.cat.all": "All",
+  "log.cat.landmark": "Landmarks",
+  "log.cat.street": "Streets",
+  "log.cat.park": "Parks",
+  "log.cat.shrine": "Shrines & temples",
+  "log.cat.view": "Views",
+  "log.unknown": "???",
+  "log.unknownHint": "Not found yet. It shows as a grey dot on the map — get close and linger for a moment.",
+  "log.discoveredAt": "Found {date} {time} · {weather}",
+  "log.photos": "Photos",
+  "log.noPhotos": "Photos you take in photo mode (P) gather here.",
+  "hud.notice.discovered": "New landmark found: {name}"
 }

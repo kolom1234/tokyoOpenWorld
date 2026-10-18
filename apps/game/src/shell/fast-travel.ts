@@ -9,6 +9,8 @@ export interface TravelTarget {
   posWF: Vec3d;
   yawRad: number;
   exact?: boolean;
+  /** 착지 판정 반경(m — 기본 12, 명소는 건물 안 좌표라 착지가 옆 거리로 비킬 수 있어 넓게). */
+  arriveM?: number;
 }
 
 export interface FastTravelDeps {
@@ -35,14 +37,15 @@ const SETTLE_MAX_MS = 8000;
 const horiz = (a: Vec3d, b: Vec3d) => Math.hypot(a.x - b.x, a.z - b.z);
 
 /** 착지했나: walk·지면 대기 아님·목표 가까이·속도 작음. */
-export function arrived(t: FastTravelDeps['traversal'], to: Vec3d): boolean {
+export function arrived(t: FastTravelDeps['traversal'], to: Vec3d, arriveM = ARRIVE_M): boolean {
   const v = t.player.velWF;
   return (
     t.mode === 'walk' &&
     !t.hud.groundLoading &&
-    horiz(t.player.posWF, to) < ARRIVE_M &&
+    horiz(t.player.posWF, to) < arriveM &&
     Math.hypot(v.x, v.y, v.z) < 2 &&
-    Math.abs(t.player.posWF.y - to.y) < 25
+    // 명소(넓은 반경)는 목표 y를 모른다(경위도만) — 높이 검사 생략.
+    (arriveM > ARRIVE_M || Math.abs(t.player.posWF.y - to.y) < 25)
   );
 }
 
@@ -63,7 +66,7 @@ export async function fastTravel(d: FastTravelDeps, to: TravelTarget): Promise<b
   let landedAt = -1;
   while (now() - t0 < TIMEOUT_MS) {
     await sleep(POLL_MS);
-    streak = arrived(d.traversal, to.posWF) ? streak + 1 : 0;
+    streak = arrived(d.traversal, to.posWF, to.arriveM) ? streak + 1 : 0;
     if (streak >= 3 && landedAt < 0) landedAt = now();
     if (landedAt >= 0 && ((d.settled?.() ?? true) || now() - landedAt > SETTLE_MAX_MS)) {
       ok = true;
