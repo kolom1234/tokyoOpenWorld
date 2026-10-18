@@ -1,15 +1,16 @@
 # PROGRESS
 Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-hardening`, PR #25 draft)
 
-## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅ → T03 → T04 → T01 → T02 → T06)
-## Current Task: M11-T03 Error reporting
-- Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097).
-- In progress: T03.
-- Next step (정확히 한 걸음): `docs/roadmap/M11.md` `### M11-T03` → apps/worker `/api/log` + Analytics Engine.
+## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅ → T04 → T01 → T02 → T06)
+## Current Task: M11-T04 Accessibility & settings polish
+- Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097), M11-T03 오류 보고(ADR-0098 — staging 수락), 무료 한도 일일 점검 워크플로(usage.yml — main 병합 뒤부터 실행).
+- In progress: T04.
+- Next step (정확히 한 걸음): `docs/roadmap/M11.md` `### M11-T04` → docs/12 §6 접근성, UI 배율 150 % 레이아웃.
 - Blockers: 🔶 **국토지리원 측량법 제30조 사용 승인(사용자 신청)** — production 공개(T06) 전 필수(03 §6.1, ADR-0097). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 - 다음 MVP 재빌드 때 반영할 것: 로마자 지명(셀 meta), `map --build-id` ODbL 묶음(global/odbl/). DOF 전환 실측은 T01 perf 하네스에서.
 
 ## Recently Completed
+- M11-T03 Error reporting(2026-10-19) — Worker `POST /api/log`(허용 필드·이메일/URL/긴 숫자 지움·IP/UA/위치 미사용) → Workers Analytics Engine(prod `sanpo_errors`·staging `sanpo_errors_staging`), 게임 `error-report.ts`(세션 1 %·3건·`?report=force`), `pnpm errors`(SQL API). 수락: staging 666dc839에 인위적 오류 2건 → 쿼리 2그룹 ✅. + `usage.yml`/`scripts/cf-usage.ts`(무료 한도 70 % 이슈 — 첫 측정 ours 최대 R2 18.3 %, account KV 쓰기 925 %는 다른 프로젝트). ADR-0098
 - M11-T05 License audit(2026-10-19) — 원문 재확인 표 03 §6.1(PLATEAU FAQ 手続き不要·상업 가능 ✅, KSJ N02 CC BY 4.0 ✅, Open-Meteo 비상업·production 호출 0 ✅, Freesound 22개 CC0 ✅, Rocketbox MIT ✅, 폰트 OFL ✅, npm 26개 GPL·NC 0 ✅, GSI DEM 🔶 측량법 제30조 사용 승인 신청 필요), ODbL 파생 DB `global/odbl/`(map 단계)·크레딧 링크, `/oss-licenses.txt` LICENSE 원문, 상표 스캔 CI 테스트(0건), 긴자선 미수록 크레딧 명시. ADR-0097
 - M10 잔여(2026-10-19) — physics `setPaused`(일시정지 = 물리 시각 정지), 포토 DOF = 출력 노드 교체(`post/output.ts`, 전체 재구성 없음), 사진 상한 200(오래된 것부터 — 도감 연결·IndexedDB 썸네일 정리), 로마자 방위 접두 하이픈(Nishi-Shinjuku), 한국어 파생 POI 이름 9곳 표기법 점검(수정 0), UI 글꼴 Noto Sans JP/KR Variable(fontsource 5.3.0 조각 woff2 — 타이틀 ja 278 KB·ko 178 KB·en 58 KB).
 - M10 마무리(2026-10-18) — MVP 재빌드(L0 294 + HLOD 177 + 머티리얼 32층 + 오디오 22 + map.pmtiles 1.45 MB, validate 0) → dev publish → staging. 실제 GPU staging(1600×900): HUD 시그널 8.1 Hz ≤ 10 ✅, 미니맵 0.018 ms/프레임(0.13 ms/회) ≤ 1 ✅, rAF p50 16.67·p95 16.84 ms, GPU 23.6 W(상한 33.9 W). 명소 봇 20/20(로컬 재빌드). 따라 해 보기 봇 전 단계 ✅. dev gc 대상 0.

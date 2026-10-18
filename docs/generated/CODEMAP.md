@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 593개.
+> 파일 599개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -20,6 +20,7 @@
 - `apps/game/src/debug/sun-override.ts` — `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다. | exports: parseSunFlag, dirFromAzEl, overrideEnvironment, createSunOverride
 - `apps/game/src/debug/ui-sandbox.ts` — `?ui-sandbox=1` 스토리 페이지(M10-T01): 게임·렌더 없이 @sanpo/ui를 목 브리지로. `&screen=title|pause|settings|credits|hud|boot`, `&lang=ko|ja|en`, `&pad=1`. | exports: runUiSandbox
 - `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
+- `apps/game/src/error-report.ts` — 원격 오류 보고(M11-T03, 01 §9): 전역 오류·처리 안 된 거부 → `POST /api/log`(Worker → Analytics Engine). | exports: ReportContext, ReporterOptions, DEFAULT_REPORT_RATE, browserOf, firstFrame, createReporter, installErrorReporting
 - `apps/game/src/landing-hud.ts` — freecam G 카메라 아래 내리기 안내(ADR-0083 → M10-T01 UI HUD): 찾는 중 = 안내 칸 'landing', 실패 = 이유 알림(hud.landing seq가 바뀔 때만). 게임 로직 없음. | exports: landingHudSystem
 - `apps/game/src/landing.ts` — freecam G 카메라 아래 내리기(ADR-0083): 카메라 바로 아래(+ 2·4·7 m 링 × 8방위) 후보마다 물리 레이로 판정 → 가장 가까운 안전한 자리(발 WF) 또는 가운데 후보의 이유. | exports: LandingQueries, landingOffsets, evaluateSpot, findLanding, roadIndex, onLane
 - `apps/game/src/lane-chunks.ts` — 셀 차선(lanes.bin, 05 §7) 지연 적재·캐시(최근 16셀): freecam G 차도 판정(landing.ts)·차 부르기 연석 자리(vehicles/curb-spot.ts)가 공유. | exports: laneChunks
@@ -77,10 +78,11 @@
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
-- `apps/worker/src/env.ts` — Worker 바인딩 타입(Env). R2·KV는 선택 — 리소스 생성 전 배포를 허용하기 위해 optional. see docs/modules/worker.md | exports: AssetsBinding, WorldRange, WorldObject, WorldObjectBody, WorldBucket, ConfigKv, WorkerContext, Env
+- `apps/worker/src/env.ts` — Worker 바인딩 타입(Env). R2·KV는 선택 — 리소스 생성 전 배포를 허용하기 위해 optional. see docs/modules/worker.md | exports: AssetsBinding, WorldRange, WorldObject, WorldObjectBody, WorldBucket, ConfigKv, WorkerContext, LogDataset, Env
 - `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, withSecurityHeaders, json, storageUnconfigured
 - `apps/worker/src/index.ts` — Worker 엔트리(라우터): /api/*, /world/*는 Worker, 나머지는 Static Assets. see docs/13-deployment.md §4, docs/modules/worker.md | exports: handleRequest, default
 - `apps/worker/src/routes/current.ts` — `GET /api/world/current?fv=<n>`: KV `CURRENT_BUILD:v<n>` → 활성 buildId·baseUrl. see docs/13-deployment.md §4, §8 | exports: handleWorldCurrent
+- `apps/worker/src/routes/log.ts` — `POST /api/log`(M11-T03, 01 §9·13 §4): 게임 오류 보고 → Workers Analytics Engine(데이터셋 sanpo_errors). 무료 플랜 하루 10만 점. | exports: ErrorReport, scrub, parseReport, dataPoint, handleLog
 - `apps/worker/src/routes/weather.ts` — `/api/weather`: LIVE_WEATHER=true일 때만 Open-Meteo 현재 날씨(도쿄 중심) 프록시 → 10분 엣지 캐시. 꺼져 있으면 404(disabled). | exports: OPEN_METEO_URL, LiveWeather, toLiveWeather, handleWeather
 - `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답만 캐시. see docs/13-deployment.md §4 | exports: contentRange, handleWorldData
 - `apps/worker/src/validate.ts` — 요청 입력 검증: buildId 형식, /world 경로(경로 조작 차단), formatVersion 쿼리. see docs/13-deployment.md §4 | exports: BUILD_ID_RE, isValidBuildId, parseWorldPath, parseFormatVersion
@@ -423,13 +425,17 @@
 - `packages/ui/src/internal/theme.ts` — UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = Noto Sans JP/KR Variable(OFL — @font-face는 게임 main.ts가 fontsource 유니코드 범위 조각으로 자체 호스팅, docs/12 §1), 한국어 화면은 KR 먼저. 없으면 시스템 일·한 고딕. | exports: THEME_CSS, injectTheme
 
 ## scripts
+- `scripts/cf-usage.ts` — `node scripts/cf-usage.ts [--github-issue]`(M11-T06): Cloudflare 무료 한도 대비 사용량(Workers 요청·KV·R2·Analytics Engine).
 - `scripts/check-asset-size.ts` — 정적 에셋 한도 게이트(`pnpm check:assets [dir]`): 파일당 25 MiB, 파일 수 20,000(Workers Free). see docs/13-deployment.md §2
 - `scripts/check-records.ts` — PR 기록 누락 게이트(`pnpm check:records --base <ref>`): api.ts↔모듈 카드(실패), 코드↔PROGRESS.md(경고). see docs/16-context-protocol.md §3
 - `scripts/check-size.ts` — 크기 제한 게이트(`pnpm check:size`): TS 파일 400줄·함수 60줄, 모듈 카드 150줄, docs 400줄, CLAUDE.md 200줄. see docs/15-conventions.md §2
+- `scripts/errors.ts` — `pnpm errors [--env staging|production] [--hours 24]`(M11-T03): Analytics Engine 오류 보고 집계(종류·메시지·첫 프레임·빌드·백엔드별 건수, 1/샘플률 가중 추정).
+- `scripts/lib/cf-api.ts` — Cloudflare 읽기 전용 API 도우미(M11-T03 오류 조회·M11-T06 사용량 점검): 토큰 = 환경 변수 CLOUDFLARE_API_TOKEN(권한 Account Analytics: Read), | exports: token, accountId, aeSql, graphql
 - `scripts/lib/credits.ts` — 크레딧 자동 생성(M10-T06, 03 §8, ADR-0096): data/sources.lock.json 모든 원천 + content/ATTRIBUTION.json(에셋·텍스트) → credits.json, 게임 런타임 의존(전이 포함) package.json → oss-licenses.json. | exports: LockSource, AttributionEntry, CreditData, OssPackage, creditsData, ossPackages, ossNotices, buildCredits
 - `scripts/lib/files.ts` — 저장소 파일 워커(node_modules·dist·데이터 산출물 제외) + CI 출력 헬퍼. scripts/check-* 공용. | exports: listFiles, report
 - `scripts/lib/records-rules.ts` — PR 기록 누락 검사 규칙(순수 함수): api.ts ↔ 모듈 카드, 코드 ↔ PROGRESS.md. see docs/16-context-protocol.md §3–4 | exports: RecordsReport, isCodePath, checkRecords
 - `scripts/lib/size-rules.ts` — 파일·함수·문서 크기 제한 규칙(순수 함수). see docs/15-conventions.md §2, docs/14-testing-perf.md §5 | exports: SIZE_LIMITS, SizeViolation, countLines, isTestPath, bodyLines, findLongFunctions, checkSourceText, docLimitFor, checkDocText
+- `scripts/lib/usage.ts` — Cloudflare 무료 한도 대비 사용량 판정(M11-T06 일일 점검 — 순수 함수, 테스트). 한도 = Workers Free·R2 무료·KV 무료·Analytics Engine(2026-10 문서). | exports: FREE_LIMITS, Metric, r2Class, Usage, Row, evaluate, markdown
 
 ## tools/codemap
 - `tools/codemap/src/collect.ts` — CODEMAP 대상 소스 파일 수집(테스트·빌드 산출물 제외, 경로 정렬). see docs/16-context-protocol.md §5 | exports: CODEMAP_ROOTS, comparePaths, collectSourceFiles
