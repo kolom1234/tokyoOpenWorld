@@ -1,6 +1,6 @@
 // 타이틀(이어하기·새 산책(시작 지점)·설정·크레딧)과 일시정지(계속·지도·도감·포토·설정·타이틀로) 메뉴.
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ScreenId, UiBridge } from '../../api.ts';
 import { MenuButton, NavHint } from '../components/controls.tsx';
 import { pick, t } from '../i18n/t.ts';
@@ -23,7 +23,8 @@ export function MenuScreen(p: {
   children: ComponentChildren;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
+  // 레이아웃 효과 = 렌더 직후 동기(useEffect는 rAF 뒤라 렌더가 무거우면 포커스가 늦게 온다 — CI SwiftShader 실측).
+  useLayoutEffect(() => {
     if (ref.current) focusFirst(ref.current);
   }, [p.focusKey]);
   return (

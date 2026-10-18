@@ -255,6 +255,14 @@ function sanitize(c: V4): V4 {
 }
 
 /** 후처리에 얹는 날씨(M09-T01): 빗줄기 = TAAU 뒤 가산(얇고 빠른 줄기를 TAA 이력이 지우지 않게, weather/rain.ts 화면 공간 층). */
+/** TAAU 뒤 화면 공간 층: 빗줄기(M09-T01)·포토 DOF(M10-T05). */
+function screenOverlays(hdr: V4, o: PostOverlays, depth: TextureNode, camera: PerspectiveCamera): V4 {
+  let out = hdr;
+  if (o.rain) out = vec4(out.rgb.add(rainLayers(o.rain, depth, camera)), out.a);
+  if (o.dof) out = applyDof(out, depth, camera) as unknown as V4;
+  return out;
+}
+
 export interface PostOverlays {
   rain?: RainUniforms;
   /** 포토 모드 피사계 심도(M10-T05 — 있을 때만 그래프에 넣는다). */
@@ -318,8 +326,7 @@ export function createPostPipeline(
   }
   const temporal = fx.taa ? applyTaau(hdr, scenePass, camera, fx, sc, nodes) : null;
   if (temporal) hdr = temporal.hdr;
-  if (overlays.rain) hdr = vec4(hdr.rgb.add(rainLayers(overlays.rain, depth, camera)), hdr.a);
-  if (overlays.dof) hdr = applyDof(hdr, depth, camera) as unknown as V4;
+  hdr = screenOverlays(hdr, overlays, depth, camera);
   pipeline.outputColorTransform = false;
   let out: V4 = renderOutput(hdr);
   const lut = fx.lut ? createGradeLut() : undefined;

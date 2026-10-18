@@ -1,7 +1,7 @@
 // M10 UI 셸 e2e: 샌드박스(렌더 없음)에서 키보드·게임패드 메뉴 이동·언어 즉시 전환, world-mini 메뉴 모드에서 타이틀 → 새 산책 → HUD → 일시정지(게임 입력 끔).
 // 판정 = UI 상태(data-top·data-screen·포커스·입력 enabled)로 기다리고, 그림은 Node 쪽 PNG 분석(포커스 강조색·메뉴 어둡게). see docs/14-testing-perf.md §1
 import { expect, type Page, test } from '@playwright/test';
-import { STATE_TIMEOUT_MS, STATE_VIEW, waitFrames } from './game.ts';
+import { captureCanvas, STATE_TIMEOUT_MS, STATE_VIEW, waitFrames } from './game.ts';
 import { decodePng, type RgbaImage } from './png.ts';
 
 const focusedId = (page: Page) => page.evaluate(() => document.activeElement?.id ?? '');
@@ -18,11 +18,18 @@ function accentPixels(img: RgbaImage): number {
   return n;
 }
 
-function meanLuma(img: RgbaImage): number {
+/** 휘도 표준편차(배경이 단색이 아니라 실제 장면인가). */
+function lumaStd(img: RgbaImage): number {
   let s = 0;
-  for (let i = 0; i < img.data.length; i += 4)
-    s += 0.2126 * (img.data[i] as number) + 0.7152 * (img.data[i + 1] as number) + 0.0722 * (img.data[i + 2] as number);
-  return s / (img.data.length / 4);
+  let s2 = 0;
+  const n = img.data.length / 4;
+  for (let i = 0; i < img.data.length; i += 4) {
+    const y =
+      0.2126 * (img.data[i] as number) + 0.7152 * (img.data[i + 1] as number) + 0.0722 * (img.data[i + 2] as number);
+    s += y;
+    s2 += y * y;
+  }
+  return Math.sqrt(Math.max(0, s2 / n - (s / n) ** 2));
 }
 
 /** 가짜 게임패드(표준 매핑) — window.__pad.buttons[i] = true로 누른다. */
@@ -102,22 +109,25 @@ test('menu mode on world-mini: title → new walk → HUD → pause disables gam
           .input.enabled,
     );
   expect(await enabled()).toBe(false);
-  await expect.poll(() => focusedId(page)).toBe('title-new');
+  const poll = { timeout: STATE_TIMEOUT_MS };
+  await expect.poll(() => focusedId(page), poll).toBe('title-new');
   await page.keyboard.press('Enter');
-  await expect.poll(() => focusedId(page)).toBe('start-shibuya-scramble');
+  await expect.poll(() => focusedId(page), poll).toBe('start-shibuya-scramble');
   await page.keyboard.press('Enter');
   await expect(root).toHaveAttribute('data-top', 'hud', { timeout: STATE_TIMEOUT_MS });
   await expect(page.locator('#sanpo-help')).toBeVisible();
-  await expect.poll(enabled).toBe(true);
-  const hud = decodePng(await page.screenshot());
+  await expect.poll(enabled, poll).toBe(true);
+  // 다시 켠 첫 프레임은 입력을 비운다(메뉴를 닫은 키가 새지 않게) — 몇 프레임 지난 뒤 Esc.
+  await waitFrames(page, 3);
   await page.keyboard.press('Escape');
-  await expect(root).toHaveAttribute('data-top', 'pause');
-  await expect.poll(enabled).toBe(false);
-  const paused = decodePng(await page.screenshot());
-  expect(meanLuma(paused), 'pause menu dims the scene').toBeLessThan(meanLuma(hud) * 0.9);
+  await expect(root).toHaveAttribute('data-top', 'pause', poll);
+  await expect.poll(enabled, poll).toBe(false);
+  // 메뉴 뒤에서도 월드가 계속 그려진다(캔버스 = 실제 장면 — 휘도 편차, page.screenshot은 SwiftShader 부하에서 수십 초).
+  const paused = decodePng(await captureCanvas(page));
+  expect(lumaStd(paused), 'live world behind the pause menu').toBeGreaterThan(8);
   await page.keyboard.press('Escape');
   await expect(root).toHaveAttribute('data-top', 'hud');
-  await expect.poll(enabled).toBe(true);
+  await expect.poll(enabled, poll).toBe(true);
   // 메뉴를 닫은 Esc가 다음 프레임 게임 입력(일시정지)으로 새면 다시 열린다 — 몇 프레임 뒤에도 HUD.
   await waitFrames(page, 5);
   await expect(root).toHaveAttribute('data-top', 'hud');

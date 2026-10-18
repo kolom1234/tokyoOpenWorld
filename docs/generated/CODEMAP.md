@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 583개.
+> 파일 584개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -214,6 +214,7 @@
 - `packages/render/src/internal/post/config.ts` — 품질 티어 → 후처리 효과(07 §9 표의 AO/GI/SSR 행 + 07 §7 나머지). 티어 선택·동적 해상도는 M03-T08, 여기는 표와 덮어쓰기만. | exports: POST_TIERS, resolvePost
 - `packages/render/src/internal/post/exposure.ts` — 자동 노출(07 §7): 씬 패스 HDR(하늘·공중원근 전)을 32² 격자로 읽어 로그 휘도 평균 → EMA → 노출 배율. 전부 GPU(컴퓨트 1회/프레임, | exports: REF_LUM, ADAPT, AutoExposure, createAutoExposure
 - `packages/render/src/internal/post/lut.ts` — 3D LUT 그레이딩(07 §7, M03-T07): 톤매핑·sRGB 뒤에 적용. 외부 .cube 대신 결정론 절차 LUT(라이선스 무관) — 약한 S 커브·채도 +6 %, | exports: LUT_SIZE, grade, createGradeLut
+- `packages/render/src/internal/post/photo.ts` — 포토 모드 렌더(M10-T05, 07 §7): 노출 보정(EV — 유니폼, 재컴파일 없음)·피사계 심도(DepthOfFieldNode — 포토 모드에서만 후처리를 다시 짜서 넣는다, 평소 비용 0)·고해상도 캡처(픽셀 비율 × scale, 시간 누적이 수렴할 때까지 몇 프레임 → canvas.toBlob 같은 작업 안에서). | exports: exposureBiasU, dofFocusU, dofRangeU, dofBokehU, PhotoRenderState, applyDof, CaptureRequest, captureDpr
 - `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness]) | exports: PostPipeline, CompileTarget, createDirectRender, PostOverlays, createPostPipeline
 - `packages/render/src/internal/post/weather-sky.ts` — 날씨 하늘(M09-T02 — ADR-0077): 공중원근 뒤 하늘 화소에 2D 구름층(고도 1.6 km 평면, 값 잡음 fbm 4옥타브, 바람에 흐름) + 비·안개 연무(거리 지수). | exports: WeatherSkyUniforms, createWeatherSkyUniforms, updateWeatherSky, weatherSky, tslHash, cloudAlphaCpu
 - `packages/render/src/internal/props/blocks.ts` — 소품 블록·LOD 띠(M05-T03): 셀 소품을 64 m 블록으로 나눠 종류별 조각(셀 로컬 행렬·색)을 만들고, 블록 AABB 3D 거리로 LOD 띠(히스테리시스 2 m)를 정한다. | exports: FAR_M, DEFAULT_FAR_M, TypeSlice, Block, blocksOf, distanceTo, bandOf
