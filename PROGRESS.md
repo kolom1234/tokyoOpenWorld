@@ -1,15 +1,17 @@
 # PROGRESS
-Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10-ui`)
+Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10-ui`, PR #24 draft)
 
-## Current Milestone: M10 UI/UX (T01 → T02 → T03 → T04 → T05 → T06)
-## Current Task: M10 마무리 — MVP 재빌드·dev publish·staging·실제 GPU 확인(스크린샷 3개 언어·명소 20곳 봇·HUD 비용)
-- Done in this session (#25): M10-T01–T06(ADR-0091–0096) — 셸·HUD 지명·지도·도감·포토·세이브/크레딧.
-  로컬 테스트 빌드 `test-places-m10`(6셀 + map.pmtiles — MVP 재빌드 때 지움). OSM 필터에 natural=water 추가(재정규화 필요).
+## Current Milestone: M10 UI/UX (T01–T06 완료 — PR #24 검토 대기) → 다음 M11 Hardening & Beta
+## Current Task: 없음 — M10 PR #24 사람 확인·머지 대기
+- Done in this session (#25): M10-T01–T06(ADR-0091–0096) + MVP 재빌드 `20261018-89ce0aa-aa09c5ca` → dev 버킷 publish(506파일 394.7 MB, current) → staging Worker 배포(코드 506b321, 버전 b8646e66)
+  → 실제 GPU staging 확인: 3개 언어 × 7화면 스크린샷(docs/screenshots/M10), HUD 비용, PR "따라 해 보기" 전 과정 봇(타이틀 → 언어 → 빠른 이동 → 다케시타 거리 발견 → 포토 저장·도감 연결 → 내보내기/가져오기 → 새로 고침 이어서 걷기).
+  staging 확인 중 고친 것: 일시정지 → 포토 모드에서 포인터 잠금이 셔터 클릭을 가로챔(input `setPointerLockOnClick`), 세이브 가져오기 썸네일 `fetch(data:)`가 배포 CSP에 막힘(atob 디코드), 다케시타 거리 반경 60 → 80 m.
 - In progress: 없음.
-- Next step (정확히 한 걸음): 컨테이너 `normalize --layer osm` → `normalize --layer areas` → `build` → `hlod` → `map` → `validate`.
-- Blockers: 없음. ODPT 키 없음(M10 무관).
+- Next step (정확히 한 걸음): PR #24를 사람이 "따라 해 보기" 순서로 확인 → 머지 → `docs/roadmap/M11.md` 첫 태스크 블록 읽기.
+- Blockers: 없음. ODPT 키 없음(긴자선 GTFS — M10 무관).
 
 ## Recently Completed
+- M10 마무리(2026-10-18) — MVP 재빌드(L0 294 + HLOD 177 + 머티리얼 32층 + 오디오 22 + map.pmtiles 1.45 MB, validate 0) → dev publish → staging. 실제 GPU staging(1600×900): HUD 시그널 8.1 Hz ≤ 10 ✅, 미니맵 0.018 ms/프레임(0.13 ms/회) ≤ 1 ✅, rAF p50 16.67·p95 16.84 ms, GPU 23.6 W(상한 33.9 W). 명소 봇 20/20(로컬 재빌드). 따라 해 보기 봇 전 단계 ✅. dev gc 대상 0.
 - M10-T06 Save/load & credits(2026-10-18) — 세이브 v2(IndexedDB, v1 마이그레이션·내보내기/가져오기·자동 저장 60 s·모음 복원·이어하기), 크레딧 자동 생성(/credits.json = lock 전 원천 + ATTRIBUTION, /oss-licenses.json = 런타임 의존 24개). 수락: 구 스키마 마이그레이션 테스트 ✅, 크레딧 lock 전 소스 ✅(테스트). ADR-0096
 - M10-T05 Photo mode(2026-10-18) — render `setPhoto`(노출 유니폼·DOF 포토 때만 그래프 재구성)·`screenshot({scale})`, 게임 포토 진입(freecam·시계 정지·날씨/시간/FOV·오른쪽 클릭 초점), UI 패널·WB/비네팅/그레인 합성·PNG 다운로드·썸네일 → 도감. 수락(실제 GPU): 3840×2160 저장 ✅, GPU 메모리 +756 MB → +47 MB 회수 ✅. ⚠️ DOF 켤 때 셰이더 재컴파일 4.8 s. ADR-0095
 - M10-T04 POI discovery & log(2026-10-18) — 명소 20곳(content/poi — Wikidata CC0 이름·좌표, 설명 자체 작성), `poi-wikidata`·`poi-review`(60개 통과 — 위키백과 대조 46, 최장 공통 ja·ko 8자·en 34자), sim PoiService, 도감 화면·지도 회색 점·발견 명소 빠른 이동. ADR-0094
@@ -28,29 +30,6 @@ Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10
   카드 접촉·날개 합성음), 계단 입구 ↔ 승강장 F 페이드 이동(계단 기하 ⚠️ 후속), 역 차임·문 차임·LCD 알림. **발견·수정**: 하라주쿠 선로가 승강장 구간에서 ≈ 1 % 기울어 칸 바닥이 승강장보다
   최대 1.4 m 높았다 → 파이프라인 `rail-platform-align.ts`로 승강장 구간 레일 수평화(+ 120 m 복귀). **수락(실제 GPU 봇)**: 거리 → 개찰구 걷기 통과 → 계단 F → 승강장 → 열린 문으로 걸어 들어가 F 탑승 ✅
   (docs/screenshots/M07/T06/harajuku-route.jpg). 단위 7 + 레일 2. ADR-0081
-- M09-T05 Seasons & day types(2026-10-12) — 공휴일 표 `content/sim/holidays-jp.json`(법 규칙 생성 2026–2035, 대체·국민의 휴일) → 운행일 요일 유형, 계절 키프레임 `content/sim/season.json` → SeasonParams(매 프레임 — 날짜 변경 즉시),
-  토·휴일 군중 곡선 `diurnalHoliday`(메인이 비를 밀도 배율에 곱함), 군중 옷 계절 색조(피부 제외 색 판정 — 근사 ⚠️). **수락**: 단위 7(공휴일·경계·보간·주말 비·즉시 반영) + 실제 GPU 골든 `omotesando-zelkova-autumn`(docs/screenshots/M09/T05). ADR-0080
-- M09-T04 Audio core & ambience(2026-10-12) — Freesound **CC0 녹음 22개**(`content/audio/library.json`, sha256 lock, ATTRIBUTION `fs-*` 자동) → 파이프라인 `audio`(지속 음조 최소 구간 루프·등전력 이음·발소리 온셋 조각 → Opus,
-  5.04 MB → 빌드 `shared/audio/` R2 지연 로딩, 첫 로드 0 B), 셀 `audio.json`(32 m 격자 존 규칙·음향식 신호 발음체), `@sanpo/audio`(버스·압축·절차 잔향, 원반 표본 32점 존 가중, setTargetAtTime 램프만, HRTF 32 보이스,
-  가려짐 로우패스, 재질별 발소리, 합성 유도음·개찰구·차임·LCD·문·열차·엔진), 볼륨 `[`·`]`·`\` + `?vol=`·`?audio=0`. **수락**: 존 경계 가중 ≤ 0.1/m·20 m+ 교차·램프만(단위) ✅, ATTRIBUTION 누락 0(파이프라인 테스트) ✅,
-  실제 Chrome: 5개 존 판정·베드 지연 적재·아스팔트 발소리 7걸음/4 s·전방향 보행 유도음 6개, e2e 오디오 스모크(헤드리스 무음 허용). ADR-0079
-- M09-T03 Night lighting(2026-10-11) — lights.bin 규칙 배치(가로등·자판기·간판·상점 앞, 셀 ≤ 600) → ClusteredLighting 고정 풀 1024(티어별 켜는 수) + 발광 스프라이트(1.5 km),
-  창 점등 스케줄(클래스 × JST 시 × 요일)을 L0 파사드·**HLOD**(`_FACADE.flags` 격자 발광)·**랜드마크**(커튼월 칸)에 공통 적용, 상점·간판 1차 감쇠(벽 흰 얼룩 제거), 밤 반구 산란광(상공 페이드),
-  맑은 밤 지평선 광해, 밤 잎 투과광 끔(가로수가 빛나던 문제). LightProbeGrid 불채택. **수락(실제 GPU 2560×1440 High, rAF p50, 21–22 W·상한 34 W)**: 광원 처리 +1.6 ms ≤ 2 ✅
-  (클러스터 켬 27.21 / 켠 광원 0 27.29 / 클러스터 없음 25.59 ms — 비용 = 클러스터 고정분), 비 +0.2 ms ≤ 0.8 ✅(26.68 vs 26.47), 2D 구름 ≈ 0 ms ≤ 0.5 ✅(하늘 보기 21.07 vs 21.11),
-  재선택 메인 스레드 renderPrep 4 ms 초과 0(후보 재사용·300 m만 정렬·낮 생략). 골든뷰 docs/screenshots/M09/T03(21:00 맑음 `shibuya-scramble-night` 신규, `night-rain`). e2e 13/13. ADR-0078
-- M07 Trains T01–T05(session #20, 2026-10-05~06) — 선로(OSM 이름 + N02 대조, 좌측통행, 0.5 m 표본, 곡률 제한, 승강장 정차) → 시간표(JR 합성 근사 + 긴자선 GTFS 컴파일러·키 대기) → 열차(메인 스레드 순수 함수,
-  절차 가상 통근형 전동차 LOD 3 + 차내, 노선색 띠만) → 칸 물리(키네마틱 합성 바디·문·승강장·홈도어) → train 모드(서기·좌석·전면 전망·빨리감기·LCD 일영한·경계역 자동 하차). 수치는 위 수락 요약. ADR-0070–0074
-- M06 MVP 재빌드·staging(2026-10-05) — `20261004-ed3d33c-8de63322`: L0 294(243.5 s, 260.4 MB — nav 18.3 MB·횡단 1,500(신호 522), 차선 4,432 + 연결로 4,227(신호 1,101), 1.32 MB) + HLOD 177 + 머티리얼 32층, validate 0(도로 간극 최대 1.9 cm).
-  dev 버킷 publish(478파일 376.4 MB, current 설정) + staging Worker 배포(ed3d33c) + 스모크. 실제 GPU staging: 첫 표시 7.15–7.94 s·첫 로드 23.3–24.5 MB ✅, 스크램블 대기 무리·횡단·차량 정지 확인,
-  걷기 봇 3분 319 m 낙하·끼임 0(차 접촉 3프레임 5.8 cm — 측정 시간 기준 차 수준). production 배포·버킷 쓰기 없음.
-- M06-T07 Scramble showcase — 늦은 출발 금지(보행 적까지 남은 시간 `pedWalkLeftS`), 핫스팟 건너편 목적지 crossShare 0.6, 대기 깊이 4.5 m, Detour 분리 1.5, nav 횡단 끝 조각 병합(북쪽 3 → 1),
-  골든뷰 12:01:36(전방향 보행) + 군중 준비 조건. **수락(체크리스트 수치 테스트)**: 대기 무리 10곳 108명·깊이 p90 2.9–4.7 m, 대각 27 %, 출발 p50 0.87·p90 1.4 s, 점멸 출발 0,
-  차량 녹색 때 횡단 위 0–3명(전 14–26). 실제 GPU 주기 GIF docs/screenshots/M06/T07. ADR-0067 (2026-10-05)
-- M06-T06 Traffic visuals & kinematic sync — 가상 절차 차종 7종(render `vehicles/*`, LOD 35/110/520 m, 로고·번호판 없음, 클리어코트 도장·바퀴 회전·등화), core `VEHICLE_TYPES`·`KinematicFrame`,
-  physics `worker/kinematics.ts`(sim 직결 포트 → NPC_KINEMATIC 상자, 외삽 MoveKinematic). 실제 GPU에서 찾아 고침: TAA 모션 벡터(positionPrevious — 차량·군중), 횡단보도 위 정차(런타임 횡단 띠 앞 정지 —
-  world-mini 35 % → 0), 차 높이(차선 점 4 m — ±0.02 m), 차선 넘김 중심 튐. **수락**: 단위(실제 Jolt 최소 간격 0.136 m) + 걷기 봇 5분 × 2 관통 0·낙하 0·끼임 0 ✅.
-  물리 틱 ≤ 0.33 ms, sim p95 2.7–4.5 ms, GPU +1.3/−0.35 ms(거리)·+0.01 ms(상공). 나무·간판 TAA 모션 벡터는 별도 작업 칩. ADR-0066 (2026-10-05)
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
 - [bridges] **PLATEAU 상판 없는 OSM 단독 육교**(M05-T08 ⚠️): `highway=footway + bridge=yes`(+ 계단 두 끝) 중 PLATEAU brid가 없는 것 — OSM 선 + 폭 태그(없으면 2.5 m)로 절차 상판·난간·계단 메시 + JCOL 램프. 공원 비탈 계단(두 끝 지형)도 같은 경로.
@@ -60,6 +39,8 @@ Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
+- [ui] (M10 ⚠️) 시스템 글꼴(Noto 부분 집합 미탑재), 일시정지가 물리를 멈추지 않음(탈것은 입력 0으로 굴러 멈춤), DOF 켤 때 셰이더 재컴파일 4.8 s, 로마자 지명은 붙여 쓰기(Jingumae), 한국어 POI 이름 10개는 일본어 읽기에서 유도, 사진 200장 상한 미강제, 포토 모드에 LUT·모션 블러 없음, 번역끼리 베끼기는 검사로 못 잡음.
+- [stations] 하라주쿠 다케시타 출구 개찰구 앞 동쪽이 PLATEAU 건물 — 다케시타 거리는 광장 북쪽 끝(≈ 40 m)에서 동쪽으로 들어간다(실제와 비슷). 걷기 봇은 모서리·군중에 가끔 걸린다(옆걸음으로 해결).
 - [vehicles] (M08 ⚠️) 운전석 실내·계기판 모델 없음(HUD), 앞바퀴 조향·서스펜션 렌더 없음, 전조등 노면 조명 없음, 탄 사람 = 상자 마네킹(페달 다리·발 딛기 자세 없음), 자전거 독 설비 모델 없음. 붐비는 광장(하라주쿠 거점)에선 AEB가 자주 세운다(의도 — 보행자 우선). 교통 NPC 엔진음 없음.
 - [perf] staging 첫 표시(골든 부트) 6.75–7.64 s(ADR-0086 — 전 8.7–9.1 s) → M08 뒤 6.64–9.20 s(10회, 2026-10-18): 탈것 작업은 첫 표시 두 프레임 뒤로 뺐고(선컴파일 끝 → 첫 표시 1.2–1.3 s 그대로), 변동은 대기 선컴파일 4.9–6.4 s(전력 상태). 남은 임계 경로 = 선컴파일 체인(첫 조명 셰이더 ≈ 2.3 s + 대기 LUT, 끝 ≈ 5.7–6.5 s) → 첫 프레임 동기 생성(그림자 패스 변형·HLOD/원경 지형 ≈ 0.3–0.6 s). 대기 LUT는 첫 프레임 updateBefore와 prepare에서 두 번 계산(임계 경로 밖).
 - [audio] 녹음 베드는 자동 음조 검사만 거침 — 사람 귀 검수 필요(안내방송·음악 섞임 시 library.json 원천·구간 교체 후 `pnpm pipeline audio --update-lock`). 탈것 소리(ADR-0090)는 전부 합성 — 변속 음 자연스러움은 사람 귀 리뷰 대기.
