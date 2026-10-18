@@ -137,3 +137,18 @@ export function pct(a: readonly number[], q: number): number {
 }
 
 export const round = (v: number, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
+
+/** 최소제곱 기울기(단위/분). */
+export function slope(xs: readonly number[], ys: readonly number[]): number {
+  const n = xs.length;
+  if (n < 2) return 0;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < n; i++) {
+    num += ((xs[i] as number) - mx) * ((ys[i] as number) - my);
+    den += ((xs[i] as number) - mx) ** 2;
+  }
+  return den > 0 ? num / den : 0;
+}

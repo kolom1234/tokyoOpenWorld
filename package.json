@@ -20,6 +20,7 @@
     "stations": "playwright test -c tests/golden/playwright.config.ts stations.spec.ts route.spec.ts",
     "drive": "playwright test -c tests/golden/playwright.config.ts drive.spec.ts",
     "perf": "playwright test -c tests/golden/playwright.config.ts perf.spec.ts",
+    "soak": "playwright test -c tests/golden/playwright.config.ts soak.spec.ts",
     "build": "pnpm --filter @sanpo/game build && pnpm --filter @sanpo/worker build",
     "check:size": "node scripts/check-size.ts",
     "check:assets": "node scripts/check-asset-size.ts",
