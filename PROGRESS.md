@@ -1,5 +1,5 @@
 # PROGRESS
-Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-hardening`, PR #25 draft)
+Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-hardening`, PR #25 draft — T06 사용자 확인에서 멈춤)
 
 ## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅, T04 ✅, T01 ✅(⚠️ 기록), T02 ✅ → T06)
 ## Current Task: M11-T06 Production launch(준비 — production 쓰기는 사용자 확인 뒤)
@@ -20,21 +20,7 @@ Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-harde
 - M10-T06 Save/load & credits(2026-10-18) — 세이브 v2(IndexedDB, v1 마이그레이션·내보내기/가져오기·자동 저장 60 s·모음 복원·이어하기), 크레딧 자동 생성(/credits.json = lock 전 원천 + ATTRIBUTION, /oss-licenses.json = 런타임 의존 24개). 수락: 구 스키마 마이그레이션 테스트 ✅, 크레딧 lock 전 소스 ✅(테스트). ADR-0096
 - M10-T05 Photo mode(2026-10-18) — render `setPhoto`(노출 유니폼·DOF 포토 때만 그래프 재구성)·`screenshot({scale})`, 게임 포토 진입(freecam·시계 정지·날씨/시간/FOV·오른쪽 클릭 초점), UI 패널·WB/비네팅/그레인 합성·PNG 다운로드·썸네일 → 도감. 수락(실제 GPU): 3840×2160 저장 ✅, GPU 메모리 +756 MB → +47 MB 회수 ✅. ⚠️ DOF 켤 때 셰이더 재컴파일 4.8 s. ADR-0095
 - M10-T04 POI discovery & log(2026-10-18) — 명소 20곳(content/poi — Wikidata CC0 이름·좌표, 설명 자체 작성), `poi-wikidata`·`poi-review`(60개 통과 — 위키백과 대조 46, 최장 공통 ja·ko 8자·en 34자), sim PoiService, 도감 화면·지도 회색 점·발견 명소 빠른 이동. ADR-0094
-- M10-T03 Map & minimap(2026-10-18) — PMTiles v3(MVT z13–16, MVP ≈ 1.44 MB·타일 223), 게임 map-source(처음 필요할 때 전체 받기), UI 래스터 캐시·미니맵(원형·북쪽 고정/회전)·전체 지도(팬·줌·레이어·빠른 이동 7곳, 발견한 곳만). 수락(실제 GPU 21–25 W): 미니맵 0.016 ms/프레임 ✅, 전체 지도 p50 60 fps·p95 16.8 ms ✅. ADR-0093
-- M10-T02 HUD & place names(2026-10-18) — `normalize --layer areas`(shp·dbf 자체 리더, 구 6곳 133 町丁, 읽기 누락 0) → 셀 meta placeNames, 게임 shell/places(점-폴리곤), UI hud-info. 수락(실제 GPU): 경계 갱신 32–77 ms ≤ 0.5 s ✅, HUD 시그널 ≤ 10 Hz(걷기 3.2 Hz) ✅, 22 W 상한. ADR-0092
-- M10-T01 UI shell(2026-10-18, PR 진행 중) — @sanpo/ui(Preact 10.29.8·signals 2.11.2): 화면 스택·i18n 3개 언어·공간 내비게이션(화살표·D-pad·A/B/Start/LB·RB), 설정 5탭, input `setBindings·setAxisScale·setEnabled`, traversal `configure()·motionEffects`,
-  게임 shell/(bridge·commands·hud-state·settings·pause·fast-travel·loading·credits·options). 수락: 3개 언어 전환(단위 i18n 동등성 + e2e 즉시 전환) ✅, 키보드·게임패드 내비게이션(e2e 가짜 패드) ✅. ADR-0091
-- M08 Vehicles T01–T04(2026-10-17~18, PR #23) — 세단(Jolt WheeledVehicleController·ABS·TCS·마찰 콜백)·drive 모드(추적·우핸들 운전석)·카셰어 SANPO Car(가상), AEB(보행자 예측·교통 차)·보도 서행·교통/군중이 플레이어 탈것 인지·신호·역주행·제한속도 HUD 안내(벌점 없음),
-  자전거(MotorcycleController·저속 보조)·cycle 모드·공유자전거 SANPO Cycle, 거점 = OSM car_sharing·노면 주차장·bicycle_rental(발자국 비어 있고 평평한 자리), 탈것 소리 전부 합성(엔진 AudioWorklet·타이어·젖은 노면·끽·바람·체인·프리휠·벨).
-  **수락(staging 실제 GPU)**: 0→100 12.47 s, 60 km/h 제동 18.38 m·젖음 27.18 m, 군중 접촉 0(최소 0.34 m), 자전거 23.41 km/h·1 m/s 넘어짐 0, 오디오 결손 0, 22–23 W. 첫 로드 26.45 MB, 첫 표시 6.64–9.20 s ⚠️(선컴파일 체인 변동).
-  실측 수정: 키보드 F 탑승 즉시 하차(armed), 세워 둔 탈것 굴러감(제동), 거점이 건물 벽·단 가장자리(발자국·평탄 검사), 탈것 선컴파일이 첫 표시와 경쟁(두 프레임 뒤로), 첫 워클릿 노드 끊김(unlock 때 적재). 스폰 프리셋 carshare-shibuya·bike-dock-harajuku·drive-course·bike-course. ADR-0086–0090
-- 사람 확인 후속(2026-10-13~14, PR #22) — ① 원인: 하라주쿠 외회가 옛 승강장에 정차해 섬식 승강장 서쪽 가장자리에 홈도어 없음 + 도착점이 그 가장자리 1.2 m + 물리에 승강장 윗면만 → 한 걸음에 선로 구덩이(1.5 m)·승강장 밑.
-  `preferPlatforms`·도착 = 승강장 윗면 메시 + 여유 1.2 m·구덩이 0.4 s 구조·승강장 옆면 물리·출구 4역·validate stations·`pnpm stations`(ADR-0082). ② freecam G(지면·승강장, 차양 통과, 선로·차도·건물 안·물체·경사 거부 + 이유 HUD)·조작 도움말 H(ADR-0083).
-  ③ 가상 안내판(출구당 4장)·근접 안내·`?spawn=` 8개·walk 착지 중 플레이어 = 도착점(ADR-0084). ④ 문 앞 1.3 m 탑승·"F 열차 타기"·route 봇. ⑤ precompileLate·exclusive 첫 표시까지·warmStaged·e2e STATE_VIEW 640×360(ADR-0085).
-- M07-T06 Stations: gates, interactables, audio(2026-10-12) — `content/stations/access.json`(하라주쿠 다케시타 출구) → 실물 개찰구 4통로(캐비닛·울타리 물리, 0.75 m 통로, 플랩 애니메이션,
-  카드 접촉·날개 합성음), 계단 입구 ↔ 승강장 F 페이드 이동(계단 기하 ⚠️ 후속), 역 차임·문 차임·LCD 알림. **발견·수정**: 하라주쿠 선로가 승강장 구간에서 ≈ 1 % 기울어 칸 바닥이 승강장보다
-  최대 1.4 m 높았다 → 파이프라인 `rail-platform-align.ts`로 승강장 구간 레일 수평화(+ 120 m 복귀). **수락(실제 GPU 봇)**: 거리 → 개찰구 걷기 통과 → 계단 F → 승강장 → 열린 문으로 걸어 들어가 F 탑승 ✅
-  (docs/screenshots/M07/T06/harajuku-route.jpg). 단위 7 + 레일 2. ADR-0081
+
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
 - [bridges] **PLATEAU 상판 없는 OSM 단독 육교**(M05-T08 ⚠️): `highway=footway + bridge=yes`(+ 계단 두 끝) 중 PLATEAU brid가 없는 것 — OSM 선 + 폭 태그(없으면 2.5 m)로 절차 상판·난간·계단 메시 + JCOL 램프. 공원 비탈 계단(두 끝 지형)도 같은 경로.
