@@ -9,7 +9,7 @@ import {
   type SettingsModel,
   type Signal,
 } from '@sanpo/ui';
-import { createStore, del, get, set, type UseStore } from 'idb-keyval';
+import { createStore, del, get, keys, set, type UseStore } from 'idb-keyval';
 import type { WorldView } from '../world-view.ts';
 import type { PhotoControl } from './photo.ts';
 import type { DiscoveryState } from './pois.ts';
@@ -86,6 +86,10 @@ export function createSaveStore(store: UseStore = createStore('tokyo-sanpo', 'kv
       await set(SAVE_KEY, s, store);
       for (const k of OLD_KEYS) await del(k, store);
       if (thumbs) for (const [id, b] of thumbs) await set(`photo/${id}`, b, store);
+      // 사진 상한(200장)으로 목록에서 빠진 썸네일 정리.
+      const keep = new Set(s.photos.map((ph) => `photo/${ph.id}`));
+      for (const k of await keys(store))
+        if (typeof k === 'string' && k.startsWith('photo/') && !keep.has(k)) await del(k, store);
     },
     async thumbs(ids) {
       const out = new Map<string, Blob>();

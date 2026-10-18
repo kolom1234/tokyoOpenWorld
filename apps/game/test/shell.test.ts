@@ -173,6 +173,25 @@ describe('photo mode (M10-T05)', () => {
   });
 });
 
+describe('photo cap (12 §5 — 200)', () => {
+  it('keeps the newest 200 photos and detaches evicted ones from the guide', async () => {
+    const { capPhotos, MAX_PHOTOS } = await import('../src/shell/photo.ts');
+    expect(MAX_PHOTOS).toBe(200);
+    const list = Array.from({ length: 205 }, (_, i) => ({
+      id: `p${i}`,
+      thumb: new Blob([]),
+      url: `blob:${i}`,
+      atMs: i,
+      poiId: null,
+    }));
+    const evicted: string[] = [];
+    capPhotos(list, MAX_PHOTOS, (id) => evicted.push(id));
+    expect(list).toHaveLength(200);
+    expect(list[0]?.id).toBe('p5');
+    expect(evicted).toEqual(['p0', 'p1', 'p2', 'p3', 'p4']);
+  });
+});
+
 describe('save (M10-T06)', () => {
   it('dataUrlToBlob decodes base64 without fetch (deploy CSP connect-src blocks data:)', async () => {
     const { dataUrlToBlob } = await import('../src/shell/save.ts');
