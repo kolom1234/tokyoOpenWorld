@@ -294,6 +294,11 @@ export interface PhysicsService extends SystemProvider {
   setTrainCars(data: Float64Array): void;
   /** 이름 붙인 정적 묶음(M07-T04 — 승강장 바닥 메시·홈도어 상자): 같은 이름 = 교체, null = 제거. */
   setStaticGroup(name: string, group: StaticGroupDesc | null): void;
+  /**
+   * 일시정지(M10 잔여 — 메뉴): 켜면 물리 시각이 멈춘다(스텝 0 — 차·자전거·캐릭터 제자리, 명령은 계속 적용). 끄면 멈춘 길이를 건너뛰지 않고 이어 간다.
+   * 레이·셀 적재는 그대로 동작.
+   */
+  setPaused(on: boolean): void;
   stats(): PhysicsStats;
   dispose(): void;
 }
