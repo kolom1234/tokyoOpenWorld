@@ -168,7 +168,7 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
     : precompileBase(renderer, graph.scene, view.camera, ctx.materials).catch((e: unknown) =>
         log.warn('base precompile', e),
       );
-  await ctx.atmosphere.prepare(yieldFrame, () => ctx.compileScope.frame(() => ctx.post.warmup()));
+  const steps = await ctx.atmosphere.prepare(yieldFrame, () => ctx.compileScope.frame(() => ctx.post.warmup()));
   await base;
   onProgress?.({ stage: 'atmosphere', done: 1, total: 1 });
   await yieldFrame();
@@ -181,7 +181,9 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
   ctx.avatar.group.visible = false;
   onProgress?.({ stage: 'avatar', done: 1, total: 1 });
   const ms = (a: number, b: number) => Math.round(b - a);
-  log.info(`precompile atmosphere ${ms(t0, t2)} ms, avatar ${ms(t2, performance.now())} ms`);
+  log.info(
+    `precompile atmosphere ${ms(t0, t2)} ms (compile ${steps.compileMs}, first render ${steps.renderMs}, LUT ${steps.lutMs}), avatar ${ms(t2, performance.now())} ms`,
+  );
 }
 
 /** 첫 표시 뒤(ADR-0085): 머티리얼 묶음(소품 풀 priming 포함). 소프트웨어 래스터는 생략. */

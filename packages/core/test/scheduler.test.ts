@@ -150,4 +150,18 @@ describe('Scheduler', () => {
     expect(warns).toHaveLength(1);
     expect(String(warns[0]?.args[0])).toMatch(/slow/);
   });
+  it('accumulates per-system timings and resets on read (M11-T01)', () => {
+    const { s, advance } = setup();
+    const calls: string[] = [];
+    s.add(sys('slow', 10, calls, { update: () => advance(3) }));
+    s.add(sys('fast', 20, calls, { update: () => advance(1) }));
+    s.tick(0);
+    s.tick(16);
+    const t = s.timings(true);
+    expect(t).toEqual([
+      { id: 'slow', totalMs: 6, maxMs: 3, calls: 2 },
+      { id: 'fast', totalMs: 2, maxMs: 1, calls: 2 },
+    ]);
+    expect(s.timings().every((x) => x.calls === 0 && x.totalMs === 0)).toBe(true);
+  });
 });

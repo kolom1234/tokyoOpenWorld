@@ -24,6 +24,7 @@
 | 첫 플레이 가능 | ≤ 12 s (100 Mbps, 캐시 없음) | 부팅 타임라인 |
 | 스트리밍 정지 | 0회 (도보·차량 60 km/h) | "발밑 셀 미적재" 이벤트 수 |
 - 결과는 `perf-results/<date>.json`(원본, AI 읽기 금지) + `docs/generated/perf-latest.md`(자동 요약: 지표·예산 대비·초과 항목, ≤ 60줄). 예산 초과 시 원인 태스크 생성.
+- 구현(M11-T01, ADR-0100): `pnpm perf`(tests/golden/perf.spec.ts — 실제 GPU Chrome, CI 제외, `?perf=1`·vsync 해제·High·동적 해상도 끔). 주행 경로는 메이지도리 대신 스크램블 출발 차선 자동 주행. 기준 GPU = RTX 3050 4GB Laptop 한 대(2종 판정 ⚠️). 메인 스레드 = rAF 콜백 합(GPU 역압 대기 포함) + 스케줄러 시스템별(`Scheduler.timings`).
 
 ## 3. 골든뷰 북마크 (`tests/golden/views.json`)
 | ID | 위치 | 시각/날씨 | 목적 |

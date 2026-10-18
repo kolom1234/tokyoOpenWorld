@@ -6,7 +6,7 @@ export function menusEnabled(flags: BootFlags, q: URLSearchParams): boolean {
   const t = q.get('title');
   if (t === '1') return true;
   if (t === '0') return false;
-  return !flags.debug && !flags.view && !flags.spawn && !flags.mode && !flags.probe;
+  return !flags.debug && !flags.perf && !flags.view && !flags.spawn && !flags.mode && !flags.probe;
 }
 
 export function storageOf(): Storage | undefined {

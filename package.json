@@ -19,6 +19,7 @@
     "golden": "playwright test -c tests/golden/playwright.config.ts golden.spec.ts",
     "stations": "playwright test -c tests/golden/playwright.config.ts stations.spec.ts route.spec.ts",
     "drive": "playwright test -c tests/golden/playwright.config.ts drive.spec.ts",
+    "perf": "playwright test -c tests/golden/playwright.config.ts perf.spec.ts",
     "build": "pnpm --filter @sanpo/game build && pnpm --filter @sanpo/worker build",
     "check:size": "node scripts/check-size.ts",
     "check:assets": "node scripts/check-asset-size.ts",

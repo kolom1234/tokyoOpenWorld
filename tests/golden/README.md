@@ -31,3 +31,7 @@ GOLDEN_BASE_URL=https://tokyo-sanpo-staging.kolom1357.workers.dev GOLDEN_WORLD=a
 `pnpm drive` = `drive.spec.ts`: 스폰 프리셋 `drive-course`(평지 직선 311 m — lanes.bin 직선 차선 연쇄 + 1 m 간격 아래 레이로 턱 없음 확인), `traffic=0&crowd=0&debug=1`.
 세워 둔 카셰어 세단에 태워(`traversal.request('drive')`) 실제 키(W/S)로 0→100 km/h 시간, 60 km/h 풀 브레이크 거리(건조·`&wet=1`)를 rAF 표본으로 잰다.
 GPU 전력은 nvidia-smi 1 s 표본. 결과 `test-results/golden/drive/metrics.json`, stdout `[drive] …` 줄. dev 서버가 떠 있으면 `GOLDEN_BASE_URL=http://localhost:5173 pnpm drive`.
+
+## 성능 (M11-T01, ADR-0100)
+`pnpm perf` = `perf.spec.ts`: 2560×1440 High(동적 해상도 끔, vsync 해제) — ① 스크램블 도보 ② 시부야 자동 주행(교통·군중) ③ 신주쿠 상공 비행 + 포토 DOF 전환 + 부팅.
+결과 `perf-results/<날짜>.json`(원본) + `docs/generated/perf-latest.md`(예산 표). 환경 변수 `PERF_VIEWPORT=1920x1080`·`PERF_QUALITY=medium`·`PERF_SECONDS=40`·`PERF_GPU_TIMING=1`(패스 비중)·`PERF_QUERY`.

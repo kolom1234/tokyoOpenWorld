@@ -24,7 +24,8 @@ export interface FrameContext { frameIndex: number; dtReal: number; dtGame: numb
 export interface CameraState { posWF: Vec3d; quat: Quat; fovDeg: number; near: number }
 export interface AvatarState { visible; posWF(발); yawRad; speedMs; grounded; opacity; groundMaterial? /* M09-T04 JCOL_MATERIAL — 발소리 */ }   // traversal → render.setAvatar(M04-T05, ADR-0045)
 export interface PlayerState { posWF: Vec3d; velWF: Vec3; yawRad: number; mode: string }
-export interface Scheduler { add(p: GameSystem | SystemProvider): void; remove(id: string): void; setFrameSource(src: FrameSource): void; init(): Promise<void>; tick(nowMs: number): void }
+export interface Scheduler { add(p: GameSystem | SystemProvider): void; remove(id: string): void; setFrameSource(src: FrameSource): void; init(): Promise<void>; tick(nowMs: number): void; timings(reset?): SystemTiming[] }
+export interface SystemTiming { id; totalMs; maxMs; calls }   // M11-T01: 시스템별 update 누적(측정 — `pnpm perf`, ?perf=1 핸들 `__SANPO_DEBUG__.scheduler`)
 export interface SchedulerDeps { log: Logger; clock: () => number }   // clock: 시스템별 update 시간 측정(ms)
 export interface Rng { next(): number; int(min: number, maxExcl: number): number; pick<T>(a: readonly T[]): T }
 export type DeepPartial<T>;                                            // 배열=통째 교체, undefined=미지정

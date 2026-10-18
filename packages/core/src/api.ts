@@ -126,7 +126,10 @@ export interface Scheduler {
   init(): Promise<void>;
   /** nowMs: 단조 증가 시각(ms, 예: performance.now()). 첫 tick의 dtReal은 0. */
   tick(nowMs: number): void;
+  /** 시스템별 update 누적 시간(M11-T01 측정 — `pnpm perf`). reset = 읽은 뒤 0으로. */
+  timings(reset?: boolean): SystemTiming[];
 }
+export type SystemTiming = { id: string; totalMs: number; maxMs: number; calls: number };
 export interface SchedulerDeps {
   log: Logger;
   /** 단조 시계(ms). tick 인자가 없을 때의 기준이며 시스템 update 시간 측정에 사용. */
