@@ -89,12 +89,11 @@ export interface RenderContext {
   readonly shadows: SunShadows | undefined;
   /** 티어 변경 때 교체된다(quality.ts). */
   post: PostPipeline;
-  /** 포토 모드(M10-T05): DOF를 그래프에 넣을지 — 바뀌면 rebuildPost. */
+  /** 포토 모드(M10-T05): DOF 출력을 쓸지 — post.setDof(티어 변경으로 새 post를 만들면 다시 건다). */
   readonly photo: PhotoRenderState;
   /** 고해상도 캡처 요청(프레임 시스템이 처리). */
   capture: CaptureRequest | null;
   /** 지금 티어·렌더 스케일 그대로 후처리 그래프를 다시 만든다(포토 DOF 켜고 끄기). */
-  rebuildPost(): void;
   /** 선컴파일 = 씬 패스 대상(ADR-0086). 프레임 렌더는 `compileScope.frame`으로 감싼다. */
   readonly compileScope: CompileScope;
   readonly quality: QualityManager;
@@ -274,8 +273,7 @@ function weatherState(): Pick<RenderContext, 'rain' | 'sky' | 'weather'> {
 }
 
 /** 품질·선컴파일 범위는 ctx를 받아 만든다(뒤에서 채움). */
-type ContextUnderConstruction = Omit<RenderContext, 'quality' | 'compileScope' | 'rebuildPost'> & {
-  rebuildPost?: () => void;
+type ContextUnderConstruction = Omit<RenderContext, 'quality' | 'compileScope'> & {
   quality?: QualityManager;
   compileScope?: CompileScope;
 };
@@ -291,16 +289,11 @@ function finishContext(
   const { renderer, cfg } = ctx;
   // 선컴파일 = 씬 패스 대상(ADR-0086 — 캔버스 변형은 첫 프레임에 다시 동기 컴파일), 티어 변경 뒤에도 지금 post.
   ctx.compileScope = routeCompileToScenePass(renderer, () => ctx.post.compileTarget());
-  ctx.rebuildPost = () => {
-    const scale = ctx.quality?.stats().renderScale ?? 1;
-    ctx.post.dispose();
-    ctx.post = makePost(ctx.quality?.tier ?? cfg.quality);
-    ctx.post.setRenderScale(scale);
-  };
   ctx.quality = attachQuality(ctx, deps, hw, (tier) => {
     ctx.shadows?.setTier(tier);
     ctx.post.dispose();
     ctx.post = makePost(tier);
+    ctx.post.setDof(ctx.photo.dof);
     return postFor(tier).renderScale;
   });
   // WebGL2 상한 등으로 관리자가 티어를 낮췄으면 그림자도 맞춘다(첫 빌드 전 — 재컴파일 없음).
@@ -332,10 +325,7 @@ export async function createRenderContext(deps: RenderDeps): Promise<RenderConte
   const photo: PhotoRenderState = { dof: false };
   const makePost = (tier: QualityTier): PostPipeline =>
     post
-      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, {
-          ...overlays,
-          ...(photo.dof ? { dof: true } : {}),
-        })
+      ? createPostPipeline(renderer, graph.scene, view.camera, postFor(tier), cfg.debugGpuLoad, overlays)
       : createDirectRender(renderer, graph.scene, view.camera);
   const ctx: ContextUnderConstruction = {
     cfg,

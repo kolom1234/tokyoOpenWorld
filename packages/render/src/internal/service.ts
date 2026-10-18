@@ -67,7 +67,7 @@ function statsOf(ctx: RenderContext): RenderStats {
   };
 }
 
-/** 포토 모드(M10-T05): 노출 보정·DOF(그래프 재구성)·고해상도 캡처. */
+/** 포토 모드(M10-T05): 노출 보정·DOF(출력 노드 교체 — 재구성 없음)·고해상도 캡처. */
 function photoApi(ctx: RenderContext): Pick<RenderService, 'setPhoto' | 'screenshot'> {
   return {
     setPhoto(p) {
@@ -80,7 +80,7 @@ function photoApi(ctx: RenderContext): Pick<RenderService, 'setPhoto' | 'screens
       const want = !!p?.dof && !ctx.software;
       if (want === ctx.photo.dof) return;
       ctx.photo.dof = want;
-      ctx.rebuildPost();
+      ctx.post.setDof(want);
     },
     screenshot(o) {
       if (ctx.capture) return Promise.reject(new Error('screenshot: already capturing'));
