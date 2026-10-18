@@ -124,6 +124,7 @@ buildL1(key, { l0Buildings, dem1m, farDem, far, overrides? }, ratio);   // overr
 
 ## Publish (M02-T06, ADR-0026)
 - `node tools/pipeline/src/cli.ts publish --build-id <id> --env dev|prod [--set-current] [--verify-url https://<worker>/world] [--uploader s3|api]` — 호스트에서(CLOUDFLARE_API_TOKEN, 선택 R2_ACCESS_KEY_ID/SECRET).
+- `node tools/pipeline/src/cli.ts current --env dev|prod [--build-id <id>]`(M11-T06, `cli-release.ts`·`stages/publish/current.ts`) — 활성 빌드 포인터 보기/바꾸기(롤백 = 직전 buildId, 퍼블리시된 빌드만, 재업로드 없음). staging 리허설 반영 4–13 s.
 - `… publish --verify-only --verify-url …`(Worker HEAD 전수 검증, `Accept-Encoding: identity`), `… gc --env dev [--apply]`.
 
 ## Invariants

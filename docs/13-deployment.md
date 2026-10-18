@@ -99,3 +99,34 @@
 - 이전(2026-10-12, M09 T01–T05 + M07-T06): staging = `20261011-a095dfd-cba213ec`(MVP L0 294 + HLOD 177 + 머티리얼 + **shared/audio 22파일 5.04 MB**(Opus, `audio/ogg`) + lights.bin·audio.json, 505파일 392.9 MB, dev 버킷), 코드 d942e68(Worker 버전 80c70e87) — 실제 GPU 첫 로드 26.4 MB·첫 표시 10.2–11.9 s ⚠️. 직전 `20261011-a037427-aefbe9ff`(T03 중간 배포). dev 버킷 gc(7일 규칙) 2026-10-12 — 2026-10-04 이전 13개 빌드 삭제(REST 429 → 5분 간격 재실행).
 - 이전(2026-10-05, M06-T03–T07): staging = `20261004-ed3d33c-8de63322`(MVP L0 294 + HLOD 177 + 머티리얼, nav.bin·lanes.bin(점 4 m)·신호 코드 v2 포함, 478파일 376.4 MB, dev 버킷), 코드 ed3d33c(Worker 버전 a942c765) — 실제 GPU 첫 표시 7.15–7.94 s·첫 로드 23.3–24.5 MB. 직전 `20261004-f0ae5ab-8de63322`(M06 사전). 옛 빌드 gc는 2026-10-06 이후(7일 규칙).
 - 이전(2026-09-30, M04-T03): staging = `20260929-99bffa8-ec1646fc`(MVP L0 294 + HLOD + 머티리얼, collision.bin 포함, 478파일 260.5 MB, dev 버킷), 코드 f031f80(walk). 이전 `20260929-b84bfa1-ec1646fc`·`20260929-c9a28d3-ec1646fc`(M03-T06). 이전 `20260928-b2d1e36-7fb58d45`(M02-T07). production 데이터 없음(첫 prod 퍼블리시 전까지 `/api/world/current` = no_build → 스모크는 경고만).
+
+## 9. 공개(production) 절차·롤백 (M11-T06)
+**전제(사람)**: ① 국토지리원 측량법 제30조 사용 승인 → 승인번호를 ATTRIBUTION `gsi-dem` 표기·화면 표기에 반영(03 §6.1) ② PR 병합 ③ 각 production 쓰기 직전 사용자 확인.
+요금제: Cloudflare 무료로 시작(사용자 결정 2026-10-19) — 정적 에셋 요청은 무료·무제한, Worker는 `/world/*`·`/api/*`만(하루 100,000 요청), 일일 점검 `usage.yml`(§6).
+
+| 단계 | 명령/위치 | 확인 |
+|---|---|---|
+| 1. production 버킷 publish(직전 빌드 = 롤백 대상 포함 2개) | `pnpm pipeline publish --build-id <이전> --env prod` → `pnpm pipeline publish --build-id <새> --env prod` | 파일 수·MB 로그, KV `BUILDS:v1` 2개 |
+| 2. KV 포인터 | `pnpm pipeline current --env prod --build-id <새>` | `pnpm pipeline current --env prod`(보기) |
+| 3. 코드 배포 | main 병합 → GitHub Actions `Deploy`(staging 자동 → Environment `production` 승인 = 사용자 클릭) | `/api/health` 스모크(워크플로) |
+| 4. 도메인 | `apps/worker/wrangler.jsonc` top-level `"routes": [{ "pattern": "earthaimap.com", "custom_domain": true }]` → 배포가 DNS·인증서 생성. 토큰 권한이 모자라면 대시보드: Workers & Pages → tokyo-sanpo → Settings → Domains & Routes → Add → Custom domain → `earthaimap.com` | `https://earthaimap.com/api/health` |
+| 5. 롤백 리허설 | `pnpm pipeline current --env prod --build-id <이전>` → `/api/world/current` 반영 확인 → `<새>`로 복귀 | 반영 시간(staging 실측 4–13 s, 브라우저 캐시 ≤ 60 s) |
+| 6. 공개 URL 스모크 | `GOLDEN_BASE_URL=https://earthaimap.com GOLDEN_WORLD=api GOLDEN_BOOT=1 pnpm golden -g "boot transfer"` + 아래 체크리스트 | 첫 표시·전송 MB·오류 0 |
+
+**롤백(문제가 생겼을 때)**
+- 데이터(월드)만: `pnpm pipeline current --env prod --build-id <직전 buildId>` — 1분 안(KV 전파 수 초 + 브라우저 캐시 ≤ 60 s). 목록은 `pnpm pipeline current --env prod`.
+- 코드(Worker): `cd apps/worker && npx wrangler deployments list` → `npx wrangler rollback <version-id>`(즉시), 또는 GitHub Actions에서 직전 커밋의 Deploy 다시 실행. 대시보드: Workers & Pages → tokyo-sanpo → Deployments → 이전 버전 Rollback.
+- 도메인을 잠시 내리기: 대시보드 Domains & Routes에서 `earthaimap.com` 제거(workers.dev 주소는 유지).
+
+**공개 직후 사람 확인 체크리스트(공개 URL)**
+1. 첫 화면: 타이틀이 뜨고 "새 산책"·"이어하기"·"설정"·"크레딧"이 눌린다(한국어/일본어/영어 전환).
+2. 걷기: 새 산책 → 시부야 스크램블에서 WASD·Shift·X, V 시점 전환, 마우스 시선(클릭 = 포인터 잠금, Esc = 일시정지 — 차·사람이 멈춘다).
+3. 전철: 빠른 이동(M → 하라주쿠역) → 개찰구 통과 → 계단 F → 승강장 → 열차 문 앞 F 탑승 → T 빨리감기 → 신주쿠 하차.
+4. 운전: R(차 부르기) → F 탑승 → W/S/A/D·L 전조등 → 정지 후 F 하차. B(자전거)도 한 번.
+5. 지도: M → 확대·이동·레이어, 발견한 곳 빠른 이동. 화면 아래 `© OpenStreetMap contributors` 표기.
+6. 포토: P → 노출·조리개(첫 DOF는 2–5 s 멈출 수 있음 ⚠️) → 셔터 → PNG 저장·도감에 사진.
+7. 세이브: 몇 분 걸은 뒤 새로 고침 → "이어하기"가 같은 자리, 설정 → 세이브 내보내기/가져오기.
+8. 소리: 첫 클릭 뒤 거리 소리·발소리·역 차임, 설정 볼륨·음소거, 설정 "효과음 자막".
+9. 크레딧: 데이터 출처(PLATEAU·국토지리원(승인번호)·OSM·e-Stat·긴자선 미수록), 맨 위 ODbL 링크(README가 열림), OSS 라이선스 전문·제3자 고지 링크.
+10. 오류: 이상하면 `pnpm errors --env production --hours 1`(오류 보고 1 % 샘플).
+
