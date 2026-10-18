@@ -8,6 +8,7 @@ import type { PhysicsService } from '@sanpo/physics';
 import type { SimService } from '@sanpo/sim';
 import type { RailNetwork } from '@sanpo/tile-format';
 import type { TraversalService } from '@sanpo/traversal';
+import type { Msg } from '@sanpo/ui';
 import { FADE_MS, fade, notice, prompt } from './hud.ts';
 import type { AccessFile, ExitSpec } from './layout.ts';
 import { forwardOf, rad } from './layout.ts';
@@ -145,22 +146,22 @@ export class StairsRuntime {
   private stairs(p: Vec3d): void {
     const ps = passageAt(this.d.access, p);
     if (!ps || this.moving) {
-      prompt(this.d.doc, !this.moving && this.d.traversal.hud.boardable ? 'F  열차 타기' : null);
+      prompt(this.d.doc, !this.moving && this.d.traversal.hud.boardable ? { key: 'hud.prompt.boardTrain' } : null);
       return;
     }
     const n = ps.exit.name;
     const tops = this.tops();
     if (ps.dir === 'down' && !tops) {
-      prompt(this.d.doc, `승강장 준비 중… (${n.ja})`);
+      prompt(this.d.doc, { key: 'hud.prompt.platformLoading', params: { exit: n } });
       return;
     }
-    prompt(this.d.doc, ps.dir === 'down' ? `F  승강장으로 (${n.ja})` : `F  출구로 — ${n.ko} ${n.ja}`);
+    prompt(this.d.doc, { key: ps.dir === 'down' ? 'hud.prompt.toPlatform' : 'hud.prompt.toExit', params: { exit: n } });
     if (!this.d.input.state.justPressed('interact')) return;
     const target = passageTarget(ps);
     if (ps.dir === 'down') {
       const dest = tops ? safeArrival(tops, target.pos) : undefined;
       if (!dest) {
-        notice(this.d.doc, '승강장 위치를 찾지 못했어요 — 잠시 뒤 다시 F');
+        notice(this.d.doc, { key: 'hud.notice.platformMissing' });
         return;
       }
       this.move(Promise.resolve(dest), target.yawRad);
@@ -168,7 +169,7 @@ export class StairsRuntime {
   }
 
   /** 페이드 → 이동 → 페이드 아웃. */
-  private move(dest: Promise<Vec3d>, yawRad: number, after?: string): void {
+  private move(dest: Promise<Vec3d>, yawRad: number, after?: Msg): void {
     this.moving = true;
     prompt(this.d.doc, null);
     fade(this.d.doc, true);
@@ -207,6 +208,6 @@ export class StairsRuntime {
       if (near) yaw = near.yawRad;
     }
     if (!dest) return;
-    this.move(Promise.resolve(dest), yaw, '선로·승강장 아래로는 내려갈 수 없어요 — 승강장으로 돌아왔어요');
+    this.move(Promise.resolve(dest), yaw, { key: 'hud.notice.pitRescue' });
   }
 }

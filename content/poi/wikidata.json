@@ -1,0 +1,505 @@
+{
+  "$comment": "Wikidata(CC0) 라벨·별칭·좌표·사이트링크 — `pnpm pipeline poi-wikidata`가 생성. 손으로 고치지 않는다.",
+  "license": "CC0-1.0",
+  "retrievedAt": "2026-10-18",
+  "pois": [
+    {
+      "id": "shibuya-scramble",
+      "wikidata": "Q21083961",
+      "labels": {
+        "ko": "시부야 스크램블 교차점",
+        "ja": "渋谷スクランブル交差点",
+        "en": "Shibuya scramble crossing"
+      },
+      "aliases": {
+        "ja": [
+          "渋谷駅前交叉点",
+          "渋谷駅前スクランブル交差点",
+          "渋谷駅前交差点"
+        ],
+        "en": [
+          "Shibuya Station Crossing",
+          "Shibuya Crossing",
+          "Shibuya Sta. Crossing"
+        ]
+      },
+      "lat": 35.659502777778,
+      "lon": 139.70054444444,
+      "sitelinks": {
+        "ko": "시부야 스크램블 교차점",
+        "ja": "渋谷スクランブル交差点",
+        "en": "Shibuya Crossing"
+      }
+    },
+    {
+      "id": "hachiko-statue",
+      "wikidata": "Q62124995",
+      "labels": {
+        "ja": "忠犬ハチ公像",
+        "en": "Statue of Hachikō"
+      },
+      "aliases": {
+        "ja": [
+          "ハチ公像"
+        ],
+        "en": [
+          "Hachiko statue"
+        ]
+      },
+      "lat": 35.659055555556,
+      "lon": 139.70058333333,
+      "sitelinks": {
+        "en": "Statue of Hachikō"
+      }
+    },
+    {
+      "id": "center-gai",
+      "wikidata": "Q5059296",
+      "labels": {
+        "ko": "시부야 센터 거리",
+        "ja": "渋谷センター街",
+        "en": "Center Gai"
+      },
+      "aliases": {
+        "ja": [
+          "渋谷栄通り",
+          "バスケットボールストリート",
+          "バスケ通り",
+          "バスケットボール・ストリート",
+          "センター街"
+        ],
+        "en": [
+          "Shibuya Center-Gai"
+        ]
+      },
+      "lat": 35.65981389,
+      "lon": 139.70015833,
+      "sitelinks": {
+        "ko": "시부야 센터 거리",
+        "ja": "渋谷センター街",
+        "en": "Center Gai"
+      }
+    },
+    {
+      "id": "miyashita-park",
+      "wikidata": "Q6884419",
+      "labels": {
+        "ja": "宮下公園",
+        "en": "Miyashita Park"
+      },
+      "aliases": {
+        "ja": [
+          "宮下町",
+          "渋谷区立宮下公園"
+        ]
+      },
+      "lat": 35.6612,
+      "lon": 139.7017,
+      "sitelinks": {
+        "en": "Miyashita Park"
+      }
+    },
+    {
+      "id": "yoyogi-park",
+      "wikidata": "Q1204253",
+      "labels": {
+        "ko": "요요기 공원",
+        "ja": "代々木公園",
+        "en": "Yoyogi Park"
+      },
+      "aliases": {
+        "ko": [
+          "요요기공원"
+        ],
+        "ja": [
+          "東京都立代々木公園"
+        ]
+      },
+      "lat": 35.671975,
+      "lon": 139.697685,
+      "sitelinks": {
+        "ko": "요요기 공원",
+        "ja": "代々木公園",
+        "en": "Yoyogi Park"
+      }
+    },
+    {
+      "id": "meiji-jingu",
+      "wikidata": "Q287165",
+      "labels": {
+        "ko": "메이지 신궁",
+        "ja": "明治神宮",
+        "en": "Meiji Jingū"
+      },
+      "aliases": {
+        "en": [
+          "Meiji Jingū Shrine",
+          "Meiji Grand Shrine",
+          "Meiji Shrine"
+        ]
+      },
+      "lat": 35.676111111111,
+      "lon": 139.69916666667,
+      "sitelinks": {
+        "ko": "메이지 신궁",
+        "ja": "明治神宮",
+        "en": "Meiji Shrine"
+      }
+    },
+    {
+      "id": "yoyogi-gymnasium",
+      "wikidata": "Q1069457",
+      "labels": {
+        "ko": "국립 요요기 경기장",
+        "ja": "国立代々木競技場",
+        "en": "Yoyogi National Gymnasium"
+      },
+      "aliases": {
+        "ja": [
+          "代々木体育館",
+          "代々木第二体育館",
+          "代々木第一体育館",
+          "代々木競技場",
+          "国立代々木競技場第二体育館",
+          "国立代々木競技場第一体育館",
+          "代々木オリンピックプール",
+          "国立代々木第二体育館",
+          "国立代々木第一体育館"
+        ],
+        "en": [
+          "Kokuritsu Yoyogi Kyogijo",
+          "Yoyogi Arena",
+          "Kokuritsu Yoyogi Kyōgijō",
+          "Yoyogi National Stadium"
+        ]
+      },
+      "lat": 35.6675,
+      "lon": 139.700278,
+      "sitelinks": {
+        "ko": "국립 요요기 경기장",
+        "ja": "国立代々木競技場",
+        "en": "Yoyogi National Stadium"
+      }
+    },
+    {
+      "id": "takeshita-street",
+      "wikidata": "Q3179287",
+      "labels": {
+        "ja": "竹下通り",
+        "en": "Takeshita Street"
+      },
+      "aliases": {
+        "ja": [
+          "竹下通",
+          "竹下町"
+        ]
+      },
+      "lat": 35.67125,
+      "lon": 139.70481,
+      "sitelinks": {
+        "ja": "竹下通り",
+        "en": "Takeshita Street"
+      }
+    },
+    {
+      "id": "omotesando",
+      "wikidata": "Q1205090",
+      "labels": {
+        "ko": "오모테산도",
+        "ja": "表参道",
+        "en": "Omotesandō"
+      },
+      "aliases": {
+        "ja": [
+          "表参道通り"
+        ]
+      },
+      "lat": 35.66513,
+      "lon": 139.71248,
+      "sitelinks": {
+        "ko": "오모테산도",
+        "ja": "表参道 (原宿)",
+        "en": "Omotesandō"
+      }
+    },
+    {
+      "id": "cat-street",
+      "wikidata": "Q11511093",
+      "labels": {
+        "ja": "旧渋谷川遊歩道路",
+        "en": "Cat Street, Tokyo"
+      },
+      "aliases": {
+        "ja": [
+          "キャットストリート (渋谷区)"
+        ]
+      },
+      "lat": 35.666184818281856,
+      "lon": 139.70569194900807,
+      "sitelinks": {
+        "ja": "旧渋谷川遊歩道路",
+        "en": "Cat Street, Tokyo"
+      }
+    },
+    {
+      "id": "togo-shrine",
+      "wikidata": "Q1384780",
+      "labels": {
+        "ja": "東郷神社",
+        "en": "Tōgō Shrine"
+      },
+      "aliases": {
+        "en": [
+          "Tōgō-jinja"
+        ]
+      },
+      "lat": 35.67180556,
+      "lon": 139.70592222,
+      "sitelinks": {
+        "ja": "東郷神社 (渋谷区)",
+        "en": "Tōgō Shrine"
+      }
+    },
+    {
+      "id": "national-stadium",
+      "wikidata": "Q14862239",
+      "labels": {
+        "ko": "신국립 경기장",
+        "ja": "国立競技場",
+        "en": "Japan National Stadium"
+      },
+      "aliases": {
+        "ja": [
+          "新国立競技場",
+          "国立",
+          "オリンピックスタジアム",
+          "MUFGスタジアム",
+          "MUFG国立"
+        ],
+        "en": [
+          "National Stadium",
+          "New National Stadium",
+          "Kokuritsu",
+          "Tokyo Olympic Stadium",
+          "MUFG Statium",
+          "MUFG Kokuritsu"
+        ]
+      },
+      "lat": 35.6778,
+      "lon": 139.7145,
+      "sitelinks": {
+        "ko": "도쿄 국립 경기장",
+        "ja": "国立競技場",
+        "en": "Japan National Stadium"
+      }
+    },
+    {
+      "id": "shinjuku-gyoen",
+      "wikidata": "Q776863",
+      "labels": {
+        "ko": "신주쿠 교엔",
+        "ja": "新宿御苑",
+        "en": "Shinjuku Gyoen"
+      },
+      "aliases": {
+        "ja": [
+          "環境省新宿御苑",
+          "国民公園協会新宿御苑"
+        ],
+        "en": [
+          "Shinjuku Gyoen National Garden"
+        ]
+      },
+      "lat": 35.68716944444444,
+      "lon": 139.71064444444445,
+      "sitelinks": {
+        "ko": "신주쿠 교엔",
+        "ja": "新宿御苑",
+        "en": "Shinjuku Gyo-en"
+      }
+    },
+    {
+      "id": "tocho",
+      "wikidata": "Q111973",
+      "labels": {
+        "ko": "도쿄도청사",
+        "ja": "東京都庁舎",
+        "en": "Tokyo Metropolitan Government Building"
+      },
+      "aliases": {
+        "ko": [
+          "도쿄 도청"
+        ],
+        "ja": [
+          "東京都庁第二本庁舎",
+          "東京都本庁舎",
+          "都有3号地",
+          "東京都新庁舎",
+          "東京都新都庁舎",
+          "新東京都庁舎",
+          "東京都庁第一本庁舎"
+        ],
+        "en": [
+          "Tokyo City Hall"
+        ]
+      },
+      "lat": 35.68951,
+      "lon": 139.69171,
+      "sitelinks": {
+        "ko": "도쿄도청사",
+        "ja": "東京都庁舎",
+        "en": "Tokyo Metropolitan Government Building"
+      }
+    },
+    {
+      "id": "omoide-yokocho",
+      "wikidata": "Q11501868",
+      "labels": {
+        "ja": "新宿西口商店街",
+        "en": "Omoide Yokochō"
+      },
+      "aliases": {
+        "ja": [
+          "思い出横丁",
+          "やきとり横丁",
+          "ションベン横丁",
+          "しょんべん横丁"
+        ],
+        "en": [
+          "Shinjuku Omoide Yokochō",
+          "Shinjuku West Gate Area Shopping District",
+          "Memory Alley",
+          "Memory Lane",
+          "Shonben Yokochō",
+          "Piss Alley"
+        ]
+      },
+      "lat": 35.69307,
+      "lon": 139.6995,
+      "sitelinks": {
+        "ja": "新宿西口商店街"
+      }
+    },
+    {
+      "id": "hanazono-shrine",
+      "wikidata": "Q3126680",
+      "labels": {
+        "ja": "花園神社",
+        "en": "Hanazono Shrine"
+      },
+      "aliases": {
+        "ja": [
+          "新宿花園神社"
+        ],
+        "en": [
+          "Shinjuku Hanazono Shrine",
+          "Hanazono-jinja",
+          "Hanazono jinja"
+        ]
+      },
+      "lat": 35.693553,
+      "lon": 139.705184,
+      "sitelinks": {
+        "ja": "花園神社",
+        "en": "Hanazono Shrine"
+      }
+    },
+    {
+      "id": "shinjuku-chuo-park",
+      "wikidata": "Q5364883",
+      "labels": {
+        "ko": "신주쿠 중앙공원",
+        "ja": "新宿中央公園",
+        "en": "Shinjuku Central Park"
+      },
+      "aliases": {
+        "ko": [
+          "신숙중앙공원",
+          "신주쿠중앙공원",
+          "신주쿠 중앙공원"
+        ],
+        "ja": [
+          "新宿区立新宿中央公園"
+        ],
+        "en": [
+          "Shinjuku Chūō Park"
+        ]
+      },
+      "lat": 35.69007,
+      "lon": 139.68947,
+      "sitelinks": {
+        "ko": "신주쿠 중앙공원",
+        "ja": "新宿中央公園",
+        "en": "Shinjuku Central Park"
+      }
+    },
+    {
+      "id": "yoyogi-hachimangu",
+      "wikidata": "Q11378221",
+      "labels": {
+        "ja": "代々木八幡宮",
+        "en": "Yoyogi Hachimangū"
+      },
+      "aliases": {
+        "ja": [
+          "代々木八幡神社",
+          "代々木八幡",
+          "代々木八幡遺跡"
+        ]
+      },
+      "lat": 35.67191667,
+      "lon": 139.68891667,
+      "sitelinks": {
+        "ja": "代々木八幡宮"
+      }
+    },
+    {
+      "id": "konno-hachimangu",
+      "wikidata": "Q11647638",
+      "labels": {
+        "ja": "金王八幡宮",
+        "en": "Konnō Hachimangū"
+      },
+      "aliases": {
+        "ja": [
+          "金王八幡神社",
+          "渋谷八幡宮"
+        ],
+        "en": [
+          "Konnō-hachimangū",
+          "Konnoh Hachimangu Shrine",
+          "Konnō Hachiman-gū"
+        ]
+      },
+      "lat": 35.657555555555554,
+      "lon": 139.70625,
+      "sitelinks": {
+        "ja": "金王八幡宮"
+      }
+    },
+    {
+      "id": "tokyo-gymnasium",
+      "wikidata": "Q1066903",
+      "labels": {
+        "ko": "도쿄 체육관",
+        "ja": "東京体育館",
+        "en": "Tokyo Metropolitan Gymnasium"
+      },
+      "aliases": {
+        "ja": [
+          "東京都体育館"
+        ],
+        "en": [
+          "Tokyo Municipal Gym"
+        ]
+      },
+      "lat": 35.679722,
+      "lon": 139.7125,
+      "sitelinks": {
+        "ko": "도쿄 체육관",
+        "ja": "東京体育館",
+        "en": "Tokyo Metropolitan Gymnasium"
+      }
+    }
+  ]
+}

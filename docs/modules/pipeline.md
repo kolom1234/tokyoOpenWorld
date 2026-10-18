@@ -43,6 +43,8 @@ src/stages/derive/{grid,roads,terrain-shape,edge-burn,curbs,sidewalks,footprints
 src/stages/build/roads-mesh.ts   roads.mesh(보도 윗면 + 연석 + 치마, u16 위치) + 보도 윗면 콜라이더, 바깥 가장자리 지형 맞춤
 src/stages/validate-roads.ts     `validate`의 `road gaps`(교차로 50곳 < 2 cm, 연석 아래 틈) — CLI가 오류로 올린다
 src/stages/validate-props.ts     `validate`의 `props on road`(ADR-0068): L0 지상 소품이 PLATEAU 차도 폴리곤 위(건물 발자국 제외, 보도 없는 길가 ≤ 1 m 허용)·보도 위 길가 기둥이 연석 < 0.3 m면 오류 — `derive/props/curb.ts`(settleSite·behindCurb)와 같은 판정
+src/stages/map/                 `map --build-id`(M10-T03, ADR-0093): collect(정규화 건물 바닥 링·OSM 도로·공원·물·빌드 rail.bin 철도·역·places 지명 점) → tiles(경위도 → 메르카토르 z13–16, 자르기·단순화·정수화 → MVT) → index(global/map.pmtiles + map-report.json)
+src/stages/areas/               `normalize --layer areas`(M10-T02, ADR-0092): shapefile(shp·dbf Shift_JIS) → names(町丁 분리·한자 숫자·이체자 ケ/ヶ·KEN_ALL 읽기) → kana(로마자·한글) → normalize(places.json) → assign(셀 meta placeNames, meta sources += estat-small-area·japanpost-kenall) · stages/poi/ = `poi-wikidata`(Wikidata 라벨·별칭·P625 → content/poi/wikidata.json)·`poi-review`(위키백과 본문과 최장 공통 부분 문자열·n-gram·홍보 문구 → content/poi/review.json) — M10-T04 ADR-0094
 src/stages/normalize-osm.ts      `normalize --layer osm`(M05-T02, ADR-0050): lock osm-kanto(sha256 스트림) → osmium extract·tags-filter·export GeoJSONSeq → WF → data/normalized/osm/<cell>.ndjson.gz(OsmRecord {id, geom, rings(xz), tags, source})
 src/stages/derive/markings/{common,crosswalk,lanes,stopline,text,index}.ts   노면 표시: 1 m 칸 데칼 띠(지형 + 2 cm, 셀 소유) / 일본식 횡단보도 / 차선(좌측통행·폭 행진) / 정지선(신호·stop) / 「止まれ」 획 폰트 / 조립·통계
 src/stages/build/decals-mesh.ts  decals.mesh(road_marking, u16 위치, `_PAINT`)
@@ -143,8 +145,6 @@ M02-T04: hlod-prep(23구 원경 건물·標高タイル) + hlod(L1–L3) + valid
 - 호스트 pnpm node_modules(Windows 정션)는 리눅스 컨테이너에서 깨짐 → `docker/run.sh`가 볼륨으로 가림. 컨테이너 pnpm은 `--store-dir` 고정(안 하면 저장소 루트에 `.pnpm-store/` 생성).
 - nusamai 기본 출력 CRS는 EPSG:4979(타원체고) → A안 비교 시 `--epsg 6697` 필수. ogr2ogr GeoJSON 좌표는 기본 소수 7자리(≈1 cm).
 - GSI DEM 2025판은 `srsName="fguuid:jgd2024.bl"`. 수평은 JGD2011과 같아 EPSG:6668로 취급, 표고는 2025 개정 기준(PLATEAU JGD2011 도로면 대비 중앙값 +0.05 m — 무시 가능).
-- `data/normalized/**`는 Read 금지(settings deny) → 확인은 컨테이너 명령(gdalinfo 등) 출력으로만.
-- 호스트에서 `data/build/**`·`data/normalized/**` 조회는 deny → 결과 확인은 컨테이너 명령(`validate`의 report.md 출력)으로.
-- 컨테이너 날짜는 UTC → KST 오전 9시 전 빌드의 buildId 날짜는 전날.
+- 호스트에서 `data/build/**`·`data/normalized/**` Read·조회는 deny → 결과 확인은 컨테이너 명령(gdalinfo·`validate`의 report.md) 출력으로.
 - `buildPlateauMini`는 `readDemWindowFiles`/`writeDemWindowFiles`(dem-window.ts)로 GDAL 없는 DEM 창을 쓴다. 스냅샷의 gzip 섹션 해시는 해제 바이트 기준.
-- 바인드 마운트 I/O가 느려 첫 실행(cold)이 2배 가까이 느리다(스파이크 20.9 s vs warm 11.1 s).
+- 바인드 마운트 I/O가 느려 첫 실행(cold)이 2배 가까이 느리다(스파이크 20.9 s vs warm 11.1 s). 컨테이너 날짜는 UTC → KST 오전 9시 전 buildId 날짜는 전날.

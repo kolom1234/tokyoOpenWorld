@@ -18,6 +18,7 @@ const PAD = {
   LT: 6,
   RT: 7,
   SELECT: 8,
+  START: 9,
   L3: 10,
   R3: 11,
   UP: 12,
@@ -50,7 +51,8 @@ const COMMON: ContextBindings = {
   freeCam: [key('KeyC'), pad(PAD.Y, PAD.SELECT)],
   map: [key('KeyM')],
   photo: [key('KeyP')],
-  pause: [key('Escape')],
+  // Start = 일시정지 메뉴(M10-T01 — 지도·포토는 메뉴에서). Select 단독은 Select+Y(freecam) 조합과 겹쳐 쓰지 않는다.
+  pause: [key('Escape'), pad(PAD.START)],
 };
 
 /** L스틱 이동(Y는 아래 + → 앞 +로 뒤집음). */
@@ -92,7 +94,7 @@ export const DEFAULT_BINDINGS: BindingMap = {
     sprint: [key('ShiftLeft'), key('ShiftRight'), pad(PAD.L3)],
     land: [key('KeyG'), pad(PAD.A)],
   },
-  ui: { pause: [key('Escape')], map: [key('KeyM')] },
+  ui: { pause: [key('Escape'), pad(PAD.START)], map: [key('KeyM')] },
 };
 
 /** 깊은 복사(재바인딩이 기본값을 건드리지 않도록). */

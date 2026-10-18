@@ -22,6 +22,11 @@ function fakeInput(axes: Partial<Record<AxisAction, number>> = {}, hits: ButtonA
       context = c;
     },
     rebind: () => undefined,
+    setBindings: () => undefined,
+    setAxisScale: () => undefined,
+    setEnabled: () => undefined,
+    setPointerLockOnClick: () => undefined,
+    enabled: true,
     bindings: () => ({ walk: {}, vehicle: {}, fly: {}, ui: {} }),
     dispose: () => undefined,
     systems: () => [],

@@ -140,6 +140,17 @@ function createOutputState(fovDeg: number, near: number, mode: ModeId): OutputSt
   };
 }
 
+/** patch의 잎 값을 target에 제자리로(모드들이 같은 settings 객체를 참조한다). */
+function assignDeep(target: Record<string, unknown>, patch: unknown): void {
+  if (typeof patch !== 'object' || patch === null) return;
+  for (const [k, v] of Object.entries(patch)) {
+    const cur = target[k];
+    if (v !== null && typeof v === 'object' && !Array.isArray(v) && typeof cur === 'object' && cur !== null)
+      assignDeep(cur as Record<string, unknown>, v);
+    else if (v !== undefined) target[k] = v;
+  }
+}
+
 export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = {}): TraversalService {
   const settings = mergeConfig(DEFAULT_TRAVERSAL_SETTINGS, opts.settings ?? {});
   const fsm = createModeFsm(ctx);
@@ -167,6 +178,8 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
       const o = mode.update(frame, ctx);
       if (mode.id === 'walk') walkHints(ctx, o, out.player);
       out.apply(o, mode.id);
+      // 탈것 추적 카메라는 속도 FOV를 스스로 정한다 — 나머지는 지금 설정(configure로 바뀜).
+      if (mode.id !== 'drive' && mode.id !== 'cycle') out.camera.fovDeg = settings.fovDeg;
       // 모드가 스스로 다른 모드로(열차 하차 → walk, M07-T05).
       if (o.next) fsm.request(o.next.mode, o.next.params);
     },
@@ -195,6 +208,7 @@ export function createTraversal(ctx: TraversalContext, opts: TraversalOptions = 
       return Promise.resolve();
     },
     register: (mode) => fsm.register(mode),
+    configure: (patch) => assignDeep(settings as unknown as Record<string, unknown>, patch),
     systems: () => [system],
   };
 }

@@ -138,7 +138,15 @@ describe('publish', () => {
       writeFileSync(join(dir, 'shared', 'readme.json'), 'x');
       writeFileSync(join(dir, '.work', 'dem.tif'), 'x');
       writeFileSync(join(dir, 'world.json'), '{}');
-      expect(buildFiles(dir)).toEqual(['shared/materials/albedo.ktx2', 'shared/materials/manifest.json', 'world.json']);
+      mkdirSync(join(dir, 'global'), { recursive: true });
+      writeFileSync(join(dir, 'global', 'map.pmtiles'), 'x');
+      writeFileSync(join(dir, 'map-report.json'), '{}');
+      expect(buildFiles(dir)).toEqual([
+        'global/map.pmtiles',
+        'shared/materials/albedo.ktx2',
+        'shared/materials/manifest.json',
+        'world.json',
+      ]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -69,7 +69,8 @@ function exportNames(stmt: ts.Statement): string[] {
 
 /** 파일 텍스트에서 책임 주석과 export 목록을 추출. 타입 검사 없이 구문 트리만 사용(빠르고 결정론적). */
 export function extractFileInfo(fileName: string, text: string): FileInfo {
-  const source = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
+  const kind = fileName.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const source = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, false, kind);
   const seen = new Set<string>();
   for (const stmt of source.statements) {
     for (const name of exportNames(stmt)) seen.add(name);

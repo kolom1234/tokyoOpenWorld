@@ -22,7 +22,7 @@ export const OSM_FILTERS = [
   'nwr/crossing',
   'nwr/footway',
   'nwr/barrier',
-  'nwr/natural=tree,tree_row,wood,scrub',
+  'nwr/natural=tree,tree_row,wood,scrub,water',
   'nwr/leisure=park,garden,playground',
   'nwr/landuse=grass,forest,park,recreation_ground',
   'nwr/amenity=post_box,vending_machine,bicycle_parking,bench,waste_basket,telephone',

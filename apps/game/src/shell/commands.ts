@@ -1,0 +1,74 @@
+// UiBridge 명령 구현(M10): 일시정지·시작(새 산책 = 시작 지점 빠른 이동)·빠른 이동. 이후 태스크가 사진·세이브·시간·날씨를 더한다.
+import type { Vec3d } from '@sanpo/core';
+import type { UiCommands } from '@sanpo/ui';
+import { spawnPreset } from '../spawn-presets.ts';
+import type { WorldView } from '../world-view.ts';
+import { fastTravel } from './fast-travel.ts';
+import type { PauseControl } from './pause.ts';
+import type { PhotoControl } from './photo.ts';
+import type { SaveCommands } from './save.ts';
+import { START_POINTS, type TravelState } from './travel.ts';
+
+export interface CommandContext {
+  doc: Document;
+  world(): WorldView | undefined;
+  pause: PauseControl;
+  travel: Pick<TravelState, 'isUnlocked' | 'poiPos'>;
+  photo: Pick<PhotoControl, 'set' | 'shoot' | 'store' | 'pickFocus'>;
+  save: Pick<SaveCommands, 'continueGame' | 'exportSave' | 'importSave'>;
+}
+
+/** 스폰 프리셋으로 빠른 이동(승강장 프리셋 제외 — 역 배선 전용). */
+export function travelToPreset(ctx: CommandContext, id: string): Promise<void> {
+  const p = spawnPreset(id);
+  const w = ctx.world();
+  if (!w || !p || p.surface === 'platform') return Promise.resolve();
+  const [x, y, z] = p.posWF;
+  return fastTravel(
+    {
+      doc: ctx.doc,
+      traversal: w.traversal,
+      physics: () => w.physics,
+      settled: () => {
+        const st = w.streaming?.stats();
+        return !st || st.queued + st.fetching + st.decoding + st.pendingReady === 0;
+      },
+    },
+    { posWF: { x, y, z }, yawRad: (p.yawDeg * Math.PI) / 180, exact: p.surface === 'exact' },
+  ).then(() => undefined);
+}
+
+/** 임의 위치로(명소·이어하기 — 지면은 walk가 찾는다, 건물 안이면 가까운 거리로: 착지 반경 120 m). */
+export function travelToPos(doc: Document, w: WorldView | undefined, posWF: Vec3d, yawRad = 0): Promise<void> {
+  if (!w) return Promise.resolve();
+  return fastTravel({ doc, traversal: w.traversal, physics: () => w.physics }, { posWF, yawRad, arriveM: 120 }).then(
+    () => undefined,
+  );
+}
+
+export function startPoints(): { id: string; name: { ko: string; ja: string; en: string } }[] {
+  return START_POINTS.flatMap((id) => {
+    const p = spawnPreset(id);
+    return p ? [{ id, name: p.name }] : [];
+  });
+}
+
+export function createCommands(ctx: CommandContext): UiCommands {
+  return {
+    pause: (on) => ctx.pause.set(on),
+    start: (c) => (c.kind === 'new' ? travelToPreset(ctx, c.at) : ctx.save.continueGame()),
+    fastTravel: (id) => {
+      if (!ctx.travel.isUnlocked(id)) return Promise.resolve();
+      const poi = ctx.travel.poiPos(id);
+      return poi ? travelToPos(ctx.doc, ctx.world(), poi) : travelToPreset(ctx, id);
+    },
+    setTime: () => {},
+    setWeather: () => {},
+    takePhoto: (scale) => ctx.photo.shoot(scale),
+    setPhotoParams: (p) => ctx.photo.set(p),
+    storePhoto: (thumb) => ctx.photo.store(thumb),
+    pickFocus: (x, y) => ctx.photo.pickFocus(x, y),
+    exportSave: () => ctx.save.exportSave(),
+    importSave: (f) => ctx.save.importSave(f),
+  };
+}

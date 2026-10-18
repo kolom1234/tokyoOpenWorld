@@ -5,9 +5,12 @@ import type { PrecompileProgress } from '@sanpo/render';
 import type { StreamingService } from '@sanpo/streaming';
 import type { StatusView } from './status-view.ts';
 
+/** 선컴파일 진행 + 마지막 'cells'(셀 셰이더 — compileStaged). */
+export type BootPrecompile = PrecompileProgress | { stage: 'cells'; done: number; total: number };
+
 /** world-view가 갱신하는 부팅 단계. done = 첫 표시(셀 붙임) 끝. */
 export interface BootStage {
-  precompile: string;
+  precompile: BootPrecompile;
   spawn?: readonly CellKey[];
   done: boolean;
 }
@@ -18,7 +21,8 @@ const STAGE_TEXT: Readonly<Record<PrecompileProgress['stage'], string>> = {
   avatar: '아바타 셰이더',
 };
 
-export function precompileText(p: PrecompileProgress): string {
+export function precompileText(p: BootPrecompile): string {
+  if (p.stage === 'cells') return '셀 셰이더…';
   if (p.stage === 'materials') return `셰이더 ${p.done}/${p.total}`;
   return `${STAGE_TEXT[p.stage]}${p.done >= p.total ? ' ✓' : '…'}`;
 }
@@ -27,7 +31,7 @@ export function bootProgressText(b: BootStage, s: Pick<StreamingService, 'stateO
   if (b.done) return '';
   const spawn = b.spawn;
   const cells = spawn && s ? ` · 셀 ${spawn.filter((k) => s.stateOf(k) === 'live').length}/${spawn.length}` : '';
-  return `${b.precompile}${cells}`;
+  return `${precompileText(b.precompile)}${cells}`;
 }
 
 /** 프레임마다 준비 글 + 경과(0.1 s) → 상태 패널(바뀔 때만 DOM). phase 95 = 렌더 뒤(DOM만). */

@@ -9,6 +9,7 @@ import { parseArgs, promisify } from 'node:util';
 import { type CellKey, createLogger, packCellKey } from '@sanpo/core';
 import { FORMAT_VERSION } from '@sanpo/tile-format';
 import * as assetStages from './cli-assets.ts';
+import * as mapStages from './cli-map.ts';
 import * as railStages from './cli-rail.ts';
 import { createPlateauReader } from './readers/plateau/index.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
@@ -130,6 +131,7 @@ async function normalize(args: string[]): Promise<void> {
   if (layer === 'all' || layer === 'terrain') await normalizeTerrainLayer(cells);
   if (layer === 'all' || layer === 'osm') await normalizeOsmLayer(cells);
   if (layer === 'all' || layer === 'rail') await normalizeRail(REPO_ROOT, lockSources(), cells, log.child('rail'));
+  if (layer === 'all' || layer === 'areas') mapStages.normalizeAreasLayer(mapCtx, cells);
 }
 
 /** OSM 간토 PBF → data/normalized/osm(컨테이너 전용, osmium). */
@@ -355,11 +357,16 @@ async function fixture(args: string[]): Promise<void> {
 const assets = { repoRoot: REPO_ROOT, log, lockSources };
 /** 철도 단계 문맥(cli-rail.ts, M07). */
 const rail = { repoRoot: REPO_ROOT, log };
+/** 지도·지명 단계 문맥(cli-map.ts, M10). */
+const mapCtx = { repoRoot: REPO_ROOT, log, readArea };
 
 const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   fetch: (args) => railStages.fetchSources(rail, args),
   rail: (args) => railStages.rail(rail, args, () => makeBuildId(REPO_ROOT)),
   timetables: (args) => railStages.timetables(rail, args, () => makeBuildId(REPO_ROOT)),
+  map: (args) => mapStages.map(mapCtx, args, () => makeBuildId(REPO_ROOT)),
+  'poi-wikidata': () => mapStages.poiWikidata(mapCtx),
+  'poi-review': () => mapStages.poiReview(mapCtx),
   normalize,
   build,
   'hlod-prep': hlodPrep,

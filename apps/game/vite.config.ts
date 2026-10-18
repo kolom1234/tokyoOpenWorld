@@ -3,6 +3,7 @@ import { cpSync, createReadStream, existsSync, readdirSync, statSync } from 'nod
 import { createRequire } from 'node:module';
 import { dirname, join, normalize, resolve } from 'node:path';
 import { type Connect, defineConfig, type Plugin } from 'vite';
+import { buildCredits } from '../../scripts/lib/credits.ts';
 
 /** dev/preview 서버에서도 crossOriginIsolated가 되도록 정적 에셋용 `public/_headers`와 같은 격리 헤더를 붙인다. */
 const ISOLATION_HEADERS = {
@@ -128,6 +129,29 @@ function basisTranscoder(): Plugin {
  * 기본값(unpkg CDN)은 CSP connect-src 'self'에 막히고 외부 런타임 의존이라 자체 호스팅(M03-T08). 첫 표시 뒤 한 파일(≤ 155 KB)만 받는다.
  */
 const GPU_BENCH_ROUTE = '/detect-gpu';
+/** 크레딧(M10-T06): sources.lock·ATTRIBUTION → /credits.json, 런타임 의존 라이선스 → /oss-licenses.json(dev 서빙·build 내보내기). */
+function creditsFiles(): Plugin {
+  const make = () => buildCredits(resolve(import.meta.dirname, '../..'));
+  return {
+    name: 'sanpo-credits',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = (req.url ?? '').split('?')[0];
+        if (path !== '/credits.json' && path !== '/oss-licenses.json') return next();
+        const c = make();
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.end(path === '/credits.json' ? c.credits : c.oss);
+      });
+    },
+    generateBundle() {
+      const c = make();
+      this.emitFile({ type: 'asset', fileName: 'credits.json', source: c.credits });
+      this.emitFile({ type: 'asset', fileName: 'oss-licenses.json', source: c.oss });
+    },
+  };
+}
+
 function gpuBenchmarks(): Plugin {
   // ESM 전용 exports라 require.resolve가 안 된다 → render 패키지의 pnpm 링크 경로.
   const src = resolve(import.meta.dirname, '../../packages/render/node_modules/@pmndrs/detect-gpu/dist/benchmarks');
@@ -150,7 +174,7 @@ function gpuBenchmarks(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [worldMiniFixture(), localBuild(), basisTranscoder(), gpuBenchmarks()],
+  plugins: [worldMiniFixture(), localBuild(), basisTranscoder(), gpuBenchmarks(), creditsFiles()],
   // three addon(KTX2Loader)·takram의 `three` import를 WebGPU 빌드 + 호환 이름(src/three-compat.ts)으로 — WebGL 렌더러 번들 제외.
   resolve: { alias: [{ find: /^three$/, replacement: resolve(import.meta.dirname, 'src/three-compat.ts') }] },
   server: {

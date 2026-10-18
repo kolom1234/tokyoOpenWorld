@@ -4,7 +4,7 @@ import { cellOf } from '@sanpo/geo';
 import { describe, expect, it } from 'vitest';
 import ACCESS from '../../../content/stations/access.json';
 import { SPAWN_PRESETS, spawnPreset, withSpawn } from '../src/spawn-presets.ts';
-import { arrowTo, guideText } from '../src/station/guide.ts';
+import { arrowTo, guideModel } from '../src/station/guide.ts';
 import { type AccessFile, crossedAisle, forwardOf, rad, stationLayout } from '../src/station/layout.ts';
 import { passageAt, STAIRS_REACH_M } from '../src/station/stairs.ts';
 import { flapOpen } from '../src/station/wiring.ts';
@@ -112,12 +112,15 @@ describe('station guide · signs · spawn presets (ADR-0082·0084)', () => {
     const g = e.gate.posWF;
     const f = forwardOf(rad(e.gate.yawDeg));
     const before = { x: g[0] - f.x * 20, y: g[1], z: g[2] - f.z * 20 };
-    expect(guideText(access, before, 0, false)).toMatch(/^개찰구 . 20 m/);
+    expect(guideModel(access, before, 0, false)).toMatchObject({ kind: 'gate', distanceM: 20 });
     const after = { x: g[0] + f.x * 3, y: g[1], z: g[2] + f.z * 3 };
-    expect(guideText(access, after, 0, false)).toMatch(/^계단 /);
+    expect(guideModel(access, after, 0, false)?.kind).toBe('stairs');
     const pf = e.platform.posWF;
-    expect(guideText(access, { x: pf[0] + 5, y: pf[1], z: pf[2] }, 0, true)).toMatch(/^출구 계단 . 5 m/);
-    expect(guideText(access, { x: g[0] + 500, y: g[1], z: g[2] }, 0, false)).toBeNull();
+    expect(guideModel(access, { x: pf[0] + 5, y: pf[1], z: pf[2] }, 0, true)).toMatchObject({
+      kind: 'platformExit',
+      distanceM: 5,
+    });
+    expect(guideModel(access, { x: g[0] + 500, y: g[1], z: g[2] }, 0, false)).toBeNull();
   });
   it('every exit gets a gate sign, a station totem and two stairs boards; text has no empty field', () => {
     const l = stationLayout(access);

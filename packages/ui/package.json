@@ -7,6 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@sanpo/core": "workspace:*"
+    "@preact/signals": "2.11.2",
+    "@sanpo/core": "workspace:*",
+    "idb-keyval": "6.3.0",
+    "preact": "10.29.8"
   }
 }

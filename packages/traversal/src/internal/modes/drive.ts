@@ -98,6 +98,7 @@ function updateCamera(rt: Rt, frame: FrameContext, ctx: TraversalContext, physic
   }
   const yaw = chase.yaw + chase.lookYaw;
   const cfg = rt.chaseCfg;
+  cfg.fovBoostDeg = settings.motionEffects ? DEFAULT_CHASE.fovBoostDeg : 0;
   const want = chaseBoom(st.car.pos, yaw, chase.lookPitch, cfg, rt.boomNow).len;
   const len = boomLength(boom, yaw, chase.lookPitch, want, dt * CHASE_BOOM_OUT);
   const car = { posWF: st.car.pos, yawRad: st.car.yaw, speedMs: st.car.speed };

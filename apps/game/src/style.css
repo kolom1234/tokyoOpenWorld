@@ -1,4 +1,4 @@
-/* 부트 화면 최소 스타일. HUD/메뉴는 @sanpo/ui(Preact)로 대체된다(M08). see docs/12-ui-ux.md */
+/* 부트 상태(e2e data-*)·캔버스·디버그 오버레이 스타일. 화면 UI(로딩·메뉴·HUD)는 @sanpo/ui(theme.ts — M10). see docs/12-ui-ux.md */
 :root {
   color-scheme: dark;
   font-family: system-ui, sans-serif;
@@ -89,25 +89,6 @@ body.rendering #app .caps {
   pointer-events: none;
 }
 
-/* 발밑 셀 콜라이더 적재 대기(M04-T06, wiring/ground-loading.ts). */
-.ground-loading {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.35rem 0.8rem;
-  background: rgb(0 0 0 / 55%);
-  color: #f0f0f0;
-  border-radius: 999px;
-  font:
-    13px / 1.4 system-ui,
-    sans-serif;
-  pointer-events: none;
-}
-.ground-loading[hidden] {
-  display: none;
-}
-
 /* 상시 출처 표기(credits.ts, ODbL) — 게임 입력을 막지 않는다. */
 .credits {
   position: fixed;
@@ -120,4 +101,13 @@ body.rendering #app .caps {
   text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
   pointer-events: none;
   z-index: 5;
+}
+
+/* M10: 상태 표는 e2e 속성만 — 화면에는 @sanpo/ui 로딩 화면(오류 포함)이 나온다. */
+#app.behind-ui {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }

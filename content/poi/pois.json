@@ -1,0 +1,266 @@
+{
+  "$comment": "도감 명소 20곳(M10-T04, ADR-0094). 이름·좌표 = Wikidata(CC0) → content/poi/wikidata.json(`pnpm pipeline poi-wikidata`). name: 'label' = Wikidata 라벨, 'alias:<문자열>' = Wikidata 별칭(괄호 설명은 지움), 'derived:<문자열>' = Wikidata에 그 언어 이름이 없어 일본어 이름을 우리가 옮겨 적음(ko만). description = 3개 언어 모두 자체 작성(위키백과 등 문장 복사 금지 — `pnpm pipeline poi-review`가 위키백과와 겹침을 재고 content/poi/review.json에 기록, 단위 테스트가 검사). 실존 상호·홍보 문구 금지.",
+  "author": "tokyo-sanpo",
+  "pois": [
+    {
+      "id": "shibuya-scramble",
+      "wikidata": "Q21083961",
+      "kind": "street",
+      "radiusM": 45,
+      "name": { "ja": "label", "en": "alias:Shibuya Crossing", "ko": "label" },
+      "description": {
+        "ko": "보행자 신호가 켜지면 사방에서 한꺼번에 길을 건너는 큰 교차로. 신호 한 번에 수백 명이 엇갈려 지나가는 모습을 볼 수 있다.",
+        "ja": "歩行者信号が青になると、四方から一斉に人が渡り始める大きな交差点。一度の青信号で何百人もの人が行き交う。",
+        "en": "A wide intersection where pedestrians cross in every direction at once when the walk signal turns green, often hundreds of people per cycle."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "hachiko-statue",
+      "wikidata": "Q62124995",
+      "kind": "landmark",
+      "radiusM": 55,
+      "name": { "ja": "label", "en": "label", "ko": "derived:충견 하치코 동상" },
+      "description": {
+        "ko": "주인을 기다리던 개 하치의 이야기를 기리는 동상. 역 앞 약속 장소로 오래전부터 쓰여 왔다.",
+        "ja": "飼い主の帰りを待ち続けた犬・ハチの物語を伝える銅像。駅前の待ち合わせ場所として長く使われてきた。",
+        "en": "A bronze statue remembering Hachikō, the dog who kept waiting for his owner. People have used it as a meeting point by the station for decades."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "center-gai",
+      "wikidata": "Q5059296",
+      "kind": "street",
+      "radiusM": 50,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "역 앞에서 언덕 쪽으로 뻗은 좁은 상점가. 낮과 밤 모두 사람이 많고 간판이 빽빽하다.",
+        "ja": "駅前から坂の方へ延びる細い商店街。昼も夜も人通りが多く、看板が密集している。",
+        "en": "A narrow shopping lane running uphill from the station, crowded day and night and lined with dense signage."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "miyashita-park",
+      "wikidata": "Q6884419",
+      "kind": "park",
+      "radiusM": 70,
+      "name": { "ja": "label", "en": "label", "ko": "derived:미야시타 공원" },
+      "description": {
+        "ko": "선로를 따라 길게 이어진 공원. 건물 옥상 높이에 녹지와 운동 시설이 놓여 있다.",
+        "ja": "線路沿いに細長く続く公園。建物の屋上の高さに緑地や運動施設が設けられている。",
+        "en": "A long, narrow park beside the railway, with greenery and sports facilities laid out at rooftop level."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "yoyogi-park",
+      "wikidata": "Q1204253",
+      "kind": "park",
+      "radiusM": 200,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "도심 한가운데의 넓은 공원. 잔디밭과 숲길이 있어 주말이면 산책하거나 쉬는 사람이 많다.",
+        "ja": "都心にある広々とした公園。芝生の広場と木立の道があり、週末は散歩や休憩をする人で混み合う。",
+        "en": "A spacious park in the middle of the city, with open lawns and wooded paths that fill with walkers on weekends."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "meiji-jingu",
+      "wikidata": "Q287165",
+      "kind": "shrine",
+      "radiusM": 150,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "넓은 숲에 둘러싸인 신사. 큰 도리이를 지나 자갈길을 걸으면 도시의 소음이 금세 멀어진다.",
+        "ja": "広い森に囲まれた神社。大鳥居をくぐって砂利の参道を進むと、街の騒がしさが遠のいていく。",
+        "en": "A shrine surrounded by a large forest. Past the great torii, a gravel approach leads away from the noise of the city."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "yoyogi-gymnasium",
+      "wikidata": "Q1069457",
+      "kind": "landmark",
+      "radiusM": 90,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "지붕이 크게 휘어진 독특한 모양의 체육관. 1964년 도쿄 올림픽에 맞춰 지어졌다.",
+        "ja": "大きく反り返った屋根が目を引く体育館。1964年の東京五輪に合わせて建てられた。",
+        "en": "A gymnasium known for its sweeping, curved roof, built in time for the 1964 Tokyo Olympics."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "takeshita-street",
+      "wikidata": "Q3179287",
+      "kind": "street",
+      "radiusM": 80,
+      "name": { "ja": "label", "en": "label", "ko": "derived:다케시타 거리" },
+      "description": {
+        "ko": "역 앞에서 시작하는 짧은 내리막 골목. 작은 가게가 이어져 있고 젊은 방문객이 많다.",
+        "ja": "駅前から始まる短い下り坂の通り。小さな店が連なり、若い来訪者が多い。",
+        "en": "A short downhill lane starting at the station, lined with small shops and busy with young visitors."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "omotesando",
+      "wikidata": "Q1205090",
+      "kind": "street",
+      "radiusM": 80,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "신사로 향하는 참배길로 닦인 넓은 가로수길. 느티나무 그늘을 따라 개성 있는 건축물이 늘어서 있다.",
+        "ja": "神社へ向かう参道として整えられた広い並木道。ケヤキの木陰に沿って、個性的な建築が並んでいる。",
+        "en": "A broad tree-lined avenue laid out as an approach to the shrine, with zelkova shade and distinctive architecture along it."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "cat-street",
+      "wikidata": "Q11511093",
+      "kind": "street",
+      "radiusM": 50,
+      "name": { "ja": "alias:キャットストリート (渋谷区)", "en": "label", "ko": "derived:캣 스트리트" },
+      "description": {
+        "ko": "옛 시부야강을 덮은 자리에 생긴 구불구불한 산책로. 차가 거의 다니지 않아 걷기 편하다.",
+        "ja": "かつての渋谷川を覆った跡にできた、曲がりくねった遊歩道。車がほとんど通らず歩きやすい。",
+        "en": "A winding walkway built over the former Shibuya River. With little car traffic, it is easy going on foot."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "togo-shrine",
+      "wikidata": "Q1384780",
+      "kind": "shrine",
+      "radiusM": 60,
+      "name": { "ja": "label", "en": "label", "ko": "derived:도고 신사" },
+      "description": {
+        "ko": "번화한 거리 바로 옆에 있는 조용한 신사. 연못을 둘러싼 작은 정원을 걸어 볼 수 있다.",
+        "ja": "にぎやかな通りのすぐそばにある静かな神社。池を囲む小さな庭を歩いて巡れる。",
+        "en": "A quiet shrine right next to busy streets, with a small garden that loops around a pond."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "national-stadium",
+      "wikidata": "Q14862239",
+      "kind": "landmark",
+      "radiusM": 130,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "나무 처마가 층층이 둘러싼 대형 경기장. 2021년에 열린 2020년 대회를 위해 새로 지어졌다.",
+        "ja": "木の軒が幾重にも巡る大きなスタジアム。2021年に開かれた2020年の大会に向けて新たに建てられた。",
+        "en": "A large stadium wrapped in layered wooden eaves, newly built for the 2020 Games that took place in 2021."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "shinjuku-gyoen",
+      "wikidata": "Q776863",
+      "kind": "park",
+      "radiusM": 260,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "일본식·영국식·프랑스식 정원이 한데 모인 큰 정원. 계절마다 다른 꽃과 나무를 볼 수 있다.",
+        "ja": "日本式・イギリス式・フランス式の庭がひとつにまとまった広い庭園。季節ごとに違う花や木が見られる。",
+        "en": "A large garden that brings together Japanese, English landscape and French formal styles, with different flowers and trees each season."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "tocho",
+      "wikidata": "Q111973",
+      "kind": "view",
+      "radiusM": 90,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "두 개의 탑이 솟은 도청 건물. 높은 층에 도시를 내려다보는 전망 공간이 있다.",
+        "ja": "二つの塔がそびえる都庁の建物。高い階に街を見下ろせる展望スペースがある。",
+        "en": "The twin-towered metropolitan government building, with viewing rooms high up that look out over the city."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "omoide-yokocho",
+      "wikidata": "Q11501868",
+      "kind": "street",
+      "radiusM": 45,
+      "name": { "ja": "alias:思い出横丁", "en": "label", "ko": "derived:오모이데 요코초" },
+      "description": {
+        "ko": "선로 옆 좁은 골목에 작은 음식점이 다닥다닥 붙어 있는 거리. 전후 시기의 분위기가 남아 있다.",
+        "ja": "線路脇の細い路地に小さな飲食店がぎっしり並ぶ横丁。戦後の頃の空気が今も残っている。",
+        "en": "A tight alley beside the tracks packed with tiny eateries, keeping some of the atmosphere of the postwar years."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "hanazono-shrine",
+      "wikidata": "Q3126680",
+      "kind": "shrine",
+      "radiusM": 60,
+      "name": { "ja": "label", "en": "label", "ko": "derived:하나조노 신사" },
+      "description": {
+        "ko": "번화가 가까이에 있는 신사. 경내에서 정기적으로 장이 서고 가을에는 축제가 열린다.",
+        "ja": "繁華街の近くにある神社。境内では定期的に市が立ち、秋には祭りが行われる。",
+        "en": "A shrine close to the entertainment district; markets are held in its grounds and a festival takes place in autumn."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "shinjuku-chuo-park",
+      "wikidata": "Q5364883",
+      "kind": "park",
+      "radiusM": 130,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "고층 빌딩 숲 바로 옆에 있는 공원. 인공 폭포와 광장이 있어 근처 직장인들이 쉬어 간다.",
+        "ja": "高層ビル群のすぐ隣にある公園。人工の滝や広場があり、近くで働く人たちが休みに来る。",
+        "en": "A park right beside the high-rise district, with an artificial waterfall and open plazas where nearby office workers take breaks."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "yoyogi-hachimangu",
+      "wikidata": "Q11378221",
+      "kind": "shrine",
+      "radiusM": 60,
+      "name": { "ja": "label", "en": "label", "ko": "derived:요요기 하치만구" },
+      "description": {
+        "ko": "작은 언덕 위 숲속에 있는 신사. 경내에서 아주 먼 옛날 사람들이 살던 흔적이 발견되었다.",
+        "ja": "小高い丘の木立の中にある神社。境内からは大昔の人々の暮らしの跡が見つかっている。",
+        "en": "A shrine set among trees on a small hill, where traces of ancient settlements have been found in the grounds."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "konno-hachimangu",
+      "wikidata": "Q11647638",
+      "kind": "shrine",
+      "radiusM": 50,
+      "name": { "ja": "label", "en": "label", "ko": "derived:곤노 하치만구" },
+      "description": {
+        "ko": "역에서 가까운 언덕 위의 오래된 신사. 빌딩 사이에 남은 작은 숲이 눈에 띈다.",
+        "ja": "駅から近い高台にある古い神社。ビルの間に残る小さな森が目を引く。",
+        "en": "An old shrine on higher ground near the station, its small grove standing out between office buildings."
+      },
+      "descriptionSource": "original"
+    },
+    {
+      "id": "tokyo-gymnasium",
+      "wikidata": "Q1066903",
+      "kind": "landmark",
+      "radiusM": 90,
+      "name": { "ja": "label", "en": "label", "ko": "label" },
+      "description": {
+        "ko": "금속 지붕이 크게 덮인 대형 실내 체육관. 수영장과 운동 시설도 함께 있다.",
+        "ja": "金属の大屋根に覆われた大きな屋内体育館。プールや運動施設も併設されている。",
+        "en": "A large indoor sports complex under a sweeping metal roof, with a pool and training facilities as well."
+      },
+      "descriptionSource": "original"
+    }
+  ]
+}

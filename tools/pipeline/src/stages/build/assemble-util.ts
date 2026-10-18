@@ -75,3 +75,8 @@ export function unionBounds(cells: readonly CellKey[]): CellBoundsWF {
     maxZ: pick(Math.max, 'maxZ'),
   };
 }
+
+/** 도로 조각들의 원천 id(정렬·중복 제거 — 섹션 sources). */
+export function roadSources(records: readonly { source: string }[]): string[] {
+  return [...new Set(records.map((r) => r.source))].sort();
+}

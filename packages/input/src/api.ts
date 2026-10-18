@@ -83,6 +83,15 @@ export interface InputService extends SystemProvider {
   /** 액션의 바인딩을 b 하나로 교체(기본: 현재 컨텍스트). */
   rebind(a: Action, b: Binding, context?: InputContext): void;
   bindings(): BindingMap;
+  /** 바인딩 전체 교체(설정 키 재바인딩 — 깊은 복사, M10-T01). */
+  setBindings(m: BindingMap): void;
+  /** 축 배율(시선 상하 반전 = lookY −1 — M10-T01). 기본 1. */
+  setAxisScale(a: AxisAction, k: number): void;
+  /** false = 모든 액션 0(메뉴·일시정지 — UI가 키를 갖는다). 컨텍스트는 그대로 바뀐다(M10-T01). */
+  setEnabled(on: boolean): void;
+  readonly enabled: boolean;
+  /** false = 캔버스 클릭으로 Pointer Lock을 걸지 않는다(포토 모드 — 끌기·우클릭·패널에 커서가 필요, M10-T05). 기본 true. */
+  setPointerLockOnClick(on: boolean): void;
   /** DOM 리스너 해제. */
   dispose(): void;
 }

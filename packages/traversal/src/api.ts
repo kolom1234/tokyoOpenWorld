@@ -250,6 +250,8 @@ export interface TraversalSettings {
   lookRadPerPx: number;
   fovDeg: number;
   nearM: number;
+  /** 속도 FOV 넓힘(추적 카메라)·열차 미세 진동. false = 모션 민감 모드(M10-T01). */
+  motionEffects: boolean;
   freecam: FreecamSettings;
   walk: WalkSettings;
 }
@@ -274,4 +276,6 @@ export interface TraversalService extends SystemProvider {
   /** M02 이전: 즉시 이동 후 resolve(스트리밍 대기·transition 모드는 M02-T05 이후). */
   teleport(posWF: Readonly<Vec3d>, yawRad: number): Promise<void>;
   register(mode: TraversalMode): void;
+  /** 실행 중 설정 바꾸기(설정 화면 — FOV·감도·헤드밥·모션 효과). 다음 프레임부터 모든 모드에 적용(M10-T01). */
+  configure(patch: DeepPartial<TraversalSettings>): void;
 }

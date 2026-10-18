@@ -4,6 +4,8 @@
 import type { GameSystem } from '@sanpo/core';
 import type { RailNetwork, TimetableFile } from '@sanpo/tile-format';
 import type { TrainHud, TraversalService } from '@sanpo/traversal';
+import type { LocalName, TrainModel } from '@sanpo/ui';
+import { setTrain } from './shell/hud-state.ts';
 
 type Lang = 'ja' | 'en' | 'ko';
 type Name = { ja: string; en: string; ko?: string };
@@ -78,6 +80,23 @@ export function lcdText(
   return { line: head, color, main, sub: parts.join(' · ') };
 }
 
+const local = (n: Name | undefined, fallback: string): LocalName =>
+  n ? { ja: n.ja, en: n.en, ko: n.ko ?? n.en } : { ja: fallback, en: fallback, ko: fallback };
+
+/** HUD 다음 역 모델(UI 언어로 — LCD는 3개 언어 순환 그대로). */
+export function trainModel(h: TrainHud, d: TrainLcdData | undefined): TrainModel {
+  const st = (id: string | null) =>
+    id === null ? null : local(d?.network.stations.find((s) => s.id === id)?.name, id);
+  const route = d?.timetables.flatMap((f) => f.routes).find((r) => r.id === h.routeId);
+  const line = d?.network.lines.find((l) => l.id === h.lineId);
+  return {
+    line: local(route?.name ?? line?.name, h.lineId),
+    next: st(h.nextStationId),
+    stopped: st(h.stoppedAtStationId),
+    arrivalInS: h.stoppedAtStationId ? null : h.arrivalInS,
+  };
+}
+
 function el(doc: Document, css: string): HTMLDivElement {
   const e = doc.createElement('div');
   e.style.cssText = css;
@@ -114,6 +133,7 @@ export function trainLcdSystem(
       fade.style.opacity = String(traversal.hud.fade ?? 0);
       const h = traversal.mode === 'train' ? traversal.hud.train : undefined;
       panel.style.display = h ? 'block' : 'none';
+      setTrain(doc, h ? trainModel(h, rail()) : null);
       if (!h) return;
       const lang = LANGS[Math.floor(t / ROTATE_S) % LANGS.length] ?? 'ja';
       const x = lcdText(h, rail(), lang);

@@ -60,6 +60,7 @@ import { composeAerial, LowResAerialNode } from './aerial.ts';
 import { filterAo } from './ao-filter.ts';
 import { type AutoExposure, createAutoExposure } from './exposure.ts';
 import { createGradeLut, LUT_SIZE } from './lut.ts';
+import { applyDof, exposureBiasU } from './photo.ts';
 import { type WeatherSkyUniforms, weatherSky } from './weather-sky.ts';
 
 type V4 = TslNode<'vec4'>;
@@ -254,8 +255,18 @@ function sanitize(c: V4): V4 {
 }
 
 /** 후처리에 얹는 날씨(M09-T01): 빗줄기 = TAAU 뒤 가산(얇고 빠른 줄기를 TAA 이력이 지우지 않게, weather/rain.ts 화면 공간 층). */
+/** TAAU 뒤 화면 공간 층: 빗줄기(M09-T01)·포토 DOF(M10-T05). */
+function screenOverlays(hdr: V4, o: PostOverlays, depth: TextureNode, camera: PerspectiveCamera): V4 {
+  let out = hdr;
+  if (o.rain) out = vec4(out.rgb.add(rainLayers(o.rain, depth, camera)), out.a);
+  if (o.dof) out = applyDof(out, depth, camera) as unknown as V4;
+  return out;
+}
+
 export interface PostOverlays {
   rain?: RainUniforms;
+  /** 포토 모드 피사계 심도(M10-T05 — 있을 때만 그래프에 넣는다). */
+  dof?: boolean;
   /** 구름층·연무(M09-T02) — 공중원근 뒤·노출 전. camWF = 카메라 WF 위치(렌더 원점 + 카메라). */
   sky?: { u: WeatherSkyUniforms; camWF: UniformNode<'vec3', Vector3> };
 }
@@ -305,7 +316,7 @@ export function createPostPipeline(
     ? createAutoExposure(scenePass.getTexture('output'))
     : undefined;
   // 자동 노출이 없으면(WebGL2 — 컴퓨트 없음) 골든뷰 평균 배율(맑은 낮 0.8–1.9의 가운데)로 고정.
-  let hdr: V4 = sanitize(ap.mul(exposure ? exposure.scale : float(fx.fixedExposure ?? 1)));
+  let hdr: V4 = sanitize(ap.mul(exposure ? exposure.scale : float(fx.fixedExposure ?? 1)).mul(exposureBiasU));
   if (fx.bloom) {
     const b = bloom(hdr, 0.08, 0.35, 1.2);
     // 넓은 흐림이라 ¼ 해상도로 충분(기본 ½ 대비 ≈ −1.5 ms).
@@ -315,7 +326,7 @@ export function createPostPipeline(
   }
   const temporal = fx.taa ? applyTaau(hdr, scenePass, camera, fx, sc, nodes) : null;
   if (temporal) hdr = temporal.hdr;
-  if (overlays.rain) hdr = vec4(hdr.rgb.add(rainLayers(overlays.rain, depth, camera)), hdr.a);
+  hdr = screenOverlays(hdr, overlays, depth, camera);
   pipeline.outputColorTransform = false;
   let out: V4 = renderOutput(hdr);
   const lut = fx.lut ? createGradeLut() : undefined;

@@ -106,13 +106,32 @@
     },
     {
       "id": "estat-small-area",
-      "url": "TBD (e-Stat 境界データ 小地域 2020 東京都)",
-      "resource": "Shape",
+      "url": "https://www.e-stat.go.jp/gis/statmap-search/data?dlserveyId=A002005212020&code={13103,13104,13110,13112,13113,13114}&coordSys=1&format=shape&downloadType=5&datum=2011",
+      "resource": "A002005212020DDSWC{13103 港区,13104 新宿区,13110 目黒区,13112 世田谷区,13113 渋谷区,13114 中野区}.zip → extracted/r2ka13xxx.{shp,dbf}(Shift_JIS)",
       "fiscalYear": 2020,
-      "sha256": "TBD",
+      "sha256": {
+        "13103": "61b967b7df2b7493312b099b6a3d71746788c4828bd11f928d82f0cc2cabcdd3",
+        "13104": "a5ac802311af6f6da538e218e92582353439e641899187e726bb1eaa34e238f3",
+        "13110": "aa3002633cae3f76a44335f898aab900faed4734a06349888411fd7bcc67effc",
+        "13112": "8bd5a888c4b1a0f16b5a49ef53350392fa33ddbe4e8bbf2df34c3adc8ef4422b",
+        "13113": "85089ecbf82d0c5661eb6364258406d3f2404fc4a38039fcb9fe356b173f69a1",
+        "13114": "845f3eb1dd9057ec63f05d6a3dfb24285b6d1a1b3edce4037be427f583629b13"
+      },
       "license": "Gov-Standard-Terms-2.0 (CC-BY-4.0 compatible)",
       "attribution": "出典：政府統計の総合窓口(e-Stat)",
-      "retrievedAt": null
+      "retrievedAt": "2026-10-18",
+      "dataset": "https://www.e-stat.go.jp/gis/statmap-search?type=2 (2020年国勢調査 小地域(町丁・字等) 境界データ, 世界測地系緯度経度・Shapefile)"
+    },
+    {
+      "id": "japanpost-kenall",
+      "url": "https://www.post.japanpost.jp/service/search/zipcode/download/kogaki/zip/13tokyo.zip",
+      "dataset": "https://www.post.japanpost.jp/service/search/zipcode/download/kogaki-zip.html (郵便番号データ 読み仮名データの促音・拗音を小書きで表記するもの, 東京都)",
+      "resource": "13tokyo.zip → extracted/13TOKYO.CSV(Shift_JIS) — 町域 가나 읽기만 사용(지명 로마자·한글 생성)",
+      "fiscalYear": null,
+      "sha256": "ced2a0731ac3e8deb2557ad8c6c9921e5c9ac210d7f5d5e3f1d622ea72303963",
+      "license": "Japan-Post-Zipcode (日本郵便は郵便番号データに限って著作権を主張しない・自由配布可)",
+      "attribution": "郵便番号データ：日本郵便株式会社",
+      "retrievedAt": "2026-10-18"
     },
     {
       "id": "odpt-tokyometro",

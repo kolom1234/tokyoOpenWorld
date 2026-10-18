@@ -24,6 +24,8 @@ import { createStatsHook } from './debug/stats.ts';
 import { createSunOverride } from './debug/sun-override.ts';
 import { mountWetSlider, parseWetFlag, type WeatherOverride } from './debug/wet-override.ts';
 import { createLoop, type Loop } from './loop.ts';
+import type { Shell } from './shell/bridge.ts';
+import { mixOf, tierOf } from './shell/settings.ts';
 import { type SpawnPreset, spawnPreset, withSpawn } from './spawn-presets.ts';
 import type { StatusView } from './status-view.ts';
 import { parseWeatherFlag, type WeatherSpec, weatherSpecOf } from './weather-mode.ts';
@@ -202,9 +204,10 @@ function mountCanvas(doc: Document): HTMLCanvasElement {
   return canvas;
 }
 
-/** render 설정: 플래그 + 품질(`?quality=` > 저장값 > 기본) + 골든뷰 결정론(동적 해상도 끔). */
-function renderConfigOf(flags: BootFlags, golden: GoldenView | undefined): DeepPartial<RenderConfig> {
-  const quality = flags.quality ?? (golden ? undefined : loadTier(storageOf()));
+/** render 설정: 플래그 + 품질(`?quality=` > 설정 티어 > 감지 저장값 > 기본) + 골든뷰 결정론(동적 해상도 끔). */
+function renderConfigOf(flags: BootFlags, golden: GoldenView | undefined, shell?: Shell): DeepPartial<RenderConfig> {
+  const set = shell ? tierOf(shell.settings.peek()) : undefined;
+  const quality = flags.quality ?? (golden ? undefined : (set ?? loadTier(storageOf())));
   return {
     ...(flags.exposure ? { exposure: flags.exposure } : {}),
     ...(flags.gpuTiming ? { gpuTiming: true } : {}),
@@ -240,14 +243,16 @@ function worldViewDeps(
   golden: GoldenView | undefined,
   bus: EventBus,
   weather: WeatherOverride | undefined,
+  shell?: Shell,
 ): Parameters<typeof createWorldView>[0] {
+  const audio = { ...flags.audio, ...(shell ? { mix: mixOf(shell.settings.peek()) } : {}), devKeys: flags.debug };
   return {
     canvas: mountCanvas(document),
     bus,
     log,
     scheduler,
     backend: flags.backend === 'webgl' ? 'webgl' : 'auto',
-    renderConfig: renderConfigOf(flags, golden),
+    renderConfig: renderConfigOf(flags, golden, shell),
     ...clockOf(flags, golden),
     ...(weather ? { weather } : {}),
     weatherSpec: weatherSpecOf(flags.weather, golden?.weather, flags.timeMs !== undefined),
@@ -257,7 +262,7 @@ function worldViewDeps(
     ...(flags.crowd ? { crowd: flags.crowd } : {}),
     ...(flags.noTraffic ? { traffic: false } : {}),
     ...(flags.noTrains ? { trains: false } : {}),
-    ...(flags.audio ? { audio: flags.audio } : {}),
+    audio,
     ...(flags.debug ? { debug: true } : {}),
     ...(spawnPreset(flags.spawn) ? { spawn: spawnPreset(flags.spawn) as SpawnPreset } : {}),
     ...(golden
@@ -274,11 +279,16 @@ async function setupWorldView(
   golden: GoldenView | undefined,
   bus: EventBus,
   late: LateReady,
+  shell?: Shell,
 ): Promise<WorldView | undefined> {
   try {
     const weather = weatherOf(flags);
-    const world = await createWorldView(worldViewDeps(flags, scheduler, log, golden, bus, weather));
+    const world = await createWorldView(worldViewDeps(flags, scheduler, log, golden, bus, weather, shell));
     for (const p of world.providers) scheduler.add(p);
+    if (shell) {
+      const ui = shell.attach(world);
+      scheduler.add({ systems: () => ui });
+    }
     scheduler.add({ systems: () => [bootProgressSystem(view, world)] });
     if (flags.sun)
       scheduler.add({
@@ -336,7 +346,11 @@ function addGoldenWatch(scheduler: Scheduler, world: WorldView, golden: GoldenVi
   return watch;
 }
 
-export async function boot(view: StatusView, flags: BootFlags = parseFlags(location.search)): Promise<BootResult> {
+export async function boot(
+  view: StatusView,
+  flags: BootFlags = parseFlags(location.search),
+  shell?: Shell,
+): Promise<BootResult> {
   const log = createLogger({ level: flags.debug ? 'debug' : 'info' });
   const caps = await detectCaps();
   view.setCaps(caps);
@@ -348,7 +362,7 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
   if (flags.view !== undefined && golden === undefined) view.showError(`골든뷰 없음: ${flags.view}`);
   const bus = createEventBus(log);
   const late: LateReady = {};
-  const world = await setupWorldView(flags, scheduler, log, view, golden, bus, late);
+  const world = await setupWorldView(flags, scheduler, log, view, golden, bus, late, shell);
   const watch = golden && world ? addGoldenWatch(scheduler, world, golden) : undefined;
   await scheduler.init();
 
@@ -362,6 +376,7 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
     log.child('boot').info('world', w);
   }).then(async (loaded) => {
     if (loaded === undefined || world === undefined) return;
+    shell?.setWorld(loaded.baseUrl, loaded.buildId);
     const preset = spawnPreset(flags.spawn);
     if (flags.spawn !== undefined && !preset) log.child('boot').warn(`spawn preset 없음: ${flags.spawn}`);
     const shown = await world.showWorld(preset && !golden ? withSpawn(loaded, preset) : loaded);
@@ -372,7 +387,8 @@ export async function boot(view: StatusView, flags: BootFlags = parseFlags(locat
       bus,
       log: log.child('quality'),
       storage: storageOf(),
-      fixed: flags.quality !== undefined || golden !== undefined,
+      fixed:
+        flags.quality !== undefined || golden !== undefined || (shell && tierOf(shell.settings.peek())) !== undefined,
       streamingIdle: () => {
         const st = world.streaming?.stats();
         return st !== undefined && st.queued + st.fetching + st.decoding + st.pendingReady === 0;

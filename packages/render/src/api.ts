@@ -252,12 +252,30 @@ export interface PrecompileProgress {
   total: number;
 }
 
+/** 포토 모드 렌더 설정(M10-T05). */
+export interface PhotoSettings {
+  exposureEv: number;
+  /** 초점 거리 m·초점 깊이(앞뒤 m)·보케 크기. null = DOF 없음. */
+  dof: { focusM: number; rangeM: number; bokeh: number } | null;
+}
+export interface ScreenshotOptions {
+  scale: 1 | 2;
+  settleFrames?: number;
+}
+
 export interface RenderService extends SystemProvider {
   readonly renderOriginWF: Readonly<Vec3d>;
   /** 품질 티어 변경(후처리 재구성 — 셰이더 재컴파일 끊김 1회) + `quality/changed`. 버스 이벤트로도 바뀐다. */
   setQuality(tier: QualityTier): void;
   /** detect-gpu로 초기 티어 추정 → 적용 → 60프레임 측정 후 필요하면 한 단계 내림. 첫 표시 뒤에 부른다. */
   detectQuality(): Promise<QualityTier>;
+  /**
+   * 포토 모드(M10-T05): 노출 보정(EV, 유니폼) + 피사계 심도(있으면 후처리 그래프에 DepthOfFieldNode — 켜고 끌 때 재구성 1회). null = 끔.
+   * 소프트웨어 래스터(CI)는 DOF 생략.
+   */
+  setPhoto(p: PhotoSettings | null): void;
+  /** 고해상도 캡처: 픽셀 비율 × scale로 settleFrames(기본 8 — 시간 누적 수렴) 그린 뒤 그 프레임 캔버스 PNG. 다음 프레임 원래 크기. */
+  screenshot(o: ScreenshotOptions): Promise<Blob>;
   readonly backend: RenderBackend;
   readonly depth: DepthMode;
   /** 셀 메시 추가(소유권 이전: 배열을 GPU 버퍼로 그대로 사용). 같은 키가 있으면 교체. */

@@ -32,8 +32,10 @@ Layer: L3 | Depends: core, geo, tile-format(lanes·nav 파서), @recast-navigati
 - 조정 파라미터는 `content/sim/*.json`(ADR-0061 — YAML 대신) (코드 상수 금지). sim은 콘텐츠 경로를 모른다(game이 읽어 넘김).
 - 외형은 variant(u16)로만 넘긴다 — 베이스·밝기·키는 render가 고른다(에셋 무관).
 
+**M10-T04**(ADR-0094): `createPoiService(pois: PoiDef[] {id, posWF, radiusM}, dwellS = POI_DWELL_S 2) → PoiService { discovered; restore(ids); update(posWF, mode, dtS): string[] }` — 반경 안 연속 2 s, freecam·idle 제외(메인 순수 상태, 시각·날씨 기록은 게임).
+
 ## Files
-clock/(world-clock — 모드·운행일 요일, astronomy — suncalc → 도북 → WF 벡터·조도, holidays — 공휴일 표 M09-T05), season(계절 키프레임 M09-T05), service(createSim·computeEnvironment), weather/, worker/(sim.worker, spatial-hash), crowd/(density, agents-detour, flow, lod-manager, appearance), traffic/(lane-graph, idm, routing, spawner, yielding), signals/(controller, plans), rail/(network, timetable, motion-profile, trains, doors), poi/.
+clock/(world-clock — 모드·운행일 요일, astronomy — suncalc → 도북 → WF 벡터·조도, holidays — 공휴일 표 M09-T05), season(계절 키프레임 M09-T05), service(createSim·computeEnvironment), weather/, worker/(sim.worker, spatial-hash), crowd/(density, agents-detour, flow, lod-manager, appearance), traffic/(lane-graph, idm, routing, spawner, yielding), signals/(controller, plans), rail/(network, timetable, motion-profile, trains, doors), poi/(poi-service — M10-T04).
 
 ## Gotchas
 - suncalc 2.x는 **도(degree) 단위, 방위각은 북 기준 시계방향**(1.x와 다름). 결과 방위는 `geo.trueToGridAzimuthDeg`로 도북 보정.

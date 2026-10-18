@@ -7,6 +7,8 @@ export const DEFAULT_TRAVERSAL_SETTINGS: TraversalSettings = {
   fovDeg: 70,
   // 07 §1 근평면 0.1 m.
   nearM: 0.1,
+  // 모션 효과(속도 FOV·열차 진동) — 설정 "모션 민감"이 끈다(M10-T01).
+  motionEffects: true,
   freecam: {
     dampingPerS: 3,
     // 09 §2: 속도 휠 0.5–60 m/s, 고도 상한 1,000 m.

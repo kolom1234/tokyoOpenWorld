@@ -9,7 +9,7 @@ import type { SimService } from '@sanpo/sim';
 import type { RailNetwork } from '@sanpo/tile-format';
 import type { TraversalService } from '@sanpo/traversal';
 import { nearestOnTrain } from '../world-audio.ts';
-import { guideText } from './guide.ts';
+import { guideModel } from './guide.ts';
 import { guide, prompt } from './hud.ts';
 import { type AccessFile, crossedAisle, type StationLayout, stationLayout } from './layout.ts';
 import { StairsRuntime } from './stairs.ts';
@@ -107,7 +107,7 @@ class StationRuntime {
         this.guideAt = this.t;
         const top = this.stairsRt.geometry().tops?.topAt(p.x, p.z);
         const onPlatform = top !== undefined && Math.abs(top - p.y) < 0.4;
-        guide(this.d.doc, guideText(this.d.access, p, yawOf(tr.camera.quat), onPlatform));
+        guide(this.d.doc, guideModel(this.d.access, p, yawOf(tr.camera.quat), onPlatform));
       }
     } else if (this.lastMode === 'walk') {
       // walk를 나갈 때 한 번만(freecam G 안내 등 다른 배선의 prompt를 매 프레임 지우지 않게).
