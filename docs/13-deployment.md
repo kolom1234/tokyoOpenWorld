@@ -72,6 +72,9 @@
 - R2: 저장 $0.015/GB-월(10 GB 무료), Class B 읽기 $0.36/백만(월 1,000만 무료), **egress 무료**.
 - MVP 월드 ≈ 1.5 GB(L0 294셀 × 평균 3 MB + HLOD + shared) → 저장 무료 범위. 23구 전역 L0 ≈ 30–40 GB → 월 $0.5 내외.
 - Workers: Free는 일 10만 요청 → 세션당 ~400 요청이면 일 250세션 한계. 공개 시 **Workers Paid 권장**. 정적 에셋 요청은 Worker를 호출하지 않으면 무료.
+- **무료 한도 일일 점검**(M11-T06, 사용자 결정 2026-10-19 — 무료 플랜으로 시작): `.github/workflows/usage.yml`(매일 09:00 KST) → `node scripts/cf-usage.ts --github-issue` — Workers 요청/일 100,000·KV 읽기 100,000/일·쓰기 1,000/일·R2 Class A 100만/월·Class B 1,000만/월·저장 10 GB·Analytics Engine 쓰기 100,000/일 대비 70 % 이상이면 라벨 `cf-usage` 이슈(열린 것이 있으면 본문 갱신). "ours"(tokyo-sanpo Worker·KV·`sanpo-world-*` 버킷)와 "account"(같은 계정 다른 프로젝트 포함 — 무료 한도는 계정 단위)를 나눠 표기. 토큰 권한 **Account | Account Analytics | Read**(Actions 시크릿 `CLOUDFLARE_API_TOKEN`에 필요 — 로컬 토큰은 확인됨). 로컬 실행 `node scripts/cf-usage.ts`.
+  - 2026-10-19 첫 측정: ours 최대 R2 저장 18.3 %(1.96 GB), Workers 2.0 %. account KV 쓰기 925 %(다른 프로젝트 namespace — tokyo-sanpo 아님).
+- 정적 에셋 요청(`run_worker_first` 밖)은 Workers 요청 수에 들어가지 않는다. `/world/*`·`/api/*`만 Worker 호출.
 
 ## 7. CI/CD (GitHub Actions)
 | 워크플로 | 트리거 | 단계 |
