@@ -4,8 +4,8 @@ Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-harde
 ## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅, T04 ✅, T01 ✅(⚠️ 기록), T02 ✅ → T06)
 ## Current Task: M11-T06 Production launch(준비 — production 쓰기는 사용자 확인 뒤)
 - Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097), M11-T03 오류 보고(ADR-0098 — staging 수락), 무료 한도 일일 점검 워크플로(usage.yml — main 병합 뒤부터 실행), M11-T04 접근성(ADR-0099), M11-T01 성능(ADR-0100 — `pnpm perf`).
-- In progress: T06 준비 — MVP 재빌드(로마자 지명·ODbL 묶음 반영) → dev publish → staging.
-- Next step (정확히 한 걸음): 소크 결과 기록 → MVP 재빌드(normalize --layer areas → docker build·hlod·materials·audio → map → validate) → dev publish·staging 배포 → GOLDEN_BOOT staging 첫 로드 → T06 사용자 확인 대기.
+- In progress: T06 — MVP 재빌드 `20261018-82db354-aa09c5ca`(validate 0, ODbL 36,558 피처) → dev publish(509파일 396.5 MB, Worker 검증 불일치 0)·dev 포인터 → staging f408b963. staging 첫 로드 26.7 MB·첫 표시 7.0–9.1 s ✅, 크레딧 ODbL·OSS·긴자선 표기 확인. dev gc 2개.
+- Next step (정확히 한 걸음): **사용자 확인 대기** — production 버킷 publish(`20261018-89ce0aa-aa09c5ca` 롤백용 + `20261018-82db354-aa09c5ca`) → `pipeline current --env prod` → PR 병합 → Deploy production 승인 → earthaimap.com → 롤백 리허설 → 공개 URL 스모크(docs/13 §9). 측량법 승인(🔶) 전 공개 여부도 사용자 결정.
 - Blockers: 🔶 **국토지리원 측량법 제30조 사용 승인(사용자 신청)** — production 공개(T06) 전 필수(03 §6.1, ADR-0097). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 - 다음 MVP 재빌드 때 반영할 것: 로마자 지명(셀 meta), `map --build-id` ODbL 묶음(global/odbl/). DOF 전환 실측은 T01 perf 하네스에서.
 
