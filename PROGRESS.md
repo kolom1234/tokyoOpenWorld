@@ -1,16 +1,17 @@
 # PROGRESS
-Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10-ui`, PR #24 draft)
+Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-hardening`, PR #25 draft)
 
-## Current Milestone: M10 UI/UX (T01–T06 완료 — PR #24 검토 대기) → 다음 M11 Hardening & Beta
-## Current Task: 없음 — M10 PR #24 사람 확인·머지 대기
-- Done in this session (#25): M10-T01–T06(ADR-0091–0096) + MVP 재빌드 `20261018-89ce0aa-aa09c5ca` → dev 버킷 publish(506파일 394.7 MB, current) → staging Worker 배포(코드 506b321, 버전 b8646e66)
-  → 실제 GPU staging 확인: 3개 언어 × 7화면 스크린샷(docs/screenshots/M10), HUD 비용, PR "따라 해 보기" 전 과정 봇(타이틀 → 언어 → 빠른 이동 → 다케시타 거리 발견 → 포토 저장·도감 연결 → 내보내기/가져오기 → 새로 고침 이어서 걷기).
-  staging 확인 중 고친 것: 일시정지 → 포토 모드에서 포인터 잠금이 셔터 클릭을 가로챔(input `setPointerLockOnClick`), 세이브 가져오기 썸네일 `fetch(data:)`가 배포 CSP에 막힘(atob 디코드), 다케시타 거리 반경 60 → 80 m.
-- In progress: 없음.
-- Next step (정확히 한 걸음): PR #24를 사람이 "따라 해 보기" 순서로 확인 → 머지 → `docs/roadmap/M11.md` 첫 태스크 블록 읽기.
-- Blockers: 없음. ODPT 키 없음(긴자선 GTFS — M10 무관).
+## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅ → T03 → T04 → T01 → T02 → T06)
+## Current Task: M11-T03 Error reporting
+- Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097).
+- In progress: T03.
+- Next step (정확히 한 걸음): `docs/roadmap/M11.md` `### M11-T03` → apps/worker `/api/log` + Analytics Engine.
+- Blockers: 🔶 **국토지리원 측량법 제30조 사용 승인(사용자 신청)** — production 공개(T06) 전 필수(03 §6.1, ADR-0097). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
+- 다음 MVP 재빌드 때 반영할 것: 로마자 지명(셀 meta), `map --build-id` ODbL 묶음(global/odbl/). DOF 전환 실측은 T01 perf 하네스에서.
 
 ## Recently Completed
+- M11-T05 License audit(2026-10-19) — 원문 재확인 표 03 §6.1(PLATEAU FAQ 手続き不要·상업 가능 ✅, KSJ N02 CC BY 4.0 ✅, Open-Meteo 비상업·production 호출 0 ✅, Freesound 22개 CC0 ✅, Rocketbox MIT ✅, 폰트 OFL ✅, npm 26개 GPL·NC 0 ✅, GSI DEM 🔶 측량법 제30조 사용 승인 신청 필요), ODbL 파생 DB `global/odbl/`(map 단계)·크레딧 링크, `/oss-licenses.txt` LICENSE 원문, 상표 스캔 CI 테스트(0건), 긴자선 미수록 크레딧 명시. ADR-0097
+- M10 잔여(2026-10-19) — physics `setPaused`(일시정지 = 물리 시각 정지), 포토 DOF = 출력 노드 교체(`post/output.ts`, 전체 재구성 없음), 사진 상한 200(오래된 것부터 — 도감 연결·IndexedDB 썸네일 정리), 로마자 방위 접두 하이픈(Nishi-Shinjuku), 한국어 파생 POI 이름 9곳 표기법 점검(수정 0), UI 글꼴 Noto Sans JP/KR Variable(fontsource 5.3.0 조각 woff2 — 타이틀 ja 278 KB·ko 178 KB·en 58 KB).
 - M10 마무리(2026-10-18) — MVP 재빌드(L0 294 + HLOD 177 + 머티리얼 32층 + 오디오 22 + map.pmtiles 1.45 MB, validate 0) → dev publish → staging. 실제 GPU staging(1600×900): HUD 시그널 8.1 Hz ≤ 10 ✅, 미니맵 0.018 ms/프레임(0.13 ms/회) ≤ 1 ✅, rAF p50 16.67·p95 16.84 ms, GPU 23.6 W(상한 33.9 W). 명소 봇 20/20(로컬 재빌드). 따라 해 보기 봇 전 단계 ✅. dev gc 대상 0.
 - M10-T06 Save/load & credits(2026-10-18) — 세이브 v2(IndexedDB, v1 마이그레이션·내보내기/가져오기·자동 저장 60 s·모음 복원·이어하기), 크레딧 자동 생성(/credits.json = lock 전 원천 + ATTRIBUTION, /oss-licenses.json = 런타임 의존 24개). 수락: 구 스키마 마이그레이션 테스트 ✅, 크레딧 lock 전 소스 ✅(테스트). ADR-0096
 - M10-T05 Photo mode(2026-10-18) — render `setPhoto`(노출 유니폼·DOF 포토 때만 그래프 재구성)·`screenshot({scale})`, 게임 포토 진입(freecam·시계 정지·날씨/시간/FOV·오른쪽 클릭 초점), UI 패널·WB/비네팅/그레인 합성·PNG 다운로드·썸네일 → 도감. 수락(실제 GPU): 3840×2160 저장 ✅, GPU 메모리 +756 MB → +47 MB 회수 ✅. ⚠️ DOF 켤 때 셰이더 재컴파일 4.8 s. ADR-0095
@@ -39,7 +40,7 @@ Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
-- [ui] (M10 ⚠️) 시스템 글꼴(Noto 부분 집합 미탑재), 일시정지가 물리를 멈추지 않음(탈것은 입력 0으로 굴러 멈춤), DOF 켤 때 셰이더 재컴파일 4.8 s, 로마자 지명은 붙여 쓰기(Jingumae), 한국어 POI 이름 10개는 일본어 읽기에서 유도, 사진 200장 상한 미강제, 포토 모드에 LUT·모션 블러 없음, 번역끼리 베끼기는 검사로 못 잡음.
+- [ui] (M10 ⚠️ 남은 것) 포토 모드에 LUT·모션 블러 없음, 번역끼리 베끼기는 검사로 못 잡음. (글꼴·일시정지 물리·DOF·로마자·POI ko·사진 상한은 2026-10-19 해결)
 - [stations] 하라주쿠 다케시타 출구 개찰구 앞 동쪽이 PLATEAU 건물 — 다케시타 거리는 광장 북쪽 끝(≈ 40 m)에서 동쪽으로 들어간다(실제와 비슷). 걷기 봇은 모서리·군중에 가끔 걸린다(옆걸음으로 해결).
 - [vehicles] (M08 ⚠️) 운전석 실내·계기판 모델 없음(HUD), 앞바퀴 조향·서스펜션 렌더 없음, 전조등 노면 조명 없음, 탄 사람 = 상자 마네킹(페달 다리·발 딛기 자세 없음), 자전거 독 설비 모델 없음. 붐비는 광장(하라주쿠 거점)에선 AEB가 자주 세운다(의도 — 보행자 우선). 교통 NPC 엔진음 없음.
 - [perf] staging 첫 표시(골든 부트) 6.75–7.64 s(ADR-0086 — 전 8.7–9.1 s) → M08 뒤 6.64–9.20 s(10회, 2026-10-18): 탈것 작업은 첫 표시 두 프레임 뒤로 뺐고(선컴파일 끝 → 첫 표시 1.2–1.3 s 그대로), 변동은 대기 선컴파일 4.9–6.4 s(전력 상태). 남은 임계 경로 = 선컴파일 체인(첫 조명 셰이더 ≈ 2.3 s + 대기 LUT, 끝 ≈ 5.7–6.5 s) → 첫 프레임 동기 생성(그림자 패스 변형·HLOD/원경 지형 ≈ 0.3–0.6 s). 대기 LUT는 첫 프레임 updateBefore와 prepare에서 두 번 계산(임계 경로 밖).
@@ -109,7 +110,7 @@ Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10
 - 프리뷰 URL은 staging Worker의 버전(`pr-<N>` 별칭)이며 staging 바인딩을 공유한다.
 
 ## Decisions Pending
-- 라이선스 ⚠ 항목 → M11-T05 (단, 공개 배포 전 필수)
+- 🔶 국토지리원 측량법 제30조 사용 승인(사용자 신청 — 03 §6.1) → 승인번호 받으면 ATTRIBUTION `gsi-dem`·화면 표기에 추가 후 T06
 - M06 사전 2 ⚠️: 스크램블 등 PLATEAU 밖 횡단의 ≤ 0.5 m 수치 검증 — 고해상도 정사영상(유료·별도 라이선스 가능) 도입 여부.
 
 ## Pre-flight (사람이 해야 할 일)

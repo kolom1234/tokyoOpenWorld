@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 591개.
+> 파일 593개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -27,14 +27,14 @@
 - `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면(e2e data-* — 화면에서는 UI 로딩 화면이 대신) + @sanpo/ui 셸 마운트 → boot(), 실패 시 오류 화면.
 - `apps/game/src/shell/bridge.ts` — UiBridge 구현(M10-T01): 시그널(HUD 10 Hz·로딩·설정) + 명령(일시정지·시작·빠른 이동) + @sanpo/ui 마운트. 월드는 attach 뒤에 붙는다(그 전 명령은 무시). | exports: ShellOptions, Shell, createShell
 - `apps/game/src/shell/commands.ts` — UiBridge 명령 구현(M10): 일시정지·시작(새 산책 = 시작 지점 빠른 이동)·빠른 이동. 이후 태스크가 사진·세이브·시간·날씨를 더한다. | exports: CommandContext, travelToPreset, travelToPos, startPoints, createCommands
-- `apps/game/src/shell/credits.ts` — 크레딧 모델(M10-T06, ADR-0096): 게임 빌드가 내보낸 /credits.json(sources.lock 모든 원천 + ATTRIBUTION)·/oss-licenses.json(런타임 의존 라이선스)을 처음 열 때 받는다. | exports: creditsOf, loadCredits
+- `apps/game/src/shell/credits.ts` — 크레딧 모델(M10-T06, ADR-0096): 게임 빌드가 내보낸 /credits.json(sources.lock 모든 원천 + ATTRIBUTION)·/oss-licenses.json(런타임 의존 라이선스)을 처음 열 때 받는다. | exports: creditsOf, odblEntry, loadCredits
 - `apps/game/src/shell/fast-travel.ts` — 빠른 이동(타이틀 시작 지점·지도 — M10): 검은 막 → walk 재진입(먼 기준점 = 그 아래 지면을 콜라이더 적재 뒤 찾는다, ADR-0084 경로) → 착지 확인 → 막 걷기. | exports: TravelTarget, FastTravelDeps, arrived, fastTravel
 - `apps/game/src/shell/hud-state.ts` — HUD 안내 상태(문서당 하나): 상호작용 안내(출처별 칸 — 우선순위 순), 알림(seq), 역 근접 안내, 검은 막. 게임 배선이 쓰고 shell/bridge가 10 Hz로 UI(@sanpo/ui HUD)에 넘긴다. | exports: PROMPT_SLOTS, PromptSlot, HudState, hudStateOf, setPrompt, topPrompt, pushNotice, setGuide, setFade, setDrive, setTrain
 - `apps/game/src/shell/loading.ts` — 부팅 상태 → UI 로딩 화면(LoadingModel): StatusView(e2e data-* 속성 — 화면에서는 숨김)를 감싸 같은 호출을 시그널로도 보낸다. 순수 매핑 함수는 테스트. | exports: INITIAL_LOADING, loadingOfWorld, loadingOfBoot, loadingView
 - `apps/game/src/shell/map-source.ts` — 지도 데이터 소스(M10-T03): 월드 빌드 global/map.pmtiles(파일 전체 — 수 MB, 처음 필요할 때 한 번) → 타일 MVT 디코드 → UI MapTileData. WF → 메르카토르는 @sanpo/geo. | exports: worldToMerc, createMapSource
 - `apps/game/src/shell/options.ts` — 셸 옵션: 메뉴 모드(타이틀·포인터 잠금 풀림 = 일시정지) 여부와 저장소. 개발·테스트 URL(?debug=1·?view=·?spawn=·?mode=·?probe=)은 메뉴 없이 곧바로 게임. | exports: menusEnabled, storageOf
 - `apps/game/src/shell/pause.ts` — 메뉴 일시정지(M10-T01): 게임 입력 끔(input.setEnabled) + 포인터 잠금 풀기 + 사용자 시계(custom)면 시계 멈춤. 재개 = 반대(+ 제스처 안이면 포인터 잠금 다시). | exports: PauseControl, createPause
-- `apps/game/src/shell/photo.ts` — 포토 모드(M10-T05, 12 §5): 들어가면 freecam(지금 카메라 자세)·시계 정지·날씨 보관, 파라미터 = 시간 이동(±12 h)·날씨 프리셋·노출 EV·초점 거리 mm(→ FOV)·조리개(→ DOF)·초점 거리 m, | exports: fovOfFocal, dofOf, PhotoPhotoRecord, PhotoControl, createPhoto
+- `apps/game/src/shell/photo.ts` — 포토 모드(M10-T05, 12 §5): 들어가면 freecam(지금 카메라 자세)·시계 정지·날씨 보관, 파라미터 = 시간 이동(±12 h)·날씨 프리셋·노출 EV·초점 거리 mm(→ FOV)·조리개(→ DOF)·초점 거리 m, | exports: fovOfFocal, dofOf, PhotoPhotoRecord, PhotoControl, createPhoto, MAX_PHOTOS, capPhotos
 - `apps/game/src/shell/places.ts` — HUD 지명(M10-T02): live L0 셀 meta.json placeNames(e-Stat 町丁 — 셀 로컬 폴리곤) → WF 폴리곤 색인 → 점-폴리곤 조회(포함 중 가장 작은 면적 — 飛び地·안쪽 町). | exports: pointInPolygon, PlaceIndex, createPlaceIndex
 - `apps/game/src/shell/pois.ts` — 도감 명소(M10-T04, ADR-0094): content/poi/pois.json(자체 설명·반경·종류) + content/poi/wikidata.json(이름·좌표 CC0) → DiscoveryModel·발견 판정(sim createPoiService, 2 s 체류). | exports: resolveName, PoiEntry, poiEntries, DiscoveryRecord, DiscoveryState, createDiscovery
 - `apps/game/src/shell/save.ts` — 세이브(M10-T06, 12 §4, ADR-0096): IndexedDB(idb-keyval) `save/v2` = SaveData, `photo/<id>` = 썸네일 Blob. 모음(발견·빠른 이동·사진)은 부팅 때 늘 복원, 이어하기는 위치·시각까지. | exports: SAVE_KEY, SaveParts, snapshotOf, blobToDataUrl, dataUrlToBlob, SaveStore, createSaveStore, applyCollection, exportBlob, importFile, autosaveSystem, SaveCommands, createSaveCommands
@@ -216,6 +216,7 @@
 - `packages/render/src/internal/post/config.ts` — 품질 티어 → 후처리 효과(07 §9 표의 AO/GI/SSR 행 + 07 §7 나머지). 티어 선택·동적 해상도는 M03-T08, 여기는 표와 덮어쓰기만. | exports: POST_TIERS, resolvePost
 - `packages/render/src/internal/post/exposure.ts` — 자동 노출(07 §7): 씬 패스 HDR(하늘·공중원근 전)을 32² 격자로 읽어 로그 휘도 평균 → EMA → 노출 배율. 전부 GPU(컴퓨트 1회/프레임, | exports: REF_LUM, ADAPT, AutoExposure, createAutoExposure
 - `packages/render/src/internal/post/lut.ts` — 3D LUT 그레이딩(07 §7, M03-T07): 톤매핑·sRGB 뒤에 적용. 외부 .cube 대신 결정론 절차 LUT(라이선스 무관) — 약한 S 커브·채도 +6 %, | exports: LUT_SIZE, grade, createGradeLut
+- `packages/render/src/internal/post/output.ts` — 후처리 출력 단(07 §7): 출력 변환(AgX·sRGB, renderOutput) → 3D LUT → Sharpen, 포토 DOF 출력 교체(M10 잔여 — pipeline.ts에서 분리). | exports: outputSwitch
 - `packages/render/src/internal/post/photo.ts` — 포토 모드 렌더(M10-T05, 07 §7): 노출 보정(EV — 유니폼, 재컴파일 없음)·피사계 심도(DepthOfFieldNode — 포토 모드에서만 후처리를 다시 짜서 넣는다, 평소 비용 0)·고해상도 캡처(픽셀 비율 × scale, 시간 누적이 수렴할 때까지 몇 프레임 → canvas.toBlob 같은 작업 안에서). | exports: exposureBiasU, dofFocusU, dofRangeU, dofBokehU, PhotoRenderState, applyDof, CaptureRequest, captureDpr
 - `packages/render/src/internal/post/pipeline.ts` — 후처리 파이프라인(07 §7, M03-T07 확정 순서): 씬 패스 MRT(output·normal+roughness·velocity·[diffuse+metalness]) | exports: PostPipeline, CompileTarget, createDirectRender, PostOverlays, createPostPipeline
 - `packages/render/src/internal/post/weather-sky.ts` — 날씨 하늘(M09-T02 — ADR-0077): 공중원근 뒤 하늘 화소에 2D 구름층(고도 1.6 km 평면, 값 잡음 fbm 4옥타브, 바람에 흐름) + 비·안개 연무(거리 지수). | exports: WeatherSkyUniforms, createWeatherSkyUniforms, updateWeatherSky, weatherSky, tslHash, cloudAlphaCpu
@@ -419,13 +420,13 @@
 - `packages/ui/src/internal/screens/save-section.tsx` — 설정 → 일반 → 세이브(M10-T06): 내보내기(JSON 다운로드 — 세이브·설정·사진 썸네일)·가져오기(파일 고르기 — 키보드·패드는 버튼이 숨은 file input을 연다). | exports: SaveSection
 - `packages/ui/src/internal/screens/settings.tsx` — 설정 화면: 탭(그래픽·카메라·모션·조작·소리·일반) — 바뀌면 곧바로 bridge.settings(게임이 적용·저장). 키 재바인딩 = 누를 때까지 대기(data-capturing). | exports: SETTINGS_TABS, SettingsTab, SettingsScreen
 - `packages/ui/src/internal/settings.ts` — 설정 기본값·정규화(저장본·가져오기 값의 범위·형식 검사). 저장은 게임(localStorage — 부팅 때 동기로 읽어 품질·언어 적용). | exports: DEFAULT_SETTINGS, normalizeSettings, langFromNavigator
-- `packages/ui/src/internal/theme.ts` — UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = 시스템 일·한 고딕(⚠️ Noto 서브셋 자체 호스팅은 후속 — docs/12 §1). | exports: THEME_CSS, injectTheme
+- `packages/ui/src/internal/theme.ts` — UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = Noto Sans JP/KR Variable(OFL — @font-face는 게임 main.ts가 fontsource 유니코드 범위 조각으로 자체 호스팅, docs/12 §1), 한국어 화면은 KR 먼저. 없으면 시스템 일·한 고딕. | exports: THEME_CSS, injectTheme
 
 ## scripts
 - `scripts/check-asset-size.ts` — 정적 에셋 한도 게이트(`pnpm check:assets [dir]`): 파일당 25 MiB, 파일 수 20,000(Workers Free). see docs/13-deployment.md §2
 - `scripts/check-records.ts` — PR 기록 누락 게이트(`pnpm check:records --base <ref>`): api.ts↔모듈 카드(실패), 코드↔PROGRESS.md(경고). see docs/16-context-protocol.md §3
 - `scripts/check-size.ts` — 크기 제한 게이트(`pnpm check:size`): TS 파일 400줄·함수 60줄, 모듈 카드 150줄, docs 400줄, CLAUDE.md 200줄. see docs/15-conventions.md §2
-- `scripts/lib/credits.ts` — 크레딧 자동 생성(M10-T06, 03 §8, ADR-0096): data/sources.lock.json 모든 원천 + content/ATTRIBUTION.json(에셋·텍스트) → credits.json, 게임 런타임 의존(전이 포함) package.json → oss-licenses.json. | exports: LockSource, AttributionEntry, CreditData, OssPackage, creditsData, ossPackages, buildCredits
+- `scripts/lib/credits.ts` — 크레딧 자동 생성(M10-T06, 03 §8, ADR-0096): data/sources.lock.json 모든 원천 + content/ATTRIBUTION.json(에셋·텍스트) → credits.json, 게임 런타임 의존(전이 포함) package.json → oss-licenses.json. | exports: LockSource, AttributionEntry, CreditData, OssPackage, creditsData, ossPackages, ossNotices, buildCredits
 - `scripts/lib/files.ts` — 저장소 파일 워커(node_modules·dist·데이터 산출물 제외) + CI 출력 헬퍼. scripts/check-* 공용. | exports: listFiles, report
 - `scripts/lib/records-rules.ts` — PR 기록 누락 검사 규칙(순수 함수): api.ts ↔ 모듈 카드, 코드 ↔ PROGRESS.md. see docs/16-context-protocol.md §3–4 | exports: RecordsReport, isCodePath, checkRecords
 - `scripts/lib/size-rules.ts` — 파일·함수·문서 크기 제한 규칙(순수 함수). see docs/15-conventions.md §2, docs/14-testing-perf.md §5 | exports: SIZE_LIMITS, SizeViolation, countLines, isTestPath, bodyLines, findLongFunctions, checkSourceText, docLimitFor, checkDocText
@@ -442,7 +443,7 @@
 - `tools/pipeline/src/checks/rail-photo.ts` — M07-T01 수락: 선로 중심선 vs GSI 항공사진(seamlessphoto z18 ≈ 0.49 m/px, 검증 전용 — photo-tiles.ts) ≤ 1 m. | exports: TOLERANCE_M, symmetryCenter
 - `tools/pipeline/src/checks/terrain-gsi.ts` — M01-T03 수락 검증: dem_1m.tif 표고 vs 地理院地図 표시값(GSI 표고 API) 비교 + GDAL/@sanpo/geo 투영 일치 확인. 네트워크 필요(CI 제외).
 - `tools/pipeline/src/cli-assets.ts` — CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), characters(Rocketbox → 플레이어 아바타·군중 팩, ADR-0057), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06). | exports: AssetCtx, materials, trees, signage, characters, audio
-- `tools/pipeline/src/cli-map.ts` — CLI 지도·지명·도감 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles), | exports: MapCtx, areaCellKeys, normalizeAreasLayer, map, poiWikidata, poiReview
+- `tools/pipeline/src/cli-map.ts` — CLI 지도·지명·도감 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles + global/odbl/ ODbL 파생 DB), | exports: MapCtx, areaCellKeys, normalizeAreasLayer, map, poiWikidata, poiReview
 - `tools/pipeline/src/cli-rail.ts` — CLI 철도 단계(cli.ts에서 분리, M07): fetch(N02·ODPT GTFS → data/raw, sha256 lock), rail(OSM 철도 정규화 → 노선 파생 → global/rail.bin), | exports: RailCtx, fetchSources, rail, timetables
 - `tools/pipeline/src/cli.ts` — 데이터 빌드 CLI 엔트리(`pnpm pipeline <stage> …`). see docs/04-data-pipeline.md §2, docs/modules/pipeline.md
 - `tools/pipeline/src/lib/geom2d.ts` — 수평(XZ) 2D 기하: 볼록 껍질(monotone chain), 최소 면적 사각형(회전 캘리퍼스), 다각형 면적. HLOD 박스·매스용. | exports: P2, convexHull, polygonArea, Obb, minAreaRect, obbCorners
@@ -469,7 +470,7 @@
 - `tools/pipeline/src/spike/spike-metrics.ts` — M01-T02 스파이크 비교 지표: 보존(gml:id·속성·면 종류·텍스처·도로 기능), 좌표 일치, 규모. see docs/adr/0007-plateau-reader.md | exports: RunStats, compareOutputs
 - `tools/pipeline/src/stages/areas/assign.ts` — 셀 meta placeNames(M10-T02): 정규화 町丁 링 중 셀 사각형(256 m)과 겹치는 것 → 셀 로컬(x, z) 폴리곤(링 전체 — HUD 점-폴리곤 조회, 이웃 셀과 중복 허용). | exports: AREAS_SOURCES, readPlaces, placeNamesForCell
 - `tools/pipeline/src/stages/areas/kana.ts` — 가나 읽기 → 로마자(헵번식, 장음 표기 생략)·한글(국립국어원 일본어 표기법: 어두 무성음 = 예사소리, 어중 = 거센소리, 장음 생략, ン = ㄴ받침, ッ = ㅅ받침). | exports: toFullKatakana, morae, kanaToRomaji, kanaToHangul
-- `tools/pipeline/src/stages/areas/names.ts` — 지명 3개 언어(M10-T02): e-Stat 町丁 이름(道玄坂２丁目) + 우편번호 KEN_ALL 가나 읽기 → ja「渋谷区 道玄坂二丁目」· en「Dogenzaka 2-chome, Shibuya」· ko「시부야구 도겐자카 2초메」. 순수 함수(테스트). | exports: kanjiNumber, splitTown, parseNumber, variantKey, townKey, Readings, parseKenAll, placeName
+- `tools/pipeline/src/stages/areas/names.ts` — 지명 3개 언어(M10-T02): e-Stat 町丁 이름(道玄坂２丁目) + 우편번호 KEN_ALL 가나 읽기 → ja「渋谷区 道玄坂二丁目」· en「Dogenzaka 2-chome, Shibuya」· ko「시부야구 도겐자카 2초메」. 순수 함수(테스트). | exports: kanjiNumber, splitTown, parseNumber, variantKey, townKey, Readings, parseKenAll, townRomaji, placeName
 - `tools/pipeline/src/stages/areas/normalize.ts` — `pnpm pipeline normalize --layer areas`(M10-T02): e-Stat 소지역 2020(구별 shp, JGD2011 경위도) + KEN_ALL 가나 → data/normalized/areas/places.json | exports: PlaceRecord, BoundsWF, simplifyRing, AreasResult, normalizeAreas, writeAreas
 - `tools/pipeline/src/stages/areas/shapefile.ts` — 최소 Shapefile 리더(e-Stat 소지역 경계 — M10-T02): .shp 폴리곤(유형 5, 링 여러 개) + .dbf 문자·숫자 필드(Shift_JIS). GDAL 없이 Node에서. | exports: ShpPolygon, readShpPolygons, DbfRecord, readDbf
 - `tools/pipeline/src/stages/audio/analyze.ts` — 오디오 분석(M09-T04 — ADR-0079): 루프 구간 고르기용 "지속 음조" 점수와 발소리 온셋. | exports: FFT_SIZE, HOP, monoOf, fft, spectrogramDb, tonalTrack, rmsEnvelope, onsetsOf
@@ -589,6 +590,7 @@
 - `tools/pipeline/src/stages/map/clip.ts` — 지도 타일 기하(M10-T03): 타일 정수 좌표 사각형(버퍼 포함)으로 면(Sutherland–Hodgman)·선(선분 자르기·분할) 자르기, Douglas–Peucker 단순화. 순수 함수(테스트). | exports: Pts, simplifyLine, clipRing, clipLine, quantize, ringArea, orient
 - `tools/pipeline/src/stages/map/collect.ts` — 지도 원천 수집(M10-T03): 정규화 데이터 → 지도 피처(WF xz). 건물 = PLATEAU 바닥 링(셀 소유), 도로·공원·물 = 정규화 OSM(셀 중복 id 제거), 철도·역 = 빌드 global/rail.bin, | exports: MapGeom, MapFeature, collectMapFeatures
 - `tools/pipeline/src/stages/map/index.ts` — `pnpm pipeline map --build-id <id>`(M10-T03): 정규화 데이터 + 빌드 rail.bin → global/map.pmtiles(MVT z13–16) + map-report.json. 외부 지도 타일 서비스 없음 — 출처 = OSM(ODbL)·PLATEAU·GSI·e-Stat. | exports: MAP_ATTRIBUTION, MAP_SOURCES, runMap
+- `tools/pipeline/src/stages/map/odbl.ts` — ODbL 4.6 파생 DB 공개(M11-T05, 03 §6 — ADR-0097): 빌드에 쓰인 OSM 정규화 데이터(셀별 GeoJSONSeq + 철도) + 우리 보정(content/markings)을 | exports: ODBL_FILES, collectOsmDerived, odblReadme, writeOdblPackage
 - `tools/pipeline/src/stages/map/tiles.ts` — 지도 타일러(M10-T03): WF 피처 → 경위도 → 웹 메르카토르 타일(z 13–16, extent 4096, 버퍼 64) → 자르기·단순화·정수화 → MVT 레이어. PMTiles는 index.ts가 쓴다. | exports: MAP_MIN_ZOOM, MAP_MAX_ZOOM, EXTENT, MAP_LAYERS, lonLatToMerc, TileStats, buildTiles
 - `tools/pipeline/src/stages/materials/encode.ts` — 자산 zip → 레이어 PNG(ImageMagick: 리사이즈·ORM 채널 패킹) → KTX2 배열(toktx: 알베도 ETC1S sRGB, 법선·ORM UASTC+RDO+zstd, 밉맵). | exports: ENCODE_ARGS, LayerImages, prepareLayer, encodeArray
 - `tools/pipeline/src/stages/materials/fetch.ts` — ambientCG zip 받기 + sha256 고정(data/sources.lock.json `ambientcg`.sha256 맵). 불일치 = 중단, 미기록 = --update-lock일 때만 기록. | exports: AmbientLock, sha256Of, FetchAssetsInput, fetchAssets
