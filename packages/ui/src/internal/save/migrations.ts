@@ -57,6 +57,7 @@ function normalize(r: Raw): SaveData {
       atMs: num(d.atMs, 0),
       weather: str(d.weather, 'clear'),
       photoIds: strs(d.photoIds),
+      ...(d.posWF ? { posWF: vec(d.posWF) } : {}),
     }));
   const mode = str(r.mode, 'walk');
   return {

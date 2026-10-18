@@ -73,6 +73,8 @@ export interface DiscoveryRecord {
   atMs: number;
   weather: string;
   photoIds: string[];
+  /** 발견한 자리(빠른 이동 목표). */
+  posWF?: Vec3d;
 }
 
 export interface DiscoveryState {
@@ -86,7 +88,8 @@ export interface DiscoveryState {
 export function createDiscovery(
   doc: Document,
   out: Signal<readonly DiscoveryModel[]>,
-  onFound: (e: PoiEntry) => void,
+  /** 발견(명소, 발견한 순간 플레이어 위치 — 걸을 수 있는 자리, 빠른 이동 목표). */
+  onFound: (e: PoiEntry, at: Vec3d) => void,
 ): DiscoveryState {
   const entries = poiEntries();
   const svc = createPoiService(entries.map((e) => ({ id: e.id, posWF: e.posWF, radiusM: e.radiusM })));
@@ -128,9 +131,10 @@ export function createDiscovery(
         update(f) {
           for (const id of svc.update(src.player(), src.mode(), f.dtReal)) {
             const e = entries.find((x) => x.id === id) as PoiEntry;
-            recs.set(id, { id, atMs: src.timeMs(), weather: src.weather(), photoIds: [] });
+            const at = { ...src.player() };
+            recs.set(id, { id, atMs: src.timeMs(), weather: src.weather(), photoIds: [], posWF: at });
             pushNotice(doc, { key: 'hud.notice.discovered', params: { name: e.name } });
-            onFound(e);
+            onFound(e, at);
             publish();
           }
         },

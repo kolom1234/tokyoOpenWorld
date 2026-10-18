@@ -203,7 +203,8 @@ function createParts(doc: Document, settings: Signal<SettingsModel>, world: () =
   const places = signal<readonly TravelPlace[]>([]);
   const travel = createTravelState(places);
   const discoveries = signal<readonly DiscoveryModel[]>([]);
-  const discovery = createDiscovery(doc, discoveries, (e) => travel.addPoi(e.id, e.name, e.posWF));
+  // 빠른 이동 목표 = 발견한 자리(명소 좌표는 건물 한가운데일 수 있다 — 도쿄 체육관 실측).
+  const discovery = createDiscovery(doc, discoveries, (e, at) => travel.addPoi(e.id, e.name, at));
   return {
     pause: createPause(doc, world),
     places,

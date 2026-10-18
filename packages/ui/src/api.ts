@@ -247,7 +247,8 @@ export interface SaveData {
   yawRad: number;
   mode: 'walk' | 'freecam';
   gameTimeMs: number;
-  discoveries: { id: string; atMs: number; weather: string; photoIds: string[] }[];
+  /** posWF = 발견한 자리(빠른 이동 목표 — 없으면 명소 좌표). */
+  discoveries: { id: string; atMs: number; weather: string; photoIds: string[]; posWF?: Vec3d }[];
   unlocked: string[];
   photos: { id: string; atMs: number; poiId: string | null }[];
   stats: { walkedM: number };

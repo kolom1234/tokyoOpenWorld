@@ -94,7 +94,7 @@ export async function applyCollection(s: SaveData, p: SaveParts, store: SaveStor
   p.discovery.restore(s.discoveries);
   for (const d of s.discoveries) {
     const e = p.discovery.entries.find((x) => x.id === d.id);
-    if (e) p.travel.addPoi(e.id, e.name, e.posWF);
+    if (e) p.travel.addPoi(e.id, e.name, d.posWF ?? e.posWF);
   }
 }
 
