@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 603개.
+> 파일 604개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -239,6 +239,7 @@
 - `packages/render/src/internal/scene/cell-node.ts` — 셀 → 렌더 노드: DecodedMesh 프리미티브 → BufferGeometry(TypedArray 그대로) + 공유 머티리얼, 슬롯별 Group(위치 = originWF − renderOrigin). see docs/07-rendering.md §2–3 | exports: CellRenderNode, threeAttributeName, buildGeometry, cellSeedOf, PREPASS_RENDER_ORDER, hlodNeedsDither, createCellNode, placeCellNode, disposeCellNode, CellSet, createCellSet
 - `packages/render/src/internal/scene/hlod-switch.ts` — HLOD 자식 표시 상태: 자식 셀이 live면 부모의 그 자식 영역을 0.3 s 디더로 숨기고, 자식이 해제되면 즉시 다시 보인다(구멍 없음). | exports: HLOD_CHILDREN, HLOD_FADE_S, HlodSwitch, createHlodSwitch
 - `packages/render/src/internal/scene/origin.ts` — 렌더 원점 재설정 순수 계산: 판정(거리 ≥ 2048 m), 256 m 격자 스냅, 노드 위치 = WF − renderOrigin(float64 → 대입 시 float32). see docs/01-architecture.md §7, docs/07-rendering.md §2 | exports: needsRebase, snapOrigin, toRender
+- `packages/render/src/internal/scene/release.ts` — 장면에서 영구히 빼는 오브젝트의 렌더러 캐시 해제(M11-T02 누수 수정): three r186 RenderObject는 메시(Object3D)·머티리얼의 'dispose' 이벤트로만 | exports: releaseRenderObjects
 - `packages/render/src/internal/scene/render-view.ts` — 렌더 시점 상태: WF 카메라(float64) 보관, 원점 재설정 판정·실행(origin/rebased), three 카메라에 렌더 좌표 대입. see docs/07-rendering.md §2 | exports: RenderView, createRenderView
 - `packages/render/src/internal/scene/scene-graph.ts` — 씬 그래프 골격: scene → worldRoot(원점 고정) → 레이어 루트, skyRoot(카메라 상대). see docs/07-rendering.md §2 | exports: LayerRoot, SLOT_ROOT, SceneGraph, createSceneGraph
 - `packages/render/src/internal/service.ts` — createRender: 컨텍스트(초기화·씬·머티리얼·시점·셀) → 프레임 시스템(renderPrep 70 / render 80) → RenderService 외관. see docs/modules/render.md, docs/07-rendering.md §1–3 | exports: RENDER_PHASE, RENDER_PREP_PHASE, createRender
