@@ -1,15 +1,16 @@
 # PROGRESS
 Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-hardening`, PR #25 draft)
 
-## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅, T04 ✅, T01 ✅(⚠️ 기록) → T02 → T06)
-## Current Task: M11-T02 Soak & leak test
+## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅, T04 ✅, T01 ✅(⚠️ 기록), T02 ✅ → T06)
+## Current Task: M11-T06 Production launch(준비 — production 쓰기는 사용자 확인 뒤)
 - Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097), M11-T03 오류 보고(ADR-0098 — staging 수락), 무료 한도 일일 점검 워크플로(usage.yml — main 병합 뒤부터 실행), M11-T04 접근성(ADR-0099), M11-T01 성능(ADR-0100 — `pnpm perf`).
-- In progress: T02 — 1차 1시간 소크에서 **힙 누수 발견**(+92 MB/분, 1.5 → 6.7 GB, 재시작 0·오류 0·13바퀴·열차 12회) → 원인 = three r186 RenderObject가 geometry.dispose()로는 캐시에서 안 빠짐(셀 해제마다 메시·정점 배열 잔존) → `scene/release.ts`로 수정(순간이동 왕복 시험 평탄). 2차 1시간 소크 실행 중.
+- In progress: T06 준비 — MVP 재빌드(로마자 지명·ODbL 묶음 반영) → dev publish → staging.
 - Next step (정확히 한 걸음): 소크 결과 기록 → MVP 재빌드(normalize --layer areas → docker build·hlod·materials·audio → map → validate) → dev publish·staging 배포 → GOLDEN_BOOT staging 첫 로드 → T06 사용자 확인 대기.
 - Blockers: 🔶 **국토지리원 측량법 제30조 사용 승인(사용자 신청)** — production 공개(T06) 전 필수(03 §6.1, ADR-0097). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 - 다음 MVP 재빌드 때 반영할 것: 로마자 지명(셀 meta), `map --build-id` ODbL 묶음(global/odbl/). DOF 전환 실측은 T01 perf 하네스에서.
 
 ## Recently Completed
+- M11-T02 Soak(2026-10-19) — `pnpm soak`(도보 → 열차 → 주행 → 비행 반복). 1차: 힙 누수 +92 MB/분 → 원인 three r186 RenderObject(메시 'dispose' 이벤트 필요) → `scene/release.ts`. 2차 1시간: 힙 기울기 0.38 MB/분·재시작 0·오류 0 ✅, GPU 메모리 30분 이후 0.85 MiB/분(⚠️ 관찰). ADR-0101
 - M11-T01 Performance(2026-10-19) — `pnpm perf`(실제 GPU 1440p High, vsync 해제: 도보·자동 주행·신주쿠 비행 + DOF + 부팅 → docs/generated/perf-latest.md), core `Scheduler.timings`, `?perf=1`. 수정: 야간 광원 풀 1024개 매 프레임 행렬 갱신 제외(셀 그룹은 로컬 행렬만 — 월드 순회까지 끄면 셀이 덜 그려지는 착시·떨림 e2e 실패). 첫 표시 = 셰이더 컴파일(LUT 65–420 ms → LUT 굽기 기각, 재방문 3.2–4.0 s). DOF 첫 켜기만 2.0–4.6 s·이후 0.3–0.6 s(전: 켤 때마다 4.8 s). ⚠️ 프레임 p50 도보 19–24·주행 25·비행 15–16·p95 30–46 ms(전력 상태 ±25 %)(GPU 한계 ≈ 34 W), 메인 p95 17–39 ms(render CPU — three WebGPU 드로우콜 비용 + GPU 대기), sim p95 12.8 ms, 기준 GPU 2종 미측정. ADR-0100
 - M11-T04 Accessibility(2026-10-19) — e2e `ui-scale.spec.ts`(배율 150 %: 메뉴 7 × 3개 언어 × 1024×768·1280×720 + HUD 운전·알림·열차·자막 — 문제 0, 지원 밖 800×500 대조 37건), HUD·지도 배치 em화(겹침 수정), 모션 민감 = OS 기본값 + UI 애니메이션 끔, 효과음 자막(`captions.ts`), render `setColorVision`(Machado + daltonize). ADR-0099
 - M11-T03 Error reporting(2026-10-19) — Worker `POST /api/log`(허용 필드·이메일/URL/긴 숫자 지움·IP/UA/위치 미사용) → Workers Analytics Engine(prod `sanpo_errors`·staging `sanpo_errors_staging`), 게임 `error-report.ts`(세션 1 %·3건·`?report=force`), `pnpm errors`(SQL API). 수락: staging 666dc839에 인위적 오류 2건 → 쿼리 2그룹 ✅. + `usage.yml`/`scripts/cf-usage.ts`(무료 한도 70 % 이슈 — 첫 측정 ours 최대 R2 18.3 %, account KV 쓰기 925 %는 다른 프로젝트). ADR-0098
