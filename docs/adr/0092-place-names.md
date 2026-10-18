@@ -15,5 +15,5 @@
 
 ## Consequences
 - 실제 GPU(테스트 빌드 6셀): 순간이동 뒤 지명 바뀜 32–77 ms(≤ 0.5 s ✅). HUD 시그널 갱신 ≤ 10 Hz(0.1 s 묶음, 바뀐 값만 — 걷기 중 3.2 Hz).
-- 로마자는 붙여 쓴다(Minamiaoyama — 공식 표기 Minami-Aoyama와 다를 수 있음 ⚠️). 원하면 content 덮어쓰기 표 추가.
+- 로마자는 붙여 쓴다(Jingumae·Udagawacho — 표지 관례). 2026-10-19: 방위 접두(東西南北 + 두 글자 이상)는 하이픈으로 뗀다(`names.ts townRomaji` — Nishi-Shinjuku·Minami-Aoyama). 셀 meta에 구워지므로 다음 MVP 재빌드부터 반영.
 - 셀 meta 크기 +2–4 KB(gzip 전). 지명이 바뀌려면 MVP 재빌드(셀 meta)가 필요하다.

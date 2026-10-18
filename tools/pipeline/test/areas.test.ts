@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { placeNamesForCell } from '../src/stages/areas/assign.ts';
 import { kanaToHangul, kanaToRomaji } from '../src/stages/areas/kana.ts';
-import { kanjiNumber, parseKenAll, parseNumber, placeName, splitTown } from '../src/stages/areas/names.ts';
+import { kanjiNumber, parseKenAll, parseNumber, placeName, splitTown, townRomaji } from '../src/stages/areas/names.ts';
 import { simplifyRing } from '../src/stages/areas/normalize.ts';
 import { readDbf, readShpPolygons } from '../src/stages/areas/shapefile.ts';
 
@@ -52,6 +52,14 @@ describe('place names', () => {
     });
     expect(placeName('13113', '渋谷区', '道玄坂２丁目', r).name.en).toBe('Dogenzaka 2-chome, Shibuya');
     expect(placeName('13113', '渋谷区', '未知町', r).missing).toBe(true);
+  });
+  it('hyphenates direction prefixes in romaji only (Nishi-Shinjuku, Minami-Aoyama)', () => {
+    expect(townRomaji('西新宿', 'ニシシンジュク')).toBe('Nishi-Shinjuku');
+    expect(townRomaji('南青山', 'ミナミアオヤマ')).toBe('Minami-Aoyama');
+    expect(townRomaji('東', 'ヒガシ')).toBe('Higashi');
+    expect(townRomaji('北沢', 'キタザワ')).toBe('Kitazawa');
+    expect(townRomaji('神宮前', 'ジングウマエ')).toBe('Jingumae');
+    expect(townRomaji('宇田川町', 'ウダガワチョウ')).toBe('Udagawacho');
   });
 });
 

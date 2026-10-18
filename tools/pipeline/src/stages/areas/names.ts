@@ -69,6 +69,17 @@ export function parseKenAll(csv: string, wardCodes: ReadonlySet<string>): Readin
   return { wards, towns };
 }
 
+/** 방위 접두(東西南北 + 두 글자 이상 고유 이름) — 로마자에서 하이픈으로 떼어 쓴다(Nishi-Shinjuku, Minami-Aoyama: 도로 표지·도쿄도 표기 관례). */
+const DIRECTION_PREFIX: Readonly<Record<string, string>> = { 東: 'ヒガシ', 西: 'ニシ', 南: 'ミナミ', 北: 'キタ' };
+
+/** 町 이름 로마자: 방위 접두면 `Nishi-Shinjuku`, 아니면 붙여 쓴다(Jingumae·Udagawacho — 표지 관례 그대로). */
+export function townRomaji(baseJa: string, kana: string): string {
+  const pre = DIRECTION_PREFIX[baseJa.charAt(0)];
+  if (pre && baseJa.length >= 3 && kana.startsWith(pre) && kana.length > pre.length)
+    return `${kanaToRomaji(pre)}-${kanaToRomaji(kana.slice(pre.length))}`;
+  return kanaToRomaji(kana);
+}
+
 /** 이름 3개 언어(읽기가 없으면 en·ko도 일본어 그대로 + missing = true). */
 export function placeName(
   wardCode: string,
@@ -81,7 +92,7 @@ export function placeName(
   const townKana = r.towns.get(`${wardCode}|${variantKey(base)}`);
   const ja = `${wardJa} ${base}${chome ? `${kanjiNumber(chome)}丁目` : ''}`;
   if (!wardKana || !townKana) return { name: { ja, en: ja, ko: ja }, missing: true };
-  const en = `${kanaToRomaji(townKana)}${chome ? ` ${chome}-chome` : ''}, ${kanaToRomaji(wardKana)}`;
+  const en = `${townRomaji(base, townKana)}${chome ? ` ${chome}-chome` : ''}, ${kanaToRomaji(wardKana)}`;
   const ko = `${kanaToHangul(wardKana)}구 ${kanaToHangul(townKana)}${chome ? ` ${chome}초메` : ''}`;
   return { name: { ja, en, ko }, missing: false };
 }
