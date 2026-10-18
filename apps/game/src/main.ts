@@ -1,5 +1,8 @@
 // 브라우저 엔트리: 상태 화면(e2e data-* — 화면에서는 UI 로딩 화면이 대신) + @sanpo/ui 셸 마운트 → boot(), 실패 시 오류 화면.
 // `?ui-sandbox=1` = 게임 없이 UI만(목 브리지 — 화면·언어 확인, M10-T01). see docs/modules/game.md
+// UI 글꼴(OFL — docs/03 §4): 유니코드 범위 조각 woff2(가변 wght) 자체 호스팅 — 브라우저가 화면에 쓰인 글자의 조각만 받는다(font-display swap).
+import '@fontsource-variable/noto-sans-jp/wght.css';
+import '@fontsource-variable/noto-sans-kr/wght.css';
 import { boot, parseFlags } from './boot.ts';
 import { createShell } from './shell/bridge.ts';
 import { loadingView } from './shell/loading.ts';

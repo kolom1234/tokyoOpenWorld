@@ -23,6 +23,6 @@
 
 ## Consequences
 - 공개 API: input `setBindings·setAxisScale·setEnabled·enabled`, traversal `configure()`·`TraversalSettings.motionEffects`, ui `UiBridge`·`mountUi(root, bridge, opts) → UiHandle`·시그널 재수출(게임이 같은 인스턴스로 브리지를 만든다).
-- ⚠️ 폰트: Noto Sans JP/KR 서브셋 자체 호스팅(12 §1)은 미적용 — 시스템 일·한 고딕(Yu Gothic UI·Malgun Gothic·Hiragino) 스택. 대안: 파이프라인에서 UI 문자열·지명 글리프로 서브셋(woff2) 생성.
+- ~~⚠️ 폰트: Noto Sans JP/KR 서브셋 자체 호스팅(12 §1)은 미적용~~ → 2026-10-19 적용: `@fontsource-variable/noto-sans-{jp,kr}` 5.3.0(OFL, 유니코드 범위 조각 woff2 — 빌드 248개·8.9 MB, 브라우저는 쓰인 글자 조각만). 우리 글리프 서브셋(파이프라인) 대신 조각 방식을 고른 이유: 지명·명소 이름이 23구 확장으로 늘어나도 다시 굽지 않는다. 실측(UI 타이틀): ja 13조각 278 KB·ko 10조각 178 KB·en 3조각 58 KB, `font-display: swap`(시스템 고딕으로 먼저 그림). 한국어 화면은 KR 먼저(`:lang(ko)`).
 - ⚠️ 일시정지 중 물리·군중은 계속 돈다(완전 정지는 물리 워커 일시정지 API 필요).
 - 검사 도구(check-size·codemap)는 .tsx를 TSX로 파싱하도록 고쳤다(전에는 JSX를 TS로 읽어 함수 길이를 잘못 셌다).

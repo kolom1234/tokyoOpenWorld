@@ -1,8 +1,9 @@
-// UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = 시스템 일·한 고딕(⚠️ Noto 서브셋 자체 호스팅은 후속 — docs/12 §1).
+// UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = Noto Sans JP/KR Variable(OFL — @font-face는 게임 main.ts가 fontsource 유니코드 범위 조각으로 자체 호스팅, docs/12 §1), 한국어 화면은 KR 먼저. 없으면 시스템 일·한 고딕.
 export const THEME_CSS = `
 .ui-root{position:fixed;inset:0;z-index:20;pointer-events:none;color:#f3f1ec;
-  font:calc(15px * var(--ui-scale,1))/1.45 "Noto Sans JP","Noto Sans KR","Hiragino Sans","Yu Gothic UI","Meiryo UI","Malgun Gothic",system-ui,sans-serif;
+  font:calc(15px * var(--ui-scale,1))/1.45 "Noto Sans JP Variable","Noto Sans KR Variable","Hiragino Sans","Yu Gothic UI","Meiryo UI","Malgun Gothic",system-ui,sans-serif;
   --accent:#f08a24;--panel:rgba(14,18,26,.78);--line:rgba(255,255,255,.14);--muted:#b8b4ab}
+:lang(ko) .ui-root{font-family:"Noto Sans KR Variable","Noto Sans JP Variable","Malgun Gothic","Hiragino Sans","Yu Gothic UI",system-ui,sans-serif}
 .ui-root kbd{display:inline-block;min-width:1.6em;padding:0 .35em;border:1px solid rgba(255,255,255,.35);border-bottom-width:2px;border-radius:4px;
   font:600 .82em/1.5 ui-monospace,monospace;text-align:center;background:rgba(255,255,255,.08)}
 .screen{position:absolute;inset:0}

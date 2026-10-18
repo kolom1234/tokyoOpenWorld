@@ -653,6 +653,23 @@
       "modified": true
     },
     {
+      "id": "noto-sans-ui",
+      "kind": "font",
+      "title": "Noto Sans JP / Noto Sans KR Variable(Google Fonts v56 — @fontsource-variable 5.3.0 유니코드 범위 조각 woff2) — UI 글꼴, 자체 호스팅(화면에 쓰인 글자의 조각만 받음)",
+      "url": "https://fonts.google.com/noto",
+      "license": "OFL-1.1",
+      "attribution": {
+        "ja": "UI フォント：Noto Sans JP / Noto Sans KR（© Google Inc. · Adobe, SIL Open Font License 1.1）",
+        "en": "UI font: Noto Sans JP / Noto Sans KR (© Google Inc. · Adobe, SIL Open Font License 1.1)",
+        "ko": "UI 글꼴: Noto Sans JP / Noto Sans KR (© Google Inc. · Adobe, SIL Open Font License 1.1)"
+      },
+      "files": [
+        "apps/game/node_modules/@fontsource-variable/noto-sans-jp/files/*.woff2",
+        "apps/game/node_modules/@fontsource-variable/noto-sans-kr/files/*.woff2"
+      ],
+      "modified": true
+    },
+    {
       "id": "noto-sans-jp",
       "kind": "font",
       "title": "Noto Sans JP Bold(noto-cjk Sans2.004, 일본어 서브셋 OTF) — 파이프라인 `signage`가 가상 브랜드 간판 글자 윤곽을 아틀라스로 굽는다(M05-T06). 글꼴 파일은 배포하지 않음",

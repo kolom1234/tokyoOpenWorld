@@ -44,7 +44,7 @@
 | Microsoft Rocketbox Avatar Library (커밋 `0943055`) | 플레이어 아바타(Male_Adult_10)·군중 베이스 12종 메시·기본색 텍스처·Biped 클립(ADR-0057, M06 사전 결정 1 — Quaternius ADR-0048 대체). `pnpm pipeline characters`(커밋 고정 URL에서 받기), sha256 = `sources.lock` `rocketbox`(저장소 상대 경로별), 목록 = `content/characters/catalog.json`. 로고 검사: 실제 상표 없음, 문구 프린트 아바타(Male_Adult_09) 제외. 저작권·허가 고지 = `apps/game/public/third-party-notices.txt` | MIT |
 | Kenney | 보조 소품/아이콘 | CC0 |
 | `@dgreenheck/ez-tree` | 나무 메시 생성기(파이프라인 `trees`, M05-T04 — 수종 6종 가지·잎 카드 → `apps/game/src/assets/trees/`, 잎 아틀라스·임포스터는 자체 생성, `ATTRIBUTION.json` `ez-tree`, ADR-0052) | MIT (생성물은 자체 산출물) |
-| Noto Sans JP / Noto Sans KR | UI 폰트 (자체 호스팅, 서브셋) | SIL OFL 1.1 |
+| Noto Sans JP / Noto Sans KR Variable (Google Fonts v56, `@fontsource-variable/noto-sans-{jp,kr}` 5.3.0 — 고정) | UI 폰트(2026-10-19): 유니코드 범위 조각 woff2 248개(빌드 8.9 MB, 브라우저는 화면 글자의 조각만 받음 — `font-display: swap`), `apps/game/src/main.ts` import, 출처 `ATTRIBUTION.json` `noto-sans-ui`, OFL 전문 = `apps/game/public/third-party-notices.txt`. 조각 = 원본 부분 집합(수정본) — 예약 글꼴 이름 없음(Noto) | SIL OFL 1.1 |
 | Noto Sans JP Bold (noto-cjk Sans2.004 서브셋 OTF) | 가상 간판 글자 윤곽 → 파이프라인 `signage`가 아틀라스로 굽기(M05-T06, sources.lock `noto-sans-jp`, `ATTRIBUTION.json` `noto-sans-jp`, ADR-0054). 글꼴 파일은 배포하지 않음 | SIL OFL 1.1 |
 | `opentype.js` 2.0.0 | 글꼴 윤곽 읽기(파이프라인 `signage`) | MIT |
 | 자체 제작 (설정 + 코드) | 가상 브랜드 64개(`content/signage/brands.json` 생성 규칙 + `real-brands.txt` 실존 상호 254개 대조 — 일치 0건), 간판 모델·아틀라스(ADR-0054) | 프로젝트 소유 |
