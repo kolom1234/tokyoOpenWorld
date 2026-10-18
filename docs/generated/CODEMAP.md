@@ -3,11 +3,11 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 527개.
+> 파일 552개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
-- `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootStage, precompileText, bootProgressText, bootProgressSystem
+- `apps/game/src/boot-progress.ts` — 부팅 로딩 패널 "준비" 행(M06): 선컴파일 단계(대기 LUT → 셰이더 n/N → 아바타) · 스폰 셀 live 수 · 경과 s. | exports: BootPrecompile, BootStage, precompileText, bootProgressText, bootProgressSystem
 - `apps/game/src/boot.ts` — 부트 시퀀스: 기능 감지 → core 서비스 → 렌더·입력·freecam 조립 → 루프 → 월드 로드 → streaming 시작·스폰 영역 대기. see docs/modules/game.md §부트 시퀀스 | exports: BootFlags, parseFlags, startWorld, createIdleFrameSource, BootResult, boot
 - `apps/game/src/caps.ts` — 기능 감지: WebGPU 어댑터, crossOriginIsolated(SAB), 코어 수 → 격리 모드·디코드 워커 수. see docs/01-architecture.md §2 | exports: WebGpuStatus, IsolationMode, Caps, CapsEnv, capsEnvFromGlobal, detectCaps
 - `apps/game/src/credits.ts` — 화면 오른쪽 아래 상시 출처 표기(03 §6 ODbL "Produced Work" 표기 — OSM 파생 노면 표시, M05-T02). M08 크레딧 화면·지도 하단 표기가 생기면 그쪽으로. | exports: CREDIT_LINE, mountCredits, LIVE_WEATHER_CREDIT, setLiveCredit
@@ -18,16 +18,26 @@
 - `apps/game/src/debug/post-flags.ts` — `?quality=low|medium|high|ultra`·`?post=ssr:0,ao:gtao,aoScale:1,scale:0.85,aerial:full,exp:1.25` → render 품질 티어·후처리 효과 덮어쓰기(M03-T07 A/B 측정). | exports: parseQualityFlag, parsePostFlag
 - `apps/game/src/debug/stats.ts` — `?debug=1` 전용 stats-gl 패널(동적 import — 기본 번들에 포함하지 않음). see docs/02-tech-stack.md, docs/14-testing-perf.md | exports: createStatsHook
 - `apps/game/src/debug/sun-override.ts` — `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다. | exports: parseSunFlag, dirFromAzEl, overrideEnvironment, createSunOverride
+- `apps/game/src/debug/ui-sandbox.ts` — `?ui-sandbox=1` 스토리 페이지(M10-T01): 게임·렌더 없이 @sanpo/ui를 목 브리지로. `&screen=title|pause|settings|credits|hud|boot`, `&lang=ko|ja|en`, `&pad=1`. | exports: runUiSandbox
 - `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
-- `apps/game/src/help-hud.ts` — 조작 도움말 + 카메라 아래 내리기 알림(임시 DOM HUD — M08 @sanpo/ui가 대체, ADR-0083). 왼쪽 아래 모드별 키 목록(H로 접기·펴기, 접으면 "H 도움말"), | exports: HELP_LINES, LANDING_TEXT, helpHudSystem
+- `apps/game/src/landing-hud.ts` — freecam G 카메라 아래 내리기 안내(ADR-0083 → M10-T01 UI HUD): 찾는 중 = 안내 칸 'landing', 실패 = 이유 알림(hud.landing seq가 바뀔 때만). 게임 로직 없음. | exports: landingHudSystem
 - `apps/game/src/landing.ts` — freecam G 카메라 아래 내리기(ADR-0083): 카메라 바로 아래(+ 2·4·7 m 링 × 8방위) 후보마다 물리 레이로 판정 → 가장 가까운 안전한 자리(발 WF) 또는 가운데 후보의 이유. | exports: LandingQueries, landingOffsets, evaluateSpot, findLanding, roadIndex, onLane
 - `apps/game/src/lane-chunks.ts` — 셀 차선(lanes.bin, 05 §7) 지연 적재·캐시(최근 16셀): freecam G 차도 판정(landing.ts)·차 부르기 연석 자리(vehicles/curb-spot.ts)가 공유. | exports: laneChunks
 - `apps/game/src/loop.ts` — rAF 프레임 루프 → scheduler.tick. 디버그 계측(stats-gl)은 프레임 훅으로만 끼운다. see docs/01-architecture.md §5 | exports: FrameHook, LoopDeps, Loop, createLoop
-- `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
+- `apps/game/src/main.ts` — 브라우저 엔트리: 상태 화면(e2e data-* — 화면에서는 UI 로딩 화면이 대신) + @sanpo/ui 셸 마운트 → boot(), 실패 시 오류 화면.
+- `apps/game/src/shell/bridge.ts` — UiBridge 구현(M10-T01): 시그널(HUD 10 Hz·로딩·설정) + 명령(일시정지·시작·빠른 이동) + @sanpo/ui 마운트. 월드는 attach 뒤에 붙는다(그 전 명령은 무시). | exports: ShellOptions, Shell, createShell
+- `apps/game/src/shell/commands.ts` — UiBridge 명령 구현(M10): 일시정지·시작(새 산책 = 시작 지점 빠른 이동)·빠른 이동. 이후 태스크가 사진·세이브·시간·날씨를 더한다. | exports: START_POINTS, CommandContext, travelToPreset, startPoints, createCommands
+- `apps/game/src/shell/credits.ts` — 크레딧 모델(M10-T01 최소): content/ATTRIBUTION.json(동적 import — 첫 로드 밖). M10-T06에서 빌드 credits.json·OSS 목록 자동 생성으로 바뀐다. | exports: creditsOf, loadCredits
+- `apps/game/src/shell/fast-travel.ts` — 빠른 이동(타이틀 시작 지점·지도 — M10): 검은 막 → walk 재진입(먼 기준점 = 그 아래 지면을 콜라이더 적재 뒤 찾는다, ADR-0084 경로) → 착지 확인 → 막 걷기. | exports: TravelTarget, FastTravelDeps, arrived, fastTravel
+- `apps/game/src/shell/hud-state.ts` — HUD 안내 상태(문서당 하나): 상호작용 안내(출처별 칸 — 우선순위 순), 알림(seq), 역 근접 안내, 검은 막. 게임 배선이 쓰고 shell/bridge가 10 Hz로 UI(@sanpo/ui HUD)에 넘긴다. | exports: PROMPT_SLOTS, PromptSlot, HudState, hudStateOf, setPrompt, topPrompt, pushNotice, setGuide, setFade
+- `apps/game/src/shell/loading.ts` — 부팅 상태 → UI 로딩 화면(LoadingModel): StatusView(e2e data-* 속성 — 화면에서는 숨김)를 감싸 같은 호출을 시그널로도 보낸다. 순수 매핑 함수는 테스트. | exports: INITIAL_LOADING, loadingOfWorld, loadingOfBoot, loadingView
+- `apps/game/src/shell/options.ts` — 셸 옵션: 메뉴 모드(타이틀·포인터 잠금 풀림 = 일시정지) 여부와 저장소. 개발·테스트 URL(?debug=1·?view=·?spawn=·?mode=·?probe=)은 메뉴 없이 곧바로 게임. | exports: menusEnabled, storageOf
+- `apps/game/src/shell/pause.ts` — 메뉴 일시정지(M10-T01): 게임 입력 끔(input.setEnabled) + 포인터 잠금 풀기 + 사용자 시계(custom)면 시계 멈춤. 재개 = 반대(+ 제스처 안이면 포인터 잠금 다시). | exports: PauseControl, createPause
+- `apps/game/src/shell/settings.ts` — 설정 저장(localStorage `sanpo.settings.v1` — 부팅 때 동기로 읽어 품질·언어를 첫 화면부터 적용)과 서비스 적용(품질·FOV·감도·모션·키·볼륨). | exports: SETTINGS_KEY, loadSettings, saveSettings, tierOf, mixOf, bindingsWithKeys, SettingsTargets, applySettings
 - `apps/game/src/spawn-presets.ts` — URL 스폰 프리셋(ADR-0084 — M10 지도 전 임시): `?spawn=<id>` → content/spawn-presets.json의 위치·방위로 월드 스폰을 바꾼다 | exports: SpawnPreset, SPAWN_PRESETS, spawnPreset, withSpawn
 - `apps/game/src/start-view.ts` — 시작 시점: 기본 = walk(09 §1 — world.json 스폰에서 걷기 시작, M05 결정 1). 로딩 중·`?mode=freecam`·골든뷰 = freecam | exports: START_EYE_XZ_WF, START_HEIGHT_AGL_M, SCRAMBLE_SQUARE_LOOK_WF, startFreecamPose, startWalkParams, presetFreecamPose
-- `apps/game/src/station/guide.ts` — 역 근접 안내(M07-T06 후속 — 임시 HUD, M08 지도·HUD가 대체): 걷는 중 가까운 출구를 찾아 화면 위 안내 글(방향 화살표 = 시선 기준, 거리 m). | exports: arrowTo, guideText
-- `apps/game/src/station/hud.ts` — 역·탐방 임시 HUD(M07-T06·후속 — M08 @sanpo/ui가 대체): 상호작용 안내 줄(F …), 화면 페이드, 몇 초 뜨는 알림(구조·내리기 실패 이유 등). | exports: prompt, fade, FADE_MS, notice, guide
+- `apps/game/src/station/guide.ts` — 역 근접 안내(M07-T06 후속 → M10-T01 UI HUD): 걷는 중 가까운 출구를 찾아 화면 위 안내(종류·역·출구·거리·시선 기준 방향 — 글은 @sanpo/ui가 3개 언어로). | exports: arrowDegTo, arrowTo, guideModel
+- `apps/game/src/station/hud.ts` — 역·탐방 HUD 안내(M07-T06 → M10-T01): 상호작용 안내·검은 막·알림·역 근접 안내를 shell/hud-state에 쓴다(그리기는 @sanpo/ui HUD — id는 그대로 #station-prompt 등). | exports: FADE_MS, prompt, fade, notice, guide
 - `apps/game/src/station/layout.ts` — 역 개찰구·계단 표식 배치(M07-T06 — ADR-0081): content/stations/access.json 출구 → 렌더 상자(캐비닛·윗판·울타리·표식)·플랩·물리 상자·통과 판정 선. | exports: ExitSpec, StationSpec, AccessFile, FIXTURE_COLOR, StationLayout, rad, forwardOf, rightOf, stationLayout, crossedAisle
 - `apps/game/src/station/platform-geo.ts` — 승강장 윗면 질의(M07-T06 후속 — ADR-0082): sim 승강장 메시(railStatic().platforms 윗면 삼각형) → 8 m 격자 버킷. | exports: PlatformMesh, PlatformTops, platformTops, clearTopAt, ARRIVAL_CLEARANCE_M, safeArrival, TrackPits, trackPitsBuilder, trackPits
 - `apps/game/src/station/stairs.ts` — 역 계단 F 이동 + 선로 구덩이 구조(M07-T06 후속 — ADR-0082). | exports: STAIRS_REACH_M, ARRIVAL_STEP_M, StairsDeps, Passage, passageAt, passageTarget, StairsRuntime
@@ -46,7 +56,6 @@
 - `apps/game/src/weather-mode.ts` — 날씨 모드(M09-T01, 10 §3): `?weather=auto|live|<기후표 상태 id>` > 골든뷰 weather > `?time=`(고정 시각 = 맑음 고정 — e2e·비교 결정론) > auto(기후표 마르코프). | exports: WeatherSpec, parseWeatherFlag, weatherSpecOf, applyWeatherSpec, startLiveWeather
 - `apps/game/src/wiring/camera.ts` — 배선: traversal 카메라·아바타(phase 20 확정) → render.setCamera·setAvatar(renderPrep 70 이전). see docs/modules/game.md, docs/01-architecture.md §5 | exports: CAMERA_WIRING_PHASE, createCameraWiring
 - `apps/game/src/wiring/env.ts` — 배선: sim.environment()(태양·달·날씨, 카메라 위치) → render.setEnvironment. camera(65) 뒤·renderPrep(70) 앞. see docs/modules/game.md, docs/01-architecture.md §5 | exports: ENV_WIRING_PHASE, defaultClock, createEnvWiring
-- `apps/game/src/wiring/ground-loading.ts` — 배선: 발밑·앞 셀 콜라이더 적재 대기(traversal.hud.groundLoading, M04-T06) → 화면 아래 가운데 작은 로딩 표시. HUD(M08 ui) 전까지의 최소 표시. | exports: GROUND_LOADING_PHASE, createGroundLoadingIndicator
 - `apps/game/src/wiring/quality.ts` — 품질 티어 배선(M03-T08): 저장된 티어(localStorage)로 시작 → 없으면 첫 표시 뒤 스트리밍이 조용해지면 render.detectQuality()(detect-gpu + 60프레임). | exports: QUALITY_STORAGE_KEY, loadTier, QualityWiringDeps, QualityWiring, startQualityWiring
 - `apps/game/src/wiring/streaming-physics.ts` — 배선: streaming live L0 셀(버스 `cell/ready` — onReady는 렌더 배선 단독 소유) → 물리 반경(08 §4) 안이면 collision.bin + terrain.height를 따로 요청(requestSections)해 physics.addCell, | exports: PHYSICS_WIRING_PHASE, PHYSICS_RADIUS_M, StreamingPhysicsDeps, StreamingPhysicsStats, StreamingPhysicsWiring, cellDistance, createStreamingPhysicsWiring
 - `apps/game/src/wiring/streaming-render.ts` — 배선: traversal 관심점 → streaming(phase 45), 준비된 셀 → render.addCell + ack + 부모 HLOD 자식 숨김(phase 55, 적용 예산 2 ms), | exports: INTEREST_PHASE, APPLY_PHASE, APPLY_BUDGET_MS, APPLY_BUDGET_BYTES, uploadBytes, StreamingRenderStats, StreamingRenderWiring, StreamingRenderDeps, createStreamingRenderWiring
@@ -55,7 +64,7 @@
 - `apps/game/src/world-extras.ts` — 월드 표시 직후 붙는 부가 배선(world-view.ts 400줄 제한으로 분리): 오디오(M09-T04) + 역 시설·동선(M07-T06) + freecam G 카메라 아래 내리기(ADR-0083). | exports: startWorldExtras
 - `apps/game/src/world-late.ts` — 첫 표시 뒤 적재(world-view에서 분리 — 400줄 한도): 머티리얼·아바타·나무·간판·군중(sim.worker + 군중 팩)·신호 램프. 실패하면 그 요소 없이 계속. | exports: LateState, loadMaterialsLater, AVATAR_URLS, loadAvatarLater, TREE_URLS, SIGNAGE_URLS, CROWD_URLS, CrowdMode, startCrowdLater, crowdFarDensitySystem, signalLampsOf, loadSignageLater, loadTreesLater
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
-- `apps/game/src/world-parts.ts` — world-view.ts 보조(400줄 제한으로 분리): sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스, 스폰 셀 미리 컴파일(ADR-0085). | exports: SimForDeps, simFor, initialLate, startPrecompile, frameSourceOf, warmStaged
+- `apps/game/src/world-parts.ts` — world-view.ts 보조(400줄 제한으로 분리): 상시 배선 시스템·부팅 단계, sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스, 스폰 셀 미리 컴파일(ADR-0085). | exports: SimForDeps, simFor, initialLate, startPrecompile, frameSourceOf, warmStaged, bootStageOf, wiringSystemsFor
 - `apps/game/src/world-rail.ts` — 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 → | exports: RailData, loadRail, startTrainsLater, sendRailStatics, trainPhysicsSystem
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
 - `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
@@ -368,8 +377,24 @@
 - `packages/traversal/src/internal/walk-placement.ts` — walk 착지점: 후보(기준점 → 6·12·24·48 m 링 × 8방위)마다 하늘(1,200 m)에서 수직 레이 → 첫 충돌이 TERRAIN(지면)인 가장 앞 후보. | exports: TERRAIN_LAYER, spotCandidates, findStreetSpot
 
 ## packages/ui
-- `packages/ui/src/api.ts` — @sanpo/ui 공개 계약(타입·인터페이스). see docs/modules/ui.md
-- `packages/ui/src/index.ts` — @sanpo/ui 공개 엔트리(L4): Preact HUD/메뉴/지도. api.ts 재수출 + create* 팩토리만. see docs/modules/ui.md | exports: * from './api.ts'
+- `packages/ui/src/api.ts` — @sanpo/ui 공개 계약(타입·인터페이스). 게임 상태는 UiBridge(apps/game 구현)로만 읽고 쓴다. see docs/modules/ui.md, docs/12-ui-ux.md §7 | exports: Lang, LANGS, LocalName, Msg, ScreenId, LoadingStage, LoadingModel, GuideModel, DriveModel, TrainModel, HudModel, PoiCategory, DiscoveryModel, TravelPlace, Units, VolumeSettings, RebindAction, REBIND_ACTIONS, SettingsModel, PhotoParams, CreditEntry, OssEntry, CreditsModel, StartChoice, UiCommands, UiBridge, UiOptions, UiHandle
+- `packages/ui/src/index.ts` — @sanpo/ui 공개 엔트리(L4): Preact HUD/메뉴/지도. api.ts 재수출 + mountUi·create* 팩토리 + 시그널(게임이 같은 인스턴스로 UiBridge를 만든다). see docs/modules/ui.md | exports: batch, computed, effect, ReadonlySignal, Signal, signal, * from './api.ts', mountUi, DEFAULT_KEYS, keyLabel, createMockBridge, DEFAULT_SETTINGS, langFromNavigator, normalizeSettings
+- `packages/ui/src/internal/app.tsx` — UI 루트: 화면 스택(boot → title|hud, hud 위에 pause·settings·…), 언어·배율 적용, 메뉴 동안 게임 일시정지(bridge.commands.pause), 내비게이션 드라이버. | exports: nextStack, isPlaying, mountUi
+- `packages/ui/src/internal/components/controls.tsx` — 메뉴 컨트롤: 버튼·선택(◀ ▶)·슬라이더·켬/끔. 모두 data-nav(공간 내비게이션) + 조절형은 data-nav-adjust(←→ = navadjust 이벤트). | exports: MenuButton, Row, Choice, Toggle, Slider, NavHint
+- `packages/ui/src/internal/i18n/t.ts` — i18n: 평면 키(`area.key`) → 현재 언어 문자열, `{name}` 치환. 키 집합은 ko·ja·en 동일(테스트). 없는 키 = 키 그대로(개발 중 눈에 띄게). | exports: DICTS, lang, isLocalName, pick, t, tm
+- `packages/ui/src/internal/keys.ts` — 키 이름 표시(KeyboardEvent.code → 짧은 글자)와 재바인딩 가능한 액션의 기본 키(input DEFAULT_BINDINGS 키보드와 같게 — 테스트 대조는 game). | exports: DEFAULT_KEYS, RESERVED_KEYS, keyLabel, keyOf, rebindKeys
+- `packages/ui/src/internal/nav/focus.ts` — 공간 내비게이션(키보드 화살표·게임패드 D-pad): 지금 포커스 사각형에서 방향 쪽 후보 중 가장 가까운 것. 순수 함수(DOM 없음 — 테스트). | exports: NavDir, Rect, pickNext, dirOfKey
+- `packages/ui/src/internal/nav/nav.ts` — 메뉴 내비게이션 드라이버(DOM): 화살표·게임패드 → 공간 포커스 이동, ←→ = 조절(data-nav-adjust), Esc·B = 뒤로, A = 선택, LB·RB = 탭, Start. | exports: NavHandlers, NAV_SELECTOR, focusables, focusFirst, createNav
+- `packages/ui/src/internal/nav/pad.ts` — 메뉴용 게임패드 읽기(표준 매핑): D-pad·L스틱 → 방향(처음 0.35 s 뒤 0.12 s마다 반복), A 선택, B 뒤로, Start, LB·RB 탭. 순수 상태 갱신(테스트) + 폴링은 nav.ts. | exports: PadEvent, PadSnapshot, PadState, initPadState, dirOf, stepPad
+- `packages/ui/src/internal/sandbox/mock-bridge.ts` — 목 UiBridge(`?ui-sandbox=1` 스토리 페이지·단위 테스트): 가짜 로딩 진행, HUD 모드 순환, 고정 크레딧. 게임 없이 화면을 본다. | exports: MOCK_HUD, MockBridge, createMockBridge
+- `packages/ui/src/internal/screens/boot.tsx` — 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류. | exports: BootScreen
+- `packages/ui/src/internal/screens/credits.tsx` — 크레딧: 데이터·에셋 출처(bridge.credits — 빌드 credits.json/ATTRIBUTION) + ODbL 안내 + 가상 디자인 고지 + OSS 라이선스 목록. | exports: CreditsScreen
+- `packages/ui/src/internal/screens/help.ts` — 조작 도움말(H — 왼쪽 아래): 모드별 [키, 동작] 줄. 재바인딩한 키는 설정에서, 패드가 있으면 패드 글자. 순수 함수(테스트). | exports: HelpItem, helpItems
+- `packages/ui/src/internal/screens/hud.tsx` — HUD(게임 중): 도움말(H)·상호작용 안내·알림·역 근접 안내·지면 대기·검은 막. id(#station-prompt 등) = e2e·봇이 읽는다(옛 임시 DOM과 같음). | exports: keyParams, arrowOf, guideText, distText, HudLayer, FadeLayer
+- `packages/ui/src/internal/screens/menus.tsx` — 타이틀(이어하기·새 산책(시작 지점)·설정·크레딧)과 일시정지(계속·지도·도감·포토·설정·타이틀로) 메뉴. | exports: ScreenNav, MenuScreen, TitleScreen, PauseScreen
+- `packages/ui/src/internal/screens/settings.tsx` — 설정 화면: 탭(그래픽·카메라·모션·조작·소리·일반) — 바뀌면 곧바로 bridge.settings(게임이 적용·저장). 키 재바인딩 = 누를 때까지 대기(data-capturing). | exports: SETTINGS_TABS, SettingsTab, SettingsScreen
+- `packages/ui/src/internal/settings.ts` — 설정 기본값·정규화(저장본·가져오기 값의 범위·형식 검사). 저장은 게임(localStorage — 부팅 때 동기로 읽어 품질·언어 적용). | exports: DEFAULT_SETTINGS, normalizeSettings, langFromNavigator
+- `packages/ui/src/internal/theme.ts` — UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = 시스템 일·한 고딕(⚠️ Noto 서브셋 자체 호스팅은 후속 — docs/12 §1). | exports: THEME_CSS, injectTheme
 
 ## scripts
 - `scripts/check-asset-size.ts` — 정적 에셋 한도 게이트(`pnpm check:assets [dir]`): 파일당 25 MiB, 파일 수 20,000(Workers Free). see docs/13-deployment.md §2

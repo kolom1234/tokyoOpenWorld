@@ -2,6 +2,7 @@
 // walk 중 운전석 문 앞이면 "F 운전하기"(hud.enterable). 게임 로직 없음 — traversal hud만 읽는다. 하차 실패 이유는 notice.
 import type { GameSystem, Vec3d } from '@sanpo/core';
 import type { DriveHud, TraversalService } from '@sanpo/traversal';
+import { setPrompt } from '../shell/hud-state.ts';
 import { notice } from '../station/hud.ts';
 import type { DriveGuide } from './traffic-guide.ts';
 
@@ -20,23 +21,9 @@ function panel(doc: Document): HTMLElement {
   return el;
 }
 
+/** 탑승 안내(가상 브랜드 — 실제 운영사 아님): 카셰어 SANPO Car · 공유자전거 SANPO Cycle. */
 function enterPrompt(doc: Document, kind: 'sedan' | 'bicycle' | undefined): void {
-  let el = doc.getElementById('vehicle-prompt');
-  if (!el && !kind) return;
-  if (!el) {
-    el = doc.createElement('div');
-    el.id = 'vehicle-prompt';
-    el.setAttribute('role', 'status');
-    el.style.cssText =
-      'position:fixed;left:50%;bottom:110px;transform:translateX(-50%);padding:6px 14px;border-radius:6px;' +
-      'background:rgba(10,90,95,.85);color:#fff;font:14px system-ui,sans-serif;pointer-events:none;z-index:50';
-    doc.body.append(el);
-  }
-  // 가상 브랜드(실제 운영사 아님): 카셰어 SANPO Car · 공유자전거 SANPO Cycle.
-  if (kind)
-    el.textContent =
-      kind === 'bicycle' ? 'F (패드 X) 타기 — 공유자전거 SANPO Cycle' : 'F (패드 X) 운전하기 — 카셰어 SANPO Car';
-  el.style.display = kind ? 'block' : 'none';
+  setPrompt(doc, 'vehicle', kind ? { key: kind === 'bicycle' ? 'hud.prompt.rideBike' : 'hud.prompt.driveCar' } : null);
 }
 
 /** 계기판 HTML(숫자·막대 — innerHTML은 우리 값만). */
@@ -93,18 +80,18 @@ export function driveHudSystem(
       el.style.display = d ? 'block' : 'none';
       const g = d ? guide?.update(traversal.player.posWF, traversal.player.yawRad, f.dtReal) : undefined;
       if (d) el.innerHTML = gaugeHtml(d) + guideHtml(d, g);
-      if (g?.ranRed) notice(doc, '적신호에 정지선을 넘었어요 — 안내만 해요(벌점 없음). 다음엔 정지선 앞에서 멈춰요');
+      if (g?.ranRed) notice(doc, { key: 'hud.notice.ranRed' });
       enterPrompt(doc, traversal.mode === 'walk' ? traversal.hud.enterable : undefined);
       const exit = d?.exit ?? 'ready';
       if (exit !== lastExit) {
-        if (exit === 'moving') notice(doc, '차를 멈춘 뒤 F로 내릴 수 있어요');
-        else if (exit === 'blocked') notice(doc, '내릴 자리가 없어요(벽·턱·높이 차) — 조금 옮겨 세운 뒤 F');
+        if (exit === 'moving') notice(doc, { key: 'hud.notice.exitMoving' });
+        else if (exit === 'blocked') notice(doc, { key: 'hud.notice.exitBlocked' });
       }
       lastExit = exit;
     },
     dispose() {
       doc.getElementById('sanpo-drive')?.remove();
-      doc.getElementById('vehicle-prompt')?.remove();
+      setPrompt(doc, 'vehicle', null);
     },
   };
 }

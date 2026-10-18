@@ -1,14 +1,29 @@
-// 브라우저 엔트리: 상태 화면 마운트 → boot(), 실패 시 오류 화면. see docs/modules/game.md
+// 브라우저 엔트리: 상태 화면(e2e data-* — 화면에서는 UI 로딩 화면이 대신) + @sanpo/ui 셸 마운트 → boot(), 실패 시 오류 화면.
+// `?ui-sandbox=1` = 게임 없이 UI만(목 브리지 — 화면·언어 확인, M10-T01). see docs/modules/game.md
 import { boot, parseFlags } from './boot.ts';
+import { createShell } from './shell/bridge.ts';
+import { loadingView } from './shell/loading.ts';
+import { menusEnabled, storageOf } from './shell/options.ts';
 import { mountStatusView } from './status-view.ts';
 import { WORLD_MINI_BASE_URL } from './world-load.ts';
 
 const root = document.getElementById('app');
 if (root === null) throw new Error('#app root element is missing from index.html');
 
-const view = mountStatusView(root);
+function uiRoot(): HTMLElement {
+  const el = document.createElement('div');
+  el.id = 'ui';
+  document.body.append(el);
+  return el;
+}
+
 const flags = parseFlags(location.search);
-if (flags.probe === 'decode') {
+const q = new URLSearchParams(location.search);
+if (q.get('ui-sandbox') === '1') {
+  root.classList.add('behind-ui');
+  void import('./debug/ui-sandbox.ts').then((m) => m.runUiSandbox(uiRoot(), q));
+} else if (flags.probe === 'decode') {
+  const view = mountStatusView(root);
   // 디버그 프로브: 렌더 없이 streaming 디코드 워커만 측정(e2e decode.spec.ts). 별도 청크로 동적 import.
   root.dataset.probe = 'running';
   void import('./debug/decode-probe.ts')
@@ -22,6 +37,7 @@ if (flags.probe === 'decode') {
       view.showError(`decode probe: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
     });
 } else if (flags.probe === 'physics') {
+  const view = mountStatusView(root);
   // 물리 워커 프로브(M04-T01, e2e physics.spec.ts): Jolt 워커 + 상자 낙하. 별도 청크.
   root.dataset.probe = 'running';
   void import('./debug/physics-probe.ts')
@@ -35,7 +51,15 @@ if (flags.probe === 'decode') {
       view.showError(`physics probe: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
     });
 } else {
-  boot(view, flags).catch((e: unknown) => {
+  root.classList.add('behind-ui');
+  const shell = createShell(document, uiRoot(), {
+    menus: menusEnabled(flags, q),
+    storage: storageOf(),
+    fixedQuality: flags.quality !== undefined || flags.view !== undefined,
+    fixedFov: flags.view !== undefined,
+  });
+  const view = loadingView(mountStatusView(root), shell.loading);
+  boot(view, flags, shell).catch((e: unknown) => {
     view.showError(`부트 실패: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
   });
 }

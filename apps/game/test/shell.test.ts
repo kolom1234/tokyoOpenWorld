@@ -1,0 +1,111 @@
+// M10-T01 셸 배선: 설정 키 → 입력 바인딩(패드 유지), 설정 적용 대상, 로딩 단계 매핑, 빠른 이동 착지·생략.
+import { DEFAULT_BINDINGS } from '@sanpo/input';
+import { DEFAULT_KEYS, DEFAULT_SETTINGS, REBIND_ACTIONS } from '@sanpo/ui';
+import { describe, expect, it } from 'vitest';
+import { arrived, fastTravel } from '../src/shell/fast-travel.ts';
+import { loadingOfBoot, loadingOfWorld } from '../src/shell/loading.ts';
+import { applySettings, bindingsWithKeys, loadSettings, mixOf, SETTINGS_KEY } from '../src/shell/settings.ts';
+
+describe('settings → services', () => {
+  it('UI default keys match the input default keyboard bindings', () => {
+    for (const a of REBIND_ACTIONS) {
+      const codes = Object.values(DEFAULT_BINDINGS).flatMap((ctx) =>
+        ((ctx as Record<string, { device: string; code?: string }[]>)[a] ?? [])
+          .filter((b) => b.device === 'key')
+          .map((b) => b.code),
+      );
+      expect(codes.length, a).toBeGreaterThan(0);
+      expect(codes, a).toContain(DEFAULT_KEYS[a]);
+    }
+  });
+  it('rebinding replaces only keyboard keys, keeps gamepad bindings', () => {
+    const m = bindingsWithKeys({ interact: 'KeyJ' });
+    expect(m.walk.interact).toEqual([
+      { device: 'key', code: 'KeyJ' },
+      { device: 'padButton', button: 2 },
+    ]);
+    expect(m.vehicle.interact?.[0]).toEqual({ device: 'key', code: 'KeyJ' });
+    expect(DEFAULT_BINDINGS.walk.interact?.[0]).toEqual({ device: 'key', code: 'KeyF' });
+  });
+  it('applies quality, fov, sensitivity, motion, invert, bindings and mix', () => {
+    const calls: string[] = [];
+    const t = {
+      render: { setQuality: (q: string) => calls.push(`q:${q}`) },
+      traversal: { configure: (p: unknown) => calls.push(`c:${JSON.stringify(p)}`) },
+      input: { setBindings: () => calls.push('bind'), setAxisScale: (a: string, k: number) => calls.push(`${a}:${k}`) },
+      audio: () => ({ setMix: (m: unknown) => calls.push(`mix:${JSON.stringify(m)}`) }),
+      fixedQuality: false,
+      fixedFov: false,
+    };
+    const s = { ...DEFAULT_SETTINGS, quality: 'low' as const, reduceMotion: true, invertY: true, muted: true };
+    applySettings(t as never, s);
+    expect(calls).toContain('q:low');
+    expect(calls).toContain('lookY:-1');
+    expect(calls).toContain('bind');
+    expect(calls.find((c) => c.startsWith('c:'))).toContain('"motionEffects":false');
+    expect(calls.find((c) => c.startsWith('c:'))).toContain('"headBob":false');
+    expect(mixOf(s).master).toBe(0);
+    calls.length = 0;
+    applySettings(t as never, { ...s, fovDeg: 80 }, s);
+    expect(calls.some((c) => c.startsWith('q:') || c === 'bind' || c.startsWith('mix:'))).toBe(false);
+  });
+  it('loads saved settings, falls back to the browser language', () => {
+    const store = (v: string | null) => ({ getItem: (k: string) => (k === SETTINGS_KEY ? v : null) });
+    expect(loadSettings(store(JSON.stringify({ lang: 'en', fovDeg: 90 })), ['ko']).fovDeg).toBe(90);
+    expect(loadSettings(store(null), ['ja-JP']).lang).toBe('ja');
+    expect(loadSettings(store('{broken'), ['ko']).lang).toBe('ko');
+  });
+});
+
+describe('loading model', () => {
+  it('maps world status and boot progress to stages', () => {
+    expect(loadingOfWorld({ kind: 'error', detail: 'x' })).toEqual({ stage: 'error', error: 'x' });
+    const b = { precompile: { stage: 'materials' as const, done: 5, total: 10 }, done: false };
+    expect(loadingOfBoot(b, 0)).toMatchObject({ stage: 'shaders', detail: { params: { done: 5, total: 10 } } });
+    const c = { precompile: { stage: 'cells' as const, done: 0, total: 1 }, spawn: [1, 2, 3, 4], done: false };
+    expect(loadingOfBoot(c, 2).progress).toBeCloseTo(0.775, 3);
+    expect(loadingOfBoot({ ...c, done: true }, 4).stage).toBe('ready');
+  });
+});
+
+describe('fast travel', () => {
+  const tr = (pos: { x: number; y: number; z: number }) => {
+    const t = {
+      mode: 'walk' as string,
+      player: { posWF: { ...pos }, velWF: { x: 0, y: 0, z: 0 } },
+      hud: {} as { groundLoading?: boolean },
+      requested: [] as unknown[],
+      request(m: string, p: { posWF: { x: number; y: number; z: number } }) {
+        t.requested.push(p);
+        t.mode = m;
+        Object.assign(t.player.posWF, p.posWF);
+        return true;
+      },
+      teleport: () => Promise.resolve(),
+    };
+    return t;
+  };
+  it('skips when already there, otherwise re-enters walk and waits for a settled landing', async () => {
+    const doc = {} as Document;
+    let clock = 0;
+    const deps = (t: ReturnType<typeof tr>) => ({
+      doc,
+      traversal: t as never,
+      physics: () => undefined,
+      sleep: (ms: number) => {
+        clock += ms;
+        return Promise.resolve();
+      },
+      now: () => clock,
+    });
+    const near = tr({ x: 0, y: 0, z: 0 });
+    expect(await fastTravel(deps(near), { posWF: { x: 5, y: 0, z: 5 }, yawRad: 0 })).toBe(true);
+    expect(near.requested).toHaveLength(0);
+    const far = tr({ x: 0, y: 0, z: 0 });
+    expect(await fastTravel(deps(far), { posWF: { x: 200, y: 30, z: -1200 }, yawRad: 1 })).toBe(true);
+    expect(far.requested).toHaveLength(1);
+    expect(arrived(far as never, { x: 200, y: 30, z: -1200 })).toBe(true);
+    far.hud.groundLoading = true;
+    expect(arrived(far as never, { x: 200, y: 30, z: -1200 })).toBe(false);
+  });
+});

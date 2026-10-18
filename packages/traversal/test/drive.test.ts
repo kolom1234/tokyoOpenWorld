@@ -28,6 +28,10 @@ function fakeInput() {
       context = c;
     },
     rebind: () => undefined,
+    setBindings: () => undefined,
+    setAxisScale: () => undefined,
+    setEnabled: () => undefined,
+    enabled: true,
     bindings: () => ({ walk: {}, vehicle: {}, fly: {}, ui: {} }),
     dispose: () => undefined,
     systems: () => [],

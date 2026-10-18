@@ -83,6 +83,13 @@ export interface InputService extends SystemProvider {
   /** 액션의 바인딩을 b 하나로 교체(기본: 현재 컨텍스트). */
   rebind(a: Action, b: Binding, context?: InputContext): void;
   bindings(): BindingMap;
+  /** 바인딩 전체 교체(설정 키 재바인딩 — 깊은 복사, M10-T01). */
+  setBindings(m: BindingMap): void;
+  /** 축 배율(시선 상하 반전 = lookY −1 — M10-T01). 기본 1. */
+  setAxisScale(a: AxisAction, k: number): void;
+  /** false = 모든 액션 0(메뉴·일시정지 — UI가 키를 갖는다). 컨텍스트는 그대로 바뀐다(M10-T01). */
+  setEnabled(on: boolean): void;
+  readonly enabled: boolean;
   /** DOM 리스너 해제. */
   dispose(): void;
 }

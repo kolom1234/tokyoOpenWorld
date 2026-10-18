@@ -1,5 +1,6 @@
 // 오디오 배선(M09-T04 — ADR-0079): @sanpo/audio 생성 + 첫 제스처 unlock + 셀 audio.json + 프레임 입력(리스너·환경·발소리·신호·열차·가려짐) + 볼륨 키.
-// 볼륨: `[` / `]` = 마스터 −/+ 10 %, `\` = 음소거 전환(저장 — localStorage). `?audio=0` = 끔, `?vol=0.5` = 시작 마스터. 헤드리스·자동 재생 차단에서도 오류 없이 무음.
+// 볼륨 = 설정 화면(M10-T01 — shell/settings, flags.mix). `?debug=1`에서만 개발 단축키 `[` / `]` 마스터 −/+ 10 %·`\` 음소거(저장 안 함).
+// `?audio=0` = 끔, `?vol=0.5` = 시작 마스터. 헤드리스·자동 재생 차단에서도 오류 없이 무음.
 import { type AudioMix, type AudioService, createAudio, type NearTrain } from '@sanpo/audio';
 import type { GameSystem, GroundQuery, Logger, Scheduler, TrainInfo, Vec3d } from '@sanpo/core';
 import type { PhysicsService } from '@sanpo/physics';
@@ -9,7 +10,6 @@ import type { TraversalService } from '@sanpo/traversal';
 import { createVehicleAudio } from './vehicles/vehicle-audio.ts';
 import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
 
-const MIX_KEY = 'sanpo.audio.mix.v1';
 const VOL_STEP = 0.1;
 /** 오디오 배선 phase(audio 60 직전). */
 const WIRING_PHASE = 59;
@@ -20,31 +20,10 @@ export interface AudioFlags {
   off?: boolean;
   /** `?vol=` 시작 마스터(0–1.5). */
   vol?: number;
-}
-
-function storage(): Storage | null {
-  try {
-    return globalThis.localStorage ?? null;
-  } catch {
-    return null;
-  }
-}
-
-function loadMix(): Partial<AudioMix> {
-  try {
-    const v = storage()?.getItem(MIX_KEY);
-    return v ? (JSON.parse(v) as Partial<AudioMix>) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveMix(m: Readonly<AudioMix>): void {
-  try {
-    storage()?.setItem(MIX_KEY, JSON.stringify(m));
-  } catch {
-    /* 저장 불가(사생활 모드) — 이번 세션만 */
-  }
+  /** 설정의 믹스(시작값 — 바뀌면 shell이 setMix). */
+  mix?: Partial<AudioMix>;
+  /** `?debug=1` 볼륨 단축키. */
+  devKeys?: boolean;
 }
 
 /** 태양 고도 → 밤 정도(render lighting/schedule nightOf와 같은 구간: +3° … −6°). */
@@ -106,12 +85,12 @@ function toast(doc: Document, text: string): void {
   }, 1200);
 }
 
-/** 첫 제스처 unlock + 볼륨 키. 반환 = 해제 함수. */
-function bindControls(doc: Document, audio: AudioService): () => void {
+/** 첫 제스처 unlock + (개발) 볼륨 키. 반환 = 해제 함수. */
+function bindControls(doc: Document, audio: AudioService, devKeys: boolean): () => void {
   let muted: number | null = null;
   const unlock = () => void audio.unlock();
   const onKey = (e: KeyboardEvent) => {
-    if (e.code !== 'BracketLeft' && e.code !== 'BracketRight' && e.code !== 'Backslash') return;
+    if (!devKeys || (e.code !== 'BracketLeft' && e.code !== 'BracketRight' && e.code !== 'Backslash')) return;
     if (e.code === 'Backslash') {
       if (muted === null) {
         muted = audio.mix.master;
@@ -125,7 +104,6 @@ function bindControls(doc: Document, audio: AudioService): () => void {
       const d = e.code === 'BracketRight' ? VOL_STEP : -VOL_STEP;
       audio.setMix({ master: Math.round((audio.mix.master + d) * 10) / 10 });
     }
-    saveMix(audio.mix);
     toast(
       doc,
       audio.mix.master === 0
@@ -214,7 +192,7 @@ function frameSystem(d: AudioWiringDeps, audio: AudioService): GameSystem {
 /** 오디오 시작(월드 표시 뒤). `?audio=0`이면 undefined. */
 export function startAudio(d: AudioWiringDeps): AudioService | undefined {
   if (d.flags.off) return undefined;
-  const initialMix = { ...loadMix(), ...(d.flags.vol !== undefined ? { master: d.flags.vol } : {}) };
+  const initialMix = { ...d.flags.mix, ...(d.flags.vol !== undefined ? { master: d.flags.vol } : {}) };
   const audio = createAudio({ log: d.log, manifestUrl: d.manifestUrl, initialMix });
   audio.setSignalSource((code) => d.sim.signalStateAt(code).ped);
   audio.setOccluder(occluderOf(d.physics));
@@ -222,7 +200,7 @@ export function startAudio(d: AudioWiringDeps): AudioService | undefined {
     if (p.audio) audio.addCell(p.key, p.audio);
   });
   d.streaming.onEvicted((key) => audio.removeCell(key));
-  bindControls(d.doc, audio);
+  bindControls(d.doc, audio, d.flags.devKeys === true);
   const wiring = frameSystem(d, audio);
   d.scheduler.add({ systems: () => [wiring] });
   d.scheduler.add(audio);

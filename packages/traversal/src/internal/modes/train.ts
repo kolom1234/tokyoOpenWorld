@@ -235,7 +235,7 @@ function place(rt: Rt, pose: TrainCarPose, frame: FrameContext): void {
     { posWF: pose.posWF, yawRad: pose.yawRad, pitchRad: pose.pitchRad },
     v.offset,
     look,
-    vibration(st.timeS, pose.speedMs),
+    vibration(st.timeS, rt.settings.motionEffects ? pose.speedMs : 0),
   );
   const fx = -Math.sin(pose.yawRad);
   const fz = -Math.cos(pose.yawRad);

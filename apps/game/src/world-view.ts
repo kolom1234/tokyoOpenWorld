@@ -6,7 +6,6 @@ import {
   type DeepPartial,
   type EventBus,
   type FrameSource,
-  type GameSystem,
   type GroundQuery,
   type Logger,
   type Scheduler,
@@ -19,17 +18,12 @@ import { createRender, type RenderConfig, type RenderService } from '@sanpo/rend
 import type { ClockMode, SimService } from '@sanpo/sim';
 import { createStreaming, type StreamingService } from '@sanpo/streaming';
 import { createTraversal, type FreecamParams, type TraversalService } from '@sanpo/traversal';
-import { bootProgressText } from './boot-progress.ts';
+import { type BootStage, bootProgressText } from './boot-progress.ts';
 import type { WeatherOverride } from './debug/wet-override.ts';
-import { helpHudSystem } from './help-hud.ts';
 import type { SpawnPreset } from './spawn-presets.ts';
 import { presetFreecamPose, startFreecamPose, startWalkParams } from './start-view.ts';
-import { trainLcdSystem } from './train-lcd.ts';
 import type { PlayerCars } from './vehicles/player-cars.ts';
 import type { WeatherSpec } from './weather-mode.ts';
-import { createCameraWiring } from './wiring/camera.ts';
-import { createEnvWiring } from './wiring/env.ts';
-import { createGroundLoadingIndicator } from './wiring/ground-loading.ts';
 import { createStreamingPhysicsWiring, type StreamingPhysicsWiring } from './wiring/streaming-physics.ts';
 import { createStreamingRenderWiring, type StreamingRenderWiring } from './wiring/streaming-render.ts';
 import { createStreamingSimWiring } from './wiring/streaming-sim.ts';
@@ -47,7 +41,15 @@ import {
   startCrowdLater,
 } from './world-late.ts';
 import type { LoadedWorld } from './world-load.ts';
-import { frameSourceOf, initialLate, simFor, startPrecompile, warmStaged } from './world-parts.ts';
+import {
+  bootStageOf,
+  frameSourceOf,
+  initialLate,
+  simFor,
+  startPrecompile,
+  warmStaged,
+  wiringSystemsFor,
+} from './world-parts.ts';
 import { startTrainsLater, trainPhysicsSystem } from './world-rail.ts';
 
 /** 부팅 대기 영역: 스폰 수평 384 m 안 L0 — 스폰 셀 안 어디서든 3×3 모서리 셀(≤ 362 m)까지 포함(06 §8 스폰 3×3). 상위 레벨은 우선순위상 먼저 온다. */
@@ -87,6 +89,8 @@ export interface WorldView {
   showWorld(world: LoadedWorld): Promise<number>;
   /** 첫 표시 전 준비 단계 글(로딩 패널 — 선컴파일 진행·스폰 셀 수). 첫 표시 뒤 ''. */
   bootProgress(): string;
+  /** 부팅 단계 구조(UI 로딩 화면 — M10-T01): 선컴파일·스폰 셀 live 수. */
+  bootStage(): { boot: Readonly<BootStage>; live: number };
 }
 
 export interface WorldViewDeps {
@@ -307,7 +311,7 @@ async function showWorldWith(
   warm.on = false;
   warm.stop();
   await warming;
-  late.boot.precompile = '셀 셰이더…';
+  late.boot.precompile = { stage: 'cells', done: 0, total: 1 };
   await Promise.all([pre, render.compileStaged().catch((e: unknown) => wlog.warn('staged compile', e))]);
   render.commitStaged();
   markShown();
@@ -321,21 +325,6 @@ async function showWorldWith(
   return world.spawnCells.filter((k) => s.stateOf(k) === 'live').length;
 }
 
-/** 상시 배선: 카메라·환경·지면 대기 표시·차내 안내·조작 도움말. */
-function wiringSystemsFor(
-  deps: WorldViewDeps,
-  v: { render: RenderService; traversal: TraversalService; sim: SimService; late: LateState },
-): GameSystem[] {
-  const doc = deps.canvas.ownerDocument;
-  return [
-    createCameraWiring(v.traversal, v.render),
-    createEnvWiring(v.sim, v.render, deps.weather),
-    createGroundLoadingIndicator(doc, v.traversal),
-    trainLcdSystem(doc, v.traversal, () => v.late.rail),
-    helpHudSystem(doc, v.traversal),
-  ];
-}
-
 export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const { canvas, bus, log } = deps;
   const render = await createRender({ canvas, bus, log, config: { ...deps.renderConfig, backend: deps.backend } });
@@ -346,7 +335,7 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
   const sim = simFor(deps);
   const traversal = createTraversalFor(deps, input, ground, late, sim);
   const frameSource = frameSourceOf(traversal, sim);
-  const wiringSystems = wiringSystemsFor(deps, { render, traversal, sim, late });
+  const wiringSystems = wiringSystemsFor(deps.canvas.ownerDocument, deps.weather, { render, traversal, sim, late });
 
   return {
     render,
@@ -394,5 +383,6 @@ export async function createWorldView(deps: WorldViewDeps): Promise<WorldView> {
     },
     showWorld: (world) => showWorldWith(deps, { render, traversal, ground, late, precompiled, sim, input }, world),
     bootProgress: () => bootProgressText(late.boot, late.streaming),
+    bootStage: () => bootStageOf(late),
   };
 }

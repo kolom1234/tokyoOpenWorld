@@ -57,7 +57,7 @@ function summonBikeSystem(
       const p = d.traversal.player;
       const at = { x: p.posWF.x - Math.sin(p.yawRad) * 1.6, y: p.posWF.y, z: p.posWF.z - Math.cos(p.yawRad) * 1.6 };
       cars.park(at, p.yawRad, 'summon', 'bicycle');
-      notice(doc, '공유자전거(SANPO Cycle)를 불렀어요 — 옆에 서서 F');
+      notice(doc, { key: 'hud.notice.bikeCalled' });
     },
     dispose() {},
   };
@@ -76,15 +76,15 @@ function summonSystem(
     phase: 22,
     update() {
       if (busy || d.traversal.mode !== 'walk' || !d.input.state.justPressed('summon')) return;
-      if (!d.physics()) return notice(doc, '아직 준비 중이에요 — 잠시 뒤 다시 R');
+      if (!d.physics()) return notice(doc, { key: 'hud.notice.carNotReady' });
       busy = true;
       const me = { ...d.traversal.player.posWF };
       void findCurbSpot(lanes, me).then(
         (spot) => {
           busy = false;
-          if (!spot) return notice(doc, '40 m 안 차도에서 세울 자리를 찾지 못했어요 — 큰길 보도로 가서 다시 R');
+          if (!spot) return notice(doc, { key: 'hud.notice.carNoCurb' });
           cars.park(spot.posWF, spot.yawRad, 'summon');
-          notice(doc, `카셰어 차를 불렀어요(${Math.round(spot.distanceM)} m) — 연석 쪽 운전석(오른쪽) 문 앞에서 F`);
+          notice(doc, { key: 'hud.notice.carCalled', params: { dist: Math.round(spot.distanceM) } });
         },
         () => {
           busy = false;

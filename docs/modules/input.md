@@ -11,6 +11,7 @@ createInput(deps: { target: HTMLElement; bus?: EventBus; log: Logger; bindings?:
 InputService extends SystemProvider {   // system 'input', phase 0
   readonly state: ActionState; readonly context: InputContext; readonly pointerLocked: boolean; readonly gamepadConnected: boolean;
   setContext(c); rebind(a: Action, b: Binding, context?); bindings(): BindingMap; dispose();
+  setBindings(m: BindingMap); setAxisScale(a: AxisAction, k); setEnabled(on); readonly enabled;   // M10-T01(ADR-0091): 설정 키 재바인딩·시선 반전·메뉴 동안 끄기(EMPTY_STATE)
 }
 ActionState { axis(a: AxisAction): number; pressed(a: ButtonAction): boolean; justPressed(a: ButtonAction): boolean }
 InputContext = 'walk' | 'vehicle' | 'fly' | 'ui'
@@ -18,7 +19,7 @@ ButtonAction = sprint | pace | interact | toggleView | freeCam | map | photo | p
 AxisAction = moveX(오른쪽 +) | moveY(앞 +) | lookX(px, 오른쪽 +) | lookY(px, 아래 +) | fly(위 +) | wheel(노치, 위로 굴림 +)
 Binding = {device:'key', code} | {device:'mouseButton', button} | {device:'keyAxis', negative, positive} | {device:'mouseAxis', axis:'x'|'y'|'wheel'}
         | {device:'padButton', button, hold?} | {device:'padAxis', axis, scale?, perSecond?} | {device:'padButtonAxis', negative, positive, scale?, perSecond?}   // 표준 매핑 번호
-BindingMap = Record<InputContext, Partial<Record<Action, Binding[]>>>;  DEFAULT_BINDINGS (09 §4 표, 키보드·마우스·게임패드 — Select·Start 단독·Start+Y는 M08)
+BindingMap = Record<InputContext, Partial<Record<Action, Binding[]>>>;  DEFAULT_BINDINGS (09 §4 표, 키보드·마우스·게임패드 — pause = Esc·패드 Start(9), Select 단독·Start+Y는 안 씀(메뉴에서 지도·포토))
 ```
 
 ## Invariants
@@ -31,11 +32,11 @@ BindingMap = Record<InputContext, Partial<Record<Action, Binding[]>>>;  DEFAULT_
 
 ## Files
 api.ts, internal/(raw-input — 원시 상태 순수 갱신, action-map — 스냅샷, default-bindings, service — createInput), internal/devices/(keyboard, mouse, gamepad — 폴링·데드존).
-예정: 재바인딩 설정 저장(M08 settings).
+재바인딩 저장은 게임(shell/settings — 기본 바인딩의 키보드 키만 교체 → setBindings).
 
 ## Tests
 test/action-map.test.ts: 축(WASD/E/Q)·컨텍스트별 바인딩, 스냅샷 불변, justPressed 에지·반복·탭, 마우스·휠 누적·리셋, blur 해제, 편집 대상 판별.
 test/gamepad.test.ts: 원형 데드존·재조정, 스틱 이동·R스틱 초당 시선, 버튼 에지, Select+Y 조합, 트리거 축, 연결 해제, 키+스틱 합 자르기.
 
 ## Status
-M01-T06 최소(키보드·마우스·컨텍스트), M04-T03 게임패드(ADR-0043) → M08 설정 재바인딩 저장·UI 조합.
+M01-T06 최소(키보드·마우스·컨텍스트), M04-T03 게임패드(ADR-0043), M10-T01 setBindings·setAxisScale·setEnabled·Start = 일시정지(ADR-0091).

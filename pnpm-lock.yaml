@@ -238,9 +238,18 @@ importers:
 
   packages/ui:
     dependencies:
+      '@preact/signals':
+        specifier: 2.11.2
+        version: 2.11.2(preact@10.29.8)
       '@sanpo/core':
         specifier: workspace:*
         version: link:../core
+      idb-keyval:
+        specifier: 6.3.0
+        version: 6.3.0
+      preact:
+        specifier: 10.29.8
+        version: 10.29.8
 
   tools/codemap:
     devDependencies:
@@ -781,6 +790,14 @@ packages:
   '@poppinss/exception@1.2.3':
     resolution: {integrity: sha512-dCED+QRChTVatE9ibtoaxc+WkdzOSjYTKi/+uacHWIsfodVfpsueo3+DKpgU5Px8qXjgmXkSvhXvSCz3fnP9lw==}
 
+  '@preact/signals-core@1.14.4':
+    resolution: {integrity: sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA==}
+
+  '@preact/signals@2.11.2':
+    resolution: {integrity: sha512-rVTRTt/T0HIRgbugwS5FigbfF/kfdEFYFtiqxa+lbpqTajepqnR0firuAS2iNdHyejWB7Yc9p9QePkVNBtTAwg==}
+    peerDependencies:
+      preact: '>= 10.25.0 || >=11.0.0-0'
+
   '@react-three/fiber@9.8.1':
     resolution: {integrity: sha512-GbNP4r6F/gpclFKkLGHzXcuwFWAzLyKsmrQGcDuwK3wQnwLH6F1TfGtEYjHy8OQoGsajwT19B9jtVLLjjfH09w==}
     peerDependencies:
@@ -1145,6 +1162,9 @@ packages:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
+  idb-keyval@6.3.0:
+    resolution: {integrity: sha512-um+2dgAWmYsu615EXpWVwSmapJhON0G43t3Ka/EVaohzPQXSMqKEqeDK/oIW3Ow+BXaF2PvSc+oBTFp793A5Ow==}
+
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
 
@@ -1339,6 +1359,14 @@ packages:
     resolution: {integrity: sha512-YmH+t74J2X1lwYjKzK/tgs9C9kqWWPB9JwZiDF5mEf4BdCEAmEFbO8lXBA7NM0/j4g+x6FgD/Tt5/kT7ogbEDA==}
     peerDependencies:
       three: '>= 0.168.0 < 0.187.0'
+
+  preact@10.29.8:
+    resolution: {integrity: sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q==}
+    peerDependencies:
+      preact-render-to-string: '>=5'
+    peerDependenciesMeta:
+      preact-render-to-string:
+        optional: true
 
   proj4@2.22.0:
     resolution: {integrity: sha512-MVvH09QrYm3A235rcX39WDiCKanrBiblu28l0KYIn/B2DofmYhvP/LLS43kE66jNDfx/P1l/nah3JmsAq8UgbQ==}
@@ -1986,6 +2014,13 @@ snapshots:
 
   '@poppinss/exception@1.2.3': {}
 
+  '@preact/signals-core@1.14.4': {}
+
+  '@preact/signals@2.11.2(preact@10.29.8)':
+    dependencies:
+      '@preact/signals-core': 1.14.4
+      preact: 10.29.8
+
   '@react-three/fiber@9.8.1(@types/react@19.3.0)(react@19.3.0)(three@0.186.1(patch_hash=67bd65df6eda0c069e22d269ba3374495ae7a050b4a4242e53caad3c3aaba504))':
     dependencies:
       '@babel/runtime': 7.29.7
@@ -2294,6 +2329,8 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
+  idb-keyval@6.3.0: {}
+
   ieee754@1.2.1: {}
 
   ignore@7.0.9: {}
@@ -2437,6 +2474,8 @@ snapshots:
   postprocessing@6.39.5(three@0.186.1(patch_hash=67bd65df6eda0c069e22d269ba3374495ae7a050b4a4242e53caad3c3aaba504)):
     dependencies:
       three: 0.186.1(patch_hash=67bd65df6eda0c069e22d269ba3374495ae7a050b4a4242e53caad3c3aaba504)
+
+  preact@10.29.8: {}
 
   proj4@2.22.0:
     dependencies:

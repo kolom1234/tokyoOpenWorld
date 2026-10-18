@@ -19,10 +19,11 @@
 | Credits | `world/<buildId>/credits.json`(데이터·에셋 출처), ODbL 파생 DB 링크, `oss-licenses.json`(코드 라이선스) |
 | Pause (Esc) | 재개, 지도, 도감, 설정, 타이틀로 |
 
-## 2.1 임시 안내 HUD·스폰 프리셋 (M08·M10 전 — ADR-0082·0083·0084)
-apps/game 임시 DOM(M08 @sanpo/ui가 대체): 왼쪽 아래 조작 도움말(모드별, H 접기), 화면 위 역 근접 안내(개찰구·계단·출구 방향·거리), 아래 상호작용 안내(F …), 알림(구조·G 실패 이유).
+## 2.1 안내 HUD·메뉴 모드·스폰 프리셋 (ADR-0082·0083·0084 → M10 ADR-0091)
+M10-T01부터 @sanpo/ui HUD: 왼쪽 아래 조작 도움말(모드별 [키, 동작], 재바인딩·패드 반영, H 접기, 설정 "도움말 보이기"), 화면 위 역 근접 안내, 아래 상호작용 안내, 알림 — 게임은 번역 키(Msg)만 보낸다(apps/game `shell/hud-state`).
+메뉴 모드(타이틀·포인터 잠금 풀림 = 일시정지)는 기본, `?debug=1`·`?view=`·`?spawn=`·`?mode=`·`?probe=`이면 곧바로 HUD(`?title=1|0` 강제). 볼륨 키 `[ ] \`는 `?debug=1` 개발 단축키(정식 = 설정 → 소리).
 
-URL 스폰 프리셋 `?spawn=<id>`(content/spawn-presets.json — 지도 전까지 빠른 이동):
+URL 스폰 프리셋 `?spawn=<id>`(content/spawn-presets.json — 개발·테스트용으로 유지, 정식 이동 = 타이틀 "새 산책" 시작 지점·지도 빠른 이동):
 | id | 장소 | 시작 |
 |---|---|---|
 | `harajuku-gate` | 하라주쿠역 다케시타 출구 개찰구 앞(거리) | 개찰구를 보고 4 m 앞 |
@@ -41,7 +42,7 @@ URL 스폰 프리셋 `?spawn=<id>`(content/spawn-presets.json — 지도 전까�
 - 하단 상시 표기: `© OpenStreetMap contributors, 国土交通省 PLATEAU, 国土地理院` (크레딧 링크).
 
 ## 4. 세이브
-- IndexedDB(`idb-keyval`) 키: `save/v1` = `{ posWF, yaw, mode, discovered: string[], photos: PhotoMeta[], stats, gameTimeMs }`, `settings/v1`.
+- IndexedDB(`idb-keyval`) 키: `save/v1` = `{ posWF, yaw, mode, discovered: string[], photos: PhotoMeta[], stats, gameTimeMs }`. 설정은 localStorage `sanpo.settings.v1`(부팅 때 동기 — render 티어·첫 화면 언어, ADR-0091).
 - 자동 저장 60 s 간격 + 모드 전환 시. JSON 내보내기/가져오기(설정 화면).
 - 스키마 버전 필드 + 마이그레이션 함수 테이블(`src/internal/save/migrations.ts`).
 

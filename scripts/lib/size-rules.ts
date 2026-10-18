@@ -46,7 +46,8 @@ export function bodyLines(body: ts.Node, source: ts.SourceFile): number {
 
 /** 함수 본문을 가진 모든 함수형 노드(중첩 포함)의 줄 수를 검사. */
 export function findLongFunctions(path: string, text: string, maxLines: number): SizeViolation[] {
-  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const kind = path.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind);
   const out: SizeViolation[] = [];
   const visit = (node: ts.Node): void => {
     const body = ts.isFunctionLike(node) && 'body' in node ? (node.body as ts.Node | undefined) : undefined;

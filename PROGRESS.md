@@ -1,15 +1,17 @@
 # PROGRESS
-Updated: 2026-10-18 (session #24 — ① 첫 표시 개선 + M08 Vehicles, 브랜치 `claude/m08-vehicles`)
+Updated: 2026-10-18 (session #25 — M10 UI/UX 큐 모드, 브랜치 `claude/m10-ui`)
 
-## Current Milestone: M08 Vehicles (T01 → T02 → T03 → T04)
-## Current Task: M08 Vehicles 완료(T01–T04) — PR #23 사람 확인 대기
-- Done in this session (#24, 2026-10-17~18, 브랜치 `claude/m08-vehicles`, PR #23): ① 첫 표시(ADR-0086) + M08-T01–T04(ADR-0087–0090). 수치는 아래 Recently Completed·PR 본문.
-  MVP 재빌드 `20261017-18986b3-cba213ec`(L0 294 + HLOD 177, validate 0, 거점 카셰어 147·공유자전거 117) → dev 버킷 publish(current) → staging Worker b9913ddc(코드 41e9e72). dev 버킷 gc(7일) 3개 삭제.
-- In progress: 없음. 사람 확인(PR 본문 "따라 해 보기" — 엔진음 변속 리뷰 포함) 대기.
-- Next step (정확히 한 걸음): 사용자 확인 결과 반영 → 병합 뒤 M10(로드맵 docs/17) 첫 태스크 블록 Read. (⚠️ 후속 후보: 첫 표시 선컴파일 체인 변동 6.6–9.2 s, 탄 사람 다리 애니메이션, 운전석 실내 모델.)
-- Blockers: 없음. ODPT 키 없음(M08 무관).
+## Current Milestone: M10 UI/UX (T01 → T02 → T03 → T04 → T05 → T06)
+## Current Task: M10-T02 HUD & place names
+- Done in this session (#25): M10-T01 UI 셸(ADR-0091) — Preact 화면 스택(부팅·타이틀·일시정지·설정·크레딧·HUD), ko·ja·en, 키보드·마우스·게임패드 내비게이션, 메뉴 모드(개발 URL은 곧바로 HUD),
+  설정(품질·FOV·감도·모션 민감·시선 반전·키 재바인딩·볼륨·언어·UI 배율 — localStorage `sanpo.settings.v1`), 임시 HUD(도움말 H·역 안내·안내·알림) 흡수, 새 산책 시작 지점 = 빠른 이동, `?ui-sandbox=1`.
+- In progress: M10-T02 — e-Stat 소지역(2020, 6개 구 shp) + 우편번호 KEN_ALL(가나 읽기) 원천을 data/raw에 받음(sha256은 lock 갱신 예정). 다음: 파이프라인 `areas` 단계 → 셀 meta placeNames → HUD 지명.
+- Next step (정확히 한 걸음): `tools/pipeline/src/stages/areas/`(shp·dbf 리더 + 가나 → 로마자·한글) 작성.
+- Blockers: 없음. ODPT 키 없음(M10 무관).
 
 ## Recently Completed
+- M10-T01 UI shell(2026-10-18, PR 진행 중) — @sanpo/ui(Preact 10.29.8·signals 2.11.2): 화면 스택·i18n 3개 언어·공간 내비게이션(화살표·D-pad·A/B/Start/LB·RB), 설정 5탭, input `setBindings·setAxisScale·setEnabled`, traversal `configure()·motionEffects`,
+  게임 shell/(bridge·commands·hud-state·settings·pause·fast-travel·loading·credits·options). 수락: 3개 언어 전환(단위 i18n 동등성 + e2e 즉시 전환) ✅, 키보드·게임패드 내비게이션(e2e 가짜 패드) ✅. ADR-0091
 - M08 Vehicles T01–T04(2026-10-17~18, PR #23) — 세단(Jolt WheeledVehicleController·ABS·TCS·마찰 콜백)·drive 모드(추적·우핸들 운전석)·카셰어 SANPO Car(가상), AEB(보행자 예측·교통 차)·보도 서행·교통/군중이 플레이어 탈것 인지·신호·역주행·제한속도 HUD 안내(벌점 없음),
   자전거(MotorcycleController·저속 보조)·cycle 모드·공유자전거 SANPO Cycle, 거점 = OSM car_sharing·노면 주차장·bicycle_rental(발자국 비어 있고 평평한 자리), 탈것 소리 전부 합성(엔진 AudioWorklet·타이어·젖은 노면·끽·바람·체인·프리휠·벨).
   **수락(staging 실제 GPU)**: 0→100 12.47 s, 60 km/h 제동 18.38 m·젖음 27.18 m, 군중 접촉 0(최소 0.34 m), 자전거 23.41 km/h·1 m/s 넘어짐 0, 오디오 결손 0, 22–23 W. 첫 로드 26.45 MB, 첫 표시 6.64–9.20 s ⚠️(선컴파일 체인 변동).

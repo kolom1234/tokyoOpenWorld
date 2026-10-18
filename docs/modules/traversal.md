@@ -21,7 +21,8 @@ TraversalMode { id; requires: ('physics'|'trains')[]; enter(ctx, from, params?);
 ModeOutput { camera; interest; hud; player?: ModePlayer { posWF; velWF; yawRad }; avatar?: AvatarState }   // player 없으면 카메라 = 플레이어(freecam)
 WalkParams { posWF 기준점; yawRad; pitchRad? }   // 바디가 returnToBodyM 안이면 복귀, 아니면 기준점 아래 지면(하늘 레이 → TERRAIN)에 놓기
 FreecamParams { posWF: Vec3d; yawRad; pitchRad }   // yaw: +Y축 반시계, 0 = −Z(도북); pitch 위 +
-TraversalSettings { lookRadPerPx 0.0025; fovDeg 70; nearM 0.1; freecam: { dampingPerS 3; min/max/startSpeedMs 0.5/60/15; speedStepPerNotch 1.25; sprintMultiplier 4; maxAltitudeM 1000; minClearanceM 1 };
+TraversalService += configure(patch: DeepPartial<TraversalSettings>)   // M10-T01(ADR-0091): 설정 화면 — 같은 settings 객체 제자리 갱신, 다음 프레임부터(FOV는 drive·cycle 밖 모드에서 매 프레임 settings.fovDeg)
+TraversalSettings { lookRadPerPx 0.0025; fovDeg 70; nearM 0.1; motionEffects true(false = 추적 카메라 속도 FOV·열차 미세 진동 끔); freecam: { dampingPerS 3; min/max/startSpeedMs 0.5/60/15; speedStepPerNotch 1.25; sprintMultiplier 4; maxAltitudeM 1000; minClearanceM 1 };
   walk: { paceSpeedsMs [1.35, 1.8, 3.0]; sprintMs 5; eyeHeightM 1.6; headBob true; bobVerticalM 0.012; bobLateralM 0.006; lookSmoothingS 0.03; eyeFollowPerS 12(임계 감쇠 스프링 ω);
           thirdPerson { shoulderM 0.4; distanceM 3.5; min 1.5; max 6; pivotHeightM 1.55 }; returnToBodyM 150; view 'first' } }
 forwardOf(yaw, pitch): Vec3;  lookAtAngles(fromWF, toWF): { yawRad; pitchRad };  DEFAULT_TRAVERSAL_SETTINGS
