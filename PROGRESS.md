@@ -1,16 +1,15 @@
 # PROGRESS
-Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-hardening`, PR #25 draft — T06 사용자 확인에서 멈춤)
+Updated: 2026-10-19 (session #26 — M11 완료·공개, 브랜치 `claude/m11-launch-records`)
 
-## Current Milestone: M11 Hardening & Beta (M10 잔여 ✅, T05 ✅, T03 ✅, T04 ✅, T01 ✅(⚠️ 기록), T02 ✅ → T06)
-## Current Task: M11-T06 Production launch(준비 — production 쓰기는 사용자 확인 뒤)
-- Done in this session (#26): M10 잔여 6건(일시정지 물리 정지·DOF 출력 노드 교체·사진 200장·로마자 방위 하이픈·한국어 POI 9곳 점검·Noto 글꼴), M11-T05 라이선스 감사(ADR-0097), M11-T03 오류 보고(ADR-0098 — staging 수락), 무료 한도 일일 점검 워크플로(usage.yml — main 병합 뒤부터 실행), M11-T04 접근성(ADR-0099), M11-T01 성능(ADR-0100 — `pnpm perf`).
-- In progress: T06 — MVP 재빌드 `20261018-82db354-aa09c5ca`(validate 0, ODbL 36,558 피처) → dev publish(509파일 396.5 MB, Worker 검증 불일치 0)·dev 포인터 → staging f408b963. staging 첫 로드 26.7 MB·첫 표시 7.0–9.1 s ✅, 크레딧 ODbL·OSS·긴자선 표기 확인. dev gc 2개.
-- Done(사용자 승인 2026-10-19): production 버킷 publish — `20261018-89ce0aa-aa09c5ca`(롤백용) + `20261018-82db354-aa09c5ca`, KV 포인터 = 새 빌드(`pipeline current --env prod`로 확인).
-- Next step (정확히 한 걸음): 사용자가 PR #25 병합 → GitHub Actions Deploy의 production 승인 → (확인 뒤) earthaimap.com 연결 → `publish --verify-only` → 롤백 리허설 → 공개 URL 스모크(docs/13 §9). 측량법 승인은 사용자 병행 신청.
-- Blockers: 🔶 **국토지리원 측량법 제30조 사용 승인(사용자 신청)** — production 공개(T06) 전 필수(03 §6.1, ADR-0097). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
-- 다음 MVP 재빌드 때 반영할 것: 로마자 지명(셀 meta), `map --build-id` ODbL 묶음(global/odbl/). DOF 전환 실측은 T01 perf 하네스에서.
+## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
+## Current Task: 없음 — 공개 직후 사람 확인(docs/13 §9 체크리스트)·측량법 승인 대기
+- Done in this session (#26): M10 잔여 6건, M11 T05(ADR-0097)·T03(0098)·T04(0099)·T01(0100)·T02(0101)·T06(공개).
+- In progress: 없음.
+- Next step (정확히 한 걸음): 사용자가 공개 URL 체크리스트(docs/13 §9)를 확인 → 국토지리원 승인번호가 오면 ATTRIBUTION `gsi-dem` 표기·화면 상시 표기(`apps/game/src/credits.ts`)에 넣고 재배포.
+- Blockers: 🔶 국토지리원 측량법 제30조 사용 승인(사용자 신청 중 — 03 §6.1). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 
 ## Recently Completed
+- M11-T06 Production launch(2026-10-19) — 사용자 승인: prod 버킷 publish(롤백용 + 새 빌드)·KV 포인터 → PR #25 병합·Deploy 승인 → earthaimap.com 커스텀 도메인(API) → 공개 도메인 경유 파일 검증 불일치 0 → 롤백 리허설 4 s/원복 5 s → 공개 URL 스모크(첫 로드 25.6–26.0 MB, 첫 표시 HIT 8.5–12.1 s, 콘솔 오류 0). ⚠️ 배포 직후 첫 방문(엣지 MISS) 14.9–33 s.
 - M11-T02 Soak(2026-10-19) — `pnpm soak`(도보 → 열차 → 주행 → 비행 반복). 1차: 힙 누수 +92 MB/분 → 원인 three r186 RenderObject(메시 'dispose' 이벤트 필요) → `scene/release.ts`. 2차 1시간: 힙 기울기 0.38 MB/분·재시작 0·오류 0 ✅, GPU 메모리 30분 이후 0.85 MiB/분(⚠️ 관찰). ADR-0101
 - M11-T01 Performance(2026-10-19) — `pnpm perf`(실제 GPU 1440p High, vsync 해제: 도보·자동 주행·신주쿠 비행 + DOF + 부팅 → docs/generated/perf-latest.md), core `Scheduler.timings`, `?perf=1`. 수정: 야간 광원 풀 1024개 매 프레임 행렬 갱신 제외(셀 그룹은 로컬 행렬만 — 월드 순회까지 끄면 셀이 덜 그려지는 착시·떨림 e2e 실패). 첫 표시 = 셰이더 컴파일(LUT 65–420 ms → LUT 굽기 기각, 재방문 3.2–4.0 s). DOF 첫 켜기만 2.0–4.6 s·이후 0.3–0.6 s(전: 켤 때마다 4.8 s). ⚠️ 프레임 p50 도보 19–24·주행 25·비행 15–16·p95 30–46 ms(전력 상태 ±25 %)(GPU 한계 ≈ 34 W), 메인 p95 17–39 ms(render CPU — three WebGPU 드로우콜 비용 + GPU 대기), sim p95 12.8 ms, 기준 GPU 2종 미측정. ADR-0100
 - M11-T04 Accessibility(2026-10-19) — e2e `ui-scale.spec.ts`(배율 150 %: 메뉴 7 × 3개 언어 × 1024×768·1280×720 + HUD 운전·알림·열차·자막 — 문제 0, 지원 밖 800×500 대조 37건), HUD·지도 배치 em화(겹침 수정), 모션 민감 = OS 기본값 + UI 애니메이션 끔, 효과음 자막(`captions.ts`), render `setColorVision`(Machado + daltonize). ADR-0099
@@ -20,7 +19,6 @@ Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-harde
 - M10 마무리(2026-10-18) — MVP 재빌드(L0 294 + HLOD 177 + 머티리얼 32층 + 오디오 22 + map.pmtiles 1.45 MB, validate 0) → dev publish → staging. 실제 GPU staging(1600×900): HUD 시그널 8.1 Hz ≤ 10 ✅, 미니맵 0.018 ms/프레임(0.13 ms/회) ≤ 1 ✅, rAF p50 16.67·p95 16.84 ms, GPU 23.6 W(상한 33.9 W). 명소 봇 20/20(로컬 재빌드). 따라 해 보기 봇 전 단계 ✅. dev gc 대상 0.
 - M10-T06 Save/load & credits(2026-10-18) — 세이브 v2(IndexedDB, v1 마이그레이션·내보내기/가져오기·자동 저장 60 s·모음 복원·이어하기), 크레딧 자동 생성(/credits.json = lock 전 원천 + ATTRIBUTION, /oss-licenses.json = 런타임 의존 24개). 수락: 구 스키마 마이그레이션 테스트 ✅, 크레딧 lock 전 소스 ✅(테스트). ADR-0096
 - M10-T05 Photo mode(2026-10-18) — render `setPhoto`(노출 유니폼·DOF 포토 때만 그래프 재구성)·`screenshot({scale})`, 게임 포토 진입(freecam·시계 정지·날씨/시간/FOV·오른쪽 클릭 초점), UI 패널·WB/비네팅/그레인 합성·PNG 다운로드·썸네일 → 도감. 수락(실제 GPU): 3840×2160 저장 ✅, GPU 메모리 +756 MB → +47 MB 회수 ✅. ⚠️ DOF 켤 때 셰이더 재컴파일 4.8 s. ADR-0095
-- M10-T04 POI discovery & log(2026-10-18) — 명소 20곳(content/poi — Wikidata CC0 이름·좌표, 설명 자체 작성), `poi-wikidata`·`poi-review`(60개 통과 — 위키백과 대조 46, 최장 공통 ja·ko 8자·en 34자), sim PoiService, 도감 화면·지도 회색 점·발견 명소 빠른 이동. ADR-0094
 
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
@@ -31,6 +29,9 @@ Updated: 2026-10-19 (session #26 — M11 큐 모드, 브랜치 `claude/m11-harde
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
+- [launch] 배포·새 빌드 직후 엣지 캐시가 비어 첫 방문이 느리다(공개 URL 14.9–33 s, HIT 뒤 8.5–12.1 s). 대안: publish 뒤 공개 URL로 셀·공유 에셋을 한 번 GET(가까운 PoP만 데워짐)·R2 커스텀 도메인 CDN(§5). 첫 표시는 셰이더 컴파일(노트북 발열 시 7.7–8.9 s)이 대부분.
+- [render] 숨겨진 탭·크기 0 캔버스에서 선컴파일하면 SSR 블러 텍스처(1×1, mip 5)로 비동기 파이프라인 생성 오류 1건(실제 창에서는 없음) — 캔버스 크기 0이면 선컴파일을 늦추거나 SSR 최소 크기 검토.
+- [perf] (M11-T01 ⚠️) 1440p High 프레임 p50 15–25 ms·메인 p95 17–39 ms(render CPU = three WebGPU 드로우콜 비용 + GPU 대기), sim p95 ≈ 12–13 ms, 기준 GPU 2종 미측정 — ADR-0100 대안(셀 슬롯 병합·그림자 캐스터 축소·Medium 기본).
 - [ui] (M10 ⚠️ 남은 것) 포토 모드에 LUT·모션 블러 없음, 번역끼리 베끼기는 검사로 못 잡음. (글꼴·일시정지 물리·DOF·로마자·POI ko·사진 상한은 2026-10-19 해결)
 - [stations] 하라주쿠 다케시타 출구 개찰구 앞 동쪽이 PLATEAU 건물 — 다케시타 거리는 광장 북쪽 끝(≈ 40 m)에서 동쪽으로 들어간다(실제와 비슷). 걷기 봇은 모서리·군중에 가끔 걸린다(옆걸음으로 해결).
 - [vehicles] (M08 ⚠️) 운전석 실내·계기판 모델 없음(HUD), 앞바퀴 조향·서스펜션 렌더 없음, 전조등 노면 조명 없음, 탄 사람 = 상자 마네킹(페달 다리·발 딛기 자세 없음), 자전거 독 설비 모델 없음. 붐비는 광장(하라주쿠 거점)에선 AEB가 자주 세운다(의도 — 보행자 우선). 교통 NPC 엔진음 없음.
