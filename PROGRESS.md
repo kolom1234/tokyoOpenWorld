@@ -19,7 +19,6 @@ Updated: 2026-10-19 (session #26 — M11 완료·공개, 브랜치 `claude/m11-l
 - M10 마무리(2026-10-18) — MVP 재빌드(L0 294 + HLOD 177 + 머티리얼 32층 + 오디오 22 + map.pmtiles 1.45 MB, validate 0) → dev publish → staging. 실제 GPU staging(1600×900): HUD 시그널 8.1 Hz ≤ 10 ✅, 미니맵 0.018 ms/프레임(0.13 ms/회) ≤ 1 ✅, rAF p50 16.67·p95 16.84 ms, GPU 23.6 W(상한 33.9 W). 명소 봇 20/20(로컬 재빌드). 따라 해 보기 봇 전 단계 ✅. dev gc 대상 0.
 - M10-T06 Save/load & credits(2026-10-18) — 세이브 v2(IndexedDB, v1 마이그레이션·내보내기/가져오기·자동 저장 60 s·모음 복원·이어하기), 크레딧 자동 생성(/credits.json = lock 전 원천 + ATTRIBUTION, /oss-licenses.json = 런타임 의존 24개). 수락: 구 스키마 마이그레이션 테스트 ✅, 크레딧 lock 전 소스 ✅(테스트). ADR-0096
 - M10-T05 Photo mode(2026-10-18) — render `setPhoto`(노출 유니폼·DOF 포토 때만 그래프 재구성)·`screenshot({scale})`, 게임 포토 진입(freecam·시계 정지·날씨/시간/FOV·오른쪽 클릭 초점), UI 패널·WB/비네팅/그레인 합성·PNG 다운로드·썸네일 → 도감. 수락(실제 GPU): 3840×2160 저장 ✅, GPU 메모리 +756 MB → +47 MB 회수 ✅. ⚠️ DOF 켤 때 셰이더 재컴파일 4.8 s. ADR-0095
-- M10-T04 POI discovery & log(2026-10-18) — 명소 20곳(content/poi — Wikidata CC0 이름·좌표, 설명 자체 작성), `poi-wikidata`·`poi-review`(60개 통과 — 위키백과 대조 46, 최장 공통 ja·ko 8자·en 34자), sim PoiService, 도감 화면·지도 회색 점·발견 명소 빠른 이동. ADR-0094
 
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
