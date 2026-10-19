@@ -7,6 +7,8 @@ import type { PhysicsService } from '@sanpo/physics';
 import type { SimService } from '@sanpo/sim';
 import type { StreamingService } from '@sanpo/streaming';
 import type { TraversalService } from '@sanpo/traversal';
+import { withCaptions } from './captions.ts';
+import { pushCaption } from './shell/hud-state.ts';
 import { createVehicleAudio } from './vehicles/vehicle-audio.ts';
 import type { StreamingRenderWiring } from './wiring/streaming-render.ts';
 
@@ -193,7 +195,9 @@ function frameSystem(d: AudioWiringDeps, audio: AudioService): GameSystem {
 export function startAudio(d: AudioWiringDeps): AudioService | undefined {
   if (d.flags.off) return undefined;
   const initialMix = { ...d.flags.mix, ...(d.flags.vol !== undefined ? { master: d.flags.vol } : {}) };
-  const audio = createAudio({ log: d.log, manifestUrl: d.manifestUrl, initialMix });
+  const audio = withCaptions(createAudio({ log: d.log, manifestUrl: d.manifestUrl, initialMix }), (m) =>
+    pushCaption(d.doc, m),
+  );
   audio.setSignalSource((code) => d.sim.signalStateAt(code).ped);
   audio.setOccluder(occluderOf(d.physics));
   d.cells.onCell((p) => {

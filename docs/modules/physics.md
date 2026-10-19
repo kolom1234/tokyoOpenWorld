@@ -29,6 +29,7 @@ PhysicsService extends SystemProvider {   // system 'physics', phase 30 — 프�
   setSurfaceWetness(w 0..1);                // 타이어–노면 마찰 = 곡선 × lerp(1, wetFrictionScale, w)
   spawnVehicle('bicycle', posWF, yawRad, params: BicycleParams): BodyHandle;   // M08-T03(ADR-0089): MotorcycleController 2륜(앞 조향·뒤 구동), 페달 = 단일 기어 엔진 스로틀 × clamp(1 − v/vmax), 저속(< 2.2 m/s) 기울기 제어기 끄고 롤 스프링·정지(< 0.4 m/s) 발 딛기, 기울기 상한 35°. 차량 칸 최대 8(MAX_VEHICLES)
   SedanParams = content/vehicles/sedan.json(질량·치수·기울기 상한 35°·엔진 곡선·변속·서스펜션·타이어 곡선·조향·제동 앞/뒤·ABS/TCS·aero·속도 제한)
+  setPaused(on: boolean);                   // 메뉴 일시정지(M10 잔여): 물리 시각 정지(스텝 0), 재개 시 건너뜀 없이 이어 감 — 명령·레이·셀 적재는 계속
   stats(): PhysicsStats;                    // ready, isolation, build, steps, simTimeS, bodies, initMs, tickMs, anchorWF, rebases, colliderCells, colliderPending, loadTickMaxMs, loadTicksOver8Ms, kinematicBodies, kinematicFrames(M06-T06)
   dispose();
 }

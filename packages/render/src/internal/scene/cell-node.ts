@@ -6,6 +6,7 @@ import { createHlodFades } from '../materials/hlod.ts';
 import type { MaterialRegistry } from '../materials/registry.ts';
 import type { HlodSwitch } from './hlod-switch.ts';
 import { toRender } from './origin.ts';
+import { releaseRenderObjects } from './release.ts';
 import { type LayerRoot, SLOT_ROOT } from './scene-graph.ts';
 
 /** glTF 속성 이름(DecodedMesh 규약) → three 속성 이름. 나머지는 소문자(`_BLDG` → `_bldg`). */
@@ -115,6 +116,9 @@ export function createCellNode(
     if (mesh === undefined) continue;
     const group = new Group();
     group.name = `${p.id}/${slot}`;
+    // 정적 셀(M11-T01): 로컬 행렬은 배치·원점 재설정 때만(placeCellNode). 월드 행렬 순회(matrixWorldAutoUpdate)는 그대로 —
+    // 끄면 CI 정지 떨림 e2e(TAAU)가 0.40 → 0.43 %로 나빠졌다(스테이징 셀 재부모화 뒤 월드 행렬이 늦게 맞는 것으로 추정).
+    group.matrixAutoUpdate = false;
     for (const prim of mesh.primitives) {
       const hlod = slot === 'hlod';
       const material = hlod ? materials.getHlod(prim.materialId) : materials.get(prim.materialId);
@@ -148,11 +152,17 @@ export function createCellNode(
 
 /** 원점 재설정·추가 시: 원본 originWF에서 새로 계산(누적 없음). */
 export function placeCellNode(node: CellRenderNode, renderOriginWF: Readonly<Vec3d>): void {
-  for (const g of node.groups) toRender(g.position, node.originWF, renderOriginWF);
+  for (const g of node.groups) {
+    toRender(g.position, node.originWF, renderOriginWF);
+    g.updateMatrix();
+  }
 }
 
 export function disposeCellNode(node: CellRenderNode): void {
-  for (const g of node.groups) g.removeFromParent();
+  for (const g of node.groups) {
+    g.removeFromParent();
+    releaseRenderObjects(g);
+  }
   for (const m of node.meshes) m.geometry.dispose();
 }
 

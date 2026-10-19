@@ -7,6 +7,7 @@ import type {
   Scheduler,
   SchedulerDeps,
   SystemProvider,
+  SystemTiming,
 } from '../api.ts';
 
 /** dtReal 상한(s). 탭 전환·디버거 정지 후 폭주 방지. */
@@ -22,6 +23,10 @@ interface Entry {
   lastWarnFrame: number;
   /** remove()됨 — 진행 중인 tick 스냅샷에서도 이후 update를 건너뛴다(dispose 후 update 금지). */
   removed: boolean;
+  /** 누적 측정(timings). */
+  totalMs: number;
+  maxMs: number;
+  calls: number;
 }
 
 function isProvider(p: GameSystem | SystemProvider): p is SystemProvider {
@@ -53,10 +58,25 @@ function runSystem(e: Entry, frame: FrameContext, clock: () => number, log: Logg
     log.error(`system '${e.sys.id}' update threw`, err);
   }
   const spentMs = clock() - t0;
+  e.totalMs += spentMs;
+  e.calls++;
+  if (spentMs > e.maxMs) e.maxMs = spentMs;
   if (spentMs > SYSTEM_BUDGET_MS && frame.frameIndex - e.lastWarnFrame >= BUDGET_WARN_INTERVAL_FRAMES) {
     e.lastWarnFrame = frame.frameIndex;
     log.warn(`system '${e.sys.id}' took ${spentMs.toFixed(2)} ms (> ${SYSTEM_BUDGET_MS} ms budget)`);
   }
+}
+
+/** 시스템별 누적 시간(timings) — reset이면 읽은 뒤 0으로. */
+function timingsOf(entries: readonly Entry[], reset = false): SystemTiming[] {
+  const out = entries.map((e) => ({ id: e.sys.id, totalMs: e.totalMs, maxMs: e.maxMs, calls: e.calls }));
+  if (reset)
+    for (const e of entries) {
+      e.totalMs = 0;
+      e.maxMs = 0;
+      e.calls = 0;
+    }
+  return out;
 }
 
 export function createScheduler(deps: SchedulerDeps): Scheduler {
@@ -72,7 +92,15 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     if (entries.some((e) => e.sys.id === sys.id)) throw new Error(`Scheduler.add: duplicate system id '${sys.id}'`);
     entries = [
       ...entries,
-      { sys, order: orderSeq++, lastWarnFrame: -BUDGET_WARN_INTERVAL_FRAMES, removed: false },
+      {
+        sys,
+        order: orderSeq++,
+        lastWarnFrame: -BUDGET_WARN_INTERVAL_FRAMES,
+        removed: false,
+        totalMs: 0,
+        maxMs: 0,
+        calls: 0,
+      },
     ].sort(byPhaseThenOrder);
   };
 
@@ -98,6 +126,7 @@ export function createScheduler(deps: SchedulerDeps): Scheduler {
     async init() {
       for (const e of entries) await e.sys.init?.();
     },
+    timings: (reset) => timingsOf(entries, reset),
     tick(nowMs) {
       if (!source) throw new Error('Scheduler.tick: setFrameSource() must be called first');
       const rawDt = lastNowMs === undefined ? 0 : (nowMs - lastNowMs) / 1000;

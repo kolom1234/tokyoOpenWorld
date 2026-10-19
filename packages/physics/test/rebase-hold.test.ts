@@ -70,4 +70,22 @@ describe('anchor rebase & hold', () => {
     expect(phys.pose(ch)?.posWF.y ?? 30).toBeLessThan(29);
     phys.dispose();
   });
+
+  it('freezes bodies while paused and resumes without skipping time (M10 pause)', async () => {
+    const { phys, run } = await setup({ x: 0, y: 0, z: 0 });
+    const box = phys.debugSpawnBox({ x: 0, y: 100, z: 0 }, { x: 0.5, y: 0.5, z: 0.5 }, true);
+    await run(0.5);
+    phys.setPaused(true);
+    await run(0.1);
+    const y0 = phys.pose(box)?.posWF.y ?? 0;
+    await run(2);
+    expect(phys.pose(box)?.posWF.y).toBeCloseTo(y0, 6);
+    phys.setPaused(false);
+    await run(0.1);
+    const y1 = phys.pose(box)?.posWF.y ?? 0;
+    // 재개 0.1 s: 2 s를 건너뛰었다면 ≈ 25 m 더 떨어졌을 것 — 0.1 s 분량(≈ 1 m 미만)만.
+    expect(y0 - y1).toBeGreaterThan(0);
+    expect(y0 - y1).toBeLessThan(1.5);
+    phys.dispose();
+  });
 });

@@ -1,5 +1,5 @@
 // 메뉴 일시정지(M10-T01): 게임 입력 끔(input.setEnabled) + 포인터 잠금 풀기 + 사용자 시계(custom)면 시계 멈춤. 재개 = 반대(+ 제스처 안이면 포인터 잠금 다시).
-// 메뉴 모드에서는 포인터 잠금이 풀리면(Esc — 잠금 중 Esc는 페이지에 오지 않는다·창 전환) 일시정지 메뉴를 연다. 탈것은 입력 0으로 굴러 멈춘다(물리 정지 없음 ⚠️).
+// 메뉴 모드에서는 포인터 잠금이 풀리면(Esc — 잠금 중 Esc는 페이지에 오지 않는다·창 전환) 일시정지 메뉴를 연다. 물리도 멈춘다(physics.setPaused — 차·자전거·캐릭터 제자리).
 import type { ClockMode } from '@sanpo/sim';
 import type { UiHandle } from '@sanpo/ui';
 import type { WorldView } from '../world-view.ts';
@@ -25,6 +25,7 @@ export function createPause(doc: Document, world: () => WorldView | undefined): 
       if (on === paused) return;
       paused = on;
       w?.input.setEnabled(!on);
+      w?.physics?.setPaused(on);
       if (on) {
         if (doc.pointerLockElement) {
           intentional = true;

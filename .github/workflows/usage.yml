@@ -1,0 +1,37 @@
+# Cloudflare 무료 한도 일일 점검(M11-T06, 사용자 결정 2026-10-19): Workers 요청·KV·R2·Analytics Engine 사용량이 무료 한도의 70 % 이상이면
+# 라벨 cf-usage 이슈를 만든다(열린 이슈가 있으면 본문만 갱신 — 알림은 처음 한 번). 토큰 권한 = Account | Account Analytics | Read.
+# 시크릿 값은 node 프로세스 env로만 전달한다. 시크릿이 없으면 건너뛰고 성공.
+name: Cloudflare usage
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # 매일 09:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  usage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check Cloudflare secrets
+        id: gate
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+        run: echo "enabled=$HAS_TOKEN" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        if: steps.gate.outputs.enabled == 'true'
+      - uses: actions/setup-node@v7
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: 24
+      - name: Usage vs free limits (issue at 70 %)
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/cf-usage.ts --github-issue

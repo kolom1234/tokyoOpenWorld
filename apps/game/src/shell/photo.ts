@@ -154,8 +154,20 @@ export function createPhoto(
     restore(list) {
       for (const r of list)
         if (!photos.some((p) => p.id === r.id)) photos.push({ ...r, url: URL.createObjectURL(r.thumb) });
+      capPhotos(photos, MAX_PHOTOS, (old) => discovery.detachPhoto(old));
     },
   };
+}
+
+/** 도감 사진 상한(12 §5) — 넘으면 가장 오래된 것부터 지운다(썸네일 URL 해제·도감 연결 끊기, IndexedDB 썸네일은 다음 저장 때 save가 정리). */
+export const MAX_PHOTOS = 200;
+
+export function capPhotos(photos: PhotoPhotoRecord[], max: number, onEvict: (id: string) => void): void {
+  while (photos.length > max) {
+    const old = photos.shift() as PhotoPhotoRecord;
+    URL.revokeObjectURL(old.url);
+    onEvict(old.id);
+  }
 }
 
 async function storePhoto(
@@ -175,6 +187,7 @@ async function storePhoto(
     poiId: near?.id ?? null,
   });
   if (near) discovery.attachPhoto(near.id, id);
+  capPhotos(photos, MAX_PHOTOS, (old) => discovery.detachPhoto(old));
   return { id, poiName: near?.name ?? null };
 }
 

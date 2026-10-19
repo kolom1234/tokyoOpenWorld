@@ -172,7 +172,7 @@ export interface FrameSource { camera(): CameraState; player(): PlayerState; gam
 - 네트워크/디코드 실패: 3회 지수 백오프 재시도 → 실패 셀은 부모 HLOD로 대체 표시, `Logger.warn`.
 - 워커 크래시: `WorkerSupervisor`가 재시작, 물리 워커 재시작 시 현재 로드된 셀의 콜라이더 재전송.
 - 디버그 오버레이(`?debug=1`): FPS, draw calls, 삼각형, GPU 메모리 추정, 셀 상태 맵, 워커 큐 길이 (stats-gl + lil-gui).
-- 원격 오류 보고: Worker `/api/log` (샘플링 1%, PII 없음) — M11.
+- 원격 오류 보고: Worker `/api/log` (세션 샘플링 1 %, PII 없음 → Workers Analytics Engine, 조회 `pnpm errors`) — M11-T03, ADR-0098.
 
 ## 10. 확장 원칙
 - 새 이동수단/시스템 = 새 `GameSystem` + `ModeId` 추가, 기존 코드 수정 최소화 (개방-폐쇄).

@@ -11,6 +11,7 @@ import {
   type Object3D,
 } from 'three/webgpu';
 import type { PlayerVehicleDraw } from '../../api.ts';
+import { releaseRenderObjects } from '../scene/release.ts';
 import { buildVehicleGeometry } from './models.ts';
 
 export type { PlayerVehicleDraw } from '../../api.ts';
@@ -72,6 +73,7 @@ function write(s: Slot, v: PlayerVehicleDraw, o: Readonly<Vec3d>): void {
 
 function dropSlot(slots: Map<number, Slot>, id: number, s: Slot): void {
   s.mesh.removeFromParent();
+  releaseRenderObjects(s.mesh);
   s.mesh.geometry.dispose();
   slots.delete(id);
 }
@@ -134,6 +136,7 @@ export function createPlayerVehicles(): PlayerVehicles {
       return () => {
         for (const m of made) {
           m.removeFromParent();
+          releaseRenderObjects(m);
           (m as Mesh).geometry.dispose();
         }
       };

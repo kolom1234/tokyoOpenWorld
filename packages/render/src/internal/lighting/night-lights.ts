@@ -195,6 +195,12 @@ function assignPool(pool: readonly PointLight[], cand: readonly Cand[], o: Updat
   return active;
 }
 
+/** 풀 위치를 바꾼 뒤: 광원 로컬 행렬 + 묶음 월드 행렬(부모 = 단위 변환 lightRoot). */
+function syncMatrices(root: Group, pool: readonly PointLight[]): void {
+  for (const l of pool) l.updateMatrix();
+  root.updateMatrixWorld(true);
+}
+
 const m4 = new Matrix4();
 const v3 = new Vector3();
 const col = new Color();
@@ -251,6 +257,7 @@ function buildRoot(poolSize: number): {
     const l = new PointLight(0xffffff, 0, 0.01, 2);
     l.position.set(0, -1e5, 0);
     l.name = `nightLight${i}`;
+    l.matrixAutoUpdate = false;
     pool.push(l);
     root.add(l);
   }
@@ -258,6 +265,9 @@ function buildRoot(poolSize: number): {
   const fill = new HemisphereLight(new Color(0.42, 0.4, 0.62), new Color(0.62, 0.45, 0.3), 0);
   fill.name = 'nightFill';
   root.add(sprites, fill);
+  // 정적 풀(M11-T01): 광원 1024개가 매 프레임 장면 행렬 갱신 순회에 들지 않게 — 위치는 재배정(reselect) 때만 바뀌고 그때 갱신한다.
+  root.matrixWorldAutoUpdate = false;
+  syncMatrices(root, pool);
   return { root, pool, sprites, fill };
 }
 
@@ -280,6 +290,7 @@ export function createNightLights(poolSize: number): NightLights {
     dayDone = o.night <= 0;
     const lights = gatherCandidates(cells, o, cand);
     const active = assignPool(pool, cand.near, o);
+    syncMatrices(root, pool);
     const ns = fillSprites(sprites, cand, o);
     st = { cells: cells.size, lights, active, sprites: ns };
   };

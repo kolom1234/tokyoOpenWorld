@@ -253,6 +253,9 @@ export interface PrecompileProgress {
 }
 
 /** 포토 모드 렌더 설정(M10-T05). */
+/** 색각 보정 모드(M11-T04): 1형(적)·2형(녹)·3형(청) — Machado 2009 시뮬레이션 + 오차 재분배. ui `ColorVision`과 같은 값. */
+export type ColorVision = 'off' | 'protan' | 'deutan' | 'tritan';
+
 export interface PhotoSettings {
   exposureEv: number;
   /** 초점 거리 m·초점 깊이(앞뒤 m)·보케 크기. null = DOF 없음. */
@@ -274,6 +277,8 @@ export interface RenderService extends SystemProvider {
    * 소프트웨어 래스터(CI)는 DOF 생략.
    */
   setPhoto(p: PhotoSettings | null): void;
+  /** 색각 보정(M11-T04 — 12 §6): 후처리 출력 단 색 행렬(유니폼, 재컴파일 없음). 직접 렌더(WebGL2 폴백·CI)는 적용 안 함. */
+  setColorVision(mode: ColorVision): void;
   /** 고해상도 캡처: 픽셀 비율 × scale로 settleFrames(기본 8 — 시간 누적 수렴) 그린 뒤 그 프레임 캔버스 PNG. 다음 프레임 원래 크기. */
   screenshot(o: ScreenshotOptions): Promise<Blob>;
   readonly backend: RenderBackend;

@@ -233,5 +233,19 @@
   "save.exported": "내보냈어요 — 다운로드 폴더를 확인하세요",
   "save.imported": "가져왔어요 — 도감·지도·설정에 반영했어요",
   "save.invalid": "이 파일은 도쿄 산보 세이브가 아니거나 손상됐어요",
-  "save.failed": "실패했어요: {e}"
+  "save.failed": "실패했어요: {e}",
+  "settings.colorVision": "색각 보정",
+  "settings.colorVisionHint": "색 구분이 어려운 유형에 맞춰 화면 색 대비를 조정합니다.",
+  "colorVision.off": "끔",
+  "colorVision.protan": "1형(적색)",
+  "colorVision.deutan": "2형(녹색)",
+  "colorVision.tritan": "3형(청색)",
+  "settings.captions": "효과음 자막",
+  "settings.captionsHint": "역 차임·문 차임 같은 중요한 소리를 글로 보여 줍니다.",
+  "caption.stationChime": "[역 차임]",
+  "caption.doorChime": "[문 차임]",
+  "caption.lcdChime": "[차내 안내 알림음]",
+  "caption.gate": "[개찰구: 카드 터치]",
+  "caption.gateDenied": "[개찰구: 통과할 수 없음]",
+  "caption.bicycleBell": "[자전거 벨]"
 }

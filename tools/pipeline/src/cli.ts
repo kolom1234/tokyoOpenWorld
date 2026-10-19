@@ -11,6 +11,7 @@ import { FORMAT_VERSION } from '@sanpo/tile-format';
 import * as assetStages from './cli-assets.ts';
 import * as mapStages from './cli-map.ts';
 import * as railStages from './cli-rail.ts';
+import * as releaseStages from './cli-release.ts';
 import { createPlateauReader } from './readers/plateau/index.ts';
 import { buildArea, unionBounds } from './stages/build/assemble.ts';
 import { type AreaDef, makeBuildId } from './stages/build/manifest.ts';
@@ -379,6 +380,7 @@ const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   validate,
   publish,
   gc,
+  current: (args) => releaseStages.current({ repoRoot: REPO_ROOT, log }, args),
   fixture,
 };
 

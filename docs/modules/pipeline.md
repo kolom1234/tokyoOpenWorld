@@ -43,7 +43,7 @@ src/stages/derive/{grid,roads,terrain-shape,edge-burn,curbs,sidewalks,footprints
 src/stages/build/roads-mesh.ts   roads.mesh(보도 윗면 + 연석 + 치마, u16 위치) + 보도 윗면 콜라이더, 바깥 가장자리 지형 맞춤
 src/stages/validate-roads.ts     `validate`의 `road gaps`(교차로 50곳 < 2 cm, 연석 아래 틈) — CLI가 오류로 올린다
 src/stages/validate-props.ts     `validate`의 `props on road`(ADR-0068): L0 지상 소품이 PLATEAU 차도 폴리곤 위(건물 발자국 제외, 보도 없는 길가 ≤ 1 m 허용)·보도 위 길가 기둥이 연석 < 0.3 m면 오류 — `derive/props/curb.ts`(settleSite·behindCurb)와 같은 판정
-src/stages/map/                 `map --build-id`(M10-T03, ADR-0093): collect(정규화 건물 바닥 링·OSM 도로·공원·물·빌드 rail.bin 철도·역·places 지명 점) → tiles(경위도 → 메르카토르 z13–16, 자르기·단순화·정수화 → MVT) → index(global/map.pmtiles + map-report.json)
+src/stages/map/                 `map --build-id`(M10-T03, ADR-0093): collect(정규화 건물 바닥 링·OSM 도로·공원·물·빌드 rail.bin 철도·역·places 지명 점) → tiles(경위도 → 메르카토르 z13–16, 자르기·단순화·정수화 → MVT) → index(global/map.pmtiles + map-report.json) + `odbl.ts`(M11-T05 ADR-0097 — global/odbl/: OSM 정규화 피처 전부 GeoJSONSeq·보정·README, publish 대상)
 src/stages/areas/               `normalize --layer areas`(M10-T02, ADR-0092): shapefile(shp·dbf Shift_JIS) → names(町丁 분리·한자 숫자·이체자 ケ/ヶ·KEN_ALL 읽기) → kana(로마자·한글) → normalize(places.json) → assign(셀 meta placeNames, meta sources += estat-small-area·japanpost-kenall) · stages/poi/ = `poi-wikidata`(Wikidata 라벨·별칭·P625 → content/poi/wikidata.json)·`poi-review`(위키백과 본문과 최장 공통 부분 문자열·n-gram·홍보 문구 → content/poi/review.json) — M10-T04 ADR-0094
 src/stages/normalize-osm.ts      `normalize --layer osm`(M05-T02, ADR-0050): lock osm-kanto(sha256 스트림) → osmium extract·tags-filter·export GeoJSONSeq → WF → data/normalized/osm/<cell>.ndjson.gz(OsmRecord {id, geom, rings(xz), tags, source})
 src/stages/derive/markings/{common,crosswalk,lanes,stopline,text,index}.ts   노면 표시: 1 m 칸 데칼 띠(지형 + 2 cm, 셀 소유) / 일본식 횡단보도 / 차선(좌측통행·폭 행진) / 정지선(신호·stop) / 「止まれ」 획 폰트 / 조립·통계
@@ -123,7 +123,7 @@ buildL1(key, { l0Buildings, dem1m, farDem, far, overrides? }, ratio);   // overr
 - 예산: L1 3e6 B, L2/L3 2e6 B(10진). 초과 시 L1 비율 × 0.6ⁿ, L2/L3 박스 × 0.6ⁿ·매스 격자 × 2(≤ 4회).
 
 ## Publish (M02-T06, ADR-0026)
-- `node tools/pipeline/src/cli.ts publish --build-id <id> --env dev|prod [--set-current] [--verify-url https://<worker>/world] [--uploader s3|api]` — 호스트에서(CLOUDFLARE_API_TOKEN, 선택 R2_ACCESS_KEY_ID/SECRET).
+- `node tools/pipeline/src/cli.ts publish --build-id <id> --env dev|prod [--set-current] [--verify-url https://<worker>/world] [--uploader s3|api]` — 호스트에서(CLOUDFLARE_API_TOKEN, 선택 R2_ACCESS_KEY_ID/SECRET). `current --env dev|prod [--build-id <id>]`(M11-T06, `cli-release.ts`·`stages/publish/current.ts`) — 활성 빌드 포인터 보기/바꾸기(롤백 = 직전 buildId, 퍼블리시된 빌드만, 재업로드 없음). staging 리허설 반영 4–13 s.
 - `… publish --verify-only --verify-url …`(Worker HEAD 전수 검증, `Accept-Encoding: identity`), `… gc --env dev [--apply]`.
 
 ## Invariants

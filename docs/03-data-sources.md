@@ -1,17 +1,17 @@
 # 03 — Data Sources & Licensing
 
 > 규칙: 여기 없는 데이터/에셋은 사용 금지. 추가 시 이 표 + `content/ATTRIBUTION.json` + `data/sources.lock.json` 동시 갱신.
-> ⚠ 표시 = 배포 전 원문 약관 재확인 필요 (M11-T05 "라이선스 감사" 태스크에서 일괄 확인).
+> ⚠ 표시 = 배포 전 원문 약관 재확인 필요. **M11-T05 감사(2026-10-19) 완료** — 결과·근거 원문 = §6.1. 남은 것은 ⚠가 아니라 🔶(사람 신청 대기) 1건: 국토지리원 측량법 제30조 사용 승인.
 
 ## 1. 지리 공간 데이터
 | ID | 데이터 | 제공 | 사용 레이어 | 라이선스 / 출처 표기 |
 |---|---|---|---|---|
-| `plateau-shibuya` | 3D 도시모델 시부야구 (최신 연도판, 2025년도판 공개 확인) | 국토교통성 Project PLATEAU / G공간정보센터 | 건물 LOD2(+텍스처), 도로 LOD1–3, 교량, 도시설비(frn) LOD3, 식생(veg) LOD3, DEM, 토지이용 | PLATEAU 사이트 폴리시(CC BY 4.0 호환). 저작권은 해당 지자체. 표기: `出典：国土交通省 Project PLATEAU 3D都市モデル（渋谷区）を加工して作成` ⚠ 측량법상 공공측량 성과 이용 조건 확인 |
+| `plateau-shibuya` | 3D 도시모델 시부야구 (최신 연도판, 2025년도판 공개 확인) | 국토교통성 Project PLATEAU / G공간정보센터 | 건물 LOD2(+텍스처), 도로 LOD1–3, 교량, 도시설비(frn) LOD3, 식생(veg) LOD3, DEM, 토지이용 | PLATEAU 사이트 폴리시(CC BY 4.0 호환). 저작권은 해당 지자체. 표기: `出典：国土交通省 Project PLATEAU 3D都市モデル（渋谷区）を加工して作成` ✅ 상업 이용 가능·이용 절차 불필요(PLATEAU FAQ, §6.1) — 측량법 절차는 공공측량 성과 원본을 받는 경우이고, 공개 오픈데이터 이용자는 해당 없음 |
 | `plateau-shinjuku` | 3D 도시모델 신주쿠구 2025년도판 — 都 제공 pref 판은 **3차 메시 단위**(구 경계로 자르지 않음, 이웃 구 zip의 같은 메시 = 같은 파일) → 시부야 zip에 없는 MVP 메시(53394527·35·36·37)만 사용 | 동상 | 건물·도로(L0), L1 | 동상 (`新宿区`) |
 | `plateau-meguro` | 3D 도시모델 메구로구 2025년도판 — MVP 남서 모서리 메시 53393584만 | 동상 | 건물·도로(L0), L1 | 동상 (`目黒区`) |
 | `plateau-tokyo23` | 3D 도시모델 도쿄 23구 (2020년도판: LOD1 전역, LOD2 중점지구 11곳), 건물 176.8만 동 | 동상 | HLOD 원경(L2·L3, 영역 밖 L1): 방향 사각형 박스 + 블록 매스(ADR-0024) | 동상 |
-| `gsi-dem` | 기반지도정보 수치표고모델 **1 m (DEM1A, 항공레이저) 주** + 5 m (DEM5A) 결측 채움. 2025-08-22판(수평 JGD2024 = JGD2011, 표고는 2025 개정 기준) | 국토지리원 | 지형 높이장, 물리 heightfield | 국토지리원 콘텐츠 이용규약(CC BY 4.0 호환). 표기: `出典：国土地理院（基盤地図情報 数値標高モデル）を加工して作成` ⚠ 측량법 승인 필요 여부 |
-| `gsi-dem-tiles` | 지리원 타일 표고 타일 `dem_png` z14(기반지도정보 수치표고모델 기반, ≈ 8 m 화소) | 국토지리원 | HLOD 원경 지형(L2 16 m·L3 64 m·영역 밖 L1) — hlodExtentWF 48 km 정사각형, 676 타일 | 국토지리원 콘텐츠 이용규약(CC BY 4.0 호환). 표기 `出典：国土地理院（地理院タイル 標高タイル）を加工して作成` |
+| `gsi-dem` | 기반지도정보 수치표고모델 **1 m (DEM1A, 항공레이저) 주** + 5 m (DEM5A) 결측 채움. 2025-08-22판(수평 JGD2024 = JGD2011, 표고는 2025 개정 기준) | 국토지리원 | 지형 높이장, 물리 heightfield | 국토지리원 콘텐츠 이용규약(CC BY 4.0 호환). 표기: `出典：国土地理院（基盤地図情報 数値標高モデル）を加工して作成` 🔶 **측량법 제30조 사용 승인 필요**(3D 지형으로 가공·인터넷 공개 = 承認申請Q&A Q2-4 사례, 수수료 없음 Q4-3·기반지도정보 무상 승인 Q5-4) — 사용자 신청 대기, 승인번호를 크레딧·화면 표기에 추가(§6.1) |
+| `gsi-dem-tiles` | 지리원 타일 표고 타일 `dem_png` z14(기반지도정보 수치표고모델 기반, ≈ 8 m 화소) | 국토지리원 | HLOD 원경 지형(L2 16 m·L3 64 m·영역 밖 L1) — hlodExtentWF 48 km 정사각형, 676 타일 | 국토지리원 콘텐츠 이용규약(PDL 1.0, CC BY 4.0 호환). 표기 `出典：国土地理院（地理院タイル 標高タイル）を加工して作成`. 지리원 타일은 출처 명시로 신청 불필요(Q&A Q1-12)지만 가공·재배포라 위 사용 승인 신청에 함께 적는다(보수적, §6.1) |
 | `gsi-photo` | 지리원 타일 전국최신사진(seamlessphoto) | 국토지리원 | **검증 전용**(M05-T02 횡단보도 위치 대조 z18, `checks/markings-photo.ts` — 게임 데이터에 굽지 않음). 원거리 지면 알베도 참고는 미사용 | 동 규약. 표기 `出典：地理院タイル（全国最新写真）` |
 | `osm-kanto` | OpenStreetMap 간토 추출본 (Geofabrik `kanto-260929.osm.pbf` 고정판, `normalize --layer osm`) | OSM 기여자 | 도로 속성(차선·일방통행·제한속도), 신호, 철도 선로 상세, 플랫폼, 나무, 공원, POI 이름, 건물 층수 보완, 카셰어·공유자전거 거점 위치(M08 — amenity=car_sharing·노면 주차장·bicycle_rental, 위치만 — 운영사 이름·브랜드 미사용) | **ODbL 1.0**. 표기 `© OpenStreetMap contributors`. 파생 DB 공개 의무 → §4 참조 |
 | `ksj-n02` | 국토수치정보 철도 데이터(N02, **2025년도판** `N02-25_GML.zip`, `pnpm pipeline fetch --source ksj-n02` — sha256 lock) | 국토교통성 | 노선 식별 대조(OSM 선로 ↔ 노선·사업자, 평균 4.7–9.5 m), 역 위치 | **CC BY 4.0**(2020년도판 이후 오픈 데이터 — 다운로드 페이지 표기). 표기 `出典：国土数値情報（鉄道データ）（国土交通省）を加工して作成` |
@@ -25,7 +25,7 @@
 | ID | 데이터 | 라이선스 | 사용 여부 |
 |---|---|---|---|
 | `odpt-tokyometro` | 도쿄메트로 GTFS/GTFS-JP (ODPT) | 공공교통 오픈데이터 기본 라이선스. ODPT 개발자 등록(키) 필요 | ✅ 긴자선 시간표(시각 운행). 후쿠토신선 등 지하 노선은 M12+. 키 = 환경 변수 `ODPT_CONSUMER_KEY`(로그·파일·커밋 금지) — **키 대기**(M07-T02 컴파일러는 픽스처로 검증, ATTRIBUTION 항목은 실제 데이터를 받을 때 추가) |
-| `odpt-toei` | 도에이 지하철/버스 (ODPT) | ⚠ 라이선스 명칭 확인 | 🔶 MVP 범위 밖(오에도선은 M12+) |
+| `odpt-toei` | 도에이 지하철/버스 (ODPT) | 미사용 — 쓰기 시작할 때 그 데이터셋의 ODPT 라이선스 명칭을 확인(M11-T05: 사용하지 않으므로 공개 전 확인 대상 아님) | 🔶 MVP 범위 밖(오에도선은 M12+) |
 | `odpt-jreast` | JR동일본 (ODPT) | "공공교통 오픈데이터 챌린지 한정 라이선스" → 상시 서비스 사용 불가 | ❌ 사용 금지. 야마노테선은 **합성 시간표**(`10-simulation.md §6.1`, ADR-0008) |
 | 자체 작성 `synthetic-timetables` | JR 야마노테·사이쿄·쇼난신주쿠 **근사 시간표**(M07-T02, `content/sim/synthetic-lines.json` 시간대 간격·정차 → ADR-0071) + GTFS 테스트 픽스처 `tests/fixtures/gtfs-mini`(가상 시각·가상 사업자) | 프로젝트 소유. 크레딧에 "근사 시간표(실제 시간표 아님)" 명시(`ATTRIBUTION.json` `synthetic-timetables`) | ✅ |
 
@@ -33,7 +33,7 @@
 | ID | 데이터 | 라이선스 | 비고 |
 |---|---|---|---|
 | `wikidata` | 랜드마크 다국어 이름·좌표·짧은 설명 | CC0 | Wikipedia 본문(CC BY-SA)은 번들 금지. 설명문은 자체 작성(`content/poi/*.yaml`) |
-| `open-meteo` | 현재 날씨(실시간 날씨 모드) | 데이터 CC BY 4.0. 무료 API는 비상업 한정 ⚠ 상업화 시 유료 플랜 | 게임 `?weather=live`(기본 auto), Worker LIVE_WEATHER = staging·local true / production false(M09-T01). 켜지면 크레딧 줄에 'Open-Meteo.com (CC BY 4.0)' |
+| `open-meteo` | 현재 날씨(실시간 날씨 모드) | 데이터 CC BY 4.0. 무료 API = 비상업 한정(광고·구독 없는 개인·비영리 사이트는 비상업 — 원문 §6.1), 하루 10,000·시간 5,000·분 600 호출. ✅ production은 LIVE_WEATHER=false(호출 0) — 켜려면 광고·구독 없음 유지 또는 유료 플랜 | 게임 `?weather=live`(기본 auto), Worker LIVE_WEATHER = staging·local true / production false(M09-T01). 켜지면 크레딧 줄에 'Open-Meteo.com (CC BY 4.0)' |
 
 ## 4. 에셋 (텍스처·모델·폰트·사운드)
 | 소스 | 사용 | 라이선스 |
@@ -44,7 +44,7 @@
 | Microsoft Rocketbox Avatar Library (커밋 `0943055`) | 플레이어 아바타(Male_Adult_10)·군중 베이스 12종 메시·기본색 텍스처·Biped 클립(ADR-0057, M06 사전 결정 1 — Quaternius ADR-0048 대체). `pnpm pipeline characters`(커밋 고정 URL에서 받기), sha256 = `sources.lock` `rocketbox`(저장소 상대 경로별), 목록 = `content/characters/catalog.json`. 로고 검사: 실제 상표 없음, 문구 프린트 아바타(Male_Adult_09) 제외. 저작권·허가 고지 = `apps/game/public/third-party-notices.txt` | MIT |
 | Kenney | 보조 소품/아이콘 | CC0 |
 | `@dgreenheck/ez-tree` | 나무 메시 생성기(파이프라인 `trees`, M05-T04 — 수종 6종 가지·잎 카드 → `apps/game/src/assets/trees/`, 잎 아틀라스·임포스터는 자체 생성, `ATTRIBUTION.json` `ez-tree`, ADR-0052) | MIT (생성물은 자체 산출물) |
-| Noto Sans JP / Noto Sans KR | UI 폰트 (자체 호스팅, 서브셋) | SIL OFL 1.1 |
+| Noto Sans JP / Noto Sans KR Variable (Google Fonts v56, `@fontsource-variable/noto-sans-{jp,kr}` 5.3.0 — 고정) | UI 폰트(2026-10-19): 유니코드 범위 조각 woff2 248개(빌드 8.9 MB, 브라우저는 화면 글자의 조각만 받음 — `font-display: swap`), `apps/game/src/main.ts` import, 출처 `ATTRIBUTION.json` `noto-sans-ui`, OFL 전문 = `apps/game/public/third-party-notices.txt`. 조각 = 원본 부분 집합(수정본) — 예약 글꼴 이름 없음(Noto) | SIL OFL 1.1 |
 | Noto Sans JP Bold (noto-cjk Sans2.004 서브셋 OTF) | 가상 간판 글자 윤곽 → 파이프라인 `signage`가 아틀라스로 굽기(M05-T06, sources.lock `noto-sans-jp`, `ATTRIBUTION.json` `noto-sans-jp`, ADR-0054). 글꼴 파일은 배포하지 않음 | SIL OFL 1.1 |
 | `opentype.js` 2.0.0 | 글꼴 윤곽 읽기(파이프라인 `signage`) | MIT |
 | 자체 제작 (설정 + 코드) | 가상 브랜드 64개(`content/signage/brands.json` 생성 규칙 + `real-brands.txt` 실존 상호 254개 대조 — 일치 0건), 간판 모델·아틀라스(ADR-0054) | 프로젝트 소유 |
@@ -69,7 +69,22 @@
 - 추적성: OSM을 입력으로 쓴 모든 섹션은 헤더 `sources[]`에 `osm-kanto`를 기록한다(05 §3). validate 단계가 목록을 보고서로 출력.
 - 빌드 산출물 중 OSM 파생 DB(정규화 GeoPackage)를 `R2: world/<buildId>/odbl/osm-derived.gpkg`로 공개하고 크레딧 화면에 링크.
 - 게임 화면(Produced Work)에는 `© OpenStreetMap contributors` 상시 표기(크레딧 + 지도 화면 하단). M05-T02부터 화면 오른쪽 아래 최소 표기(`apps/game/src/credits.ts`) — M08 크레딧 화면이 대체.
-- ⚠ `osm-derived.gpkg` 공개(파생 DB)는 아직 없음 — 첫 공개 배포 전 M11-T05 라이선스 감사에서(현재 OSM 파생 = 노면 표시 기하, data/normalized/osm은 비커밋).
+- ✅ (M11-T05, ADR-0097) 파생 DB 공개 = 파이프라인 `map --build-id`가 `global/odbl/`(`osm-derived.geojsonseq.gz` — 빌드에 쓴 OSM 정규화 피처 전부 GeoJSONSeq, `osm-crossing-corrections.json` — 우리 보정, `README.txt` — ODbL 고지·방법) 생성 → publish → `/world/<buildId>/global/odbl/README.txt`(크레딧 화면 맨 위 링크). gpkg 대신 GeoJSONSeq(GDAL 없이·기계 판독). `global/map.pmtiles`와 셀의 OSM 유래 섹션도 ODbL 파생 DB로 고지(README). 변환 방법 = 공개 저장소(MIT) 파이프라인 + sources.lock(ODbL 4.6b).
+
+## 6.1 라이선스 감사 결과 (M11-T05, 2026-10-19 — 원문 재확인)
+| 대상 | 원문 | 결론 |
+|---|---|---|
+| PLATEAU | [PLATEAU FAQ](https://www.mlit.go.jp/plateau/faq/) 「手続き不要です… CC BY4.0等のオープンライセンス」「商用利用も可能です」, [사이트 폴리시](https://www.mlit.go.jp/plateau/site-policy/) PDL 1.0(CC BY 4.0 호환, ODbL과 함께 쓰는 것 허용), 가공 시 「を加工して作成」 별도 표기, 정부가 만든 것처럼 보이게 하지 말 것 | ✅ 표기 그대로. 측량법은 공공측량 성과 원본 입수 절차(오픈데이터 이용자 해당 없음) |
+| GSI DEM1A/5A(기반지도정보) | [측량성과 이용 절차](https://www.gsi.go.jp/LAW/2930-index.html)·[承認申請Q&A](https://www.gsi.go.jp/LAW/2930-qa.html): Q2-4 「…数値標高モデル…立体的な地図を作成するような場合は、測量法第30条に基づく『測量成果の使用承認申請書』の提出が必要」, Q5-4 기반지도정보는 무상 승인, Q4-3 수수료 없음, Q5-1 처리 7–14일, Q5-2 시스템·웹은 승인번호·출처를 표시 화면에 상시 | 🔶 **사용자 신청 필요** — [측량성과 원스톱 서비스](https://service.gsi.go.jp/onestop/)(사전 판단 [이용 절차 내비](https://service.gsi.go.jp/onestop/navi/index/)) → 「地図・空中写真等の複製または使用承認申請」 → 사용(제30조). 승인번호를 ATTRIBUTION `gsi-dem`·화면 오른쪽 아래 표기에 추가. **production 공개(M11-T06)는 승인 뒤** |
+| GSI 標高タイル·写真 | Q1-12 「地理院タイルは出典の明示のみで申請不要」(실시간 읽기), 콘텐츠 이용규약 PDL 1.0 | ✅ 사진 = 검증 전용(배포 없음). 標高タイル은 가공 재배포라 위 신청서에 함께 적는다(보수적) |
+| KSJ N02 | [N02 페이지](https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2024.html) 「2020年（令和2年）以降：オープンデータ（CC_BY_4.0）」 | ✅ 2025년도판 CC BY 4.0(상업 가능) |
+| Open-Meteo | [Terms](https://open-meteo.com/en/terms) 「You may only use the free API services for non-commercial purposes」, 비상업 예 = 구독·광고 없는 개인·비영리 사이트 | ✅ production 호출 0(LIVE_WEATHER=false). 켜면 크레딧 'Open-Meteo.com (CC BY 4.0)' |
+| Freesound 음원 22개 | `content/audio/library.json` 전부 `CC0-1.0`(BY·BY-SA·NC 0) | ✅ 표기 의무 없음, 크레딧에 관례 표기 |
+| Rocketbox | [저장소 README](https://github.com/microsoft/Microsoft-Rocketbox) 「released under MIT License」(2020-12), 추가 제한 없음(연구 인용은 권고) | ✅ MIT 전문 = `third-party-notices.txt` |
+| OSM ODbL | ODbL 4.6: 파생 DB·그 산출물을 공개 사용하면 파생 DB 전체 또는 변경 파일·방법을 기계 판독 형태로 제공. [OSMF Produced Work 지침](https://osmfoundation.org/wiki/Licence/Community_Guidelines/Produced_Work_-_Guideline): 원 데이터 추출을 의도한 결과 = DB | ✅ `global/odbl/` 공개 + map.pmtiles·셀 OSM 섹션 ODbL 고지 + 화면 `© OpenStreetMap contributors` + 공개 저장소 방법 |
+| 폰트 | Noto Sans JP/KR(OFL 1.1 — 글꼴과 함께 라이선스 전문 배포, 단독 판매 금지), 간판 Noto Sans JP Bold(파일 비배포) | ✅ OFL 전문 = `third-party-notices.txt`·`/oss-licenses.txt` |
+| npm 런타임 의존 26개 | MIT 21·Apache-2.0 1(idb-keyval)·BSD-2 1(suncalc)·OFL 2·(MIT OR CC0) 1 — GPL·NC 0 | ✅ `/oss-licenses.txt` = 패키지별 LICENSE·NOTICE 원문(파일 없는 5개는 package.json 선언 + 저작자 + MIT 문구), 크레딧 링크 |
+| 실존 상표 | `tools/pipeline/test/trademark-scan.test.ts`(UI 3개 언어·명소 이름·설명·역 안내·가상 브랜드 × real-brands.txt 267줄 — 0건, CI), 간판 = 가상 브랜드(생성기 대조 0건), 차량·열차·소품 = 절차 모델(로고·엠블럼·번호판 없음), 아바타 문구 프린트 제외(ADR-0057) | ✅ 노선·역·지명(山手線·東京メトロ 등)은 사실 표기(로고·발차 멜로디 없음) |
 
 ## 7. `data/sources.lock.json` 형식 (커밋 대상)
 ```json

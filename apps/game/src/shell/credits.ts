@@ -36,17 +36,54 @@ async function getJson<T>(url: string): Promise<T> {
   return (await r.json()) as T;
 }
 
-export async function loadCredits(buildId: string | null): Promise<CreditsModel> {
+/** ODbL 4.6 파생 DB(M11-T05 — 빌드 global/odbl/, 파이프라인 map 단계)를 크레딧 맨 앞에 링크. 픽스처(world-mini)는 없음. */
+export function odblEntry(worldBase: string | null): AttributionEntry | null {
+  if (!worldBase || worldBase.includes('/fixtures/')) return null;
+  return {
+    id: 'osm-derived-db',
+    kind: 'data',
+    title: 'OpenStreetMap derived database (ODbL 1.0) — osm-derived.geojsonseq.gz · map.pmtiles',
+    url: `${worldBase}/global/odbl/README.txt`,
+    license: 'ODbL-1.0',
+    attribution: {
+      ja: 'OSM から作った派生データベース（ODbL 1.0）をここで公開しています',
+      en: 'The OpenStreetMap-derived database used by this world is offered here under ODbL 1.0',
+      ko: '이 월드에 쓴 OpenStreetMap 파생 데이터베이스를 ODbL 1.0으로 여기에 공개합니다',
+    },
+  };
+}
+
+/** 라이선스 전문 링크(M11-T05): 런타임 OSS LICENSE 원문(빌드 생성)·제3자 고지(Rocketbox MIT·Noto OFL). */
+const NOTICE_ENTRIES: AttributionEntry[] = [
+  {
+    id: 'oss-license-texts',
+    kind: 'notice',
+    title: 'Open-source license texts',
+    url: '/oss-licenses.txt',
+    license: '—',
+  },
+  {
+    id: 'third-party-notices',
+    kind: 'notice',
+    title: 'Third-party notices',
+    url: '/third-party-notices.txt',
+    license: '—',
+  },
+];
+
+export async function loadCredits(buildId: string | null, worldBase: string | null = null): Promise<CreditsModel> {
+  const odbl = odblEntry(worldBase);
+  const withOdbl = (es: AttributionEntry[]) => [...(odbl ? [odbl] : []), ...es, ...NOTICE_ENTRIES];
   try {
     const [c, o] = await Promise.all([
       getJson<{ data: AttributionEntry[] }>('/credits.json'),
       getJson<{ packages: OssEntry[] }>('/oss-licenses.json'),
     ]);
-    return creditsOf(c.data, buildId, o.packages);
+    return creditsOf(withOdbl(c.data), buildId, o.packages);
   } catch {
     const m = (await import('../../../../content/ATTRIBUTION.json')) as unknown as {
       default: { entries: AttributionEntry[] };
     };
-    return creditsOf(m.default.entries, buildId);
+    return creditsOf(withOdbl(m.default.entries), buildId);
   }
 }

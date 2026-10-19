@@ -82,7 +82,21 @@ export interface DiscoveryState {
   records(): DiscoveryRecord[];
   restore(rs: readonly DiscoveryRecord[]): void;
   attachPhoto(poiId: string, photoId: string): void;
+  /** 사진 상한으로 지운 사진을 모든 기록에서 뺀다. */
+  detachPhoto(photoId: string): void;
   system(src: { player(): Readonly<Vec3d>; mode(): string; timeMs(): number; weather(): string }): GameSystem;
+}
+
+function dropPhoto(recs: Iterable<DiscoveryRecord>, photoId: string): boolean {
+  let hit = false;
+  for (const r of recs) {
+    const i = r.photoIds.indexOf(photoId);
+    if (i >= 0) {
+      r.photoIds.splice(i, 1);
+      hit = true;
+    }
+  }
+  return hit;
 }
 
 export function createDiscovery(
@@ -123,6 +137,9 @@ export function createDiscovery(
       if (!r) return;
       r.photoIds.push(photoId);
       publish();
+    },
+    detachPhoto(photoId) {
+      if (dropPhoto(recs.values(), photoId)) publish();
     },
     system(src) {
       return {

@@ -1,8 +1,10 @@
-// UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = 시스템 일·한 고딕(⚠️ Noto 서브셋 자체 호스팅은 후속 — docs/12 §1).
+// UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = Noto Sans JP/KR Variable(OFL — @font-face는 게임 main.ts가 fontsource 유니코드 범위 조각으로 자체 호스팅, docs/12 §1), 한국어 화면은 KR 먼저. 없으면 시스템 일·한 고딕.
 export const THEME_CSS = `
 .ui-root{position:fixed;inset:0;z-index:20;pointer-events:none;color:#f3f1ec;
-  font:calc(15px * var(--ui-scale,1))/1.45 "Noto Sans JP","Noto Sans KR","Hiragino Sans","Yu Gothic UI","Meiryo UI","Malgun Gothic",system-ui,sans-serif;
+  font:calc(15px * var(--ui-scale,1))/1.45 "Noto Sans JP Variable","Noto Sans KR Variable","Hiragino Sans","Yu Gothic UI","Meiryo UI","Malgun Gothic",system-ui,sans-serif;
   --accent:#f08a24;--panel:rgba(14,18,26,.78);--line:rgba(255,255,255,.14);--muted:#b8b4ab}
+:lang(ko) .ui-root{font-family:"Noto Sans KR Variable","Noto Sans JP Variable","Malgun Gothic","Hiragino Sans","Yu Gothic UI",system-ui,sans-serif}
+.reduce-motion .ui-root *,.reduce-motion .ui-root *::before,.reduce-motion .ui-root *::after{transition:none!important;animation:none!important}
 .ui-root kbd{display:inline-block;min-width:1.6em;padding:0 .35em;border:1px solid rgba(255,255,255,.35);border-bottom-width:2px;border-radius:4px;
   font:600 .82em/1.5 ui-monospace,monospace;text-align:center;background:rgba(255,255,255,.08)}
 .screen{position:absolute;inset:0}
@@ -60,6 +62,7 @@ export const THEME_CSS = `
 .credits-body{width:min(52em,92vw);max-height:68vh;overflow:auto;padding:.6em 1.2em;border:1px solid var(--line);border-radius:10px;background:rgba(10,13,20,.6)}
 .credit-list,.oss-list{list-style:none;padding:0;margin:0}
 .credit-list li{display:flex;flex-direction:column;padding:.45em 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.credit-list a{color:var(--accent)}
 .credit-list small,.oss-list li{color:var(--muted);font-size:.82em;word-break:break-all}
 .hud{pointer-events:none}
 .help{position:absolute;left:12px;bottom:12px;max-width:min(30em,46vw);padding:.5em .7em;border-radius:8px;background:rgba(0,0,0,.42);
@@ -67,21 +70,26 @@ export const THEME_CSS = `
 .help.collapsed{display:block}
 .help-item{display:contents}
 .help-item kbd{justify-self:start}
-.prompt{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);padding:.4em 1em;border-radius:8px;background:rgba(20,40,90,.85);font-size:1.0em}
-.notice{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);max-width:min(36em,90vw);padding:.55em 1.1em;border-radius:8px;
+.prompt{position:absolute;left:50%;bottom:calc(12px + 6.6em);max-width:min(36em,60vw);transform:translateX(-50%);padding:.4em 1em;border-radius:8px;background:rgba(20,40,90,.85);font-size:1.0em}
+.caption{position:absolute;left:50%;top:calc(28px + 8.4em);transform:translateX(-50%);max-width:min(30em,50vw);padding:.2em .7em;border-radius:6px;
+  background:rgba(0,0,0,.72);font-size:.95em;text-align:center}
+.notice{position:absolute;left:50%;bottom:calc(12px + 9.6em);transform:translateX(-50%);max-width:min(36em,90vw);padding:.55em 1.1em;border-radius:8px;
   background:rgba(90,40,20,.88);text-align:center}
-.guide{position:absolute;left:50%;top:14px;transform:translateX(-50%);padding:.35em 1em;border-radius:8px;background:rgba(20,50,79,.88);
+.guide{position:absolute;left:50%;top:calc(20px + 2.7em);max-width:min(46em,92vw);transform:translateX(-50%);padding:.35em 1em;border-radius:8px;background:rgba(20,50,79,.88);
   border-bottom:3px solid var(--accent)}
 .ui-root .ground-loading{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);padding:.3em .9em;border-radius:999px;background:rgba(0,0,0,.55);font-size:.85em}
 .fade{position:absolute;inset:0;background:#000;pointer-events:none;transition:opacity .3s}
 .hud-corner{position:absolute;top:12px;padding:.35em .8em;border-radius:8px;background:rgba(0,0,0,.38);text-shadow:0 0 3px rgba(0,0,0,.7);transition:opacity .8s}
-.hud-place{left:12px;font-size:1.05em;font-weight:600;letter-spacing:.02em}
+.hud-place{left:12px;font-size:1.05em;font-weight:600;letter-spacing:.02em;max-width:36vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hud-place:empty{display:none}
 .hud-clock{right:12px;display:flex;gap:.7em;align-items:baseline}
 .hud-clock .clock{font:600 1.25em/1 ui-monospace,monospace}
 .idle{opacity:.22}
 .help{transition:opacity .8s}
-.gauge{position:absolute;right:226px;bottom:12px;min-width:13em;padding:.6em .9em;border-radius:10px;background:rgba(0,0,0,.5);font-size:.9em}
+.gauge{position:absolute;right:226px;bottom:12px;min-width:13em;max-width:calc(52vw - 238px);box-sizing:border-box;padding:.6em .9em;border-radius:10px;background:rgba(0,0,0,.5);font-size:.9em}
+.hud[data-mode=drive] .prompt,.hud[data-mode=cycle] .prompt{bottom:auto;top:calc(28px + 8.4em)}
+.hud[data-mode=drive] .notice,.hud[data-mode=cycle] .notice{bottom:auto;top:calc(28px + 11.4em)}
+.hud[data-mode=drive] .caption,.hud[data-mode=cycle] .caption{top:calc(28px + 14.6em)}
 .gauge-main{display:flex;align-items:baseline;gap:.6em}
 .gauge-speed{font:600 2.3em/1 system-ui,sans-serif}
 .gauge-gear{margin-left:auto;font:600 1.4em system-ui}
@@ -107,9 +115,10 @@ export const THEME_CSS = `
 .map-canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab;touch-action:none}
 .map-missing{position:absolute;top:45%;width:100%;text-align:center;color:var(--muted)}
 .map-attribution{position:absolute;left:0;right:0;bottom:0;padding:.25em .6em;background:rgba(255,255,255,.82);color:#333;font-size:.75em}
-.map-scale{position:absolute;left:12px;bottom:2.2em;color:#333;font-size:.75em;text-shadow:0 0 2px #fff}
+.map-scale{position:absolute;left:12px;top:12px;color:#333;font-size:.75em;text-shadow:0 0 2px #fff}
 .map-scale span{display:inline-block;height:6px;border:2px solid #333;border-top:0;margin-right:.4em;vertical-align:middle}
-.map-side{width:min(22em,34vw);display:flex;flex-direction:column;gap:.5em;padding:1.2em;overflow:auto;background:rgba(14,18,26,.92)}
+.map-side{width:min(22em,34vw);display:flex;flex-direction:column;gap:.5em;padding:1.2em 1.2em 2.6em;overflow:auto;background:rgba(14,18,26,.92)}
+.map-screen>.nav-hint{left:auto;right:0;bottom:.5em;width:min(22em,34vw);padding:0 .6em;box-sizing:border-box}
 .map-side h2{margin:0}
 .map-list{display:flex;flex-direction:column;gap:.35em}
 .map-list h3{margin:.4em 0 .2em}
@@ -117,7 +126,8 @@ export const THEME_CSS = `
 .btn.travel small{color:var(--muted)}
 .btn.travel.locked{opacity:.55}
 .btn.travel.selected{border-color:var(--accent)}
-.map-layers{display:grid;grid-template-columns:1fr auto;gap:.4em .8em;align-items:center;margin-top:.4em}
+.map-layers{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:.4em .8em;align-items:center;margin-top:.4em}
+.map-layers .choice{min-width:0;width:100%;box-sizing:border-box}
 .log-screen{justify-content:flex-start;padding-top:4vh}
 .log-screen h2 small{font-size:.6em;color:var(--muted);margin-left:.6em}
 .log-body{display:flex;gap:1em;width:min(64em,94vw);height:58vh}
@@ -152,7 +162,6 @@ export const THEME_CSS = `
 .photo-panel .nav-hint{position:static;margin-top:.3em}
 .save-section{margin-top:1em;padding-top:.6em;border-top:1px solid var(--line)}
 .save-section h3{margin:.2em 0}
-.map-screen .nav-hint{left:0;right:auto;width:calc(100% - min(22em,34vw));color:#444;bottom:2.4em}
 `;
 
 export function injectTheme(doc: Document): void {

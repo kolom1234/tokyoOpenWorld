@@ -10,6 +10,9 @@ export interface HudState {
   prompts: Partial<Record<PromptSlot, Msg>>;
   notice: Msg | null;
   noticeSeq: number;
+  /** 효과음 자막(M11-T04). */
+  caption: Msg | null;
+  captionSeq: number;
   guide: GuideModel | null;
   fade: boolean;
   /** 탈것 계기(drive·cycle — vehicles/drive-hud). */
@@ -25,7 +28,18 @@ const states = new WeakMap<Document, HudState>();
 export function hudStateOf(doc: Document): HudState {
   let s = states.get(doc);
   if (!s) {
-    s = { prompts: {}, notice: null, noticeSeq: 0, guide: null, fade: false, drive: null, train: null, version: 0 };
+    s = {
+      prompts: {},
+      notice: null,
+      noticeSeq: 0,
+      caption: null,
+      captionSeq: 0,
+      guide: null,
+      fade: false,
+      drive: null,
+      train: null,
+      version: 0,
+    };
     states.set(doc, s);
   }
   return s;
@@ -54,6 +68,13 @@ export function pushNotice(doc: Document, msg: Msg): void {
   const s = hudStateOf(doc);
   s.notice = msg;
   s.noticeSeq++;
+  s.version++;
+}
+
+export function pushCaption(doc: Document, msg: Msg): void {
+  const s = hudStateOf(doc);
+  s.caption = msg;
+  s.captionSeq++;
   s.version++;
 }
 

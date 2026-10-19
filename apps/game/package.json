@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource-variable/noto-sans-jp": "5.3.0",
+    "@fontsource-variable/noto-sans-kr": "5.3.0",
     "@sanpo/audio": "workspace:*",
     "@sanpo/core": "workspace:*",
     "@sanpo/geo": "workspace:*",

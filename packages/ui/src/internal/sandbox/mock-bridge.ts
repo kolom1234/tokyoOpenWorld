@@ -20,6 +20,8 @@ export const MOCK_HUD: HudModel = {
   prompt: { key: 'hud.prompt.boardTrain' },
   notice: null,
   noticeSeq: 0,
+  caption: null,
+  captionSeq: 0,
   guide: {
     kind: 'gate',
     station: { ko: '하라주쿠', ja: '原宿', en: 'Harajuku' },

@@ -298,9 +298,26 @@ function cellApi(
   };
 }
 
+/** 일시정지 시계(M10 잔여): 멈춘 동안 물리 시각이 흐르지 않는다 — step 목표·보간 시각이 그대로라 워커는 스텝 0, 재개하면 멈춘 길이만큼 뒤로 민 시각에서 이어 간다(시간 건너뜀 없음). */
+function pausableClock(raw: () => number): { now: () => number; setPaused: (on: boolean) => void } {
+  let offset = 0;
+  let pausedAt: number | null = null;
+  return {
+    now: () => (pausedAt ?? raw()) - offset,
+    setPaused(on) {
+      if (on && pausedAt === null) pausedAt = raw();
+      else if (!on && pausedAt !== null) {
+        offset += raw() - pausedAt;
+        pausedAt = null;
+      }
+    },
+  };
+}
+
 export function createPhysics(deps: PhysicsDeps): PhysicsService {
   const cfg: PhysicsConfig = { ...DEFAULT_PHYSICS_CONFIG, ...deps.config };
-  const now = deps.now ?? (() => performance.now());
+  const clock = pausableClock(deps.now ?? (() => performance.now()));
+  const now = clock.now;
   const isolation = isolationOf(cfg.isolation);
   const anchorWF = anchorOf(deps.originWF, cfg.anchorGridM);
   const rebase = { count: 0 };
@@ -340,6 +357,7 @@ export function createPhysics(deps: PhysicsDeps): PhysicsService {
     connectKinematicSource: (port) => transport.post({ t: 'kinematicPort', port }, [port]),
     setTrainCars: (data) => queue.push({ c: 'trains', data }),
     setStaticGroup: (name, group) => queue.push({ c: 'statics', name, group }),
+    setPaused: clock.setPaused,
     stats: () => ({ ...statsOf(history.latest, link.st, isolation, handles.count, anchorWF), rebases: rebase.count }),
     systems: () => [system],
     dispose: () => system.dispose(),

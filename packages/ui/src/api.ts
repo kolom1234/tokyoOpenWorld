@@ -95,6 +95,9 @@ export interface HudModel {
   yawRad: number;
   /** 게임패드 연결(도움말을 패드 글자로). */
   gamepad: boolean;
+  /** 효과음 자막(M11-T04 — 12 §6): 게임이 중요 효과음을 낼 때마다 seq 증가, 표시는 설정 captions일 때만. */
+  caption: Msg | null;
+  captionSeq: number;
 }
 
 export type PoiCategory = 'landmark' | 'street' | 'park' | 'shrine' | 'view';
@@ -160,6 +163,10 @@ export const REBIND_ACTIONS: readonly RebindAction[] = [
   'photo',
 ];
 
+/** 색각 보정(M11-T04 — 12 §6): 1형(적)·2형(녹)·3형(청) 색각에 맞춘 대비 보정 LUT(render setColorVision). */
+export type ColorVision = 'off' | 'protan' | 'deutan' | 'tritan';
+export const COLOR_VISIONS: readonly ColorVision[] = ['off', 'protan', 'deutan', 'tritan'];
+
 export interface SettingsModel {
   v: 1;
   lang: Lang;
@@ -177,6 +184,10 @@ export interface SettingsModel {
   minimapRotate: boolean;
   uiScale: number;
   showHelp: boolean;
+  /** 색각 보정(M11-T04). */
+  colorVision: ColorVision;
+  /** 효과음 자막(M11-T04). */
+  captions: boolean;
   /** 액션 → 키 코드(KeyboardEvent.code) 덮어쓰기. 없으면 기본. */
   keys: Partial<Record<RebindAction, string>>;
 }

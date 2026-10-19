@@ -22,7 +22,8 @@ RenderStats += weather: { rain: { count, density, snow }, wetness, direct }  // 
 setStationFixtures(f: StationFixtures { boxes: f64 × 8(cx,cy,cz,hx,hy,hz,yaw,색 번호); flaps: f64 × 8(…, 접힘 쪽 ±1); signs?: StationSign[] { posWF, yawRad, widthM, heightM, icon: gate|stairs|exit|station, title, sub } — 가상 디자인 글자 판(stations/signs.ts 아틀라스 1장·메시 1개, ADR-0084) } | null); setGateFlaps(open: Float32Array /* 통로별 0..1 */)  // M07-T06 역 시설(개찰구·울타리·계단 표식, WF — stations/fixtures.ts), ADR-0081
 RenderStats += night: { level, cells, lights, active, sprites }  // M09-T03 밤 정도·lights.bin 셀·광원 수·켠 클러스터 광원(풀 1024)·발광 스프라이트, ADR-0078
 RenderStats += signs: { instances, visible, pools, ready }; RenderService += loadSignage(urls: SignageAssetUrls{atlas}): Promise<void>  // M05-T06 ADR-0054 — 첫 표시 뒤, 파사드 간판 띠도 같은 아틀라스
-RenderService += setPhoto(PhotoSettings{exposureEv, dof: {focusM, rangeM, bokeh}|null} | null), screenshot(ScreenshotOptions{scale 1|2, settleFrames 8}): Promise<Blob>  // M10-T05(ADR-0095): 노출 유니폼·DOF는 포토 모드에서만 그래프 재구성, 캡처 = 픽셀 비율 × scale로 수렴 프레임 뒤 toBlob
+RenderService += setPhoto(PhotoSettings{exposureEv, dof: {focusM, rangeM, bokeh}|null} | null), screenshot(ScreenshotOptions{scale 1|2, settleFrames 8}): Promise<Blob>  // M10-T05(ADR-0095): 노출 유니폼·DOF는 포토 모드에서만 출력 노드 교체(post `setDof` — 같은 씬 패스·TAAU, 처음 켤 때 DOF 출력 생성·재사용, 전체 재구성 없음 — M11 세션), 캡처 = 픽셀 비율 × scale로 수렴 프레임 뒤 toBlob
+RenderService += setColorVision(ColorVision 'off'|'protan'|'deutan'|'tritan')  // M11-T04: 출력 단 색 행렬 유니폼(post/color-vision.ts — Machado 2009 + daltonize), 직접 렌더 제외
 RenderService += setQuality(tier), detectQuality(): Promise<QualityTier>  // 버스 'quality/changed'도 적용(되먹임 없음), 자기 변경은 방출. 소프트웨어 래스터 = detect-gpu 생략 → low
 QualityTier = @sanpo/core 재수출
 RenderService extends SystemProvider {            // systems: renderPrep(70), render(80)
@@ -98,3 +99,4 @@ M01-T06 최소 구현(초기화·reversed-Z·방향광·셀 메시·원점 재�
 - `reversedDepthBuffer`·`logarithmicDepthBuffer`는 생성자 옵션(이후 readonly). WebGL2는 `EXT_clip_control` 없으면 three가 조용히 표준 깊이로 폴백 → `backend-caps.ts`로 미리 판정.
 - WebGPU는 `snorm8x3`·`unorm16x3` 정점 형식이 없다 → three가 업로드 시 4성분으로 패딩(WebGPUAttributeUtils). 밀집 3성분 배열을 그대로 넘겨도 된다.
 - takram atmosphere의 WebGPU 노드명은 `@takram/three-atmosphere/webgpu` 타입 정의 확인 후 사용.
+- 장면에서 영구히 빼는 메시는 `scene/release.ts releaseRenderObjects`(하위 트리에 'dispose' 이벤트)를 거친다 — three r186 RenderObject는 geometry.dispose()로는 캐시에서 빠지지 않아 공유 머티리얼 리스너가 메시·정점 배열을 붙잡는다(M11-T02 소크: 셀 해제마다 누수, 힙 +92 MB/분).

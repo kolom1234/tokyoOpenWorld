@@ -8,6 +8,7 @@ import { createCrowdMaterial, outfitU } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
 import { nightU, updateNight } from './lighting/night.ts';
 import { compileDetached, precompileBase, precompileMaterials, yieldFrame } from './materials/precompile.ts';
+import { setColorVision } from './post/color-vision.ts';
 import { dofBokehU, dofFocusU, dofRangeU, exposureBiasU } from './post/photo.ts';
 import { loadAvatarModel } from './scene/avatar-model.ts';
 import { loadSignageInto } from './signs/load.ts';
@@ -67,9 +68,10 @@ function statsOf(ctx: RenderContext): RenderStats {
   };
 }
 
-/** 포토 모드(M10-T05): 노출 보정·DOF(그래프 재구성)·고해상도 캡처. */
-function photoApi(ctx: RenderContext): Pick<RenderService, 'setPhoto' | 'screenshot'> {
+/** 포토 모드(M10-T05): 노출 보정·DOF(출력 노드 교체 — 재구성 없음)·고해상도 캡처. */
+function photoApi(ctx: RenderContext): Pick<RenderService, 'setPhoto' | 'screenshot' | 'setColorVision'> {
   return {
+    setColorVision,
     setPhoto(p) {
       exposureBiasU.value = 2 ** (p?.exposureEv ?? 0);
       if (p?.dof) {
@@ -80,7 +82,7 @@ function photoApi(ctx: RenderContext): Pick<RenderService, 'setPhoto' | 'screens
       const want = !!p?.dof && !ctx.software;
       if (want === ctx.photo.dof) return;
       ctx.photo.dof = want;
-      ctx.rebuildPost();
+      ctx.post.setDof(want);
     },
     screenshot(o) {
       if (ctx.capture) return Promise.reject(new Error('screenshot: already capturing'));
@@ -166,7 +168,7 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
     : precompileBase(renderer, graph.scene, view.camera, ctx.materials).catch((e: unknown) =>
         log.warn('base precompile', e),
       );
-  await ctx.atmosphere.prepare(yieldFrame, () => ctx.compileScope.frame(() => ctx.post.warmup()));
+  const steps = await ctx.atmosphere.prepare(yieldFrame, () => ctx.compileScope.frame(() => ctx.post.warmup()));
   await base;
   onProgress?.({ stage: 'atmosphere', done: 1, total: 1 });
   await yieldFrame();
@@ -179,7 +181,9 @@ async function precompileAll(ctx: RenderContext, onProgress?: (p: PrecompileProg
   ctx.avatar.group.visible = false;
   onProgress?.({ stage: 'avatar', done: 1, total: 1 });
   const ms = (a: number, b: number) => Math.round(b - a);
-  log.info(`precompile atmosphere ${ms(t0, t2)} ms, avatar ${ms(t2, performance.now())} ms`);
+  log.info(
+    `precompile atmosphere ${ms(t0, t2)} ms (compile ${steps.compileMs}, first render ${steps.renderMs}, LUT ${steps.lutMs}), avatar ${ms(t2, performance.now())} ms`,
+  );
 }
 
 /** 첫 표시 뒤(ADR-0085): 머티리얼 묶음(소품 풀 priming 포함). 소프트웨어 래스터는 생략. */

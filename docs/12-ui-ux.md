@@ -53,6 +53,7 @@ URL 스폰 프리셋 `?spawn=<id>`(content/spawn-presets.json — 개발·테스
 
 ## 6. 접근성
 - 자막: 안내 차임/중요 효과음 텍스트화. 색각 보정 LUT 3종. 모션 민감: 헤드밥·모션블러·FOV 효과 끄기. UI 배율 80–150%.
+- 구현(M11-T04, ADR-0099): 자막 = 게임 `captions.ts`(AudioService 감싸기 — 역·문·차내 차임·개찰구·거부·자전거 벨, 30 m 안, 2 s 반복 없음) → HUD `caption`(설정 '효과음 자막', 기본 끔). 색각 보정 = render `setColorVision`(1·2·3형 — Machado 2009 + 오차 재분배 행렬, 출력 단 유니폼). 모션 민감 = 헤드밥·속도 FOV(운전·자전거)·열차 진동·UI 전환/깜빡임 끔, 기본값은 OS `prefers-reduced-motion`. 모션 블러는 렌더에 없음(끌 것 없음). UI 배율 150 % = e2e `ui-scale.spec.ts`(메뉴 7화면 × 3개 언어 × 1024×768·1280×720 + HUD 운전·알림·열차·자막 변형 — 화면 밖·글 잘림·겹침 0).
 
 ## 7. `UiBridge` 계약 (`packages/ui/src/api.ts`)
 ```ts

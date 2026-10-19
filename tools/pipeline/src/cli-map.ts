@@ -1,4 +1,4 @@
-// CLI 지도·지명·도감 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles),
+// CLI 지도·지명·도감 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles + global/odbl/ ODbL 파생 DB),
 // poi-wikidata(Wikidata → content/poi/wikidata.json)·poi-review(위키백과 겹침 → content/poi/review.json). Node만(GDAL·osmium 불필요).
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -44,6 +44,7 @@ export async function map(ctx: MapCtx, args: string[], buildIdOf: () => string):
     buildDir: join(ctx.repoRoot, 'data/build', buildId),
     cells: areaCellKeys(ctx.readArea(values.area)),
     log: ctx.log.child('map'),
+    odbl: { repoRoot: ctx.repoRoot, buildId },
   });
 }
 

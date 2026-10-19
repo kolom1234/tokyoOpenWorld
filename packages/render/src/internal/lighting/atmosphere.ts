@@ -49,7 +49,11 @@ export interface AtmosphereRig {
    * 조명·하늘이 0(검은 화면)이 된다(three r186 + takram 0.19.1 실측) → 선컴파일 때 1회 await.
    */
   /** renderOnce = 실제 경로로 한 프레임(후처리면 씬 패스 + 후처리 — 캔버스 직접 렌더는 다른 머티리얼 변형을 동기로 만든다, ADR-0086). */
-  prepare(yieldFrame: () => Promise<void>, renderOnce: () => void): Promise<void>;
+  /** 반환 = 단계 시간(ms): 장면 비동기 컴파일·첫 렌더(후처리 포함)·LUT 계산(M11-T01 계측). */
+  prepare(
+    yieldFrame: () => Promise<void>,
+    renderOnce: () => void,
+  ): Promise<{ compileMs: number; renderMs: number; lutMs: number }>;
   dispose(): void;
 }
 
@@ -106,11 +110,16 @@ export function createAtmosphere(
     async prepare(yieldFrame, renderOnce) {
       // LUT 노드는 첫 빌드(setup)에서 텍스처를 만든다 → 실제 경로로 1회 렌더(renderOnce)해 초기화한 뒤 계산을 끝까지 기다린다.
       // 먼저 비동기 컴파일 + 한 프레임 양보: 동기 render 안에서 파이프라인을 만들면 그동안 프레임이 멈춘다(M06 실측 1.4–1.7 s).
+      const t0 = performance.now();
       await renderer.compileAsync(scene, camera);
       await yieldFrame();
+      const t1 = performance.now();
       renderOnce();
       await yieldFrame();
+      const t2 = performance.now();
       await ctx.lutNode.updateTextures(renderer as unknown as Parameters<typeof ctx.lutNode.updateTextures>[0]);
+      const t3 = performance.now();
+      return { compileMs: Math.round(t1 - t0), renderMs: Math.round(t2 - t1), lutMs: Math.round(t3 - t2) };
     },
     dispose() {
       light.dispose();

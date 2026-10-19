@@ -8,7 +8,7 @@
 
 ## Decision
 1. **명소 20곳**(거리 6·공원 4·신사 5·랜드마크 4·전망 1 — 상업 시설·전망대 상호는 피함)을 `content/poi/pois.json`(YAML 대신 JSON — 의존성 없이 게임 번들·파이프라인이 같이 읽음)에: Wikidata Q-id, 종류, 발견 반경, 이름 규칙, 설명 ko·ja·en, `descriptionSource: original`.
-2. **이름·좌표 = Wikidata**(`pnpm pipeline poi-wikidata` → `content/poi/wikidata.json`, CC0, User-Agent = 저장소 주소만): 이름 규칙 `label`(라벨) | `alias:<s>`(그 언어 Wikidata 별칭 — 괄호 설명은 지움, 예: 旧渋谷川遊歩道路 → キャットストリート) | `derived:<s>`(ko 라벨이 없을 때만 일본어 이름을 우리가 옮겨 적음 — 10곳 ⚠️). 좌표 P625 → `lonLatToWF`.
+2. **이름·좌표 = Wikidata**(`pnpm pipeline poi-wikidata` → `content/poi/wikidata.json`, CC0, User-Agent = 저장소 주소만): 이름 규칙 `label`(라벨) | `alias:<s>`(그 언어 Wikidata 별칭 — 괄호 설명은 지움, 예: 旧渋谷川遊歩道路 → キャットストリート) | `derived:<s>`(ko 라벨이 없을 때만 일본어 이름을 우리가 옮겨 적음 — 실제 9곳(처음 기록 10곳은 오기), 2026-10-19 점검 ✅: 국립국어원 일본어 표기법(장음 미표기·어두 예사소리·ン = ㄴ 받침)과 한국어 위키백과·관용 표기 대조 — 충견 하치코 동상·미야시타 공원·다케시타 거리·캣 스트리트·도고 신사(東郷 Tōgō)·오모이데 요코초(横丁 Yokochō)·하나조노 신사·요요기 하치만구·곤노 하치만구(金王 Konnō), 고칠 것 0). 좌표 P625 → `lonLatToWF`.
 3. **설명 검수**(`pnpm pipeline poi-review` → `content/poi/review.json`): 사이트링크로 ja·en·ko 위키백과 본문을 받아 정규화 뒤 최장 공통 부분 문자열(ja·ko ≤ 16자, en ≤ 45자 — 고유명사·연도는 허용, 문장 복사는 걸림)과 n-gram 공유율(ja·ko 글자 8개, en 단어 4개 ≤ 20 %), 홍보 문구 목록(최고·必見·must-see…) 검사. 결과에 설명 sha256 — 단위 테스트(오프라인, CI)가 지금 글과 sha·통과 여부·상한·홍보 0·형식·이름 규칙·좌표가 MVP 영역 안을 검사(설명을 고치고 검수를 다시 안 돌리면 실패).
 4. **발견 판정** = `@sanpo/sim` `createPoiService(pois)`(메인 순수 상태): 반경 안 연속 2 s(나가면 초기화), mode freecam·idle 제외(걷기·탈것·열차는 셈), 한 번만, `restore(ids)`. 게임(`shell/pois.ts`)이 발견 기록(게임 시각·날씨·사진 id)·알림·지도 빠른 이동 대상(`poi:<id>`, 착지 반경 120 m — 좌표가 건물 안일 수 있어 walk 착지가 거리로 비킨다) 추가.
 5. **도감 화면**(일시정지 메뉴 → 도감): 분류 탭 6개, 격자(미발견 = ???·지도에 회색 점), 상세(이름·자체 설명·발견 시각 JST·날씨·사진 — 사진은 T05). 키보드·패드 = 탭·격자 공간 이동.

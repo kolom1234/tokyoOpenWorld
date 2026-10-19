@@ -55,6 +55,8 @@ export interface Shell {
   attach(world: WorldView): GameSystem[];
   /** 월드 로드 뒤: 빌드 루트(지도 global/map.pmtiles·크레딧). */
   setWorld(baseUrl: string, buildId: string): void;
+  /** setWorld로 받은 빌드 id(오류 보고 — M11-T03), 전에는 null. */
+  readonly buildId: string | null;
   readonly travel: TravelState;
   readonly discovery: DiscoveryState;
   readonly photo: PhotoControl;
@@ -71,6 +73,8 @@ const EMPTY_HUD: HudModel = {
   prompt: null,
   notice: null,
   noticeSeq: 0,
+  caption: null,
+  captionSeq: 0,
   guide: null,
   drive: null,
   train: null,
@@ -97,6 +101,8 @@ function hudOf(doc: Document, w: WorldView, groundS: number, places: PlaceIndex)
     prompt: topPrompt(s),
     notice: s.notice,
     noticeSeq: s.noticeSeq,
+    caption: s.caption,
+    captionSeq: s.captionSeq,
     guide: s.guide,
     groundLoading: groundS >= GROUND_SHOW_S,
     fade: s.fade ? 1 : 0,
@@ -230,8 +236,14 @@ function systemsOf(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudMod
   ];
 }
 
+/** 저장된 설정 또는 기본(브라우저 언어·OS 모션 줄이기). */
+function initialSettings(doc: Document, storage: Storage | undefined): SettingsModel {
+  const win = doc.defaultView;
+  return loadSettings(storage, win?.navigator.languages, win?.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+}
+
 export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions): Shell {
-  const settings = signal(loadSettings(opts.storage, doc.defaultView?.navigator.languages));
+  const settings = signal(initialSettings(doc, opts.storage));
   const loading = signal<LoadingModel>(INITIAL_LOADING);
   const hud = signal<HudModel>(EMPTY_HUD);
   let world: WorldView | undefined;
@@ -246,7 +258,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     signal(false),
   );
   void save.init();
-  let buildId: string | null = null;
+  const loaded = { buildId: null as string | null, base: null as string | null };
   const bridge: UiBridge = {
     hud,
     loading,
@@ -255,7 +267,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     settings,
     hasSave: save.hasSave,
     startPoints: startPoints(),
-    credits: (): Promise<CreditsModel> => loadCredits(buildId),
+    credits: (): Promise<CreditsModel> => loadCredits(loaded.buildId, loaded.base),
     worldToMap: (p: Vec3d) => worldToMerc(p),
     map,
     photoUrl: (id) => photo.photoUrl(id),
@@ -272,6 +284,9 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
     discovery,
     photo,
     save,
+    get buildId() {
+      return loaded.buildId;
+    },
     attach(w) {
       world = w;
       offs.push(settingsEffect(w, settings, opts), pause.autoPause(ui, opts.menus));
@@ -279,7 +294,7 @@ export function createShell(doc: Document, root: HTMLElement, opts: ShellOptions
       return [...systemsOf(doc, w, shell, hud), ...extra];
     },
     setWorld(baseUrl, id) {
-      buildId = id;
+      Object.assign(loaded, { buildId: id, base: baseUrl });
       map.setBase(baseUrl);
     },
     dispose() {

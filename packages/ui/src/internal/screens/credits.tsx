@@ -36,7 +36,12 @@ export function CreditsScreen(p: { bridge: UiBridge; back: () => void; pad: bool
                   {e.attribution ? <span>{pick(e.attribution)}</span> : null}
                   <small>
                     {t('credits.license')}: {e.license}
-                    {e.url ? ` · ${e.url}` : ''}
+                    {e.url ? ' · ' : ''}
+                    {e.url ? (
+                      <a href={e.url} target="_blank" rel="noopener noreferrer">
+                        {e.url}
+                      </a>
+                    ) : null}
                   </small>
                 </li>
               ))}

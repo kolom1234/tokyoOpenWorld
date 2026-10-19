@@ -44,6 +44,7 @@ import { createWorldView, type WorldView } from './world-view.ts';
 /** URL 쿼리 디버그 플래그(docs/15-conventions.md §8). 이후 tier/spawn 추가. */
 export interface BootFlags {
   debug: boolean;
+  perf?: boolean; // `?perf=1` → 측정 핸들 `__SANPO_DEBUG__`만(오버레이·stats-gl·debug 로그 없음 — `pnpm perf`·`pnpm soak`, M11-T01)
   /**
    * `?world=mini` → 저장소 픽스처 world-mini(/fixtures/world-mini)를 API 대신 사용(dev·PR preview·staging·CI e2e).
    * `?world=local` → 로컬 파이프라인 빌드(data/build/<SANPO_LOCAL_BUILD>, vite dev 전용 /local-world).
@@ -116,6 +117,7 @@ export function parseFlags(search: string): BootFlags {
   const q = new URLSearchParams(search);
   return {
     debug: q.get('debug') === '1',
+    ...(q.get('perf') === '1' ? { perf: true } : {}),
     ...(q.get('world') === 'mini' || q.get('world') === 'local' ? { world: q.get('world') as 'mini' | 'local' } : {}),
     ...(q.get('backend') === 'webgl' ? { backend: 'webgl' as const } : {}),
     ...(q.get('probe') === 'decode' || q.get('probe') === 'physics'
@@ -319,8 +321,8 @@ async function setupWorldView(
       });
       scheduler.add(overlay.system);
       // e2e·콘솔 조작용 핸들(디버그 모드에서만 노출).
-      Object.assign(globalThis, { __SANPO_DEBUG__: { world, rebaseTest: overlay.rebaseTest } });
-    }
+      Object.assign(globalThis, { __SANPO_DEBUG__: { world, scheduler, rebaseTest: overlay.rebaseTest } });
+    } else if (flags.perf) Object.assign(globalThis, { __SANPO_DEBUG__: { world, scheduler } });
     return world;
   } catch (e) {
     view.showError(`렌더러 초기화 실패: ${e instanceof Error ? e.message : String(e)}`);
@@ -355,7 +357,6 @@ export async function boot(
   const caps = await detectCaps();
   view.setCaps(caps);
   log.child('boot').info('caps', caps);
-
   const scheduler = createScheduler({ log, clock: () => performance.now() });
   scheduler.setFrameSource(createIdleFrameSource());
   const golden = flags.view === undefined ? undefined : await loadGoldenView(flags.view);

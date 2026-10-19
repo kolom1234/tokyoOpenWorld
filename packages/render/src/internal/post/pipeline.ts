@@ -6,8 +6,6 @@
 import { type AtmosphereContext, aerialPerspective } from '@takram/three-atmosphere/webgpu';
 import { bloom } from 'three/examples/jsm/tsl/display/BloomNode.js';
 import { ao as gtao } from 'three/examples/jsm/tsl/display/GTAONode.js';
-import { lut3D } from 'three/examples/jsm/tsl/display/Lut3DNode.js';
-import { sharpen } from 'three/examples/jsm/tsl/display/SharpenNode.js';
 import { ssgi } from 'three/examples/jsm/tsl/display/SSGINode.js';
 import { ssr } from 'three/examples/jsm/tsl/display/SSRNode.js';
 import { taau } from 'three/examples/jsm/tsl/display/TAAUNode.js';
@@ -25,15 +23,12 @@ import {
   output,
   packNormalToRGB,
   pass,
-  renderOutput,
   roughness,
   sample,
   screenUV,
   select,
   sin,
-  texture3D,
   uint,
-  uniform,
   unpackRGBToNormal,
   vec4,
   velocity,
@@ -59,7 +54,7 @@ import { type RainUniforms, rainLayers } from '../weather/rain.ts';
 import { composeAerial, LowResAerialNode } from './aerial.ts';
 import { filterAo } from './ao-filter.ts';
 import { type AutoExposure, createAutoExposure } from './exposure.ts';
-import { createGradeLut, LUT_SIZE } from './lut.ts';
+import { outputSwitch } from './output.ts';
 import { applyDof, exposureBiasU } from './photo.ts';
 import { type WeatherSkyUniforms, weatherSky } from './weather-sky.ts';
 
@@ -84,6 +79,11 @@ export interface PostPipeline {
   exposure(): { lum: number; scale: number } | null;
   /** 동적 해상도: 씬 패스·중간 RTT·AO·SSR 해상도 배율(TAAU가 출력 해상도로 복원). */
   setRenderScale(scale: number): void;
+  /**
+   * 포토 DOF(M10 잔여): 같은 씬 패스·TAAU를 두고 출력 노드만 바꾼다(처음 켤 때 DOF 출력 그래프를 만들고 이후 재사용) —
+   * 전체 후처리 재구성(씬 머티리얼 재컴파일 4.8 s)이 아니라 출력 사각형·DOF 내부 패스만 컴파일. 직접 렌더 = 무시.
+   */
+  setDof(on: boolean): void;
   /**
    * 머티리얼 선컴파일 대상(ADR-0086): 씬 패스 렌더 타깃 + MRT — 캔버스로 컴파일하면 다른 변형(출력 형식·MRT 출력)이라 첫 프레임에 다시 동기 컴파일한다.
    * 직접 렌더 = null(캔버스 그대로).
@@ -114,6 +114,7 @@ export function createDirectRender(renderer: WebGPURenderer, scene: Scene, camer
     effects: null,
     exposure: () => null,
     setRenderScale() {},
+    setDof() {},
     compileTarget: () => null,
     dispose() {},
   };
@@ -255,18 +256,15 @@ function sanitize(c: V4): V4 {
 }
 
 /** 후처리에 얹는 날씨(M09-T01): 빗줄기 = TAAU 뒤 가산(얇고 빠른 줄기를 TAA 이력이 지우지 않게, weather/rain.ts 화면 공간 층). */
-/** TAAU 뒤 화면 공간 층: 빗줄기(M09-T01)·포토 DOF(M10-T05). */
+/** TAAU 뒤 화면 공간 층: 빗줄기(M09-T01). 포토 DOF(M10-T05)는 setDof가 출력 노드를 바꿔 얹는다. */
 function screenOverlays(hdr: V4, o: PostOverlays, depth: TextureNode, camera: PerspectiveCamera): V4 {
   let out = hdr;
   if (o.rain) out = vec4(out.rgb.add(rainLayers(o.rain, depth, camera)), out.a);
-  if (o.dof) out = applyDof(out, depth, camera) as unknown as V4;
   return out;
 }
 
 export interface PostOverlays {
   rain?: RainUniforms;
-  /** 포토 모드 피사계 심도(M10-T05 — 있을 때만 그래프에 넣는다). */
-  dof?: boolean;
   /** 구름층·연무(M09-T02) — 공중원근 뒤·노출 전. camWF = 카메라 WF 위치(렌더 원점 + 카메라). */
   sky?: { u: WeatherSkyUniforms; camWF: UniformNode<'vec3', Vector3> };
 }
@@ -328,11 +326,7 @@ export function createPostPipeline(
   if (temporal) hdr = temporal.hdr;
   hdr = screenOverlays(hdr, overlays, depth, camera);
   pipeline.outputColorTransform = false;
-  let out: V4 = renderOutput(hdr);
-  const lut = fx.lut ? createGradeLut() : undefined;
-  if (lut) out = lut3D(out, texture3D(lut), LUT_SIZE, uniform(1)) as unknown as V4;
-  if (fx.sharpen) out = sharpen(out, 0.15) as unknown as V4;
-  pipeline.outputNode = out;
+  const out = outputSwitch(pipeline, hdr, fx, () => applyDof(hdr, depth, camera), nodes);
   return {
     render(dtS) {
       pipeline.render();
@@ -350,6 +344,7 @@ export function createPostPipeline(
       if (sc.aerial) sc.aerial.renderScale = scale;
       if (sc.ssr) sc.ssr.resolutionScale = 0.5 * scale;
     },
+    setDof: out.setDof,
     compileTarget: () => ({
       target: scenePass.renderTarget,
       mrt: scenePass.getMRT(),
@@ -360,7 +355,7 @@ export function createPostPipeline(
       scenePass.dispose();
       for (const n of nodes) n.dispose();
       exposure?.dispose();
-      lut?.dispose();
+      out.lut?.dispose();
     },
   };
 }

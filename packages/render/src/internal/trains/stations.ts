@@ -11,6 +11,7 @@ import {
   Mesh,
 } from 'three/webgpu';
 import type { TrainStationsData } from '../../api.ts';
+import { releaseRenderObjects } from '../scene/release.ts';
 import { VehicleBuilder as B, VPART, type VPart } from '../vehicles/builder.ts';
 
 type P3 = readonly [number, number, number];
@@ -152,6 +153,7 @@ export function createStationsField(): StationsField {
   const clear = () => {
     for (const m of root.children.slice()) {
       root.remove(m);
+      releaseRenderObjects(m);
       (m as Mesh).geometry.dispose();
     }
     cur = undefined;

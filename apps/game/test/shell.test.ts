@@ -30,7 +30,10 @@ describe('settings → services', () => {
   it('applies quality, fov, sensitivity, motion, invert, bindings and mix', () => {
     const calls: string[] = [];
     const t = {
-      render: { setQuality: (q: string) => calls.push(`q:${q}`) },
+      render: {
+        setQuality: (q: string) => calls.push(`q:${q}`),
+        setColorVision: (m: string) => calls.push(`cv:${m}`),
+      },
       traversal: { configure: (p: unknown) => calls.push(`c:${JSON.stringify(p)}`) },
       input: { setBindings: () => calls.push('bind'), setAxisScale: (a: string, k: number) => calls.push(`${a}:${k}`) },
       audio: () => ({ setMix: (m: unknown) => calls.push(`mix:${JSON.stringify(m)}`) }),
@@ -45,15 +48,23 @@ describe('settings → services', () => {
     expect(calls.find((c) => c.startsWith('c:'))).toContain('"motionEffects":false');
     expect(calls.find((c) => c.startsWith('c:'))).toContain('"headBob":false');
     expect(mixOf(s).master).toBe(0);
+    expect(calls).toContain('cv:off');
     calls.length = 0;
     applySettings(t as never, { ...s, fovDeg: 80 }, s);
-    expect(calls.some((c) => c.startsWith('q:') || c === 'bind' || c.startsWith('mix:'))).toBe(false);
+    expect(calls.some((c) => c.startsWith('q:') || c === 'bind' || c.startsWith('mix:') || c.startsWith('cv:'))).toBe(
+      false,
+    );
+    applySettings(t as never, { ...s, colorVision: 'deutan' }, s);
+    expect(calls).toContain('cv:deutan');
   });
   it('loads saved settings, falls back to the browser language', () => {
     const store = (v: string | null) => ({ getItem: (k: string) => (k === SETTINGS_KEY ? v : null) });
     expect(loadSettings(store(JSON.stringify({ lang: 'en', fovDeg: 90 })), ['ko']).fovDeg).toBe(90);
     expect(loadSettings(store(null), ['ja-JP']).lang).toBe('ja');
     expect(loadSettings(store('{broken'), ['ko']).lang).toBe('ko');
+    // M11-T04: 저장본이 없을 때만 OS 모션 줄이기를 따른다.
+    expect(loadSettings(store(null), ['ko'], true).reduceMotion).toBe(true);
+    expect(loadSettings(store(JSON.stringify({ reduceMotion: false })), ['ko'], true).reduceMotion).toBe(false);
   });
 });
 
@@ -170,6 +181,34 @@ describe('photo mode (M10-T05)', () => {
     expect(d?.focusM).toBe(10);
     expect(d?.rangeM).toBeCloseTo(2.5, 6);
     expect(d?.bokeh).toBeCloseTo(2, 6);
+  });
+});
+
+describe('credits ODbL link (M11-T05)', () => {
+  it('links the build ODbL package for API/local worlds, not fixtures', async () => {
+    const { odblEntry } = await import('../src/shell/credits.ts');
+    expect(odblEntry('/world/20261019-abc')?.url).toBe('/world/20261019-abc/global/odbl/README.txt');
+    expect(odblEntry('/fixtures/world-mini')).toBeNull();
+    expect(odblEntry(null)).toBeNull();
+  });
+});
+
+describe('photo cap (12 §5 — 200)', () => {
+  it('keeps the newest 200 photos and detaches evicted ones from the guide', async () => {
+    const { capPhotos, MAX_PHOTOS } = await import('../src/shell/photo.ts');
+    expect(MAX_PHOTOS).toBe(200);
+    const list = Array.from({ length: 205 }, (_, i) => ({
+      id: `p${i}`,
+      thumb: new Blob([]),
+      url: `blob:${i}`,
+      atMs: i,
+      poiId: null,
+    }));
+    const evicted: string[] = [];
+    capPhotos(list, MAX_PHOTOS, (id) => evicted.push(id));
+    expect(list).toHaveLength(200);
+    expect(list[0]?.id).toBe('p5');
+    expect(evicted).toEqual(['p0', 'p1', 'p2', 'p3', 'p4']);
   });
 });
 

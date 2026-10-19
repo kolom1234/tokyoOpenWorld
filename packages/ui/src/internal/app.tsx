@@ -142,6 +142,8 @@ function uiEffects(
       lang.value = s.lang;
       doc.documentElement.lang = s.lang;
       root.style.setProperty('--ui-scale', String(s.uiScale));
+      // 모션 민감(M11-T04): UI 전환·깜빡임 애니메이션도 끈다(theme `.reduce-motion`).
+      root.classList.toggle('reduce-motion', s.reduceMotion);
     }),
     effect(() => {
       const s = screen.value;
