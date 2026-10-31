@@ -27,6 +27,8 @@
   "env": { "staging": { "name": "tokyo-sanpo-staging", "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-dev" }] } }
 }
 ```
+- **접근 경로(ADR-0103)**: production = 커스텀 도메인 `earthaimap.com`만 — top-level `workers_dev: false`·`preview_urls: false`(workers.dev·버전 프리뷰 주소는 존 WAF·킬 스위치를 우회). `env.staging`은 PR 프리뷰(`pr-<N>` 별칭) 때문에 둘 다 `true`(staging 데이터만 — dev 버킷·staging KV·`sanpo_errors_staging`). production 스모크는 `https://earthaimap.com`.
+- **관측 로그(ADR-0103)**: `observability.redact_query_string: true`(env로 상속 — 2026-10-31 staging 확인: 배포 뒤 요청 URL은 쿼리 없이 기록, 표식 쿼리 0건). 보존 = Workers Paid 7일(설정 없음), 접근 = 계정 멤버(대시보드·Observability API 권한). Worker는 IP·UA·본문을 로그에 쓰지 않는다(`console.error`는 처리 안 된 예외 종류만). 이벤트 샘플링 = production 0.1·staging 1(ADR-0104 — 폭주 때 로그 과금 억제, 오류 집계는 AE·호출 지표), 요청당 CPU 상한 `limits.cpu_ms = 50`(7일 p99.9 4.5–5.3 ms).
 - 로컬 개발: `env.local`(배포 금지)에만 R2/KV 바인딩 → `wrangler dev --env local`이 miniflare로 시뮬레이션. `pnpm dev` = Vite(5173, `/api`·`/world` → 8787 프록시) + wrangler dev(8787). 시드: `pnpm --filter @sanpo/worker seed:local` (ADR-0016).
 - 게임 빌드: `apps/game` Vite → `apps/game/dist`. 배포: `apps/worker`에서 `wrangler deploy`.
 - 정적 에셋 한도: 파일당 25 MiB, 버전당 파일 20,000(Free)/100,000(Paid). → **월드 데이터는 절대 정적 에셋에 넣지 않는다**(R2 전용). CI가 dist 내 25 MiB 초과 파일을 차단.
@@ -39,7 +41,8 @@
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
   Cross-Origin-Resource-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+  X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=()
@@ -56,16 +59,17 @@
   같은 출처 정적 부트스트랩 `/basis/ktx2-worker.js`에만 별도 CSP(`!`로 전역 CSP 분리 — 두 정책이 겹치면 교집합이 된다). 페이지 CSP는 그대로.
 - 외부 도메인 리소스 금지(폰트 포함 자체 호스팅). §5 확장 시 `connect-src`에 world 도메인 추가 + R2 CORS 설정.
 - **문서 정책 헤더(ADR-0102)**: Referrer-Policy·Permissions-Policy는 `_headers`에만 — HTML은 Worker를 거치지 않는다. Permissions-Policy는 쓰지 않는 기능만 끈다(gamepad·fullscreen·autoplay 유지, Chromium이 모르는 이름은 콘솔 오류라 금지).
+- **프레이밍 금지(F06, ADR-0103)**: 문서 CSP `frame-ancestors 'none'` + `X-Frame-Options: DENY`(옛 브라우저), `base-uri 'none'`·`form-action 'self'`. Worker가 만든 응답(`/api/*`·`/world/*`·오류 응답 포함)에는 `headers.ts WORKER_RESPONSE_HEADERS` — CSP `default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'` + XFO DENY + `_headers`와 같은 Referrer·Permissions-Policy(테스트가 값 대조). 정적 에셋 위임 응답에는 격리 헤더만(문서 CSP를 덮어쓰지 않음). `'unsafe-eval'` 범위 = `/basis/ktx2-worker.js` 한 파일(테스트가 다른 경로를 막음).
 - **HSTS = Cloudflare 존 설정**(SSL/TLS → Edge Certificates, 2026-10-31 실측 `max-age=2592000`). `_headers`·Worker에 넣지 않는다(중복 — `apps/game/test/headers.test.ts`).
 
 ## 4. Worker 라우트 (`apps/worker/src/routes/`)
 | 경로 | 동작 |
 |---|---|
 | `GET /api/health` | `{"ok":true}`만(no-store) — 배포 스모크 테스트용. 바인딩 등 내부 구성은 노출하지 않는다(ADR-0102 — 저장소 미구성은 `/api/world/current` 503) |
-| `GET /api/world/current?fv=1` | KV `CURRENT_BUILD:v1` → `{ buildId, formatVersion, baseUrl }` (Cache-Control max-age=60) |
-| `GET /world/<buildId>/<path>` | 평범한 GET: ① `caches.default` 조회 → ② 미스 시 R2 → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답만 `ctx.waitUntil(cache.put)`. Range·조건부 헤더가 있으면 캐시를 건너뛰고 `env.WORLD.get(key, { range, onlyIf })`가 206/304/412. 없으면 404(`max-age=300`). 진단 `X-Sanpo-Cache: HIT/MISS/BYPASS`(ADR-0026) |
+| `GET /api/world/current?fv=1` | KV `CURRENT_BUILD:v1` → `{ buildId, formatVersion, baseUrl }` (Cache-Control max-age=30). 200·404는 엣지 캐시(Cache API, 키 = `fv`만 — 다른 쿼리 무시) 30 s → KV 읽기는 PoP당 30 s에 1번(F05, ADR-0103) |
+| `GET /world/<buildId>/<path>` | 평범한 GET: ① `caches.default` 조회 → ② 미스 시 R2 → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답과 **검증된 경로의 404(`max-age=300`, 네거티브 캐시)**를 `ctx.waitUntil(cache.put)` — 캐시 키 = 출처 + 경로. **쿼리 문자열이 있으면 400 `unexpected_query`**(게임은 쓰지 않음 — 캐시 우회 R2 읽기 차단, F05·ADR-0103). 유효한 Range·조건부 헤더가 있으면 캐시를 건너뛰고 `env.WORLD.get(key, { range, onlyIf })`가 206/304/412. **Range는 Worker가 직접 해석(F07)**: 단일 `bytes=a-b|a-|-n`만, 문법 오류(다중 범위·다른 단위·`a>b`)는 무시 → 200 전체(캐시 경로), 만족 불가(시작 ≥ 크기·`-0`)는 416 + `Content-Range: bytes */<size>`, 끝이 넘치면 잘라 206, 날짜가 틀린 If-(Un)Modified-Since는 무시. 처리 안 된 예외는 최상위에서 500 `{"error":"internal_error"}`(no-store, 보안 헤더 유지 — 1101 없음). 진단 `X-Sanpo-Cache: HIT/MISS/BYPASS`(ADR-0026) |
 | `GET /api/weather` | `LIVE_WEATHER=true`일 때만(아니면 404). Open-Meteo 현재 날씨(도쿄역, m/s) → `{time, temperatureC, precipitationMm, weatherCode, cloudCover 0–1, windMs, windDirDeg, isDay}`, 10분 캐시, 상류 오류 502 |
-| `POST /api/log` | 오류 보고(M11-T03, ADR-0098): 게임이 세션 1 % 샘플링 → 본문 ≤ 4 KB 허용 필드만·이메일/URL/긴 숫자 지움 → Workers Analytics Engine `LOGS`(prod `sanpo_errors`·staging `sanpo_errors_staging`) 한 점, 204. IP·UA·위치 미사용. 조회 `pnpm errors` |
+| `POST /api/log` | 오류 보고(M11-T03, ADR-0098): 게임이 세션 1 % 샘플링 → 본문 ≤ 4,096 B(**실제 수신 바이트** 누적 — 넘는 순간 스트림 취소 413, Content-Length는 빠른 거절 보조, 손상 UTF-8 400 — F04) 허용 필드만·이메일/URL/긴 숫자 지움 → Workers Analytics Engine `LOGS`(prod `sanpo_errors`·staging `sanpo_errors_staging`) 한 점, 204. UA·위치 미사용. 조회 `pnpm errors`. **남용 방어(F03, ADR-0103)**: `Content-Type: application/json` 아니면 415, Origin이 있으면 허용 목록(earthaimap.com·staging·프리뷰·localhost)만(아니면 403 — 보조 수단), IP 해시 키 분당 10회 초과 429(`LOG_LIMITER`, IP 원문 미저장), 샘플률 {0.01, 1}만, production은 `kind:"test"` 400 |
 - buildId 형식 검증 정규식 `^[0-9]{8}-[0-9a-f]{7}-[0-9a-f]{8}$`, 경로 `..` 차단.
 
 ## 5. 확장(트래픽 증가 시) — Worker 우회
@@ -90,7 +94,7 @@
 
 - MVP 월드 ≈ 1.5 GB(L0 294셀 × 평균 3 MB + HLOD + shared) → 저장 무료 범위. 23구 전역 L0 ≈ 30–40 GB → 월 $0.5 내외.
 - Workers: 세션당 ~400 요청이면 포함량 1,000만 = 주기당 약 2.5만 세션. 정적 에셋 요청(`run_worker_first` 밖)은 Workers 요청 수에 들어가지 않는다. `/world/*`·`/api/*`만 Worker 호출.
-- **포함량 점검**(M11-T06, 2026-10-31 paid 기준으로 전환): `.github/workflows/usage.yml`(매일 09:00 KST) → `node scripts/cf-usage.ts --github-issue`. 요금제 = **`CF_PLAN=paid`**(저장소 Actions 변수 `CF_PLAN`, 없으면 paid — `free`면 예전 무료 일일 한도로 판정), 청구 시작일 `CF_BILLING_DAY`(없으면 25).
+- **포함량 점검**(M11-T06, 2026-10-31 paid 기준으로 전환): `.github/workflows/usage.yml`(**30분마다** — 2026-11-01부터, 차단기 §6.1) → `node scripts/cf-usage.ts --github-issue --kill-switch`. 요금제 = **`CF_PLAN=paid`**(저장소 Actions 변수 `CF_PLAN`, 없으면 paid — `free`면 예전 무료 일일 한도로 판정), 청구 시작일 `CF_BILLING_DAY`(없으면 25).
   - 판정: 청구 주기(25일 00:00 UTC부터) 누적 ÷ 포함량이 **70 % 초과**일 때만 라벨 `cf-usage` 이슈(열린 것이 있으면 본문 갱신). 주기 말 예상(카운터 = 누적 ÷ 경과 비율, 저장량 = 지금까지 평균과 최근 값)과 account 행의 **예상 추가 요금**(주기 말 예상 − 포함량 × 단가)을 같이 표시. 일일(UTC 오늘) 값은 급증 참고표(⚡ = 주기 안 이전 날 평균의 3배 이상이고 포함량 1 % 이상)로만 — 이슈를 열지 않는다.
   - "ours"(tokyo-sanpo Worker·KV·`sanpo-world-*` 버킷·`sanpo_errors*` 데이터셋)와 "account"(같은 계정 다른 프로젝트 포함)를 나눠 표기. account 행에는 사용량 상위 3개 Worker·KV 네임스페이스(제목)·버킷·데이터셋 이름과 비중 — ID·비밀값은 출력하지 않는다.
   - 측정: GraphQL Analytics(Workers·KV·DO `durableObjectsInvocationsAdaptiveGroups`·`durableObjectsPeriodicGroups.duration`·Queues `queueMessageOperationsAdaptiveGroups.billableOperations`·AE·R2). 저장량 = **누적 GB-월**(일별 최대의 합 ÷ 30 — R2 문서; 대시보드 값과 일치, GB = 10^9 B), 주기 말 예상 = 누적 + 최근 값 × 남은 날 ÷ 30. Workers Logs = Workers Observability 텔레메트리 쿼리로 console 줄(`cf-worker`) + 호출 로그(`cf-worker-event`)를 Worker별로 센다(span = 트레이스는 2026-12-01 전 미과금이라 제외). Paid 보존 7일 — 주기 경과가 7일 이하면 정확, 넘으면 최근 7일의 Worker별 호출당 로그 수 × 주기 호출 수로 외삽. 2026-12-01 이후 GB 단위 수집량은 API로 못 재므로 대시보드 Billing → Billable usage. Analytics Engine 읽기 쿼리는 측정하지 않음(미과금).
@@ -98,15 +102,26 @@
   - 토큰 권한 **Account Analytics: Read**(필수) + 이름용 **Workers KV Storage: Read**·**Workers Scripts: Read**(DO 네임스페이스)·**Queues: Read**(없으면 번호로 표기) + 로그용 **Workers Observability**(텔레메트리 쿼리 API가 Write 권한 요구 — 없으면 호출 수로 추정). Billable Usage API(`/billable-usage`, Billing: Read)는 alpha·deprecated라 쓰지 않는다. 로컬 실행 `node scripts/cf-usage.ts`(env `CF_PLAN=free` 등으로 바꿔 볼 수 있음).
   - 이력: 2026-10-19 첫 측정(무료 기준) ours 최대 R2 저장 18.3 %. 2026-10-31 이슈 #27(account KV 쓰기 130 %/일)은 이미 Paid인데 무료 일일 한도로 계산한 오탐 — 원인 = 같은 계정 다른 프로젝트(koreaaimap.com Worker `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). paid 기준 같은 날 KV 쓰기 주기 누적 7.6 %(주기 말 예상 35.8 %). 같은 날 DO·Queues·Observability 추가, 대시보드(10-25 ~ 10-30) 대조 — 전 항목 ±0.1 % 안(R2 저장 0.47 GB-월·DO Duration 14.55 GB-s·Queues 76,492 일치, 로그 95,128 ≈ 0.09M).
 
+### 6.1 비용 회로 차단기(킬 스위치, ADR-0104)
+- **감시**: `usage.yml` 30분마다 → `cf-usage.ts --github-issue --kill-switch`. 조건 = ours 지표 > 90 % **또는** account 주기 말 예상 추가 요금 > $1(카운터 외삽은 경과 3일 하한). 충족 → 라벨 `cf-kill-switch` 이슈(원인·수치·조치) + 시크릿 `CF_KILLSWITCH_TOKEN`이 있으면 존 WAF 규칙 `sanpo-kill-switch` 켬(없으면 차단 건너뜀 — 이슈에 표시).
+- **차단 범위**: `earthaimap.com`의 `/world/*`·`/api/*`만, Worker·R2 앞 엣지에서 503 `{"error":"maintenance"}`(Free 플랜이 사용자 응답을 거부하면 기본 403 페이지). 정적 게임 파일은 계속 → 게임 부팅 화면 "점검 중이에요".
+- **토큰(사람, 최소 권한)**: My Profile → API Tokens → Create Custom Token → Permissions `Zone · WAF · Edit` + `Zone · Zone · Read`, Zone Resources = Include · Specific zone · earthaimap.com, TTL 선택 → GitHub Secret `CF_KILLSWITCH_TOKEN`(+ 선택 Actions 변수 `CF_ZONE_ID` = 존 Overview의 Zone ID — 있으면 Zone Read 불필요). 로컬 조작은 같은 값을 환경 변수로.
+- **명령**: `pnpm killswitch status`(두 규칙 상태), `ensure`(빠진 규칙을 비활성으로 생성 — 멱등, 기존 규칙 보존), `off`(해제), `on --confirm-production`(수동 차단), `--target staging-test`(staging 시험 규칙, host `staging.earthaimap.com`).
+- **해제 절차(자동 재활성화 없음)**: ① 이슈의 원인 지표 확인(ours면 `pnpm errors`·Workers Logs·R2 지표로 남용 경로, account면 어느 프로젝트인지) ② 원인 차단(WAF 요청 제한·코드 수정·다른 프로젝트 조치) ③ `CF_KILLSWITCH_TOKEN=… pnpm killswitch off` ④ `https://earthaimap.com` 부팅·`/api/world/current` 200 확인 ⑤ 이슈 닫기. 같은 조건이 남아 있으면 다음 30분 점검에서 다시 켜진다.
+- **staging 실검증 준비(사람, 1회)**: Workers & Pages → tokyo-sanpo-staging → Settings → Domains & Routes → Add → Custom domain `staging.earthaimap.com`(workers.dev는 존 WAF 밖). `/api/log` Origin 허용 목록에 포함됨.
+- 추가 절감: `limits.cpu_ms = 50`, production 관측 샘플링 0.1(§2). Worker를 거치지 않는 월드 제공안 = ADR-0105(제안).
+
 ## 7. CI/CD (GitHub Actions)
 | 워크플로 | 트리거 | 단계 |
 |---|---|---|
 | `ci.yml` | PR, main push | **check**(Node 24·22 매트릭스): `pnpm install --frozen-lockfile` → `pnpm check`(biome·tsc·depcruise·check-size) → `pnpm test` → `pnpm build`(게임 + worker dry-run) → `pnpm check:assets`(25 MiB/파일, 2만 파일). **e2e**: Playwright Chromium(headless shell) → `pnpm test:e2e`(게임 빌드 + `vite preview` → `?world=mini` 부트 스모크, 실패 시 trace 업로드). **records**: `pnpm codemap` 결과 ≠ 커밋본이면 실패, PR이면 `check:records`(api.ts↔모듈 카드 실패, 코드↔PROGRESS 경고). |
 | `preview.yml` | PR | staging Worker에 `wrangler versions upload --preview-alias pr-<N>`(배포 아님) → 프리뷰 URL을 PR 코멘트 1개로 갱신. staging이 한 번도 배포되지 않았으면 안내 코멘트 후 성공 |
-| `deploy.yml` | main push, 수동 | staging 빌드 → `wrangler deploy --env staging` → `/api/health` 스모크 → Environment `production` 수동 승인 → 재빌드 → `wrangler deploy` → 스모크. production 잡은 환경에 Required reviewers가 없으면 배포 전 실패(자동 생성된 무보호 환경 방지) |
+| `deploy.yml` | main push, 수동 | staging 빌드 → `wrangler deploy --env staging` → `/api/health` 스모크 → Environment `production` 수동 승인 → 재빌드 → `wrangler deploy` → `https://earthaimap.com` 스모크. production 잡은 환경에 Required reviewers가 없으면 배포 전 실패(자동 생성된 무보호 환경 방지). **최신 main만 승인 대상(ADR-0103)**: 새 실행의 `supersede` 잡이 먼저 시작된 실행 중 승인 대기(`waiting`)를 취소하고(`actions: write`, 요약에 취소한 run id), production 잡 첫 단계가 `GITHUB_SHA ≠ main 머리`면 실패(아직 staging이던 옛 실행이 나중에 승인 대기에 들어간 경우), `refs/heads/main`이 아닌 수동 실행은 production 잡을 건너뛴다 |
+- **보안 게이트·공급망(ADR-0103)**: `ci.yml`의 `security (gitleaks · dependency audit)` 잡 = gitleaks 8.30.1(공식 릴리스 tar.gz, SHA-256 고정 검증) 전체 이력 `--redact` + `pnpm audit --audit-level low`(lockfile만, 예외는 `pnpm.auditConfig.ignoreGhsas` + ADR 사유·만료). 외부 Actions는 전부 커밋 SHA 고정(주석 = 원래 태그), `.github/dependabot.yml`(github-actions·npm 주간, 7일 cooldown).
+  기존 필수 체크 4개(`check (node 24)`·`check (node 22)`·`e2e (playwright chromium · world-mini)`·`records (codemap · module cards · PROGRESS)`)는 그대로. **새 잡을 필수로 만들려면(사람)**: GitHub → Settings → Rules → Rulesets → main 규칙 → Require status checks to pass → Add checks → `security (gitleaks · dependency audit)` → Save(한 번 이상 실행된 뒤 목록에 나온다). 주의: 필수로 만들면 새 권고가 공개된 날 모든 PR이 막힌다 — 그날 업그레이드하거나 예외(ADR)로 푼다.
 - 시크릿이 없으면(포크 PR·Dependabot) preview/deploy는 존재 여부만 `secrets.X != ''`로 판정해 건너뛰고 성공. 시크릿은 wrangler 프로세스 env로만 전달(echo·인자 금지).
 - 공용 셋업: `.github/actions/setup`(pnpm → Node → install), 스모크: `.github/scripts/smoke.sh`.
-- **world-mini 픽스처(M01-T07, ADR-0019)**: `vite build`가 `tests/fixtures/world-mini`를 `dist/fixtures/world-mini/`로 복사 → PR preview·staging 정적 에셋(`/fixtures/*` = `Cache-Control: no-cache`). 게임은 `?world=mini`일 때만 이 경로를 쓴다. production 빌드는 `SANPO_WORLD_MINI=0`으로 복사 생략.
+- **world-mini 픽스처(M01-T07, ADR-0019)**: `vite build`가 `tests/fixtures/world-mini`를 `dist/fixtures/world-mini/`로 복사 → PR preview·staging 정적 에셋(`/fixtures/*` = `Cache-Control: no-cache`). 게임은 `?world=mini`일 때만 이 경로를 쓴다. production 빌드는 `SANPO_WORLD_MINI=0`으로 복사 생략. **진단 도구 제외(ADR-0103)**: production 빌드는 `SANPO_DEBUG_TOOLS=0` → vite define `__SANPO_DEBUG_TOOLS__ = false` → `?ui-sandbox=1`·`?probe=decode|physics`·`?report=force` 분기와 그 동적 import 청크(ui-sandbox·decode-probe·physics-probe)가 번들에서 빠진다(`apps/game/test/debug-tools.test.ts`). `?spawn=`·`?debug=1`은 탐방·지원용으로 유지, staging·PR 프리뷰·e2e 빌드는 전부 포함.
 - 시크릿: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`. 월드 퍼블리시용 `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`는 **빌드 머신 로컬에만**(CI에 두지 않음).
   키가 없으면 퍼블리시는 같은 API 토큰으로 R2 REST 업로드 + 배포된 Worker HEAD 검증(ADR-0026).
 - 월드 퍼블리시(빌드 머신, 호스트에서): `pnpm pipeline publish --build-id <id> --env dev|prod [--set-current] [--verify-url https://<worker>/world]` — 대상 = world.json·cells.idx·`L<n>/**.tkc`·`shared/materials/*`(manifest·KTX2, `image/ktx2`, M03-T06),
@@ -135,13 +150,13 @@
 | 3. 코드 배포 | main 병합 → GitHub Actions `Deploy`(staging 자동 → Environment `production` 승인 = 사용자 클릭) | `/api/health` 스모크(워크플로) |
 | 4. 도메인 | `apps/worker/wrangler.jsonc` top-level `"routes": [{ "pattern": "earthaimap.com", "custom_domain": true }]` → 배포가 DNS·인증서 생성. 토큰 권한이 모자라면 대시보드: Workers & Pages → tokyo-sanpo → Settings → Domains & Routes → Add → Custom domain → `earthaimap.com` | `https://earthaimap.com/api/health` |
 | 4b. www → apex 301(ADR-0102, 대시보드) | ① DNS → Records → Add: `AAAA`, Name `www`, IPv6 `100::`, Proxied(주황) ② Rules → Redirect Rules → Create: 조건 `(http.host eq "www.earthaimap.com")`, URL redirect → Dynamic `concat("https://earthaimap.com", http.request.uri.path)`, 301, Preserve query string ✅. Worker 커스텀 도메인으로 붙이지 않는다(정적 에셋이 먼저 응답해 `/`가 리다이렉트되지 않음) | `curl -sSI "https://www.earthaimap.com/a?b=1"` → 301 `Location: https://earthaimap.com/a?b=1`. 2026-10-31 설정·확인 ✅(`http://www…` 도 301 한 번에 `https://earthaimap.com/…`) |
-| 5. 롤백 리허설 | `pnpm pipeline current --env prod --build-id <이전>` → `/api/world/current` 반영 확인 → `<새>`로 복귀 | 반영 시간(staging 실측 4–13 s, 브라우저 캐시 ≤ 60 s) |
+| 5. 롤백 리허설 | `pnpm pipeline current --env prod --build-id <이전>` → `/api/world/current` 반영 확인 → `<새>`로 복귀 | 반영 시간(staging 실측 4–13 s + 엣지 ≤ 30 s, 브라우저 캐시 ≤ 30 s) |
 | 6. 공개 URL 스모크 | `GOLDEN_BASE_URL=https://earthaimap.com GOLDEN_WORLD=api GOLDEN_BOOT=1 pnpm golden -g "boot transfer"` + 아래 체크리스트 | 첫 표시·전송 MB·오류 0 |
 
 **롤백(문제가 생겼을 때)**
-- 데이터(월드)만: `pnpm pipeline current --env prod --build-id <직전 buildId>` — 1분 안(KV 전파 수 초 + 브라우저 캐시 ≤ 60 s). 목록은 `pnpm pipeline current --env prod`.
+- 데이터(월드)만: `pnpm pipeline current --env prod --build-id <직전 buildId>` — 1분 안(KV 전파 수 초 + 엣지 캐시 ≤ 30 s + 브라우저 캐시 ≤ 30 s, ADR-0103). 목록은 `pnpm pipeline current --env prod`.
 - 코드(Worker): `cd apps/worker && npx wrangler deployments list` → `npx wrangler rollback <version-id>`(즉시), 또는 GitHub Actions에서 직전 커밋의 Deploy 다시 실행. 대시보드: Workers & Pages → tokyo-sanpo → Deployments → 이전 버전 Rollback.
-- 도메인을 잠시 내리기: 대시보드 Domains & Routes에서 `earthaimap.com` 제거(workers.dev 주소는 유지).
+- 도메인을 잠시 내리기: 대시보드 Domains & Routes에서 `earthaimap.com` 제거 — production workers.dev·프리뷰 주소는 꺼져 있어(ADR-0103) 그동안 접근 경로가 없다(점검 화면이 필요하면 킬 스위치 ADR-0104).
 
 **공개 직후 사람 확인 체크리스트(공개 URL)**
 1. 첫 화면: 타이틀이 뜨고 "새 산책"·"이어하기"·"설정"·"크레딧"이 눌린다(한국어/일본어/영어 전환).

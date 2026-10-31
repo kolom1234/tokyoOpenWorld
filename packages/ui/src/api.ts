@@ -21,7 +21,8 @@ export interface Msg {
 
 export type ScreenId = 'boot' | 'title' | 'hud' | 'pause' | 'settings' | 'credits' | 'map' | 'log' | 'photo';
 
-export type LoadingStage = 'caps' | 'manifest' | 'shaders' | 'spawn' | 'ready' | 'error';
+/** `maintenance` = 서버가 비용 차단 장치로 월드·API를 막는 중(점검 화면 — 오류 상세 없음, ADR-0104). */
+export type LoadingStage = 'caps' | 'manifest' | 'shaders' | 'spawn' | 'ready' | 'error' | 'maintenance';
 
 export interface LoadingModel {
   stage: LoadingStage;
@@ -272,6 +273,9 @@ export interface SaveExport {
   settings: SettingsModel;
   thumbs: Record<string, string>;
 }
+
+/** 세이브 가져오기 실패 사유(ADR-0103): 형식이 아님·손상 | 파일이 상한보다 큼(읽기 전) | 배열·썸네일 합계가 상한 초과. */
+export type SaveImportProblem = 'invalid' | 'too_large' | 'too_many';
 
 export type StartChoice = { kind: 'continue' } | { kind: 'new'; at: string };
 

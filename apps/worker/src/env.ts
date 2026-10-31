@@ -26,9 +26,9 @@ export interface WorldObjectBody extends WorldObject {
   body: ReadableStream;
 }
 
-/** R2Bucket 중 사용하는 부분. `range`/`onlyIf`에 요청 Headers를 그대로 넘기면 R2가 Range·조건부 헤더를 해석한다. */
+/** R2Bucket 중 사용하는 부분. `range` = 직접 해석한 범위(range.ts — 요청 헤더를 그대로 넘기지 않는다, F07), `onlyIf` = 조건부 헤더만 담은 Headers. */
 export interface WorldBucket {
-  get(key: string, options?: { range?: Headers; onlyIf?: Headers }): Promise<WorldObjectBody | WorldObject | null>;
+  get(key: string, options?: { range?: WorldRange; onlyIf?: Headers }): Promise<WorldObjectBody | WorldObject | null>;
   head(key: string): Promise<WorldObject | null>;
 }
 
@@ -47,6 +47,11 @@ export interface LogDataset {
   writeDataPoint(p: { indexes?: string[]; blobs?: string[]; doubles?: number[] }): void;
 }
 
+/** Workers Rate Limiting 바인딩(`ratelimits`, F03) 중 사용하는 부분. 카운터는 PoP 단위·근사(정확한 전역 한도가 아님). */
+export interface RateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 export interface Env {
   ASSETS?: AssetsBinding;
   /** R2 월드 데이터 버킷. 없으면 `/world/*` 비활성(503). */
@@ -57,4 +62,8 @@ export interface Env {
   WORLD_BASE_URL?: string;
   /** Workers Analytics Engine 데이터셋 `sanpo_errors`(M11-T03). 없으면 `/api/log`는 기록 없이 204. */
   LOGS?: LogDataset;
+  /** `/api/log` IP(해시) 요청 제한. 없으면(테스트) 제한 없음 — 대시보드 WAF 규칙이 앞단. */
+  LOG_LIMITER?: RateLimiter;
+  /** 배포 환경 `production`·`staging`·`local`(wrangler vars). production은 `kind:"test"` 보고를 거절한다. */
+  DEPLOY_ENV?: string;
 }

@@ -1,11 +1,13 @@
 // 세이브(M10-T06, 12 §4, ADR-0096): IndexedDB(idb-keyval) `save/v2` = SaveData, `photo/<id>` = 썸네일 Blob. 모음(발견·빠른 이동·사진)은 부팅 때 늘 복원, 이어하기는 위치·시각까지.
-// 자동 저장 60 s + 모드 전환 때. 내보내기 = JSON(세이브 + 설정 + 썸네일 data URL), 가져오기 = parseSaveExport(검사·마이그레이션) → 저장 → 적용.
+// 자동 저장 60 s + 모드 전환 때. 내보내기 = JSON(세이브 + 설정 + 썸네일 data URL), 가져오기 = 크기 상한 → readSaveExport(상한·검사·마이그레이션) → 저장 → 적용.
 import type { GameSystem } from '@sanpo/core';
 import {
   migrateSave,
-  parseSaveExport,
+  readSaveExport,
+  SAVE_LIMITS,
   type SaveData,
   type SaveExport,
+  SaveImportError,
   type SettingsModel,
   type Signal,
 } from '@sanpo/ui';
@@ -123,10 +125,15 @@ export async function exportBlob(s: SaveData, p: SaveParts, store: SaveStore): P
   return new Blob([JSON.stringify(file)], { type: 'application/json' });
 }
 
-/** 가져오기: 검사 → 썸네일·세이브 저장 → 반환(적용은 호출 쪽). 잘못된 파일 = 예외. */
+/**
+ * 가져오기: 크기 상한(읽기 전) → 검사(배열·썸네일 상한·형식) → 썸네일·세이브 저장 → 반환(적용은 호출 쪽).
+ * 실패 = `SaveImportError`(problem: too_large·too_many·invalid — UI가 사유별 안내, ADR-0103).
+ */
 export async function importFile(f: Blob, store: SaveStore): Promise<SaveExport> {
-  const x = parseSaveExport(await f.text());
-  if (!x) throw new Error('invalid save file');
+  if (f.size > SAVE_LIMITS.fileBytes) throw new SaveImportError('too_large');
+  const r = readSaveExport(await f.text());
+  if (!r.ok) throw new SaveImportError(r.error);
+  const x = r.value;
   const thumbs = new Map<string, Blob>();
   for (const [id, url] of Object.entries(x.thumbs)) {
     const b = dataUrlToBlob(url);

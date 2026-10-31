@@ -1,4 +1,4 @@
-// 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류.
+// 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류, 점검(킬 스위치 — ADR-0104).
 import { useEffect, useState } from 'preact/hooks';
 import type { LoadingModel } from '../../api.ts';
 import { t, tm } from '../i18n/t.ts';
@@ -14,6 +14,7 @@ export function BootScreen(p: { loading: LoadingModel }) {
     return () => clearInterval(id);
   }, []);
   const err = l.stage === 'error';
+  const maintenance = l.stage === 'maintenance';
   return (
     <div class="screen boot" data-screen="boot">
       <div class="boot-center">
@@ -24,12 +25,16 @@ export function BootScreen(p: { loading: LoadingModel }) {
           {t(`boot.stage.${l.stage}`)}
           {l.detail ? <span class="boot-detail"> · {tm(l.detail)}</span> : null}
         </div>
-        {err ? null : (
+        {err || maintenance ? null : (
           <div class="progress">
             <div class="progress-fill" style={{ width: `${Math.round(Math.min(1, l.progress) * 100)}%` }} />
           </div>
         )}
-        {err ? (
+        {maintenance ? (
+          <div class="boot-maintenance">
+            <p>{t('boot.maintenanceHint')}</p>
+          </div>
+        ) : err ? (
           <div class="boot-error">
             <p>{t('boot.errorHint')}</p>
             <pre>{l.error}</pre>

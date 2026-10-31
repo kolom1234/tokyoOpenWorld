@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 606개.
+> 파일 612개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -21,7 +21,7 @@
 - `apps/game/src/debug/sun-override.ts` — `?sun=<방위>,<고도>`(도, 도북 기준 시계방향·지평선 위 +) → 태양 방향 고정(조명·대기 확인·골든 비교용). sim 환경 배선(M03-T03) 뒤에 실행해 덮어쓴다. | exports: parseSunFlag, dirFromAzEl, overrideEnvironment, createSunOverride
 - `apps/game/src/debug/ui-sandbox.ts` — `?ui-sandbox=1` 스토리 페이지(M10-T01): 게임·렌더 없이 @sanpo/ui를 목 브리지로. `&screen=title|pause|settings|credits|hud|boot|map|log|photo`, `&lang=ko|ja|en`, `&pad=1`, `&scale=0.8–1.5`(UI 배율 — M11-T04 레이아웃 검사). | exports: runUiSandbox
 - `apps/game/src/debug/wet-override.ts` — `?wet=<0..1>` → 노면 젖음 고정 + 화면 왼쪽 아래 슬라이더(M03-T06 젖음 셰이딩 수동 검증). sim 날씨(M06) 전 디버그 전용. | exports: WeatherOverride, parseWetFlag, withWeatherOverride, mountWetSlider
-- `apps/game/src/error-report.ts` — 원격 오류 보고(M11-T03, 01 §9): 전역 오류·처리 안 된 거부 → `POST /api/log`(Worker → Analytics Engine). | exports: ReportContext, ReporterOptions, DEFAULT_REPORT_RATE, browserOf, firstFrame, createReporter, installErrorReporting
+- `apps/game/src/error-report.ts` — 원격 오류 보고(M11-T03, 01 §9): 전역 오류·처리 안 된 거부 → `POST /api/log`(Worker → Analytics Engine). | exports: ReportContext, ReporterOptions, DEFAULT_REPORT_RATE, dedupeKey, browserOf, firstFrame, createReporter, installErrorReporting
 - `apps/game/src/landing-hud.ts` — freecam G 카메라 아래 내리기 안내(ADR-0083 → M10-T01 UI HUD): 찾는 중 = 안내 칸 'landing', 실패 = 이유 알림(hud.landing seq가 바뀔 때만). 게임 로직 없음. | exports: landingHudSystem
 - `apps/game/src/landing.ts` — freecam G 카메라 아래 내리기(ADR-0083): 카메라 바로 아래(+ 2·4·7 m 링 × 8방위) 후보마다 물리 레이로 판정 → 가장 가까운 안전한 자리(발 WF) 또는 가운데 후보의 이유. | exports: LandingQueries, landingOffsets, evaluateSpot, findLanding, roadIndex, onLane
 - `apps/game/src/lane-chunks.ts` — 셀 차선(lanes.bin, 05 §7) 지연 적재·캐시(최근 16셀): freecam G 차도 판정(landing.ts)·차 부르기 연석 자리(vehicles/curb-spot.ts)가 공유. | exports: laneChunks
@@ -74,18 +74,20 @@
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-parts.ts` — world-view.ts 보조(400줄 제한으로 분리): 상시 배선 시스템·부팅 단계, sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스, 스폰 셀 미리 컴파일(ADR-0085). | exports: SimForDeps, simFor, initialLate, startPrecompile, frameSourceOf, warmStaged, bootStageOf, wiringSystemsFor
 - `apps/game/src/world-rail.ts` — 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 → | exports: RailData, loadRail, startTrainsLater, sendRailStatics, trainPhysicsSystem
-- `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
+- `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회(킬 스위치 차단 = 점검 상태). see docs/13-deployment.md §4, §8 | exports: WorldStatus, isEdgeBlock, fetchWorldStatus
 - `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
-- `apps/worker/src/env.ts` — Worker 바인딩 타입(Env). R2·KV는 선택 — 리소스 생성 전 배포를 허용하기 위해 optional. see docs/modules/worker.md | exports: AssetsBinding, WorldRange, WorldObject, WorldObjectBody, WorldBucket, ConfigKv, WorkerContext, LogDataset, Env
-- `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, withSecurityHeaders, json, storageUnconfigured
+- `apps/worker/src/env.ts` — Worker 바인딩 타입(Env). R2·KV는 선택 — 리소스 생성 전 배포를 허용하기 위해 optional. see docs/modules/worker.md | exports: AssetsBinding, WorldRange, WorldObject, WorldObjectBody, WorldBucket, ConfigKv, WorkerContext, LogDataset, RateLimiter, Env
+- `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, WORKER_RESPONSE_HEADERS, withSecurityHeaders, json, storageUnconfigured
 - `apps/worker/src/index.ts` — Worker 엔트리(라우터): /api/*, /world/*는 Worker, 나머지는 Static Assets. see docs/13-deployment.md §4, docs/modules/worker.md | exports: handleRequest, default
-- `apps/worker/src/routes/current.ts` — `GET /api/world/current?fv=<n>`: KV `CURRENT_BUILD:v<n>` → 활성 buildId·baseUrl. see docs/13-deployment.md §4, §8 | exports: handleWorldCurrent
-- `apps/worker/src/routes/log.ts` — `POST /api/log`(M11-T03, 01 §9·13 §4): 게임 오류 보고 → Workers Analytics Engine(데이터셋 sanpo_errors). 무료 플랜 하루 10만 점. | exports: ErrorReport, scrub, parseReport, dataPoint, handleLog
+- `apps/worker/src/log-guard.ts` — `/api/log` 남용 방어(ADR-0103): Content-Type·Origin 허용 목록·IP 요청 제한(해시 키)(F03) + 실제 수신 바이트 본문 상한(F04). see docs/13-deployment.md §4 | exports: isAllowedOrigin, isJsonContentType, clientKey, guardLogRequest, BodyResult, readLimitedText
+- `apps/worker/src/range.ts` — `/world/*` Range·조건부 헤더 해석(F07, ADR-0103): RFC 9110 §14 단일 바이트 범위만, 문법 오류는 무시(200 전체), 만족 불가는 416. see docs/13-deployment.md §4 | exports: ParsedRange, parseRange, isSatisfiable, clampRange, conditionalHeaders
+- `apps/worker/src/routes/current.ts` — `GET /api/world/current?fv=<n>`: KV `CURRENT_BUILD:v<n>` → 활성 buildId·baseUrl. 엣지 캐시 30 s(KV 읽기 절감, F05). see docs/13-deployment.md §4, §8 | exports: handleWorldCurrent
+- `apps/worker/src/routes/log.ts` — `POST /api/log`(M11-T03, 01 §9·13 §4): 게임 오류 보고 → Workers Analytics Engine(데이터셋 sanpo_errors). | exports: REPORT_SAMPLE_RATES, ErrorReport, scrub, parseReport, dataPoint, handleLog
 - `apps/worker/src/routes/weather.ts` — `/api/weather`: LIVE_WEATHER=true일 때만 Open-Meteo 현재 날씨(도쿄 중심) 프록시 → 10분 엣지 캐시. 꺼져 있으면 404(disabled). | exports: OPEN_METEO_URL, LiveWeather, toLiveWeather, handleWeather
-- `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답만 캐시. see docs/13-deployment.md §4 | exports: contentRange, handleWorldData
+- `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답 + 검증된 경로의 404(5분)만 캐시. 쿼리 문자열은 400(F05), | exports: contentRange, handleWorldData
 - `apps/worker/src/validate.ts` — 요청 입력 검증: buildId 형식, /world 경로(경로 조작 차단), formatVersion 쿼리. see docs/13-deployment.md §4 | exports: BUILD_ID_RE, isValidBuildId, parseWorldPath, parseFormatVersion
 
 ## packages/audio
@@ -395,8 +397,8 @@
 - `packages/traversal/src/internal/walk-placement.ts` — walk 착지점: 후보(기준점 → 6·12·24·48 m 링 × 8방위)마다 하늘(1,200 m)에서 수직 레이 → 첫 충돌이 TERRAIN(지면)인 가장 앞 후보. | exports: TERRAIN_LAYER, spotCandidates, findStreetSpot
 
 ## packages/ui
-- `packages/ui/src/api.ts` — @sanpo/ui 공개 계약(타입·인터페이스). 게임 상태는 UiBridge(apps/game 구현)로만 읽고 쓴다. see docs/modules/ui.md, docs/12-ui-ux.md §7 | exports: Lang, LANGS, LocalName, Msg, ScreenId, LoadingStage, LoadingModel, GuideModel, DriveModel, TrainModel, HudModel, PoiCategory, DiscoveryModel, TravelPlace, Units, VolumeSettings, RebindAction, REBIND_ACTIONS, ColorVision, COLOR_VISIONS, SettingsModel, PhotoParams, CreditEntry, OssEntry, CreditsModel, MapFeatureData, MapTileData, MapSource, SaveData, SaveExport, StartChoice, UiCommands, UiBridge, UiOptions, UiHandle
-- `packages/ui/src/index.ts` — @sanpo/ui 공개 엔트리(L4): Preact HUD/메뉴/지도. api.ts 재수출 + mountUi·create* 팩토리 + 시그널(게임이 같은 인스턴스로 UiBridge를 만든다). see docs/modules/ui.md | exports: batch, computed, effect, ReadonlySignal, Signal, signal, * from './api.ts', mountUi, DEFAULT_KEYS, keyLabel, createMockBridge, migrateSave, parseSaveExport, SAVE_VERSION, DEFAULT_SETTINGS, langFromNavigator, normalizeSettings
+- `packages/ui/src/api.ts` — @sanpo/ui 공개 계약(타입·인터페이스). 게임 상태는 UiBridge(apps/game 구현)로만 읽고 쓴다. see docs/modules/ui.md, docs/12-ui-ux.md §7 | exports: Lang, LANGS, LocalName, Msg, ScreenId, LoadingStage, LoadingModel, GuideModel, DriveModel, TrainModel, HudModel, PoiCategory, DiscoveryModel, TravelPlace, Units, VolumeSettings, RebindAction, REBIND_ACTIONS, ColorVision, COLOR_VISIONS, SettingsModel, PhotoParams, CreditEntry, OssEntry, CreditsModel, MapFeatureData, MapTileData, MapSource, SaveData, SaveExport, SaveImportProblem, StartChoice, UiCommands, UiBridge, UiOptions, UiHandle
+- `packages/ui/src/index.ts` — @sanpo/ui 공개 엔트리(L4): Preact HUD/메뉴/지도. api.ts 재수출 + mountUi·create* 팩토리 + 시그널(게임이 같은 인스턴스로 UiBridge를 만든다). see docs/modules/ui.md | exports: batch, computed, effect, ReadonlySignal, Signal, signal, * from './api.ts', mountUi, DEFAULT_KEYS, keyLabel, createMockBridge, SAVE_LIMITS, SaveImportError, migrateSave, parseSaveExport, readSaveExport, SAVE_VERSION, DEFAULT_SETTINGS, langFromNavigator, normalizeSettings
 - `packages/ui/src/internal/app.tsx` — UI 루트: 화면 스택(boot → title|hud, hud 위에 pause·settings·…), 언어·배율 적용, 메뉴 동안 게임 일시정지(bridge.commands.pause), 내비게이션 드라이버. | exports: nextStack, isPlaying, mountUi
 - `packages/ui/src/internal/components/controls.tsx` — 메뉴 컨트롤: 버튼·선택(◀ ▶)·슬라이더·켬/끔. 모두 data-nav(공간 내비게이션) + 조절형은 data-nav-adjust(←→ = navadjust 이벤트). | exports: MenuButton, Row, Choice, Toggle, Slider, NavHint
 - `packages/ui/src/internal/i18n/t.ts` — i18n: 평면 키(`area.key`) → 현재 언어 문자열, `{name}` 치환. 키 집합은 ko·ja·en 동일(테스트). 없는 키 = 키 그대로(개발 중 눈에 띄게). | exports: DICTS, lang, isLocalName, pick, t, tm
@@ -412,8 +414,9 @@
 - `packages/ui/src/internal/nav/pad.ts` — 메뉴용 게임패드 읽기(표준 매핑): D-pad·L스틱 → 방향(처음 0.35 s 뒤 0.12 s마다 반복), A 선택, B 뒤로, Start, LB·RB 탭. 순수 상태 갱신(테스트) + 폴링은 nav.ts. | exports: PadEvent, PadSnapshot, PadState, initPadState, dirOf, stepPad
 - `packages/ui/src/internal/photo/grade.ts` — 포토 그레이딩(M10-T05): 화이트밸런스(곱하기 색조)·비네팅(방사형 곱하기)·필름 그레인(결정론 잡음 타일 overlay). 미리보기(CSS 층)와 저장(2D 캔버스 합성)이 같은 값을 쓴다. | exports: wbColor, css, vignetteAlpha, grainAlpha, noiseTile, noiseDataUrl, gradePhoto
 - `packages/ui/src/internal/sandbox/mock-bridge.ts` — 목 UiBridge(`?ui-sandbox=1` 스토리 페이지·단위 테스트): 가짜 로딩 진행, HUD 모드 순환, 고정 크레딧. 게임 없이 화면을 본다. | exports: MOCK_HUD, MockBridge, createMockBridge
-- `packages/ui/src/internal/save/migrations.ts` — 세이브 스키마·마이그레이션(M10-T06, 12 §4): 버전 필드 + 단계별 함수 표. v1 = 12 §4 초안 모양(발견 id 배열·사진 메타), v2 = 지금(발견 기록·빠른 이동·사진 명소 연결). | exports: SAVE_VERSION, migrateSave, parseSaveExport
-- `packages/ui/src/internal/screens/boot.tsx` — 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류. | exports: BootScreen
+- `packages/ui/src/internal/save/limits.ts` — 세이브 가져오기 자원 상한(ADR-0103, 보안 점검 후속): 파일 크기는 읽기 전에(`f.text()` 전), 배열 길이·썸네일 합계는 JSON 파싱 직후 마이그레이션 전에. | exports: SAVE_LIMITS, SaveImportError, withinSaveLimits
+- `packages/ui/src/internal/save/migrations.ts` — 세이브 스키마·마이그레이션(M10-T06, 12 §4): 버전 필드 + 단계별 함수 표. v1 = 12 §4 초안 모양(발견 id 배열·사진 메타), v2 = 지금(발견 기록·빠른 이동·사진 명소 연결). | exports: SAVE_VERSION, migrateSave, readSaveExport, parseSaveExport
+- `packages/ui/src/internal/screens/boot.tsx` — 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류, 점검(킬 스위치 — ADR-0104). | exports: BootScreen
 - `packages/ui/src/internal/screens/credits.tsx` — 크레딧: 데이터·에셋 출처(bridge.credits — 빌드 credits.json/ATTRIBUTION) + ODbL 안내 + 가상 디자인 고지 + OSS 라이선스 목록. | exports: CreditsScreen
 - `packages/ui/src/internal/screens/help.ts` — 조작 도움말(H — 왼쪽 아래): 모드별 [키, 동작] 줄. 재바인딩한 키는 설정에서, 패드가 있으면 패드 글자. 순수 함수(테스트). | exports: HelpItem, helpItems
 - `packages/ui/src/internal/screens/hud-info.tsx` — HUD 정보(M10-T02, 12 §2): 왼쪽 위 지명, 오른쪽 위 시각(JST)·날씨·기온, 탈것 계기(속도·기어·RPM·등화·안내), 열차 다음 역. | exports: jstClock, speedText, useIdle, HudInfo
@@ -422,7 +425,7 @@
 - `packages/ui/src/internal/screens/map.tsx` — 전체 지도(M) — M10-T03: 지도 캔버스(map/controller — 팬·줌·60 fps) + 빠른 이동 목록(발견한 곳만 이동 — 포커스하면 지도가 그곳으로) + 레이어(지명·역) + 출처 상시 표기. | exports: MapScreen
 - `packages/ui/src/internal/screens/menus.tsx` — 타이틀(이어하기·새 산책(시작 지점)·설정·크레딧)과 일시정지(계속·지도·도감·포토·설정·타이틀로) 메뉴. | exports: ScreenNav, MenuScreen, TitleScreen, PauseScreen
 - `packages/ui/src/internal/screens/photo.tsx` — 포토 모드(P) — M10-T05, 12 §5: 자유 카메라(WASD·E/Q·마우스 끌기)로 구도, 오른쪽 패널 = 시간(±12 h)·날씨·노출·화이트밸런스·초점 거리(mm)·조리개·초점(오른쪽 클릭)·비네팅·그레인·3분할·배율(×1/×2), | exports: DEFAULT_PHOTO, PhotoScreen
-- `packages/ui/src/internal/screens/save-section.tsx` — 설정 → 일반 → 세이브(M10-T06): 내보내기(JSON 다운로드 — 세이브·설정·사진 썸네일)·가져오기(파일 고르기 — 키보드·패드는 버튼이 숨은 file input을 연다). | exports: SaveSection
+- `packages/ui/src/internal/screens/save-section.tsx` — 설정 → 일반 → 세이브(M10-T06): 내보내기(JSON 다운로드 — 세이브·설정·사진 썸네일)·가져오기(파일 고르기 — 키보드·패드는 버튼이 숨은 file input을 연다). | exports: importNote, SaveSection
 - `packages/ui/src/internal/screens/settings.tsx` — 설정 화면: 탭(그래픽·카메라·모션·조작·소리·일반) — 바뀌면 곧바로 bridge.settings(게임이 적용·저장). 키 재바인딩 = 누를 때까지 대기(data-capturing). | exports: SETTINGS_TABS, SettingsTab, SettingsScreen
 - `packages/ui/src/internal/settings.ts` — 설정 기본값·정규화(저장본·가져오기 값의 범위·형식 검사). 저장은 게임(localStorage — 부팅 때 동기로 읽어 품질·언어 적용). | exports: DEFAULT_SETTINGS, normalizeSettings, langFromNavigator
 - `packages/ui/src/internal/theme.ts` — UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = Noto Sans JP/KR Variable(OFL — @font-face는 게임 main.ts가 fontsource 유니코드 범위 조각으로 자체 호스팅, docs/12 §1), 한국어 화면은 KR 먼저. 없으면 시스템 일·한 고딕. | exports: THEME_CSS, injectTheme
@@ -432,15 +435,18 @@
 - `scripts/check-asset-size.ts` — 정적 에셋 한도 게이트(`pnpm check:assets [dir]`): 파일당 25 MiB, 파일 수 20,000(Workers Free). see docs/13-deployment.md §2
 - `scripts/check-records.ts` — PR 기록 누락 게이트(`pnpm check:records --base <ref>`): api.ts↔모듈 카드(실패), 코드↔PROGRESS.md(경고). see docs/16-context-protocol.md §3
 - `scripts/check-size.ts` — 크기 제한 게이트(`pnpm check:size`): TS 파일 400줄·함수 60줄, 모듈 카드 150줄, docs 400줄, CLAUDE.md 200줄. see docs/15-conventions.md §2
-- `scripts/errors.ts` — `pnpm errors [--env staging|production] [--hours 24]`(M11-T03): Analytics Engine 오류 보고 집계(종류·메시지·첫 프레임·빌드·백엔드별 건수, 1/샘플률 가중 추정).
+- `scripts/errors.ts` — `pnpm errors [--env staging|production] [--hours 24] [--include-test]`(M11-T03): Analytics Engine 오류 보고 집계(종류·메시지·첫 프레임·빌드·백엔드별 건수, 1/샘플률 가중 추정).
+- `scripts/killswitch.ts` — `pnpm killswitch <status|ensure|on|off> [--target production|staging-test] [--confirm-production]`(ADR-0104): 비용 차단 WAF 규칙 수동 조작.
+- `scripts/lib/breaker.ts` — 비용 회로 차단기 판정(ADR-0104 — 순수 함수, 테스트): TOKYO SANPO("ours") 지표 하나라도 포함량 90 % 초과, 또는 계정 전체 주기 말 예상 초과 요금 > $1. | exports: BREAKER, Trip, breakerExtraUsd, evaluateBreaker
 - `scripts/lib/cf-api.ts` — Cloudflare 읽기 전용 API 도우미(M11-T03 오류 조회·M11-T06 사용량 점검): 토큰 = 환경 변수 CLOUDFLARE_API_TOKEN(권한 Account Analytics: Read), | exports: token, accountId, rest, aeSql, graphql
 - `scripts/lib/credits.ts` — 크레딧 자동 생성(M10-T06, 03 §8, ADR-0096): data/sources.lock.json 모든 원천 + content/ATTRIBUTION.json(에셋·텍스트) → credits.json, 게임 런타임 의존(전이 포함) package.json → oss-licenses.json. | exports: LockSource, AttributionEntry, CreditData, OssPackage, creditsData, ossPackages, ossNotices, buildCredits
 - `scripts/lib/files.ts` — 저장소 파일 워커(node_modules·dist·데이터 산출물 제외) + CI 출력 헬퍼. scripts/check-* 공용. | exports: listFiles, report
+- `scripts/lib/killswitch.ts` — 킬 스위치(ADR-0104): earthaimap.com 존 WAF 사용자 정의 규칙 `sanpo-kill-switch`(평소 비활성)를 만들고 켜고 끈다 — | exports: ZONE_NAME, Target, TARGETS, MAINTENANCE_BODY, ruleExpression, Rule, ruleBody, KillSwitchApi, CfApiError, zoneId, TargetState, status, ensure, setEnabled, apiFromEnv
 - `scripts/lib/records-rules.ts` — PR 기록 누락 검사 규칙(순수 함수): api.ts ↔ 모듈 카드, 코드 ↔ PROGRESS.md. see docs/16-context-protocol.md §3–4 | exports: RecordsReport, isCodePath, checkRecords
 - `scripts/lib/size-rules.ts` — 파일·함수·문서 크기 제한 규칙(순수 함수). see docs/15-conventions.md §2, docs/14-testing-perf.md §5 | exports: SIZE_LIMITS, SizeViolation, countLines, isTestPath, bodyLines, findLongFunctions, checkSourceText, docLimitFor, checkDocText
 - `scripts/lib/usage-collect.ts` — Cloudflare GraphQL Analytics → 요금제 판정 입력(M11-T06): 청구 주기 누적·오늘(UTC) 카운터(Workers·KV·DO·Queues·AE·R2) | exports: Counters, Storage, Names, tallyCounters, tallyStorage, labeler, lookupNames, Collected, collect
 - `scripts/lib/usage-logs.ts` — Workers Logs(Observability) 이벤트 수(M11-T06 사용량 점검): Workers Observability 텔레메트리 쿼리로 Worker별 | exports: ScriptLogs, parseAggregates, extrapolate, LogCounts, logCounts
-- `scripts/lib/usage.ts` — Cloudflare 요금제 포함량 대비 사용량 판정(M11-T06 점검 — 순수 함수, 테스트). 요금제 = CF_PLAN(기본 paid — 2026-10-31 사용자 확인: | exports: METRICS, Metric, Plan, Allowance, GB_MONTH_DAYS, PLANS, LABELS, THRESHOLD, r2Class, Entry, Usage, emptyUsage, add, Cycle, billingCycle, Row, evaluate, overThreshold, Spike, spikes, fmt, NOTES, markdown
+- `scripts/lib/usage.ts` — Cloudflare 요금제 포함량 대비 사용량 판정(M11-T06 점검 — 순수 함수, 테스트). 요금제 = CF_PLAN(기본 paid — 2026-10-31 사용자 확인: | exports: METRICS, Metric, Plan, STORAGE, Allowance, GB_MONTH_DAYS, PLANS, LABELS, THRESHOLD, r2Class, Entry, Usage, emptyUsage, add, Cycle, billingCycle, Row, evaluate, overThreshold, Spike, spikes, fmt, NOTES, markdown
 
 ## tools/codemap
 - `tools/codemap/src/collect.ts` — CODEMAP 대상 소스 파일 수집(테스트·빌드 산출물 제외, 경로 정렬). see docs/16-context-protocol.md §5 | exports: CODEMAP_ROOTS, comparePaths, collectSourceFiles

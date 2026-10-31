@@ -21,6 +21,8 @@ export function loadingOfWorld(w: WorldStatus): Partial<LoadingModel> {
       return { stage: 'manifest', progress: 0.12 };
     case 'loaded':
       return { stage: 'shaders', progress: 0.2 };
+    case 'maintenance':
+      return { stage: 'maintenance', error: null };
     case 'unconfigured':
     case 'no-build':
       return { stage: 'error', error: `world: ${w.kind}` };
@@ -57,7 +59,9 @@ export function loadingOfBoot(b: Readonly<BootStage>, live: number): Partial<Loa
 /** StatusView 래퍼: 원래 동작 + 로딩 시그널. */
 export function loadingView(view: StatusView, loading: Signal<LoadingModel>): StatusView {
   const patch = (p: Partial<LoadingModel>) => {
-    if (loading.peek().stage === 'error' && p.stage !== 'error') return;
+    // 오류·점검 화면은 끝 상태 — 뒤따르는 진행 보고로 덮지 않는다.
+    const end = loading.peek().stage;
+    if ((end === 'error' || end === 'maintenance') && p.stage !== end) return;
     loading.value = { ...loading.peek(), ...p };
   };
   return {

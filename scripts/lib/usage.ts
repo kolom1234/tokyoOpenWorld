@@ -23,7 +23,7 @@ export type Metric = (typeof METRICS)[number];
 export type Plan = 'paid' | 'free';
 
 /** 저장량 지표(주기 값 = 누적 GB-월 = 일별 최대의 합 ÷ 30, 오늘 값 = 최근 일별 최대). 나머지는 누적 카운터. */
-const STORAGE: ReadonlySet<Metric> = new Set(['kvStorageBytes', 'r2StorageBytes']);
+export const STORAGE: ReadonlySet<Metric> = new Set(['kvStorageBytes', 'r2StorageBytes']);
 
 export interface Allowance {
   included: number;

@@ -2,11 +2,14 @@
 # COOP/COEP → crossOriginIsolated(SharedArrayBuffer, Jolt 멀티스레드). see docs/13-deployment.md §3
 # HSTS는 넣지 않는다 — Cloudflare 존 설정(SSL/TLS → Edge Certificates)이 모든 응답에 붙인다(ADR-0102).
 # Permissions-Policy는 쓰지 않는 강력 기능만 끈다(gamepad·fullscreen·autoplay는 기본값 유지). Chromium이 모르는 기능 이름은 콘솔 오류가 나므로 넣지 않는다.
+# 프레이밍 금지(F06, ADR-0103): CSP frame-ancestors 'none' + 옛 브라우저용 X-Frame-Options: DENY. base-uri 'none'·form-action 'self'도 함께.
+# /basis/ktx2-worker.js는 전역 CSP를 `!`로 떼고 자기 CSP만(워커 스크립트 — frame-ancestors·base-uri는 문서에만 의미, 'unsafe-eval'은 이 파일만).
 /*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
   Cross-Origin-Resource-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+  X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=()

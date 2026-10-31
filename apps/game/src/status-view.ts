@@ -60,6 +60,8 @@ export function describeWorld(world: WorldStatus | undefined): StatusRow {
       return row('준비 중 (저장소 미연결)', 'warn');
     case 'no-build':
       return row('활성 빌드 없음', 'warn');
+    case 'maintenance':
+      return row('점검 중 (엣지 차단 — ADR-0104)', 'warn');
     case 'error':
       return row(`오류: ${world.detail}`, 'bad');
   }

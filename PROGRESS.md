@@ -1,12 +1,14 @@
 # PROGRESS
-Updated: 2026-10-31 (session #28 — Cloudflare 사용량 점검을 Workers Paid·R2 포함량 기준으로, 브랜치 `claude/cf-usage-paid-plan`)
+Updated: 2026-10-31 (session #29 — 보안 점검(Codex 2026-10-23) 후속 + 비용 회로 차단기, 브랜치 `claude/security-cost-guard`, draft PR #30)
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
-## Current Task: 없음 — 공개 직후 사람 확인(docs/13 §9 체크리스트)·측량법 승인 대기
-- Done in this session (#28): `usage.yml`/`scripts/cf-usage.ts`를 실제 요금제(Workers Paid + R2 Paid, 계정 단위, 청구 주기 매월 25일)에 맞춤 — 청구 주기 누적 ÷ 포함량 70 % 초과만 이슈, 주기 말 예상·예상 추가 요금, 일일 값은 급증 참고표, account 행 상위 Worker·KV·DO·큐·버킷 이름(ID 비노출). DO·Queues·Observability 로그 포함, 대시보드 대조(`--at`). `CF_PLAN=paid`(docs/13 §6). 이슈 #27(무료 일일 한도 오탐) 정리.
-- In progress: 없음.
-- Next step (정확히 한 걸음): PR 병합(병합 전에는 main의 매일 09:00 KST 점검이 옛 무료 기준으로 돈다) → 보안 후속 항목 중 F03(오류 API 남용)·F05(캐시 우회 R2 읽기)를 비용 보호 관점에서 먼저.
-- Blockers: 🔶 국토지리원 측량법 제30조 사용 승인(사용자 신청 중 — 03 §6.1). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
+## Current Task: 보안 후속 + 킬 스위치(사용자 요청 1–13, ADR-0103·0104·0105) — 코드 전부 커밋·staging 재검증 ✅, 킬 스위치 실검증만 대기
+- Done in this session (#29): 1–12(F03·F05·F04·F07·F06·workers.dev·Deploy supersede·관측 쿼리·진단 도구·세이브 상한·F08·CI 공급망) + 13 코드(`scripts/lib/breaker.ts`·`scripts/lib/killswitch.ts`·`pnpm killswitch`·`cf-usage --kill-switch`·usage.yml 30분·`limits.cpu_ms` 50·prod 샘플링 0.1·게임 점검 화면·ADR-0104·ADR-0105 제안). F01·F02 = 해결됨(존 설정, 2026-10-31 실측).
+  staging 재검증(버전 1ccd6a59): Codex 스크립트 작업용 복사본으로 F03–F07 재현 안 됨, OSV 0, iframe 차단, 실제 GPU 부팅·스트리밍·지도·세이브(새로 고침 뒤 이어하기)·오디오 정상·콘솔 오류 0 → `docs/security/2026-10-security-followup.md` §1–3.
+- In progress: 킬 스위치 실검증(staging 테스트 규칙 켜기 → staging.earthaimap.com 점검 화면 스크린샷 → 끄기 → 복구 스크린샷, production 규칙은 `ensure`로 만들기만).
+- Next step (정확히 한 걸음): 사용자가 토큰·도메인을 준비하면 `CF_KILLSWITCH_TOKEN=… pnpm killswitch ensure` → `on --target staging-test` → 게임 확인 → `off --target staging-test`. 그다음 PR ready → 사용자 병합·Deploy 승인 → "배포 완료" 뒤 production 대상 재검증 → 같은 문서 §4 최종표 커밋.
+- Blockers: 🔶 (a) 존 한정 토큰 `Zone → WAF: Edit` + `Zone → Zone: Read`(로컬 env·GitHub Secret `CF_KILLSWITCH_TOKEN`, 선택 변수 `CF_ZONE_ID`) (b) staging 커스텀 도메인 `staging.earthaimap.com`(대시보드 — docs/13 §6.1). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
+- 작업용 파일(세션 scratchpad, 커밋 안 함): `repro-staging/`(Codex 스크립트 복사본·evidence), `staging-verify.mjs`(실제 GPU 회귀), `probe-world.mjs`·`probe-log.mjs`, `evidence/`(스크린샷).
 
 ## Recently Completed
 - Cloudflare 사용량 점검 paid 전환(2026-10-31, 사용자 요청) — 이슈 #27 kvWritesDay account 130 %는 무료 일일 한도로 계산한 오탐(같은 계정 다른 프로젝트 `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). 이제 Workers Paid 포함량(요청·CPU·Workers Logs(Observability 텔레메트리)·KV 읽기/쓰기/삭제/목록/저장·DO 요청·Duration·Queues 작업·Analytics Engine)·R2 무료분(Class A/B·Standard 누적 GB-월)의 청구 주기 누적 %, 70 % 초과만 이슈. 대시보드 Billable usage(10-25 ~ 10-30)와 `--at` 대조 — 전 항목 ±0.1 % 안. 첫 측정: account KV 쓰기 7.6 %·Queues 7.6 %(주기 말 예상 36–40 %).

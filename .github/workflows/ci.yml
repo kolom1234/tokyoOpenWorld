@@ -1,4 +1,4 @@
-# PR·main 품질 게이트: check(biome+tsc+depcruise+size) → test → build → 에셋 크기, e2e 부트 스모크(world-mini), 기록 누락 검사. see docs/13-deployment.md §7, docs/14-testing-perf.md §5
+# PR·main 품질 게이트: check(biome+tsc+depcruise+size) → test → build → 에셋 크기, e2e 부트 스모크(world-mini), 기록 누락 검사, 보안(gitleaks·pnpm audit). see docs/13-deployment.md §7, docs/14-testing-perf.md §5
 name: CI
 
 on:
@@ -31,7 +31,7 @@ jobs:
         # 24 = .nvmrc 기본, 22 = engines 하한(ADR-0011). 22.x 최신은 type-stripping 기본 활성(22.18+).
         node: ['24', '22']
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
         with:
           node-version: ${{ matrix.node }}
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - name: Install Chromium (headless shell)
         run: pnpm exec playwright install --with-deps --only-shell chromium
@@ -59,7 +59,7 @@ jobs:
       # M01-T06: 시작 화면·원점 재설정 후 스크린샷(tests/e2e/render.spec.ts) — 리뷰어가 렌더 변경을 눈으로 확인.
       - name: Upload render screenshots
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: e2e-screenshots
           path: test-results/screenshots/
@@ -67,7 +67,7 @@ jobs:
           if-no-files-found: ignore
       - name: Upload Playwright traces
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: playwright-test-results
           path: test-results/
@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # PR merge-base 계산용
       - uses: ./.github/actions/setup
@@ -96,3 +96,29 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: pnpm check:records --base "$BASE_SHA"
+
+  # 보안 게이트(ADR-0103): 비밀값 탐지(gitleaks, 전체 이력) + 의존성 감사(pnpm audit, 모든 심각도). 기존 필수 체크 4개와 별개 —
+  # 필수로 만들지는 저장소 ruleset에서 정한다(docs/13 §7).
+  security:
+    name: security (gitleaks · dependency audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # 전체 이력 비밀값 탐지
+      - name: Secret scan (gitleaks, full history, redacted)
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          # gitleaks_8.30.1_checksums.txt(공식 릴리스)의 linux_x64 값.
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          tgz="$RUNNER_TEMP/gitleaks.tar.gz"
+          curl -fsSL -o "$tgz" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "$GITLEAKS_SHA256  $tgz" | sha256sum -c -
+          tar -xzf "$tgz" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git . --redact --no-banner --exit-code 1
+      # pnpm audit은 lockfile만 읽는다(설치 불필요). 예외가 필요하면 package.json pnpm.auditConfig.ignoreGhsas + ADR에 사유·만료.
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - name: Dependency audit (pnpm audit, all severities)
+        run: pnpm audit --audit-level low
