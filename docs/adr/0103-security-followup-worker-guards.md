@@ -57,6 +57,10 @@
 20. 상위 패키지 정상 업그레이드만(pnpm overrides 없음): vite 8.3.1 → **8.3.5**(postcss 8.5.32 → source-map-js **1.2.2**), vitest·`@vitest/mocker` 5.0.2 → **5.0.5**, wrangler 4.141.0 → **4.153.0**(miniflare 5.20261023.0-beta → sharp **0.35.5**·undici **7.30.1**). wrangler 4.152.0은 undici 7.29.1이라 보고서 이후 나온 undici < 7.30.1 권고 8건(High 4)이 남아 4.153.0으로. ajv 경로 fast-uri 3.1.8 → **3.1.9**(같은 범위 안 lockfile 갱신 — fast-uri < 3.1.9 권고 4건).
     결과(2026-10-31): `pnpm audit` 0건(285 패키지). 남은 예외 없음. CI `security` 잡이 이후 새 권고를 막는다.
 
+### CI 공급망·보안 게이트
+21. 외부 Actions 5종(checkout·setup-node·pnpm/action-setup·upload-artifact·github-script)을 전체 커밋 SHA로 고정(주석 = 정확한 태그 v7.0.1 등), `.github/dependabot.yml`(github-actions·npm 주간, 7일 cooldown, 그룹). 새 `security` 잡: gitleaks 8.30.1(릴리스 체크섬 고정 검증, 전체 이력, redact) + `pnpm audit --audit-level low`. 2026-10-31 로컬: gitleaks 244커밋 0건, audit 0건.
+    기존 필수 체크 4개의 이름·구성은 그대로 — `security`를 필수로 만들지는 사용자가 ruleset에서(절차 docs/13 §7).
+
 ## Consequences
 - 다른 사이트의 브라우저는 `/api/log`에 쓸 수 없다(JSON은 프리플라이트 → 405, text/plain은 415). curl 등은 Origin을 빼면 통과하지만 IP당 분당 10회로 묶인다.
 - Rate Limiting 바인딩은 env 간 상속되지 않는다 → production·staging에 각각(namespace 1001·1002). 로컬·테스트는 바인딩 없음 = 제한 없음.

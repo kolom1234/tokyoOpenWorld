@@ -66,7 +66,7 @@ jobs:
             echo "::notice::Cloudflare secrets are not available — skipping deploy."
             echo "Deploy skipped: CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not available." >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.enabled == 'true'
       - uses: ./.github/actions/setup
         if: steps.gate.outputs.enabled == 'true'
@@ -132,7 +132,7 @@ jobs:
             echo "::error::Environment 'production' has no required reviewers — configure it before production deploys (see PR description / PROGRESS.md)."
             exit 1
           fi
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - name: Build
         # 테스트 픽스처(world-mini)는 production 정적 에셋에서 뺀다(staging·PR preview만 `?world=mini` 지원, docs/13 §7).

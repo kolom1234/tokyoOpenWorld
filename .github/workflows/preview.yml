@@ -42,7 +42,7 @@ jobs:
             echo "::notice::Cloudflare secrets are not available (fork PR?) — skipping preview."
             echo "Preview skipped: Cloudflare secrets not available for this PR." >> "$GITHUB_STEP_SUMMARY"
           fi
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.enabled == 'true'
       - uses: ./.github/actions/setup
         if: steps.gate.outputs.enabled == 'true'
@@ -85,7 +85,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - name: Comment on PR
         if: steps.upload.outputs.state != ''
-        uses: actions/github-script@v9
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           STATE: ${{ steps.upload.outputs.state }}
           VERSION_ID: ${{ steps.upload.outputs.version_id }}

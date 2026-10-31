@@ -37,7 +37,7 @@
 | E2E/골든뷰 | Playwright | 1.63.0 |
 | 타입 | `@types/three` | 0.186.0 |
 | 타입(Node 툴·스크립트) | `@types/node` — 하한 Node 22 API로 고정(ADR-0011·0014) | 22.20.4 |
-| CI 액션 | `actions/checkout`·`actions/setup-node` v7, `pnpm/action-setup` v6, `actions/github-script` v9 | 메이저 태그 |
+| CI 액션 | `actions/checkout` v7.0.1·`actions/setup-node` v7.1.0, `pnpm/action-setup` v6.0.10, `actions/upload-artifact` v7.0.2, `actions/github-script` v9.0.0 | **전체 커밋 SHA 고정**(주석에 태그) + `.github/dependabot.yml` 주간·7일 cooldown(ADR-0103) |
 
 ## 3. 데이터 파이프라인 도구 (`tools/pipeline`)
 | 도구 | 용도 | 라이선스 |
