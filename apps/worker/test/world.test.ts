@@ -19,16 +19,29 @@ function meta(range?: WorldObject['range']): WorldObject {
   };
 }
 
-/** R2 get의 Range(`bytes=a-b`)·If-None-Match만 흉내 내는 인메모리 버킷. */
+/**
+ * R2 get의 범위 객체·If-None-Match·If-Match만 흉내 내는 인메모리 버킷.
+ * 실제 R2처럼 시작 ≥ 크기·끝이 객체 밖인 범위는 예외(운영 1101 원인 — F07), suffix는 크기로 자른다.
+ */
 function fakeBucket(keys: Set<string>): WorldBucket {
   return {
     async get(key, options): Promise<WorldObjectBody | WorldObject | null> {
       if (!keys.has(key)) return null;
       if (options?.onlyIf?.get('If-None-Match') === ETAG) return meta();
-      const m = /^bytes=(\d+)-(\d+)$/.exec(options?.range?.get('Range') ?? '');
-      const [start, end] = m ? [Number(m[1]), Number(m[2])] : [0, DATA.length - 1];
+      const ifMatch = options?.onlyIf?.get('If-Match');
+      if (ifMatch !== undefined && ifMatch !== null && ifMatch !== ETAG) return meta();
+      const r = options?.range;
+      if (r === undefined) return { ...meta(), body: new Blob([DATA]).stream() };
+      let start: number;
+      let end: number;
+      if (r.suffix !== undefined) [start, end] = [Math.max(0, DATA.length - r.suffix), DATA.length - 1];
+      else {
+        start = r.offset ?? 0;
+        end = r.length !== undefined ? start + r.length - 1 : DATA.length - 1;
+      }
+      if (start >= DATA.length || end >= DATA.length) throw new Error('InvalidRange: requested range not satisfiable');
       const body = new Blob([DATA.slice(start, end + 1)]).stream();
-      return { ...meta(m ? { offset: start, length: end - start + 1, suffix: undefined } : undefined), body };
+      return { ...meta({ offset: start, length: end - start + 1, suffix: undefined }), body };
     },
     async head(key) {
       return keys.has(key) ? meta() : null;
@@ -254,5 +267,89 @@ describe('edge cache (F05)', () => {
     const again = await handleRequest(new Request('https://example.test/api/world/current?fv=7'), env, ctx);
     expect(again.status).toBe(404);
     expect(reads).toBe(2);
+  });
+});
+
+describe('Range and error boundary (F07)', () => {
+  const env: Env = { WORLD: fakeBucket(new Set([`world/${BUILD}/cells/0_0.tkc`])) };
+  const path = `/world/${BUILD}/cells/0_0.tkc`;
+  const ranged = (range: string) => call(path, env, { headers: { Range: range } });
+
+  it('serves satisfiable single ranges as 206 (offset, open-ended, suffix, end past size clamped)', async () => {
+    const cases: [string, string, string][] = [
+      ['bytes=2-5', 'bytes 2-5/10', '2345'],
+      ['bytes=7-', 'bytes 7-9/10', '789'],
+      ['bytes=-3', 'bytes 7-9/10', '789'],
+      ['bytes=-30', 'bytes 0-9/10', '0123456789'],
+      ['bytes=5-100', 'bytes 5-9/10', '56789'],
+      ['bytes=0-99999999999999999999', 'bytes 0-9/10', '0123456789'],
+    ];
+    for (const [range, cr, body] of cases) {
+      const res = await ranged(range);
+      expect([range, res.status, res.headers.get('Content-Range')]).toEqual([range, 206, cr]);
+      expect(await res.text()).toBe(body);
+    }
+  });
+
+  it('answers 416 with Content-Range bytes */size for unsatisfiable ranges (no 1101)', async () => {
+    for (const range of [
+      'bytes=999999999-999999999',
+      'bytes=10-',
+      'bytes=10-20',
+      'bytes=-0',
+      'bytes=99999999999999999999-',
+    ]) {
+      const res = await ranged(range);
+      expect([range, res.status]).toEqual([range, 416]);
+      expect(res.headers.get('Content-Range')).toBe('bytes */10');
+      expect(res.headers.get('Cross-Origin-Resource-Policy')).toBe('same-origin');
+    }
+    expect((await call(`/world/${BUILD}/missing.bin`, env, { headers: { Range: 'bytes=50-' } })).status).toBe(404);
+  });
+
+  it('ignores malformed Range syntax and returns the full 200 (RFC 9110)', async () => {
+    for (const range of ['bytes=bad', 'bytes=0-1,3-4', 'items=0-1', 'bytes=5-2', 'bytes=-', 'bytes = 1-2', '']) {
+      const res = await ranged(range);
+      expect([range, res.status, res.headers.get('Content-Range')]).toEqual([range, 200, null]);
+      expect(await res.text()).toBe('0123456789');
+    }
+  });
+
+  it('keeps conditional 304/412 and ignores invalid dates', async () => {
+    expect((await call(path, env, { headers: { 'If-None-Match': ETAG } })).status).toBe(304);
+    expect((await call(path, env, { headers: { 'If-Match': '"other"' } })).status).toBe(412);
+    expect((await call(path, env, { headers: { 'If-Modified-Since': 'not a date' } })).status).toBe(200);
+  });
+
+  it('never answers 5xx for user-controlled headers and paths', async () => {
+    const headers: Record<string, string>[] = [
+      { Range: 'bytes=999999999999999999999999999-1' },
+      { Range: `bytes=${'9'.repeat(400)}-` },
+      { Range: 'bytes=-99999999999999999999999' },
+      { 'If-None-Match': 'W/"x", garbage,,*' },
+      { 'If-Unmodified-Since': 'Tue, 99 Foo 9999' },
+      { Range: 'bytes=3-4', 'If-None-Match': ETAG },
+    ];
+    for (const h of headers) expect((await call(path, env, { headers: h })).status).toBeLessThan(500);
+    for (const p of [`/world/${BUILD}/${'a'.repeat(600)}`, '/world/%00', `/world/${BUILD}/x?%ff`, '/api/nope'])
+      expect((await call(p, env)).status).toBeLessThan(500);
+  });
+
+  it('turns an unexpected exception into a 500 JSON without internals, with security headers and no-store', async () => {
+    const broken: Env = {
+      WORLD: {
+        get: async () => {
+          throw new Error('R2 internal: secret-bucket-id 7f3a');
+        },
+        head: async () => null,
+      },
+    };
+    const res = await call(path, broken);
+    expect(res.status).toBe(500);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(res.headers.get('Cross-Origin-Embedder-Policy')).toBe('require-corp');
+    const text = await res.text();
+    expect(JSON.parse(text)).toEqual({ error: 'internal_error' });
+    expect(text).not.toContain('secret');
   });
 });

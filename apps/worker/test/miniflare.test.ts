@@ -136,6 +136,23 @@ describe.skipIf(SKIP)('worker on local miniflare (wrangler dev --env local)', ()
     expect(Number(h.headers.get('content-length'))).toBe(CELL_BYTES.length);
   });
 
+  it('Range edge cases on real workerd R2 (F07): out of bounds 416, end past size 206, bad syntax 200', async () => {
+    const url = `${base}/world/${BUILD_ID}/${CELL}`;
+    const n = CELL_BYTES.length;
+    const oob = await fetch(url, { headers: { Range: 'bytes=999999999-999999999' } });
+    expect(oob.status).toBe(416);
+    expect(oob.headers.get('content-range')).toBe(`bytes */${n}`);
+    expect(oob.headers.get('cross-origin-embedder-policy')).toBe('require-corp');
+    await oob.arrayBuffer();
+    const past = await fetch(url, { headers: { Range: `bytes=${n - 4}-${n + 1000}` } });
+    expect(past.status).toBe(206);
+    expect(past.headers.get('content-range')).toBe(`bytes ${n - 4}-${n - 1}/${n}`);
+    expect((await past.arrayBuffer()).byteLength).toBe(4);
+    const bad = await fetch(url, { headers: { Range: 'bytes=bad' } });
+    expect(bad.status).toBe(200);
+    expect((await bad.arrayBuffer()).byteLength).toBe(n);
+  });
+
   it('missing cell → 404 negative-cached at the edge (MISS then HIT), bad path · query → 400', async () => {
     const url = `${base}/world/${BUILD_ID}/L0/99/99.tkc`;
     const nf = await fetch(url);

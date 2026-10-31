@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 607개.
+> 파일 608개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -83,10 +83,11 @@
 - `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, withSecurityHeaders, json, storageUnconfigured
 - `apps/worker/src/index.ts` — Worker 엔트리(라우터): /api/*, /world/*는 Worker, 나머지는 Static Assets. see docs/13-deployment.md §4, docs/modules/worker.md | exports: handleRequest, default
 - `apps/worker/src/log-guard.ts` — `/api/log` 남용 방어(ADR-0103): Content-Type·Origin 허용 목록·IP 요청 제한(해시 키)(F03) + 실제 수신 바이트 본문 상한(F04). see docs/13-deployment.md §4 | exports: isAllowedOrigin, isJsonContentType, clientKey, guardLogRequest, BodyResult, readLimitedText
+- `apps/worker/src/range.ts` — `/world/*` Range·조건부 헤더 해석(F07, ADR-0103): RFC 9110 §14 단일 바이트 범위만, 문법 오류는 무시(200 전체), 만족 불가는 416. see docs/13-deployment.md §4 | exports: ParsedRange, parseRange, isSatisfiable, clampRange, conditionalHeaders
 - `apps/worker/src/routes/current.ts` — `GET /api/world/current?fv=<n>`: KV `CURRENT_BUILD:v<n>` → 활성 buildId·baseUrl. 엣지 캐시 30 s(KV 읽기 절감, F05). see docs/13-deployment.md §4, §8 | exports: handleWorldCurrent
 - `apps/worker/src/routes/log.ts` — `POST /api/log`(M11-T03, 01 §9·13 §4): 게임 오류 보고 → Workers Analytics Engine(데이터셋 sanpo_errors). | exports: REPORT_SAMPLE_RATES, ErrorReport, scrub, parseReport, dataPoint, handleLog
 - `apps/worker/src/routes/weather.ts` — `/api/weather`: LIVE_WEATHER=true일 때만 Open-Meteo 현재 날씨(도쿄 중심) 프록시 → 10분 엣지 캐시. 꺼져 있으면 404(disabled). | exports: OPEN_METEO_URL, LiveWeather, toLiveWeather, handleWeather
-- `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답 + 검증된 경로의 404(5분)만 캐시. 쿼리 문자열은 400(F05, ADR-0103). see docs/13-deployment.md §4 | exports: contentRange, handleWorldData
+- `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답 + 검증된 경로의 404(5분)만 캐시. 쿼리 문자열은 400(F05), | exports: contentRange, handleWorldData
 - `apps/worker/src/validate.ts` — 요청 입력 검증: buildId 형식, /world 경로(경로 조작 차단), formatVersion 쿼리. see docs/13-deployment.md §4 | exports: BUILD_ID_RE, isValidBuildId, parseWorldPath, parseFormatVersion
 
 ## packages/audio

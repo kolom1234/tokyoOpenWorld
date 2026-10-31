@@ -28,6 +28,11 @@
 8. `/api/world/current`: 200·404를 엣지 30 s(키 = `fv`만), 브라우저 `max-age=60 → 30`. 롤백 반영 = KV 전파(실측 4–13 s) + 엣지 ≤ 30 s + 브라우저 ≤ 30 s — 기존 "1분 안" 유지. 500(`bad_current_build`)은 캐시하지 않는다.
 9. Range·조건부 요청은 그대로 R2 직행(BYPASS — ADR-0026, 지도·부분 읽기 호환). HEAD도 R2 head. 이 둘의 반복 요청 비용은 킬 스위치(ADR-0104)가 상한.
 
+### F07 Range·예외 경계
+11. `range.ts parseRange`: RFC 9110 §14 단일 바이트 범위만 해석해 R2에 **범위 객체**를 넘긴다(요청 Headers를 그대로 넘기지 않음). 문법 오류 = Range 무시 → 평범한 GET(200 전체, 엣지 캐시를 탄다 — 잘못된 Range로 캐시 우회 불가). 만족 불가 = **416 + `Content-Range: bytes */<size>`**: suffix 0·안전 정수를 넘는 시작은 head로 크기만 보고, R2가 범위 밖 시작에 던지는 예외(운영 1101 원인)는 잡아서 head → 416/404, 끝이 넘친 범위는 객체 끝까지 잘라 한 번 재시도(206).
+    조건부 헤더는 4개만 골라 `onlyIf`로, 날짜가 틀린 If-(Un)Modified-Since는 무시(RFC 9110 §13.1.3–4).
+12. `handleRequest` 최상위 try/catch: 처리 안 된 예외 → `500 {"error":"internal_error"}`(no-store) + 보안 헤더. 응답에 메시지·스택 없음, Workers Logs에는 예외 종류만(`console.error` — Worker에는 Logger 없음).
+
 ## Consequences
 - 다른 사이트의 브라우저는 `/api/log`에 쓸 수 없다(JSON은 프리플라이트 → 405, text/plain은 415). curl 등은 Origin을 빼면 통과하지만 IP당 분당 10회로 묶인다.
 - Rate Limiting 바인딩은 env 간 상속되지 않는다 → production·staging에 각각(namespace 1001·1002). 로컬·테스트는 바인딩 없음 = 제한 없음.

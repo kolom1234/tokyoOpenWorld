@@ -26,9 +26,9 @@ export interface WorldObjectBody extends WorldObject {
   body: ReadableStream;
 }
 
-/** R2Bucket 중 사용하는 부분. `range`/`onlyIf`에 요청 Headers를 그대로 넘기면 R2가 Range·조건부 헤더를 해석한다. */
+/** R2Bucket 중 사용하는 부분. `range` = 직접 해석한 범위(range.ts — 요청 헤더를 그대로 넘기지 않는다, F07), `onlyIf` = 조건부 헤더만 담은 Headers. */
 export interface WorldBucket {
-  get(key: string, options?: { range?: Headers; onlyIf?: Headers }): Promise<WorldObjectBody | WorldObject | null>;
+  get(key: string, options?: { range?: WorldRange; onlyIf?: Headers }): Promise<WorldObjectBody | WorldObject | null>;
   head(key: string): Promise<WorldObject | null>;
 }
 
