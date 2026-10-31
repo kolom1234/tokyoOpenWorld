@@ -53,6 +53,10 @@
 ### 세이브 가져오기
 19. `SAVE_LIMITS`(ui): 파일 24 MiB를 `f.text()` 전에(설정 화면·게임 `importFile` 두 곳), 파싱 직후 마이그레이션·썸네일 디코드 전에 사진·썸네일 200개(= 사진 상한 MAX_PHOTOS)·발견/열림 2,000·발견당 사진 id 200·썸네일 하나 1,000,000자·합계 20,000,000자. 넘으면 저장 없이 `SaveImportError(problem)` → 사유별 안내(3개 언어). 정상 세이브(썸네일 360 px JPEG ≈ 20–60 KB × 200)는 상한의 절반 아래. 서버 업로드가 아닌 브라우저 자원 보호.
 
+### F08 의존성
+20. 상위 패키지 정상 업그레이드만(pnpm overrides 없음): vite 8.3.1 → **8.3.5**(postcss 8.5.32 → source-map-js **1.2.2**), vitest·`@vitest/mocker` 5.0.2 → **5.0.5**, wrangler 4.141.0 → **4.153.0**(miniflare 5.20261023.0-beta → sharp **0.35.5**·undici **7.30.1**). wrangler 4.152.0은 undici 7.29.1이라 보고서 이후 나온 undici < 7.30.1 권고 8건(High 4)이 남아 4.153.0으로. ajv 경로 fast-uri 3.1.8 → **3.1.9**(같은 범위 안 lockfile 갱신 — fast-uri < 3.1.9 권고 4건).
+    결과(2026-10-31): `pnpm audit` 0건(285 패키지). 남은 예외 없음. CI `security` 잡이 이후 새 권고를 막는다.
+
 ## Consequences
 - 다른 사이트의 브라우저는 `/api/log`에 쓸 수 없다(JSON은 프리플라이트 → 405, text/plain은 415). curl 등은 Origin을 빼면 통과하지만 IP당 분당 10회로 묶인다.
 - Rate Limiting 바인딩은 env 간 상속되지 않는다 → production·staging에 각각(namespace 1001·1002). 로컬·테스트는 바인딩 없음 = 제한 없음.

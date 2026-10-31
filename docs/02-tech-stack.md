@@ -27,11 +27,11 @@
 | 런타임 | Node.js 24 LTS (`.nvmrc`=24, `engines` ≥22.12 허용 — ADR-0011) | 24.x (하한 22.12) |
 | 패키지 매니저 | pnpm (workspaces) | 10.34.5 (`packageManager` 필드 고정) |
 | 언어 | TypeScript | 6.0.3 (`typescript-eslint` 호환 범위 < 6.1. TS 7 전환은 별도 ADR) |
-| 번들러 | Vite | 8.3.1 |
-| CF 배포 | `wrangler` (선택: `@cloudflare/vite-plugin` 1.60.2 — 도입 시 ADR) | 4.141.0 |
+| 번들러 | Vite | 8.3.5 (보안 권고 대응 2026-10-31 — ≥ 8.3.3, ADR-0103) |
+| CF 배포 | `wrangler` (선택: `@cloudflare/vite-plugin` 1.60.2 — 도입 시 ADR) | 4.153.0 (miniflare 5.20261023.0-beta → sharp 0.35.5·undici 7.30.1, ADR-0103) |
 | 린트/포맷 | Biome | 2.5.14 |
 | 의존 규칙 | dependency-cruiser | 18.4.0 |
-| 단위 테스트 | Vitest | 5.0.2 |
+| 단위 테스트 | Vitest | 5.0.5 (`@vitest/mocker` 5.0.5) |
 | PMTiles 호환 검사 | `pmtiles`(공식 JS 리더) — tile-format 테스트 전용 devDependency, 런타임은 자체 리더(ADR-0093) | 4.5.0 (BSD-3-Clause) |
 | JSON Schema 검증 | `ajv` (draft 2020-12, `ajv/dist/2020`) — 테스트·파이프라인 validate 전용, 런타임 번들 금지 (ADR-0017) | 8.20.0 (MIT) |
 | E2E/골든뷰 | Playwright | 1.63.0 |
