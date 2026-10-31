@@ -5,11 +5,11 @@ Updated: 2026-10-31 (session #27 — production 보안 후속, 브랜치 `claude
 ## Current Task: 없음 — 공개 직후 사람 확인(docs/13 §9 체크리스트)·측량법 승인 대기
 - Done in this session (#27): production 보안 후속(ADR-0102) — `/api/health` = `{"ok":true}`만, `_headers` Referrer-Policy·Permissions-Policy, HSTS·www 리다이렉트는 Cloudflare 존 설정(docs/13 §9 4b), 스모크가 본문·정책 헤더 확인. staging 검증, production 쓰기 없음.
 - In progress: 없음.
-- Next step (정확히 한 걸음): 사용자가 대시보드에서 www → apex 301(docs/13 §9 4b) 설정 → PR 병합·Deploy 승인 → 공개 URL `/api/health` 본문·정책 헤더 확인. 국토지리원 승인번호가 오면 ATTRIBUTION `gsi-dem`·`apps/game/src/credits.ts` 표기 후 재배포.
+- Next step (정확히 한 걸음): PR 병합·Deploy 승인 → 공개 URL `/api/health` 본문·정책 헤더 확인(www → apex 301은 2026-10-31 사용자 설정·확인 완료). 국토지리원 승인번호가 오면 ATTRIBUTION `gsi-dem`·`apps/game/src/credits.ts` 표기 후 재배포.
 - Blockers: 🔶 국토지리원 측량법 제30조 사용 승인(사용자 신청 중 — 03 §6.1). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 
 ## Recently Completed
-- Production 보안 후속(2026-10-31, 사용자 요청) — `/api/health` 바인딩 상세 제거(`{"ok":true}`), `_headers` `/*`에 `Referrer-Policy: strict-origin-when-cross-origin`·`Permissions-Policy`(쓰지 않는 센서·카메라·마이크·위치·결제·USB 등만 끔). HSTS는 이미 존 설정(`max-age=2592000`)이라 코드에 넣지 않음(테스트로 중복 차단). www는 DNS 레코드 없음(NXDOMAIN) → Redirect Rule(대시보드, docs/13 §9 4b). ADR-0102
+- Production 보안 후속(2026-10-31, 사용자 요청) — `/api/health` 바인딩 상세 제거(`{"ok":true}`), `_headers` `/*`에 `Referrer-Policy: strict-origin-when-cross-origin`·`Permissions-Policy`(쓰지 않는 센서·카메라·마이크·위치·결제·USB 등만 끔). HSTS는 이미 존 설정(`max-age=2592000`)이라 코드에 넣지 않음(테스트로 중복 차단). www는 DNS 레코드 없음(NXDOMAIN) → 사용자가 대시보드에서 `AAAA www 100::`(Proxied) + Redirect Rule 설정(docs/13 §9 4b) → https·http www 경로·쿼리 유지 301 한 번에 apex 200 ✅. ADR-0102
 - M11-T06 Production launch(2026-10-19) — 사용자 승인: prod 버킷 publish(롤백용 + 새 빌드)·KV 포인터 → PR #25 병합·Deploy 승인 → earthaimap.com 커스텀 도메인(API) → 공개 도메인 경유 파일 검증 불일치 0 → 롤백 리허설 4 s/원복 5 s → 공개 URL 스모크(첫 로드 25.6–26.0 MB, 첫 표시 HIT 8.5–12.1 s, 콘솔 오류 0). ⚠️ 배포 직후 첫 방문(엣지 MISS) 14.9–33 s.
 - M11-T02 Soak(2026-10-19) — `pnpm soak`(도보 → 열차 → 주행 → 비행 반복). 1차: 힙 누수 +92 MB/분 → 원인 three r186 RenderObject(메시 'dispose' 이벤트 필요) → `scene/release.ts`. 2차 1시간: 힙 기울기 0.38 MB/분·재시작 0·오류 0 ✅, GPU 메모리 30분 이후 0.85 MiB/분(⚠️ 관찰). ADR-0101
 - M11-T01 Performance(2026-10-19) — `pnpm perf`(실제 GPU 1440p High, vsync 해제: 도보·자동 주행·신주쿠 비행 + DOF + 부팅 → docs/generated/perf-latest.md), core `Scheduler.timings`, `?perf=1`. 수정: 야간 광원 풀 1024개 매 프레임 행렬 갱신 제외(셀 그룹은 로컬 행렬만 — 월드 순회까지 끄면 셀이 덜 그려지는 착시·떨림 e2e 실패). 첫 표시 = 셰이더 컴파일(LUT 65–420 ms → LUT 굽기 기각, 재방문 3.2–4.0 s). DOF 첫 켜기만 2.0–4.6 s·이후 0.3–0.6 s(전: 켤 때마다 4.8 s). ⚠️ 프레임 p50 도보 19–24·주행 25·비행 15–16·p95 30–46 ms(전력 상태 ±25 %)(GPU 한계 ≈ 34 W), 메인 p95 17–39 ms(render CPU — three WebGPU 드로우콜 비용 + GPU 대기), sim p95 12.8 ms, 기준 GPU 2종 미측정. ADR-0100
