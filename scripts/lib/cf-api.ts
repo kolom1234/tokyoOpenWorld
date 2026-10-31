@@ -18,6 +18,24 @@ export async function accountId(): Promise<string> {
   return id;
 }
 
+/** REST GET(body 있으면 JSON POST) → `result`(실패 = 예외 — 권한 없음 포함). 오류 메시지에 계정·자원 ID는 넣지 않는다. */
+export async function rest<T>(
+  path: string,
+  body?: unknown,
+): Promise<{ result: T; result_info?: { total_pages?: number } }> {
+  const auth = { Authorization: `Bearer ${token()}` };
+  const init: RequestInit =
+    body === undefined
+      ? { headers: auth }
+      : { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  const res = await fetch(`${API}${path}`, init);
+  const j = (await res.json()) as { success: boolean; result: T; result_info?: { total_pages?: number } };
+  if (!res.ok || !j.success) {
+    throw new Error(`${init.method ?? 'GET'} ${path.split('?')[0]?.replace(/[0-9a-f]{32}/g, '…')} ${res.status}`);
+  }
+  return j;
+}
+
 /** Workers Analytics Engine SQL API → 행 목록. */
 export async function aeSql<T = Record<string, unknown>>(acc: string, sql: string): Promise<T[]> {
   const res = await fetch(`${API}/accounts/${acc}/analytics_engine/sql`, {

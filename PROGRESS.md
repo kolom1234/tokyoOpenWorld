@@ -1,14 +1,15 @@
 # PROGRESS
-Updated: 2026-10-31 (session #27 — production 보안 후속, 브랜치 `claude/prod-security-followup`)
+Updated: 2026-10-31 (session #28 — Cloudflare 사용량 점검을 Workers Paid·R2 포함량 기준으로, 브랜치 `claude/cf-usage-paid-plan`)
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
 ## Current Task: 없음 — 공개 직후 사람 확인(docs/13 §9 체크리스트)·측량법 승인 대기
-- Done in this session (#27): production 보안 후속(ADR-0102) — `/api/health` = `{"ok":true}`만, `_headers` Referrer-Policy·Permissions-Policy, HSTS·www 리다이렉트는 Cloudflare 존 설정(docs/13 §9 4b), 스모크가 본문·정책 헤더 확인. staging 검증, production 쓰기 없음.
+- Done in this session (#28): `usage.yml`/`scripts/cf-usage.ts`를 실제 요금제(Workers Paid + R2 Paid, 계정 단위, 청구 주기 매월 25일)에 맞춤 — 청구 주기 누적 ÷ 포함량 70 % 초과만 이슈, 주기 말 예상·예상 추가 요금, 일일 값은 급증 참고표, account 행 상위 Worker·KV·DO·큐·버킷 이름(ID 비노출). DO·Queues·Observability 로그 포함, 대시보드 대조(`--at`). `CF_PLAN=paid`(docs/13 §6). 이슈 #27(무료 일일 한도 오탐) 정리.
 - In progress: 없음.
-- Next step (정확히 한 걸음): PR 병합·Deploy 승인 → 공개 URL `/api/health` 본문·정책 헤더 확인(www → apex 301은 2026-10-31 사용자 설정·확인 완료). 국토지리원 승인번호가 오면 ATTRIBUTION `gsi-dem`·`apps/game/src/credits.ts` 표기 후 재배포.
+- Next step (정확히 한 걸음): PR 병합(병합 전에는 main의 매일 09:00 KST 점검이 옛 무료 기준으로 돈다) → 보안 후속 항목 중 F03(오류 API 남용)·F05(캐시 우회 R2 읽기)를 비용 보호 관점에서 먼저.
 - Blockers: 🔶 국토지리원 측량법 제30조 사용 승인(사용자 신청 중 — 03 §6.1). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 
 ## Recently Completed
+- Cloudflare 사용량 점검 paid 전환(2026-10-31, 사용자 요청) — 이슈 #27 kvWritesDay account 130 %는 무료 일일 한도로 계산한 오탐(같은 계정 다른 프로젝트 `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). 이제 Workers Paid 포함량(요청·CPU·Workers Logs(Observability 텔레메트리)·KV 읽기/쓰기/삭제/목록/저장·DO 요청·Duration·Queues 작업·Analytics Engine)·R2 무료분(Class A/B·Standard 누적 GB-월)의 청구 주기 누적 %, 70 % 초과만 이슈. 대시보드 Billable usage(10-25 ~ 10-30)와 `--at` 대조 — 전 항목 ±0.1 % 안. 첫 측정: account KV 쓰기 7.6 %·Queues 7.6 %(주기 말 예상 36–40 %).
 - Production 보안 후속(2026-10-31, 사용자 요청) — `/api/health` 바인딩 상세 제거(`{"ok":true}`), `_headers` `/*`에 `Referrer-Policy: strict-origin-when-cross-origin`·`Permissions-Policy`(쓰지 않는 센서·카메라·마이크·위치·결제·USB 등만 끔). HSTS는 이미 존 설정(`max-age=2592000`)이라 코드에 넣지 않음(테스트로 중복 차단). www는 DNS 레코드 없음(NXDOMAIN) → 사용자가 대시보드에서 `AAAA www 100::`(Proxied) + Redirect Rule 설정(docs/13 §9 4b) → https·http www 경로·쿼리 유지 301 한 번에 apex 200 ✅. ADR-0102
 - M11-T06 Production launch(2026-10-19) — 사용자 승인: prod 버킷 publish(롤백용 + 새 빌드)·KV 포인터 → PR #25 병합·Deploy 승인 → earthaimap.com 커스텀 도메인(API) → 공개 도메인 경유 파일 검증 불일치 0 → 롤백 리허설 4 s/원복 5 s → 공개 URL 스모크(첫 로드 25.6–26.0 MB, 첫 표시 HIT 8.5–12.1 s, 콘솔 오류 0). ⚠️ 배포 직후 첫 방문(엣지 MISS) 14.9–33 s.
 - M11-T02 Soak(2026-10-19) — `pnpm soak`(도보 → 열차 → 주행 → 비행 반복). 1차: 힙 누수 +92 MB/분 → 원인 three r186 RenderObject(메시 'dispose' 이벤트 필요) → `scene/release.ts`. 2차 1시간: 힙 기울기 0.38 MB/분·재시작 0·오류 0 ✅, GPU 메모리 30분 이후 0.85 MiB/분(⚠️ 관찰). ADR-0101
@@ -18,7 +19,6 @@ Updated: 2026-10-31 (session #27 — production 보안 후속, 브랜치 `claude
 - M11-T05 License audit(2026-10-19) — 원문 재확인 표 03 §6.1(PLATEAU FAQ 手続き不要·상업 가능 ✅, KSJ N02 CC BY 4.0 ✅, Open-Meteo 비상업·production 호출 0 ✅, Freesound 22개 CC0 ✅, Rocketbox MIT ✅, 폰트 OFL ✅, npm 26개 GPL·NC 0 ✅, GSI DEM 🔶 측량법 제30조 사용 승인 신청 필요), ODbL 파생 DB `global/odbl/`(map 단계)·크레딧 링크, `/oss-licenses.txt` LICENSE 원문, 상표 스캔 CI 테스트(0건), 긴자선 미수록 크레딧 명시. ADR-0097
 - M10 잔여(2026-10-19) — physics `setPaused`(일시정지 = 물리 시각 정지), 포토 DOF = 출력 노드 교체(`post/output.ts`, 전체 재구성 없음), 사진 상한 200(오래된 것부터 — 도감 연결·IndexedDB 썸네일 정리), 로마자 방위 접두 하이픈(Nishi-Shinjuku), 한국어 파생 POI 이름 9곳 표기법 점검(수정 0), UI 글꼴 Noto Sans JP/KR Variable(fontsource 5.3.0 조각 woff2 — 타이틀 ja 278 KB·ko 178 KB·en 58 KB).
 - M10 마무리(2026-10-18) — MVP 재빌드(L0 294 + HLOD 177 + 머티리얼 32층 + 오디오 22 + map.pmtiles 1.45 MB, validate 0) → dev publish → staging. 실제 GPU staging(1600×900): HUD 시그널 8.1 Hz ≤ 10 ✅, 미니맵 0.018 ms/프레임(0.13 ms/회) ≤ 1 ✅, rAF p50 16.67·p95 16.84 ms, GPU 23.6 W(상한 33.9 W). 명소 봇 20/20(로컬 재빌드). 따라 해 보기 봇 전 단계 ✅. dev gc 대상 0.
-- M10-T06 Save/load & credits(2026-10-18) — 세이브 v2(IndexedDB, v1 마이그레이션·내보내기/가져오기·자동 저장 60 s·모음 복원·이어하기), 크레딧 자동 생성(/credits.json = lock 전 원천 + ATTRIBUTION, /oss-licenses.json = 런타임 의존 24개). 수락: 구 스키마 마이그레이션 테스트 ✅, 크레딧 lock 전 소스 ✅(테스트). ADR-0096
 
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.

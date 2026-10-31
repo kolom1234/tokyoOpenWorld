@@ -18,7 +18,7 @@
     "run_worker_first": ["/world/*", "/api/*"]
   },
   "observability": { "enabled": true },
-  // 오류 보고(M11-T03): Workers Analytics Engine — 무료 플랜 하루 10만 점, 데이터셋은 첫 기록 때 생긴다. 조회 = `pnpm errors`(SQL API).
+  // 오류 보고(M11-T03): Workers Analytics Engine — Workers Paid 주기당 1,000만 점 포함(아직 미과금, docs/13 §6), 데이터셋은 첫 기록 때 생긴다. 조회 = `pnpm errors`(SQL API).
   "analytics_engine_datasets": [{ "binding": "LOGS", "dataset": "sanpo_errors" }],
   "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" },
   "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-prod" }],
