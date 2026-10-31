@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 605개.
+> 파일 606개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -428,7 +428,7 @@
 - `packages/ui/src/internal/theme.ts` — UI 스타일(문자열 → <style>, 번들러 CSS 처리 없이 샌드박스·게임 공통). 폰트 = Noto Sans JP/KR Variable(OFL — @font-face는 게임 main.ts가 fontsource 유니코드 범위 조각으로 자체 호스팅, docs/12 §1), 한국어 화면은 KR 먼저. 없으면 시스템 일·한 고딕. | exports: THEME_CSS, injectTheme
 
 ## scripts
-- `scripts/cf-usage.ts` — `node scripts/cf-usage.ts [--github-issue]`(M11-T06): Cloudflare 요금제 포함량 대비 사용량 — 요금제 CF_PLAN(paid|free, 기본 paid)·청구 시작일 CF_BILLING_DAY(기본 25).
+- `scripts/cf-usage.ts` — `node scripts/cf-usage.ts [--github-issue] [--at <ISO 시각>]`(M11-T06): Cloudflare 요금제 포함량 대비 사용량 — 요금제 CF_PLAN(paid|free, 기본 paid)·청구 시작일 CF_BILLING_DAY(기본 25).
 - `scripts/check-asset-size.ts` — 정적 에셋 한도 게이트(`pnpm check:assets [dir]`): 파일당 25 MiB, 파일 수 20,000(Workers Free). see docs/13-deployment.md §2
 - `scripts/check-records.ts` — PR 기록 누락 게이트(`pnpm check:records --base <ref>`): api.ts↔모듈 카드(실패), 코드↔PROGRESS.md(경고). see docs/16-context-protocol.md §3
 - `scripts/check-size.ts` — 크기 제한 게이트(`pnpm check:size`): TS 파일 400줄·함수 60줄, 모듈 카드 150줄, docs 400줄, CLAUDE.md 200줄. see docs/15-conventions.md §2
@@ -438,8 +438,9 @@
 - `scripts/lib/files.ts` — 저장소 파일 워커(node_modules·dist·데이터 산출물 제외) + CI 출력 헬퍼. scripts/check-* 공용. | exports: listFiles, report
 - `scripts/lib/records-rules.ts` — PR 기록 누락 검사 규칙(순수 함수): api.ts ↔ 모듈 카드, 코드 ↔ PROGRESS.md. see docs/16-context-protocol.md §3–4 | exports: RecordsReport, isCodePath, checkRecords
 - `scripts/lib/size-rules.ts` — 파일·함수·문서 크기 제한 규칙(순수 함수). see docs/15-conventions.md §2, docs/14-testing-perf.md §5 | exports: SIZE_LIMITS, SizeViolation, countLines, isTestPath, bodyLines, findLongFunctions, checkSourceText, docLimitFor, checkDocText
-- `scripts/lib/usage-collect.ts` — Cloudflare GraphQL Analytics → 요금제 판정 입력(M11-T06): 청구 주기 누적·오늘(UTC) 카운터 + 일별 최대 저장량(KV·R2 Standard). | exports: Counters, Storage, KvName, tallyCounters, tallyStorage, kvNames, Collected, collect
-- `scripts/lib/usage.ts` — Cloudflare 요금제 포함량 대비 사용량 판정(M11-T06 점검 — 순수 함수, 테스트). 요금제 = CF_PLAN(기본 paid — 2026-10-31 사용자 확인: | exports: METRICS, Metric, Plan, Allowance, PLANS, LABELS, THRESHOLD, r2Class, Entry, Usage, emptyUsage, add, Cycle, billingCycle, Row, evaluate, overThreshold, Spike, spikes, fmt, NOTES, markdown
+- `scripts/lib/usage-collect.ts` — Cloudflare GraphQL Analytics → 요금제 판정 입력(M11-T06): 청구 주기 누적·오늘(UTC) 카운터(Workers·KV·DO·Queues·AE·R2) | exports: Counters, Storage, Names, tallyCounters, tallyStorage, labeler, lookupNames, Collected, collect
+- `scripts/lib/usage-logs.ts` — Workers Logs(Observability) 이벤트 수(M11-T06 사용량 점검): Workers Observability 텔레메트리 쿼리로 Worker별 | exports: ScriptLogs, parseAggregates, extrapolate, LogCounts, logCounts
+- `scripts/lib/usage.ts` — Cloudflare 요금제 포함량 대비 사용량 판정(M11-T06 점검 — 순수 함수, 테스트). 요금제 = CF_PLAN(기본 paid — 2026-10-31 사용자 확인: | exports: METRICS, Metric, Plan, Allowance, GB_MONTH_DAYS, PLANS, LABELS, THRESHOLD, r2Class, Entry, Usage, emptyUsage, add, Cycle, billingCycle, Row, evaluate, overThreshold, Spike, spikes, fmt, NOTES, markdown
 
 ## tools/codemap
 - `tools/codemap/src/collect.ts` — CODEMAP 대상 소스 파일 수집(테스트·빌드 산출물 제외, 경로 정렬). see docs/16-context-protocol.md §5 | exports: CODEMAP_ROOTS, comparePaths, collectSourceFiles

@@ -3,13 +3,13 @@ Updated: 2026-10-31 (session #28 — Cloudflare 사용량 점검을 Workers Paid
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
 ## Current Task: 없음 — 공개 직후 사람 확인(docs/13 §9 체크리스트)·측량법 승인 대기
-- Done in this session (#28): `usage.yml`/`scripts/cf-usage.ts`를 실제 요금제(Workers Paid + R2 Paid, 계정 단위, 청구 주기 매월 25일)에 맞춤 — 청구 주기 누적 ÷ 포함량 70 % 초과만 이슈, 주기 말 예상·예상 추가 요금, 일일 값은 급증 참고표, account 행 상위 Worker·KV·버킷 이름(ID 비노출). `CF_PLAN=paid`(docs/13 §6). 이슈 #27(무료 일일 한도 오탐) 정리.
+- Done in this session (#28): `usage.yml`/`scripts/cf-usage.ts`를 실제 요금제(Workers Paid + R2 Paid, 계정 단위, 청구 주기 매월 25일)에 맞춤 — 청구 주기 누적 ÷ 포함량 70 % 초과만 이슈, 주기 말 예상·예상 추가 요금, 일일 값은 급증 참고표, account 행 상위 Worker·KV·DO·큐·버킷 이름(ID 비노출). DO·Queues·Observability 로그 포함, 대시보드 대조(`--at`). `CF_PLAN=paid`(docs/13 §6). 이슈 #27(무료 일일 한도 오탐) 정리.
 - In progress: 없음.
 - Next step (정확히 한 걸음): PR 병합(병합 전에는 main의 매일 09:00 KST 점검이 옛 무료 기준으로 돈다) → 보안 후속 항목 중 F03(오류 API 남용)·F05(캐시 우회 R2 읽기)를 비용 보호 관점에서 먼저.
 - Blockers: 🔶 국토지리원 측량법 제30조 사용 승인(사용자 신청 중 — 03 §6.1). ODPT 키 없음(긴자선 — 공개 후 업데이트, 크레딧 명시).
 
 ## Recently Completed
-- Cloudflare 사용량 점검 paid 전환(2026-10-31, 사용자 요청) — 이슈 #27 kvWritesDay account 130 %는 무료 일일 한도로 계산한 오탐(같은 계정 다른 프로젝트 `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). 이제 Workers Paid 포함량(요청·CPU·KV 읽기/쓰기/삭제/목록/저장·Analytics Engine·Logs ≈ 호출 수)·R2 무료분(Class A/B·Standard GB-월 = 일별 최대 평균)의 청구 주기 누적 %, 70 % 초과만 이슈. 첫 측정: account 최대 R2 저장 23.7 %, KV 쓰기 7.6 %(주기 말 예상 35.8 %).
+- Cloudflare 사용량 점검 paid 전환(2026-10-31, 사용자 요청) — 이슈 #27 kvWritesDay account 130 %는 무료 일일 한도로 계산한 오탐(같은 계정 다른 프로젝트 `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). 이제 Workers Paid 포함량(요청·CPU·Workers Logs(Observability 텔레메트리)·KV 읽기/쓰기/삭제/목록/저장·DO 요청·Duration·Queues 작업·Analytics Engine)·R2 무료분(Class A/B·Standard 누적 GB-월)의 청구 주기 누적 %, 70 % 초과만 이슈. 대시보드 Billable usage(10-25 ~ 10-30)와 `--at` 대조 — 전 항목 ±0.1 % 안. 첫 측정: account KV 쓰기 7.6 %·Queues 7.6 %(주기 말 예상 36–40 %).
 - Production 보안 후속(2026-10-31, 사용자 요청) — `/api/health` 바인딩 상세 제거(`{"ok":true}`), `_headers` `/*`에 `Referrer-Policy: strict-origin-when-cross-origin`·`Permissions-Policy`(쓰지 않는 센서·카메라·마이크·위치·결제·USB 등만 끔). HSTS는 이미 존 설정(`max-age=2592000`)이라 코드에 넣지 않음(테스트로 중복 차단). www는 DNS 레코드 없음(NXDOMAIN) → 사용자가 대시보드에서 `AAAA www 100::`(Proxied) + Redirect Rule 설정(docs/13 §9 4b) → https·http www 경로·쿼리 유지 301 한 번에 apex 200 ✅. ADR-0102
 - M11-T06 Production launch(2026-10-19) — 사용자 승인: prod 버킷 publish(롤백용 + 새 빌드)·KV 포인터 → PR #25 병합·Deploy 승인 → earthaimap.com 커스텀 도메인(API) → 공개 도메인 경유 파일 검증 불일치 0 → 롤백 리허설 4 s/원복 5 s → 공개 URL 스모크(첫 로드 25.6–26.0 MB, 첫 표시 HIT 8.5–12.1 s, 콘솔 오류 0). ⚠️ 배포 직후 첫 방문(엣지 MISS) 14.9–33 s.
 - M11-T02 Soak(2026-10-19) — `pnpm soak`(도보 → 열차 → 주행 → 비행 반복). 1차: 힙 누수 +92 MB/분 → 원인 three r186 RenderObject(메시 'dispose' 이벤트 필요) → `scene/release.ts`. 2차 1시간: 힙 기울기 0.38 MB/분·재시작 0·오류 0 ✅, GPU 메모리 30분 이후 0.85 MiB/분(⚠️ 관찰). ADR-0101

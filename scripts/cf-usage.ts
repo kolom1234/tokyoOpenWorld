@@ -1,8 +1,10 @@
-// `node scripts/cf-usage.ts [--github-issue]`(M11-T06): Cloudflare 요금제 포함량 대비 사용량 — 요금제 CF_PLAN(paid|free, 기본 paid)·청구 시작일 CF_BILLING_DAY(기본 25).
+// `node scripts/cf-usage.ts [--github-issue] [--at <ISO 시각>]`(M11-T06): Cloudflare 요금제 포함량 대비 사용량 — 요금제 CF_PLAN(paid|free, 기본 paid)·청구 시작일 CF_BILLING_DAY(기본 25).
 // paid = 청구 주기 누적 ÷ Workers Paid·R2 포함량(계정 단위). `--github-issue`이고 70 % 초과 항목이 있으면 라벨 cf-usage 이슈(열린 이슈가 있으면 본문만 갱신).
-// 오늘(UTC) 값은 급증 참고표로만 — 이슈를 열지 않는다. 토큰 권한 = Account Analytics: Read(+ KV 이름 Workers KV Storage: Read). `usage.yml`이 매일 실행.
+// 오늘(UTC) 값은 급증 참고표로만 — 이슈를 열지 않는다. `--at`은 그 시각까지로 계산(대시보드 Billable usage 대조용 — 대시보드는 전날 끝까지 반영), 이슈 없음.
+// 토큰 권한 = Account Analytics: Read(+ 이름: Workers KV Storage·Workers Scripts·Queues Read, 로그: Workers Observability). `usage.yml`이 매일 실행.
 import { execFileSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 import { accountId } from './lib/cf-api.ts';
 import {
   billingCycle,
@@ -66,13 +68,16 @@ function issueBody(over: readonly Row[], rows: readonly Row[], report: string): 
   return `청구 주기 누적이 포함량의 ${THRESHOLD * 100} %를 넘은 항목:\n${list.join('\n')}${sum}\n\n${report}\n\n${note}`;
 }
 
-const now = new Date();
+const { values } = parseArgs({ options: { 'github-issue': { type: 'boolean' }, at: { type: 'string' } } });
+const at = values.at ? new Date(values.at) : new Date();
+if (Number.isNaN(at.getTime()) || at.getTime() > Date.now())
+  throw new Error(`--at must be a past ISO time: ${values.at}`);
 const p = plan();
-const cycle = billingCycle(now, Number(process.env.CF_BILLING_DAY || 25));
-const data = await collect(await accountId(), now, cycle);
+const cycle = billingCycle(at, Number(process.env.CF_BILLING_DAY || 25));
+const data = await collect(await accountId(), at, cycle);
 const rows = evaluate(data.cycle, data.today, p, cycle);
-const report = [markdown(rows, spikes(data.cycle, data.today, p, cycle, now), p, cycle, now), ...data.notes].join('\n');
+const report = [markdown(rows, spikes(data.cycle, data.today, p, cycle, at), p, cycle, at), ...data.notes].join('\n');
 process.stdout.write(`${report}\n`);
 if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${report}\n`);
 const over = overThreshold(rows);
-if (over.length > 0 && process.argv.includes('--github-issue')) upsertIssue(issueBody(over, rows, report));
+if (over.length > 0 && values['github-issue'] && !values.at) upsertIssue(issueBody(over, rows, report));
