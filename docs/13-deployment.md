@@ -62,8 +62,8 @@
 | 경로 | 동작 |
 |---|---|
 | `GET /api/health` | `{"ok":true}`만(no-store) — 배포 스모크 테스트용. 바인딩 등 내부 구성은 노출하지 않는다(ADR-0102 — 저장소 미구성은 `/api/world/current` 503) |
-| `GET /api/world/current?fv=1` | KV `CURRENT_BUILD:v1` → `{ buildId, formatVersion, baseUrl }` (Cache-Control max-age=60) |
-| `GET /world/<buildId>/<path>` | 평범한 GET: ① `caches.default` 조회 → ② 미스 시 R2 → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답만 `ctx.waitUntil(cache.put)`. Range·조건부 헤더가 있으면 캐시를 건너뛰고 `env.WORLD.get(key, { range, onlyIf })`가 206/304/412. 없으면 404(`max-age=300`). 진단 `X-Sanpo-Cache: HIT/MISS/BYPASS`(ADR-0026) |
+| `GET /api/world/current?fv=1` | KV `CURRENT_BUILD:v1` → `{ buildId, formatVersion, baseUrl }` (Cache-Control max-age=30). 200·404는 엣지 캐시(Cache API, 키 = `fv`만 — 다른 쿼리 무시) 30 s → KV 읽기는 PoP당 30 s에 1번(F05, ADR-0103) |
+| `GET /world/<buildId>/<path>` | 평범한 GET: ① `caches.default` 조회 → ② 미스 시 R2 → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답과 **검증된 경로의 404(`max-age=300`, 네거티브 캐시)**를 `ctx.waitUntil(cache.put)` — 캐시 키 = 출처 + 경로. **쿼리 문자열이 있으면 400 `unexpected_query`**(게임은 쓰지 않음 — 캐시 우회 R2 읽기 차단, F05·ADR-0103). Range·조건부 헤더가 있으면 캐시를 건너뛰고 `env.WORLD.get(key, { range, onlyIf })`가 206/304/412. 진단 `X-Sanpo-Cache: HIT/MISS/BYPASS`(ADR-0026) |
 | `GET /api/weather` | `LIVE_WEATHER=true`일 때만(아니면 404). Open-Meteo 현재 날씨(도쿄역, m/s) → `{time, temperatureC, precipitationMm, weatherCode, cloudCover 0–1, windMs, windDirDeg, isDay}`, 10분 캐시, 상류 오류 502 |
 | `POST /api/log` | 오류 보고(M11-T03, ADR-0098): 게임이 세션 1 % 샘플링 → 본문 ≤ 4 KB 허용 필드만·이메일/URL/긴 숫자 지움 → Workers Analytics Engine `LOGS`(prod `sanpo_errors`·staging `sanpo_errors_staging`) 한 점, 204. UA·위치 미사용. 조회 `pnpm errors`. **남용 방어(F03, ADR-0103)**: `Content-Type: application/json` 아니면 415, Origin이 있으면 허용 목록(earthaimap.com·staging·프리뷰·localhost)만(아니면 403 — 보조 수단), IP 해시 키 분당 10회 초과 429(`LOG_LIMITER`, IP 원문 미저장), 샘플률 {0.01, 1}만, production은 `kind:"test"` 400 |
 - buildId 형식 검증 정규식 `^[0-9]{8}-[0-9a-f]{7}-[0-9a-f]{8}$`, 경로 `..` 차단.
@@ -135,11 +135,11 @@
 | 3. 코드 배포 | main 병합 → GitHub Actions `Deploy`(staging 자동 → Environment `production` 승인 = 사용자 클릭) | `/api/health` 스모크(워크플로) |
 | 4. 도메인 | `apps/worker/wrangler.jsonc` top-level `"routes": [{ "pattern": "earthaimap.com", "custom_domain": true }]` → 배포가 DNS·인증서 생성. 토큰 권한이 모자라면 대시보드: Workers & Pages → tokyo-sanpo → Settings → Domains & Routes → Add → Custom domain → `earthaimap.com` | `https://earthaimap.com/api/health` |
 | 4b. www → apex 301(ADR-0102, 대시보드) | ① DNS → Records → Add: `AAAA`, Name `www`, IPv6 `100::`, Proxied(주황) ② Rules → Redirect Rules → Create: 조건 `(http.host eq "www.earthaimap.com")`, URL redirect → Dynamic `concat("https://earthaimap.com", http.request.uri.path)`, 301, Preserve query string ✅. Worker 커스텀 도메인으로 붙이지 않는다(정적 에셋이 먼저 응답해 `/`가 리다이렉트되지 않음) | `curl -sSI "https://www.earthaimap.com/a?b=1"` → 301 `Location: https://earthaimap.com/a?b=1`. 2026-10-31 설정·확인 ✅(`http://www…` 도 301 한 번에 `https://earthaimap.com/…`) |
-| 5. 롤백 리허설 | `pnpm pipeline current --env prod --build-id <이전>` → `/api/world/current` 반영 확인 → `<새>`로 복귀 | 반영 시간(staging 실측 4–13 s, 브라우저 캐시 ≤ 60 s) |
+| 5. 롤백 리허설 | `pnpm pipeline current --env prod --build-id <이전>` → `/api/world/current` 반영 확인 → `<새>`로 복귀 | 반영 시간(staging 실측 4–13 s + 엣지 ≤ 30 s, 브라우저 캐시 ≤ 30 s) |
 | 6. 공개 URL 스모크 | `GOLDEN_BASE_URL=https://earthaimap.com GOLDEN_WORLD=api GOLDEN_BOOT=1 pnpm golden -g "boot transfer"` + 아래 체크리스트 | 첫 표시·전송 MB·오류 0 |
 
 **롤백(문제가 생겼을 때)**
-- 데이터(월드)만: `pnpm pipeline current --env prod --build-id <직전 buildId>` — 1분 안(KV 전파 수 초 + 브라우저 캐시 ≤ 60 s). 목록은 `pnpm pipeline current --env prod`.
+- 데이터(월드)만: `pnpm pipeline current --env prod --build-id <직전 buildId>` — 1분 안(KV 전파 수 초 + 엣지 캐시 ≤ 30 s + 브라우저 캐시 ≤ 30 s, ADR-0103). 목록은 `pnpm pipeline current --env prod`.
 - 코드(Worker): `cd apps/worker && npx wrangler deployments list` → `npx wrangler rollback <version-id>`(즉시), 또는 GitHub Actions에서 직전 커밋의 Deploy 다시 실행. 대시보드: Workers & Pages → tokyo-sanpo → Deployments → 이전 버전 Rollback.
 - 도메인을 잠시 내리기: 대시보드 Domains & Routes에서 `earthaimap.com` 제거(workers.dev 주소는 유지).
 

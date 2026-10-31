@@ -83,10 +83,10 @@
 - `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, withSecurityHeaders, json, storageUnconfigured
 - `apps/worker/src/index.ts` — Worker 엔트리(라우터): /api/*, /world/*는 Worker, 나머지는 Static Assets. see docs/13-deployment.md §4, docs/modules/worker.md | exports: handleRequest, default
 - `apps/worker/src/log-guard.ts` — `/api/log` 남용 방어(F03, ADR-0103): Content-Type·Origin 허용 목록·IP 요청 제한(해시 키). 본문은 읽지 않는다. see docs/13-deployment.md §4 | exports: isAllowedOrigin, isJsonContentType, clientKey, guardLogRequest
-- `apps/worker/src/routes/current.ts` — `GET /api/world/current?fv=<n>`: KV `CURRENT_BUILD:v<n>` → 활성 buildId·baseUrl. see docs/13-deployment.md §4, §8 | exports: handleWorldCurrent
+- `apps/worker/src/routes/current.ts` — `GET /api/world/current?fv=<n>`: KV `CURRENT_BUILD:v<n>` → 활성 buildId·baseUrl. 엣지 캐시 30 s(KV 읽기 절감, F05). see docs/13-deployment.md §4, §8 | exports: handleWorldCurrent
 - `apps/worker/src/routes/log.ts` — `POST /api/log`(M11-T03, 01 §9·13 §4): 게임 오류 보고 → Workers Analytics Engine(데이터셋 sanpo_errors). | exports: REPORT_SAMPLE_RATES, ErrorReport, scrub, parseReport, dataPoint, handleLog
 - `apps/worker/src/routes/weather.ts` — `/api/weather`: LIVE_WEATHER=true일 때만 Open-Meteo 현재 날씨(도쿄 중심) 프록시 → 10분 엣지 캐시. 꺼져 있으면 404(disabled). | exports: OPEN_METEO_URL, LiveWeather, toLiveWeather, handleWeather
-- `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답만 캐시. see docs/13-deployment.md §4 | exports: contentRange, handleWorldData
+- `apps/worker/src/routes/world.ts` — `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답 + 검증된 경로의 404(5분)만 캐시. 쿼리 문자열은 400(F05, ADR-0103). see docs/13-deployment.md §4 | exports: contentRange, handleWorldData
 - `apps/worker/src/validate.ts` — 요청 입력 검증: buildId 형식, /world 경로(경로 조작 차단), formatVersion 쿼리. see docs/13-deployment.md §4 | exports: BUILD_ID_RE, isValidBuildId, parseWorldPath, parseFormatVersion
 
 ## packages/audio

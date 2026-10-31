@@ -136,10 +136,22 @@ describe.skipIf(SKIP)('worker on local miniflare (wrangler dev --env local)', ()
     expect(Number(h.headers.get('content-length'))).toBe(CELL_BYTES.length);
   });
 
-  it('missing cell → 404 (short cache), bad path → 400', async () => {
-    const nf = await fetch(`${base}/world/${BUILD_ID}/L0/99/99.tkc`);
+  it('missing cell → 404 negative-cached at the edge (MISS then HIT), bad path · query → 400', async () => {
+    const url = `${base}/world/${BUILD_ID}/L0/99/99.tkc`;
+    const nf = await fetch(url);
     expect(nf.status).toBe(404);
     expect(nf.headers.get('cache-control')).toContain('max-age=300');
+    expect(nf.headers.get('x-sanpo-cache')).toBe('MISS');
+    await nf.arrayBuffer();
+    let hit = '';
+    for (let i = 0; i < 20 && hit !== 'HIT'; i++) {
+      const again = await fetch(url);
+      await again.arrayBuffer();
+      expect(again.status).toBe(404);
+      hit = again.headers.get('x-sanpo-cache') ?? '';
+    }
+    expect(hit).toBe('HIT');
     expect((await fetch(`${base}/world/not-a-build/x.tkc`)).status).toBe(400);
+    expect((await fetch(`${base}/world/${BUILD_ID}/${CELL}?v=1`)).status).toBe(400);
   });
 });

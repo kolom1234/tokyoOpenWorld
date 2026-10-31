@@ -1,4 +1,4 @@
-// `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답만 캐시. see docs/13-deployment.md §4
+// `/world/<buildId>/<path>` → 엣지 캐시 → R2(Range·조건부). 200 전체 응답 + 검증된 경로의 404(5분)만 캐시. 쿼리 문자열은 400(F05, ADR-0103). see docs/13-deployment.md §4
 import { edgeCache } from '../cache.ts';
 import type { Env, WorkerContext, WorldBucket, WorldObject, WorldObjectBody, WorldRange } from '../env.ts';
 import { json, storageUnconfigured } from '../headers.ts';
@@ -16,8 +16,15 @@ function withCacheStatus(res: Response, status: 'HIT' | 'MISS' | 'BYPASS'): Resp
   return out;
 }
 
-/** 없는 셀 요청 폭주 완화용 짧은 캐시. */
+/** 없는 객체 반복 요청이 R2를 다시 조회하지 않게 엣지에도 넣는 짧은 캐시(검증된 경로만 — 새 데이터는 새 buildId라 늦게 생기는 키는 없다). */
 const NOT_FOUND_CACHE_CONTROL = 'public, max-age=300';
+/** 엣지 캐시에 넣는 상태: 200 전체 응답·404(206 조각·304·412는 넣지 않는다). */
+const CACHEABLE_STATUSES = new Set([200, 404]);
+
+/** 캐시 키 = 출처 + 경로(쿼리·헤더 제외) — 같은 객체가 URL 변형으로 여러 키가 되지 않게. */
+function cacheKey(url: URL): Request {
+  return new Request(`${url.origin}${url.pathname}`);
+}
 
 function hasBody(obj: WorldObject | WorldObjectBody): obj is WorldObjectBody {
   return 'body' in obj && obj.body !== null && obj.body !== undefined;
@@ -66,19 +73,22 @@ async function headObject(bucket: WorldBucket, key: string): Promise<Response> {
 
 export async function handleWorldData(request: Request, env: Env, ctx?: WorkerContext): Promise<Response> {
   if (env.WORLD === undefined) return storageUnconfigured('WORLD');
-  const parsed = parseWorldPath(new URL(request.url).pathname);
+  const url = new URL(request.url);
+  // 게임은 /world/*에 쿼리를 쓰지 않는다 — 무의미한 쿼리로 캐시를 우회해 R2 읽기를 늘리는 요청 차단(F05).
+  if (url.search !== '') return json(400, { error: 'unexpected_query' });
+  const parsed = parseWorldPath(url.pathname);
   if (parsed === undefined) return json(400, { error: 'bad_world_path' });
   if (request.method === 'HEAD') return headObject(env.WORLD, parsed.key);
 
   // 엣지 캐시는 평범한 GET만(클라이언트 셀 fetch). Range·조건부 요청은 R2가 직접 해석(206/304/412) — 캐시 구현마다 다른 동작을 피한다.
   const plain = !PASSTHROUGH_HEADERS.some((h) => request.headers.has(h));
   const cache = plain ? edgeCache() : undefined;
-  const cached = await cache?.match(new Request(request.url));
+  const key = cacheKey(url);
+  const cached = await cache?.match(key);
   if (cached !== undefined) return withCacheStatus(cached, 'HIT');
   const res = await getObject(env.WORLD, parsed.key, request);
-  // 200 전체 응답만 캐시(206 조각·304·404는 넣지 않는다).
-  if (cache !== undefined && ctx !== undefined && res.status === 200) {
-    ctx.waitUntil(cache.put(new Request(request.url), res.clone()));
+  if (cache !== undefined && ctx !== undefined && CACHEABLE_STATUSES.has(res.status)) {
+    ctx.waitUntil(cache.put(key, res.clone()));
   }
   return withCacheStatus(res, cache === undefined ? 'BYPASS' : 'MISS');
 }

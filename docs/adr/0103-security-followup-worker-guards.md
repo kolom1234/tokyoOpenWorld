@@ -18,6 +18,12 @@
 4. `kind:"test"`는 **production(`DEPLOY_ENV=production`)에서 400** — 합성 보고가 운영 통계에 섞이지 않는다. staging은 수락(수락 시험용).
 5. 게임은 세션 안에서 같은 종류 + 숫자만 다른 메시지를 한 번만 보낸다(`dedupeKey` — 매 프레임 반복 오류), 세션당 3건 상한은 그대로.
 
+### F05 캐시 키·네거티브 캐시
+6. `/world/*`에 **쿼리 문자열이 있으면 400 `unexpected_query`**(게임 클라이언트는 `/world/*`에 쿼리를 쓰지 않음을 확인 — streaming fetcher·world-load·map·audio·rail·materials 모두 경로만). 캐시 키는 `출처 + 경로`(빈 `?`·헤더 변형도 같은 키).
+7. 검증된 경로(buildId·세그먼트 형식 통과)의 **404를 Cache API에 300 s**(응답 `max-age=300`과 같은 값 — docs/13의 "404 5분 캐시"가 이제 실제 동작). 새 데이터는 새 buildId라 "늦게 생기는 키"가 없다. 400(형식 위반)은 캐시·R2 모두 거치지 않는다.
+8. `/api/world/current`: 200·404를 엣지 30 s(키 = `fv`만), 브라우저 `max-age=60 → 30`. 롤백 반영 = KV 전파(실측 4–13 s) + 엣지 ≤ 30 s + 브라우저 ≤ 30 s — 기존 "1분 안" 유지. 500(`bad_current_build`)은 캐시하지 않는다.
+9. Range·조건부 요청은 그대로 R2 직행(BYPASS — ADR-0026, 지도·부분 읽기 호환). HEAD도 R2 head. 이 둘의 반복 요청 비용은 킬 스위치(ADR-0104)가 상한.
+
 ## Consequences
 - 다른 사이트의 브라우저는 `/api/log`에 쓸 수 없다(JSON은 프리플라이트 → 405, text/plain은 415). curl 등은 Origin을 빼면 통과하지만 IP당 분당 10회로 묶인다.
 - Rate Limiting 바인딩은 env 간 상속되지 않는다 → production·staging에 각각(namespace 1001·1002). 로컬·테스트는 바인딩 없음 = 제한 없음.

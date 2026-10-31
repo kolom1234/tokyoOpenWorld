@@ -20,7 +20,7 @@ async function route(request: Request, env: Env, ctx: WorkerContext | undefined)
     if (pathname === '/api/log') return handleLog(request, env);
     if (!READ_METHODS.has(request.method)) return json(405, { error: 'method_not_allowed' });
     if (pathname === '/api/health') return health();
-    if (pathname === '/api/world/current') return handleWorldCurrent(request, env);
+    if (pathname === '/api/world/current') return handleWorldCurrent(request, env, ctx);
     if (pathname === '/api/weather') return handleWeather(request, env, ctx);
     if (isWorld) return handleWorldData(request, env, ctx);
     return json(404, { error: 'not_found' });
