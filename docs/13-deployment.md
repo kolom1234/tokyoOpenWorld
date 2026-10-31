@@ -27,6 +27,7 @@
   "env": { "staging": { "name": "tokyo-sanpo-staging", "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-dev" }] } }
 }
 ```
+- **접근 경로(ADR-0103)**: production = 커스텀 도메인 `earthaimap.com`만 — top-level `workers_dev: false`·`preview_urls: false`(workers.dev·버전 프리뷰 주소는 존 WAF·킬 스위치를 우회). `env.staging`은 PR 프리뷰(`pr-<N>` 별칭) 때문에 둘 다 `true`(staging 데이터만 — dev 버킷·staging KV·`sanpo_errors_staging`). production 스모크는 `https://earthaimap.com`.
 - 로컬 개발: `env.local`(배포 금지)에만 R2/KV 바인딩 → `wrangler dev --env local`이 miniflare로 시뮬레이션. `pnpm dev` = Vite(5173, `/api`·`/world` → 8787 프록시) + wrangler dev(8787). 시드: `pnpm --filter @sanpo/worker seed:local` (ADR-0016).
 - 게임 빌드: `apps/game` Vite → `apps/game/dist`. 배포: `apps/worker`에서 `wrangler deploy`.
 - 정적 에셋 한도: 파일당 25 MiB, 버전당 파일 20,000(Free)/100,000(Paid). → **월드 데이터는 절대 정적 에셋에 넣지 않는다**(R2 전용). CI가 dist 내 25 MiB 초과 파일을 차단.
@@ -143,7 +144,7 @@
 **롤백(문제가 생겼을 때)**
 - 데이터(월드)만: `pnpm pipeline current --env prod --build-id <직전 buildId>` — 1분 안(KV 전파 수 초 + 엣지 캐시 ≤ 30 s + 브라우저 캐시 ≤ 30 s, ADR-0103). 목록은 `pnpm pipeline current --env prod`.
 - 코드(Worker): `cd apps/worker && npx wrangler deployments list` → `npx wrangler rollback <version-id>`(즉시), 또는 GitHub Actions에서 직전 커밋의 Deploy 다시 실행. 대시보드: Workers & Pages → tokyo-sanpo → Deployments → 이전 버전 Rollback.
-- 도메인을 잠시 내리기: 대시보드 Domains & Routes에서 `earthaimap.com` 제거(workers.dev 주소는 유지).
+- 도메인을 잠시 내리기: 대시보드 Domains & Routes에서 `earthaimap.com` 제거 — production workers.dev·프리뷰 주소는 꺼져 있어(ADR-0103) 그동안 접근 경로가 없다(점검 화면이 필요하면 킬 스위치 ADR-0104).
 
 **공개 직후 사람 확인 체크리스트(공개 URL)**
 1. 첫 화면: 타이틀이 뜨고 "새 산책"·"이어하기"·"설정"·"크레딧"이 눌린다(한국어/일본어/영어 전환).

@@ -79,7 +79,7 @@ jobs:
     # 승인 게이트: Settings → Environments → production → Required reviewers.
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.url }}
+      url: https://earthaimap.com
     concurrency:
       group: deploy-production
       cancel-in-progress: false
@@ -115,11 +115,7 @@ jobs:
           WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-production.ndjson
         run: |
           pnpm exec wrangler deploy --env="" --message "main@${GITHUB_SHA::7}"
-          url=$(jq -r 'select(.type == "deploy") | .targets[]? | select(endswith("workers.dev"))' "$WRANGLER_OUTPUT_FILE_PATH" | head -n 1)
-          echo "url=$url" >> "$GITHUB_OUTPUT"
-          echo "Production deployed: ${url:-(no workers.dev URL)}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Production deployed: https://earthaimap.com (workers.dev off — ADR-0103)" >> "$GITHUB_STEP_SUMMARY"
+      # production은 workers.dev가 꺼져 있다(ADR-0103) → 공개 도메인으로 스모크(존 WAF·킬 스위치를 거치는 실제 경로).
       - name: Smoke test production
-        if: steps.deploy.outputs.url != ''
-        env:
-          URL: ${{ steps.deploy.outputs.url }}
-        run: .github/scripts/smoke.sh "$URL"
+        run: .github/scripts/smoke.sh https://earthaimap.com

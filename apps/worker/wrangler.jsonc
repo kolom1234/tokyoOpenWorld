@@ -9,8 +9,10 @@
   "name": "tokyo-sanpo",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-01",
-  "workers_dev": true,
-  "preview_urls": true,
+  // production은 커스텀 도메인 earthaimap.com만(ADR-0103): workers.dev·버전 프리뷰 주소는 존 WAF·킬 스위치(ADR-0104)를 우회하므로 끈다.
+  // staging은 PR 프리뷰(`pr-<N>` 별칭) 때문에 env.staging에서 다시 켠다(이 두 키는 env로 상속되므로 명시).
+  "workers_dev": false,
+  "preview_urls": false,
   "assets": {
     "directory": "../game/dist",
     "binding": "ASSETS",
@@ -28,6 +30,8 @@
   "env": {
     "staging": {
       "name": "tokyo-sanpo-staging",
+      "workers_dev": true,
+      "preview_urls": true,
       "analytics_engine_datasets": [{ "binding": "LOGS", "dataset": "sanpo_errors_staging" }],
       "vars": { "LIVE_WEATHER": "true", "WORLD_BASE_URL": "/world", "DEPLOY_ENV": "staging" },
       "ratelimits": [{ "name": "LOG_LIMITER", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }],
