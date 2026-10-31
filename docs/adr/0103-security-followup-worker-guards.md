@@ -18,6 +18,10 @@
 4. `kind:"test"`는 **production(`DEPLOY_ENV=production`)에서 400** — 합성 보고가 운영 통계에 섞이지 않는다. staging은 수락(수락 시험용).
 5. 게임은 세션 안에서 같은 종류 + 숫자만 다른 메시지를 한 번만 보낸다(`dedupeKey` — 매 프레임 반복 오류), 세션당 3건 상한은 그대로.
 
+### F04 `/api/log` 본문 상한
+10. `readLimitedText`: `request.body.getReader()`로 **실제 수신 바이트**를 누적, 4,096 B를 넘는 순간 `reader.cancel()` 후 413 — 나머지 스트림은 읽지 않는다(이전: `request.text()` 전체 버퍼링 뒤 **문자 수**로 판정 → 한글 2,528자 7,528 B 수락·Content-Length 없는 49 KB 끝까지 읽음).
+    Content-Length는 빠른 거절용 보조(없거나 작게 속여도 누적이 정본). 상한 안에서만 `TextDecoder('utf-8', { fatal: true })` — 손상 UTF-8은 400 `bad_encoding`, 그 뒤 JSON 파싱.
+
 ### F05 캐시 키·네거티브 캐시
 6. `/world/*`에 **쿼리 문자열이 있으면 400 `unexpected_query`**(게임 클라이언트는 `/world/*`에 쿼리를 쓰지 않음을 확인 — streaming fetcher·world-load·map·audio·rail·materials 모두 경로만). 캐시 키는 `출처 + 경로`(빈 `?`·헤더 변형도 같은 키).
 7. 검증된 경로(buildId·세그먼트 형식 통과)의 **404를 Cache API에 300 s**(응답 `max-age=300`과 같은 값 — docs/13의 "404 5분 캐시"가 이제 실제 동작). 새 데이터는 새 buildId라 "늦게 생기는 키"가 없다. 400(형식 위반)은 캐시·R2 모두 거치지 않는다.

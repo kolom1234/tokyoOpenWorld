@@ -4,9 +4,10 @@
 // 바인딩이 없으면(로컬·테스트) 기록 없이 204.
 import type { Env } from '../env.ts';
 import { json } from '../headers.ts';
-import { guardLogRequest } from '../log-guard.ts';
+import { guardLogRequest, readLimitedText } from '../log-guard.ts';
 
-const MAX_BODY = 4096;
+/** 본문 상한(UTF-8 바이트 — 문자 수 아님). 게임 보고는 1 KB 안팎. */
+const MAX_BODY_BYTES = 4096;
 const KINDS = new Set(['error', 'rejection', 'boot', 'worker', 'test']);
 /** 게임이 보내는 샘플률(error-report.ts DEFAULT_REPORT_RATE = 0.01, staging `?report=force` = 1)만 받는다 — 극소값으로 1/rate 가중 집계가 부풀지 않게. */
 export const REPORT_SAMPLE_RATES: readonly number[] = [0.01, 1];
@@ -86,13 +87,11 @@ export async function handleLog(request: Request, env: Env): Promise<Response> {
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
   const rejected = await guardLogRequest(request, env);
   if (rejected !== undefined) return rejected;
-  const len = Number(request.headers.get('Content-Length') ?? '0');
-  if (len > MAX_BODY) return json(413, { error: 'too_large' });
-  const text = await request.text();
-  if (text.length > MAX_BODY) return json(413, { error: 'too_large' });
+  const body = await readLimitedText(request, MAX_BODY_BYTES);
+  if (!body.ok) return body.response;
   let raw: unknown;
   try {
-    raw = JSON.parse(text);
+    raw = JSON.parse(body.text);
   } catch {
     return json(400, { error: 'bad_json' });
   }

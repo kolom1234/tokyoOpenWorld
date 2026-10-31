@@ -1,4 +1,4 @@
-// `/api/log` 남용 방어(F03, ADR-0103): Content-Type·Origin 허용 목록·IP 요청 제한(해시 키). 본문은 읽지 않는다. see docs/13-deployment.md §4
+// `/api/log` 남용 방어(ADR-0103): Content-Type·Origin 허용 목록·IP 요청 제한(해시 키)(F03) + 실제 수신 바이트 본문 상한(F04). see docs/13-deployment.md §4
 import type { Env } from './env.ts';
 import { json } from './headers.ts';
 
@@ -43,4 +43,47 @@ export async function guardLogRequest(request: Request, env: Env): Promise<Respo
     if (!success) return json(429, { error: 'rate_limited' });
   }
   return undefined;
+}
+
+export type BodyResult = { ok: true; text: string } | { ok: false; response: Response };
+
+const tooLarge = (): BodyResult => ({ ok: false, response: json(413, { error: 'too_large' }) });
+
+function concat(chunks: readonly Uint8Array[], total: number): Uint8Array {
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.byteLength;
+  }
+  return out;
+}
+
+/**
+ * 본문을 **실제 수신 바이트**로 누적해 `maxBytes`를 넘는 순간 `reader.cancel()` → 413(나머지는 읽지 않는다, F04).
+ * Content-Length는 빠른 거절용 보조(없거나 거짓이어도 스트림 누적이 정본). 상한 안에서만 UTF-8 엄격 디코딩 — 손상이면 400.
+ */
+export async function readLimitedText(request: Request, maxBytes: number): Promise<BodyResult> {
+  const declared = Number(request.headers.get('Content-Length'));
+  if (Number.isFinite(declared) && declared > maxBytes) return tooLarge();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  if (request.body !== null) {
+    const reader = request.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel('body too large');
+        return tooLarge();
+      }
+      chunks.push(value);
+    }
+  }
+  try {
+    return { ok: true, text: new TextDecoder('utf-8', { fatal: true }).decode(concat(chunks, total)) };
+  } catch {
+    return { ok: false, response: json(400, { error: 'bad_encoding' }) };
+  }
 }
