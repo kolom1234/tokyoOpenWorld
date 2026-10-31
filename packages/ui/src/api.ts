@@ -21,7 +21,8 @@ export interface Msg {
 
 export type ScreenId = 'boot' | 'title' | 'hud' | 'pause' | 'settings' | 'credits' | 'map' | 'log' | 'photo';
 
-export type LoadingStage = 'caps' | 'manifest' | 'shaders' | 'spawn' | 'ready' | 'error';
+/** `maintenance` = 서버가 비용 차단 장치로 월드·API를 막는 중(점검 화면 — 오류 상세 없음, ADR-0104). */
+export type LoadingStage = 'caps' | 'manifest' | 'shaders' | 'spawn' | 'ready' | 'error' | 'maintenance';
 
 export interface LoadingModel {
   stage: LoadingStage;

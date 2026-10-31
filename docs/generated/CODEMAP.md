@@ -74,7 +74,7 @@
 - `apps/game/src/world-load.ts` — 부트 4단계(데이터 로드): world.json(원점·포맷 검증) → cells.idx → 스폰 주변 L0 셀 목록. 셀 fetch·디코드는 streaming(M02-T05, ADR-0022·0023). | exports: WORLD_MINI_BASE_URL, WORLD_LOCAL_BASE_URL, WorldSource, LoadedWorld, checkManifest, cellsAroundSpawn, loadWorld
 - `apps/game/src/world-parts.ts` — world-view.ts 보조(400줄 제한으로 분리): 상시 배선 시스템·부팅 단계, sim 생성(시계·신호·기후·공휴일·계절·날씨 모드), 늦은 상태 초기값, 선컴파일 시작, 프레임 소스, 스폰 셀 미리 컴파일(ADR-0085). | exports: SimForDeps, simFor, initialLate, startPrecompile, frameSourceOf, warmStaged, bootStageOf, wiringSystemsFor
 - `apps/game/src/world-rail.ts` — 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 → | exports: RailData, loadRail, startTrainsLater, sendRailStatics, trainPhysicsSystem
-- `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회. see docs/13-deployment.md §4, §8 | exports: WorldStatus, fetchWorldStatus
+- `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회(킬 스위치 차단 = 점검 상태). see docs/13-deployment.md §4, §8 | exports: WorldStatus, isEdgeBlock, fetchWorldStatus
 - `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
 
 ## apps/worker
@@ -416,7 +416,7 @@
 - `packages/ui/src/internal/sandbox/mock-bridge.ts` — 목 UiBridge(`?ui-sandbox=1` 스토리 페이지·단위 테스트): 가짜 로딩 진행, HUD 모드 순환, 고정 크레딧. 게임 없이 화면을 본다. | exports: MOCK_HUD, MockBridge, createMockBridge
 - `packages/ui/src/internal/save/limits.ts` — 세이브 가져오기 자원 상한(ADR-0103, 보안 점검 후속): 파일 크기는 읽기 전에(`f.text()` 전), 배열 길이·썸네일 합계는 JSON 파싱 직후 마이그레이션 전에. | exports: SAVE_LIMITS, SaveImportError, withinSaveLimits
 - `packages/ui/src/internal/save/migrations.ts` — 세이브 스키마·마이그레이션(M10-T06, 12 §4): 버전 필드 + 단계별 함수 표. v1 = 12 §4 초안 모양(발견 id 배열·사진 메타), v2 = 지금(발견 기록·빠른 이동·사진 명소 연결). | exports: SAVE_VERSION, migrateSave, readSaveExport, parseSaveExport
-- `packages/ui/src/internal/screens/boot.tsx` — 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류. | exports: BootScreen
+- `packages/ui/src/internal/screens/boot.tsx` — 부팅·로딩 화면: 로고, 단계(기능 → 월드 → 셰이더 → 출발 지역), 진행 막대, 팁(8 s마다), WebGPU·격리 상태, 오류, 점검(킬 스위치 — ADR-0104). | exports: BootScreen
 - `packages/ui/src/internal/screens/credits.tsx` — 크레딧: 데이터·에셋 출처(bridge.credits — 빌드 credits.json/ATTRIBUTION) + ODbL 안내 + 가상 디자인 고지 + OSS 라이선스 목록. | exports: CreditsScreen
 - `packages/ui/src/internal/screens/help.ts` — 조작 도움말(H — 왼쪽 아래): 모드별 [키, 동작] 줄. 재바인딩한 키는 설정에서, 패드가 있으면 패드 글자. 순수 함수(테스트). | exports: HelpItem, helpItems
 - `packages/ui/src/internal/screens/hud-info.tsx` — HUD 정보(M10-T02, 12 §2): 왼쪽 위 지명, 오른쪽 위 시각(JST)·날씨·기온, 탈것 계기(속도·기어·RPM·등화·안내), 열차 다음 역. | exports: jstClock, speedText, useIdle, HudInfo

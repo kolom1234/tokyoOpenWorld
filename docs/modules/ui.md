@@ -19,7 +19,7 @@ SettingsModel { v 1; lang; quality auto|tier; fovDeg 50–100; headBob; reduceMo
 ColorVision = 'off'|'protan'|'deutan'|'tritan', COLOR_VISIONS  // M11-T04: 그래픽 탭 색각 보정(render setColorVision), 소리 탭 효과음 자막. reduceMotion = UI 전환·깜빡임도 끔(`.reduce-motion`), 기본값 = OS prefers-reduced-motion(게임 loadSettings)
 RebindAction = interact|toggleView|freeCam|sprint|pace|summon|summonBike|land|lights|skip|map|photo;  LANGS, REBIND_ACTIONS
 SaveData{v 2; savedAt; posWF; yawRad; mode; gameTimeMs; discoveries; unlocked; photos; stats}, SaveExport, migrateSave(raw) → SaveData|null, parseSaveExport(text) → SaveExport|null, SAVE_VERSION 2  // M10-T06 ADR-0096
-SaveImportProblem = 'invalid'|'too_large'|'too_many', readSaveExport(text) → Result<SaveExport, SaveImportProblem>, SAVE_LIMITS{fileBytes 24 MiB, photos 200, discoveries·unlocked 2000, photoIdsPerDiscovery 200, thumbChars 1e6, thumbTotalChars 2e7}, SaveImportError(problem)  // ADR-0103 — 파일 크기는 읽기 전, 개수·썸네일 합계는 마이그레이션 전, 설정 화면이 사유별 안내
+LoadingStage에 'maintenance'(킬 스위치 점검 화면 — 진행 막대·오류 상세 없음, ADR-0104), SaveImportProblem = 'invalid'|'too_large'|'too_many', readSaveExport(text) → Result<SaveExport, SaveImportProblem>, SAVE_LIMITS{fileBytes 24 MiB, photos 200, discoveries·unlocked 2000, photoIdsPerDiscovery 200, thumbChars 1e6, thumbTotalChars 2e7}, SaveImportError(problem)  // ADR-0103 — 파일 크기는 읽기 전, 개수·썸네일 합계는 마이그레이션 전, 설정 화면이 사유별 안내
 DEFAULT_SETTINGS, normalizeSettings(raw, fallbackLang), langFromNavigator(langs), DEFAULT_KEYS, keyLabel(code), createMockBridge(opts) (샌드박스·테스트)
 재수출: signal, computed, effect, batch, Signal, ReadonlySignal(@preact/signals — 게임이 같은 인스턴스로 브리지를 만든다)
 ```
