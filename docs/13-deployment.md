@@ -39,7 +39,8 @@
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
   Cross-Origin-Resource-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'
+  X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=()
@@ -56,6 +57,7 @@
   같은 출처 정적 부트스트랩 `/basis/ktx2-worker.js`에만 별도 CSP(`!`로 전역 CSP 분리 — 두 정책이 겹치면 교집합이 된다). 페이지 CSP는 그대로.
 - 외부 도메인 리소스 금지(폰트 포함 자체 호스팅). §5 확장 시 `connect-src`에 world 도메인 추가 + R2 CORS 설정.
 - **문서 정책 헤더(ADR-0102)**: Referrer-Policy·Permissions-Policy는 `_headers`에만 — HTML은 Worker를 거치지 않는다. Permissions-Policy는 쓰지 않는 기능만 끈다(gamepad·fullscreen·autoplay 유지, Chromium이 모르는 이름은 콘솔 오류라 금지).
+- **프레이밍 금지(F06, ADR-0103)**: 문서 CSP `frame-ancestors 'none'` + `X-Frame-Options: DENY`(옛 브라우저), `base-uri 'none'`·`form-action 'self'`. Worker가 만든 응답(`/api/*`·`/world/*`·오류 응답 포함)에는 `headers.ts WORKER_RESPONSE_HEADERS` — CSP `default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'` + XFO DENY + `_headers`와 같은 Referrer·Permissions-Policy(테스트가 값 대조). 정적 에셋 위임 응답에는 격리 헤더만(문서 CSP를 덮어쓰지 않음). `'unsafe-eval'` 범위 = `/basis/ktx2-worker.js` 한 파일(테스트가 다른 경로를 막음).
 - **HSTS = Cloudflare 존 설정**(SSL/TLS → Edge Certificates, 2026-10-31 실측 `max-age=2592000`). `_headers`·Worker에 넣지 않는다(중복 — `apps/game/test/headers.test.ts`).
 
 ## 4. Worker 라우트 (`apps/worker/src/routes/`)

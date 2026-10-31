@@ -1,4 +1,4 @@
-// 정적 에셋 헤더(public/_headers, docs/13 §3): 문서 응답 정책 헤더와 HSTS 중복 방지(ADR-0102).
+// 정적 에셋 헤더(public/_headers, docs/13 §3): 문서 응답 정책 헤더와 HSTS 중복 방지(ADR-0102), 프레이밍 금지(F06, ADR-0103).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -30,6 +30,25 @@ describe('public/_headers', () => {
     for (const off of ['camera', 'microphone', 'geolocation', 'payment']) expect(policy).toContain(`${off}=()`);
     // 게임이 쓰는 기능(게임패드·전체 화면·오디오 자동 재생)은 끄지 않는다.
     for (const used of ['gamepad', 'fullscreen', 'autoplay']) expect(policy).not.toContain(used);
+  });
+
+  it('forbids framing and locks base/form targets on documents (F06)', () => {
+    const all = blocks.get('/*');
+    const csp = all?.get('content-security-policy') ?? '';
+    for (const d of [
+      "frame-ancestors 'none'",
+      "base-uri 'none'",
+      "form-action 'self'",
+      "script-src 'self' 'wasm-unsafe-eval'",
+    ])
+      expect(csp).toContain(d);
+    expect(csp).not.toContain("'unsafe-eval'");
+    expect(all?.get('x-frame-options')).toBe('DENY');
+    // KTX2 트랜스코더 워커만 별도 CSP('unsafe-eval', ADR-0032) — 범위는 그 파일 하나.
+    const ktx2 = blocks.get('/basis/ktx2-worker.js')?.get('content-security-policy') ?? '';
+    expect(ktx2).toContain("'unsafe-eval'");
+    const withEval = [...blocks].filter(([, h]) => /'unsafe-eval'/.test(h.get('content-security-policy') ?? ''));
+    expect(withEval.map(([p]) => p)).toEqual(['/basis/ktx2-worker.js']);
   });
 
   it('leaves HSTS to the Cloudflare zone setting (no duplicate header)', () => {

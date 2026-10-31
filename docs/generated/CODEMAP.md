@@ -80,7 +80,7 @@
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
 - `apps/worker/src/env.ts` — Worker 바인딩 타입(Env). R2·KV는 선택 — 리소스 생성 전 배포를 허용하기 위해 optional. see docs/modules/worker.md | exports: AssetsBinding, WorldRange, WorldObject, WorldObjectBody, WorldBucket, ConfigKv, WorkerContext, LogDataset, RateLimiter, Env
-- `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, withSecurityHeaders, json, storageUnconfigured
+- `apps/worker/src/headers.ts` — Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3 | exports: SECURITY_HEADERS, WORKER_RESPONSE_HEADERS, withSecurityHeaders, json, storageUnconfigured
 - `apps/worker/src/index.ts` — Worker 엔트리(라우터): /api/*, /world/*는 Worker, 나머지는 Static Assets. see docs/13-deployment.md §4, docs/modules/worker.md | exports: handleRequest, default
 - `apps/worker/src/log-guard.ts` — `/api/log` 남용 방어(ADR-0103): Content-Type·Origin 허용 목록·IP 요청 제한(해시 키)(F03) + 실제 수신 바이트 본문 상한(F04). see docs/13-deployment.md §4 | exports: isAllowedOrigin, isJsonContentType, clientKey, guardLogRequest, BodyResult, readLimitedText
 - `apps/worker/src/range.ts` — `/world/*` Range·조건부 헤더 해석(F07, ADR-0103): RFC 9110 §14 단일 바이트 범위만, 문법 오류는 무시(200 전체), 만족 불가는 416. see docs/13-deployment.md §4 | exports: ParsedRange, parseRange, isSatisfiable, clampRange, conditionalHeaders

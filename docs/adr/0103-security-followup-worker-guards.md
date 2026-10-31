@@ -33,6 +33,10 @@
     조건부 헤더는 4개만 골라 `onlyIf`로, 날짜가 틀린 If-(Un)Modified-Since는 무시(RFC 9110 §13.1.3–4).
 12. `handleRequest` 최상위 try/catch: 처리 안 된 예외 → `500 {"error":"internal_error"}`(no-store) + 보안 헤더. 응답에 메시지·스택 없음, Workers Logs에는 예외 종류만(`console.error` — Worker에는 Logger 없음).
 
+### F06 프레이밍·남은 헤더
+13. 문서(`_headers /*`): CSP에 `frame-ancestors 'none'; base-uri 'none'; form-action 'self'` + `X-Frame-Options: DENY`. 임베딩 요구 없음(공유는 링크). `/basis/ktx2-worker.js`의 별도 CSP(`!`로 전역 분리, `'unsafe-eval'`)는 유지 — 워커 스크립트라 frame-ancestors는 의미 없고, `'unsafe-eval'`이 그 파일 밖으로 퍼지지 않게 테스트로 고정.
+14. Worker가 만든 응답 전부(오류 포함): 격리 4종 + CSP `default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'` + XFO DENY + Referrer·Permissions-Policy(`_headers`와 같은 값). 정적 에셋 위임(`env.ASSETS.fetch`) 응답에는 붙이지 않는다(문서 CSP 보존). HSTS는 계속 존 설정만(ADR-0102 — Worker·`_headers`에 없음을 테스트).
+
 ## Consequences
 - 다른 사이트의 브라우저는 `/api/log`에 쓸 수 없다(JSON은 프리플라이트 → 405, text/plain은 415). curl 등은 Origin을 빼면 통과하지만 IP당 분당 10회로 묶인다.
 - Rate Limiting 바인딩은 env 간 상속되지 않는다 → production·staging에 각각(namespace 1001·1002). 로컬·테스트는 바인딩 없음 = 제한 없음.
