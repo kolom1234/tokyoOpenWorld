@@ -1,5 +1,5 @@
 # ADR-0015: R2·KV 바인딩은 선택 — 없으면 월드 라우트 503으로 비활성
-- Status: Accepted
+- Status: Accepted (health 바인딩 보고는 ADR-0102로 대체 — 2026-10-31부터 `{"ok":true}`만)
 - Date: 2026-09-27
 
 ## Context

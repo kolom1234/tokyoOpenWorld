@@ -20,11 +20,13 @@ describe('@sanpo/worker router', () => {
     expect(await res.json()).toMatchObject({ error: 'world_storage_unconfigured' });
   });
 
-  it('reports binding presence on /api/health without values', async () => {
-    const env: Env = { CONFIG: { get: async () => null } };
-    const res = await get('/api/health', env);
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, bindings: { world: false, config: true } });
+  it('answers /api/health with liveness only, never binding details', async () => {
+    for (const env of [{}, { CONFIG: { get: async () => null } }] satisfies Env[]) {
+      const res = await get('/api/health', env);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('Cache-Control')).toBe('no-store');
+      expect(await res.text()).toBe('{"ok":true}');
+    }
   });
 
   it('rejects writes and unknown api paths', async () => {

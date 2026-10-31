@@ -41,6 +41,8 @@
   Cross-Origin-Resource-Policy: same-origin
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'
   X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=()
 /basis/ktx2-worker.js
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self'
@@ -53,11 +55,13 @@
 - **KTX2 트랜스코더 워커만 `'unsafe-eval'`(ADR-0032)**: basis_transcoder(embind)가 `new Function`을 쓴다. blob 워커는 페이지 CSP를 물려받으므로
   같은 출처 정적 부트스트랩 `/basis/ktx2-worker.js`에만 별도 CSP(`!`로 전역 CSP 분리 — 두 정책이 겹치면 교집합이 된다). 페이지 CSP는 그대로.
 - 외부 도메인 리소스 금지(폰트 포함 자체 호스팅). §5 확장 시 `connect-src`에 world 도메인 추가 + R2 CORS 설정.
+- **문서 정책 헤더(ADR-0102)**: Referrer-Policy·Permissions-Policy는 `_headers`에만 — HTML은 Worker를 거치지 않는다. Permissions-Policy는 쓰지 않는 기능만 끈다(gamepad·fullscreen·autoplay 유지, Chromium이 모르는 이름은 콘솔 오류라 금지).
+- **HSTS = Cloudflare 존 설정**(SSL/TLS → Edge Certificates, 2026-10-31 실측 `max-age=2592000`). `_headers`·Worker에 넣지 않는다(중복 — `apps/game/test/headers.test.ts`).
 
 ## 4. Worker 라우트 (`apps/worker/src/routes/`)
 | 경로 | 동작 |
 |---|---|
-| `GET /api/health` | `{ ok, bindings: { world, config } }`(boolean만, no-store) — 배포 스모크 테스트용 |
+| `GET /api/health` | `{"ok":true}`만(no-store) — 배포 스모크 테스트용. 바인딩 등 내부 구성은 노출하지 않는다(ADR-0102 — 저장소 미구성은 `/api/world/current` 503) |
 | `GET /api/world/current?fv=1` | KV `CURRENT_BUILD:v1` → `{ buildId, formatVersion, baseUrl }` (Cache-Control max-age=60) |
 | `GET /world/<buildId>/<path>` | 평범한 GET: ① `caches.default` 조회 → ② 미스 시 R2 → Content-Type/ETag/`Cache-Control: public, max-age=31536000, immutable`/CORP → ③ 200 전체 응답만 `ctx.waitUntil(cache.put)`. Range·조건부 헤더가 있으면 캐시를 건너뛰고 `env.WORLD.get(key, { range, onlyIf })`가 206/304/412. 없으면 404(`max-age=300`). 진단 `X-Sanpo-Cache: HIT/MISS/BYPASS`(ADR-0026) |
 | `GET /api/weather` | `LIVE_WEATHER=true`일 때만(아니면 404). Open-Meteo 현재 날씨(도쿄역, m/s) → `{time, temperatureC, precipitationMm, weatherCode, cloudCover 0–1, windMs, windDirDeg, isDay}`, 10분 캐시, 상류 오류 502 |
@@ -112,6 +116,7 @@
 | 2. KV 포인터 | `pnpm pipeline current --env prod --build-id <새>` | `pnpm pipeline current --env prod`(보기) |
 | 3. 코드 배포 | main 병합 → GitHub Actions `Deploy`(staging 자동 → Environment `production` 승인 = 사용자 클릭) | `/api/health` 스모크(워크플로) |
 | 4. 도메인 | `apps/worker/wrangler.jsonc` top-level `"routes": [{ "pattern": "earthaimap.com", "custom_domain": true }]` → 배포가 DNS·인증서 생성. 토큰 권한이 모자라면 대시보드: Workers & Pages → tokyo-sanpo → Settings → Domains & Routes → Add → Custom domain → `earthaimap.com` | `https://earthaimap.com/api/health` |
+| 4b. www → apex 301(ADR-0102, 대시보드) | ① DNS → Records → Add: `AAAA`, Name `www`, IPv6 `100::`, Proxied(주황) ② Rules → Redirect Rules → Create: 조건 `(http.host eq "www.earthaimap.com")`, URL redirect → Dynamic `concat("https://earthaimap.com", http.request.uri.path)`, 301, Preserve query string ✅. Worker 커스텀 도메인으로 붙이지 않는다(정적 에셋이 먼저 응답해 `/`가 리다이렉트되지 않음) | `curl -sSI "https://www.earthaimap.com/a?b=1"` → 301 `Location: https://earthaimap.com/a?b=1` |
 | 5. 롤백 리허설 | `pnpm pipeline current --env prod --build-id <이전>` → `/api/world/current` 반영 확인 → `<새>`로 복귀 | 반영 시간(staging 실측 4–13 s, 브라우저 캐시 ≤ 60 s) |
 | 6. 공개 URL 스모크 | `GOLDEN_BASE_URL=https://earthaimap.com GOLDEN_WORLD=api GOLDEN_BOOT=1 pnpm golden -g "boot transfer"` + 아래 체크리스트 | 첫 표시·전송 MB·오류 0 |
 

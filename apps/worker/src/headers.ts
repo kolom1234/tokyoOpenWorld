@@ -1,5 +1,8 @@
 // Worker 응답 공통 헤더(격리·보안)의 단일 출처 + JSON 응답 헬퍼. see docs/13-deployment.md §3
-/** 모든 Worker 응답에 붙는 헤더. COOP/COEP → crossOriginIsolated(SharedArrayBuffer). */
+/**
+ * 모든 Worker 응답에 붙는 헤더. COOP/COEP → crossOriginIsolated(SharedArrayBuffer).
+ * 문서용 정책(CSP·Referrer-Policy·Permissions-Policy)은 HTML이 Worker를 거치지 않으므로 game `public/_headers`, HSTS는 Cloudflare 존 설정(ADR-0102).
+ */
 export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Embedder-Policy': 'require-corp',

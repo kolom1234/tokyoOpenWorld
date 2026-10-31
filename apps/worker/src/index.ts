@@ -8,9 +8,9 @@ import { handleWorldData } from './routes/world.ts';
 
 const READ_METHODS = new Set(['GET', 'HEAD']);
 
-/** 배포 스모크 테스트용 상태. 바인딩 유무(boolean)만 노출하고 값·ID는 노출하지 않는다. */
-function health(env: Env): Response {
-  return json(200, { ok: true, bindings: { world: env.WORLD !== undefined, config: env.CONFIG !== undefined } });
+/** 배포 스모크 테스트용 생존 확인. 바인딩 등 내부 구성은 외부에 노출하지 않는다(ADR-0102) — 저장소 미구성은 `/api/world/current` 503으로 드러난다. */
+function health(): Response {
+  return json(200, { ok: true });
 }
 
 async function route(request: Request, env: Env, ctx: WorkerContext | undefined): Promise<Response> {
@@ -19,7 +19,7 @@ async function route(request: Request, env: Env, ctx: WorkerContext | undefined)
   if (pathname.startsWith('/api/') || isWorld) {
     if (pathname === '/api/log') return handleLog(request, env);
     if (!READ_METHODS.has(request.method)) return json(405, { error: 'method_not_allowed' });
-    if (pathname === '/api/health') return health(env);
+    if (pathname === '/api/health') return health();
     if (pathname === '/api/world/current') return handleWorldCurrent(request, env);
     if (pathname === '/api/weather') return handleWeather(request, env, ctx);
     if (isWorld) return handleWorldData(request, env, ctx);

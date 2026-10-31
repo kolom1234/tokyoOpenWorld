@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 배포 스모크 테스트: /api/health 200 + ok:true + COOP 헤더(Worker 응답), / 200 + COOP/COEP(정적 에셋, public/_headers),
-# 현재 빌드가 있으면 world.json·cells.idx 200.
+# 배포 스모크 테스트: /api/health 200 + 본문 {"ok":true}만(내부 상세 비노출, ADR-0102) + COOP 헤더(Worker 응답),
+# / 200 + COOP/COEP·Referrer-Policy·Permissions-Policy(정적 에셋, public/_headers), 현재 빌드가 있으면 world.json·cells.idx 200.
 # 전파 지연을 고려해 재시도.
 # 사용: .github/scripts/smoke.sh https://tokyo-sanpo-staging.<subdomain>.workers.dev
 set -euo pipefail
@@ -13,11 +13,13 @@ check() {
   local api_headers page_headers
   api_headers=$(mktemp)
   page_headers=$(mktemp)
-  curl -fsS --max-time 10 -D "$api_headers" "$base/api/health" | grep -q '"ok":true' &&
+  [ "$(curl -fsS --max-time 10 -D "$api_headers" "$base/api/health")" = '{"ok":true}' ] &&
     has_header "$api_headers" 'cross-origin-opener-policy: same-origin' &&
     curl -fsS --max-time 10 -D "$page_headers" -o /dev/null "$base/" &&
     has_header "$page_headers" 'cross-origin-opener-policy: same-origin' &&
-    has_header "$page_headers" 'cross-origin-embedder-policy: require-corp'
+    has_header "$page_headers" 'cross-origin-embedder-policy: require-corp' &&
+    has_header "$page_headers" 'referrer-policy: strict-origin-when-cross-origin' &&
+    has_header "$page_headers" 'permissions-policy: .*camera=().*'
 }
 
 # 월드 데이터(M02-T06·T07): 바인딩이 있고 현재 빌드가 있으면 world.json·cells.idx가 Worker를 거쳐 200이어야 한다.
@@ -43,5 +45,5 @@ for i in $(seq 1 "$attempts"); do
   echo "smoke: attempt $i/$attempts failed, retrying in $((i * 5))s"
   sleep $((i * 5))
 done
-echo "::error::smoke test failed for $base (/api/health body/headers or / status/isolation headers)"
+echo "::error::smoke test failed for $base (/api/health body/headers or / status/isolation/policy headers)"
 exit 1
