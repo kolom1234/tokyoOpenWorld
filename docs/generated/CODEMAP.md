@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 609개.
+> 파일 612개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -436,14 +436,17 @@
 - `scripts/check-records.ts` — PR 기록 누락 게이트(`pnpm check:records --base <ref>`): api.ts↔모듈 카드(실패), 코드↔PROGRESS.md(경고). see docs/16-context-protocol.md §3
 - `scripts/check-size.ts` — 크기 제한 게이트(`pnpm check:size`): TS 파일 400줄·함수 60줄, 모듈 카드 150줄, docs 400줄, CLAUDE.md 200줄. see docs/15-conventions.md §2
 - `scripts/errors.ts` — `pnpm errors [--env staging|production] [--hours 24] [--include-test]`(M11-T03): Analytics Engine 오류 보고 집계(종류·메시지·첫 프레임·빌드·백엔드별 건수, 1/샘플률 가중 추정).
+- `scripts/killswitch.ts` — `pnpm killswitch <status|ensure|on|off> [--target production|staging-test] [--confirm-production]`(ADR-0104): 비용 차단 WAF 규칙 수동 조작.
+- `scripts/lib/breaker.ts` — 비용 회로 차단기 판정(ADR-0104 — 순수 함수, 테스트): TOKYO SANPO("ours") 지표 하나라도 포함량 90 % 초과, 또는 계정 전체 주기 말 예상 초과 요금 > $1. | exports: BREAKER, Trip, breakerExtraUsd, evaluateBreaker
 - `scripts/lib/cf-api.ts` — Cloudflare 읽기 전용 API 도우미(M11-T03 오류 조회·M11-T06 사용량 점검): 토큰 = 환경 변수 CLOUDFLARE_API_TOKEN(권한 Account Analytics: Read), | exports: token, accountId, rest, aeSql, graphql
 - `scripts/lib/credits.ts` — 크레딧 자동 생성(M10-T06, 03 §8, ADR-0096): data/sources.lock.json 모든 원천 + content/ATTRIBUTION.json(에셋·텍스트) → credits.json, 게임 런타임 의존(전이 포함) package.json → oss-licenses.json. | exports: LockSource, AttributionEntry, CreditData, OssPackage, creditsData, ossPackages, ossNotices, buildCredits
 - `scripts/lib/files.ts` — 저장소 파일 워커(node_modules·dist·데이터 산출물 제외) + CI 출력 헬퍼. scripts/check-* 공용. | exports: listFiles, report
+- `scripts/lib/killswitch.ts` — 킬 스위치(ADR-0104): earthaimap.com 존 WAF 사용자 정의 규칙 `sanpo-kill-switch`(평소 비활성)를 만들고 켜고 끈다 — | exports: ZONE_NAME, Target, TARGETS, MAINTENANCE_BODY, ruleExpression, Rule, ruleBody, KillSwitchApi, CfApiError, zoneId, TargetState, status, ensure, setEnabled, apiFromEnv
 - `scripts/lib/records-rules.ts` — PR 기록 누락 검사 규칙(순수 함수): api.ts ↔ 모듈 카드, 코드 ↔ PROGRESS.md. see docs/16-context-protocol.md §3–4 | exports: RecordsReport, isCodePath, checkRecords
 - `scripts/lib/size-rules.ts` — 파일·함수·문서 크기 제한 규칙(순수 함수). see docs/15-conventions.md §2, docs/14-testing-perf.md §5 | exports: SIZE_LIMITS, SizeViolation, countLines, isTestPath, bodyLines, findLongFunctions, checkSourceText, docLimitFor, checkDocText
 - `scripts/lib/usage-collect.ts` — Cloudflare GraphQL Analytics → 요금제 판정 입력(M11-T06): 청구 주기 누적·오늘(UTC) 카운터(Workers·KV·DO·Queues·AE·R2) | exports: Counters, Storage, Names, tallyCounters, tallyStorage, labeler, lookupNames, Collected, collect
 - `scripts/lib/usage-logs.ts` — Workers Logs(Observability) 이벤트 수(M11-T06 사용량 점검): Workers Observability 텔레메트리 쿼리로 Worker별 | exports: ScriptLogs, parseAggregates, extrapolate, LogCounts, logCounts
-- `scripts/lib/usage.ts` — Cloudflare 요금제 포함량 대비 사용량 판정(M11-T06 점검 — 순수 함수, 테스트). 요금제 = CF_PLAN(기본 paid — 2026-10-31 사용자 확인: | exports: METRICS, Metric, Plan, Allowance, GB_MONTH_DAYS, PLANS, LABELS, THRESHOLD, r2Class, Entry, Usage, emptyUsage, add, Cycle, billingCycle, Row, evaluate, overThreshold, Spike, spikes, fmt, NOTES, markdown
+- `scripts/lib/usage.ts` — Cloudflare 요금제 포함량 대비 사용량 판정(M11-T06 점검 — 순수 함수, 테스트). 요금제 = CF_PLAN(기본 paid — 2026-10-31 사용자 확인: | exports: METRICS, Metric, Plan, STORAGE, Allowance, GB_MONTH_DAYS, PLANS, LABELS, THRESHOLD, r2Class, Entry, Usage, emptyUsage, add, Cycle, billingCycle, Row, evaluate, overThreshold, Spike, spikes, fmt, NOTES, markdown
 
 ## tools/codemap
 - `tools/codemap/src/collect.ts` — CODEMAP 대상 소스 파일 수집(테스트·빌드 산출물 제외, 경로 정렬). see docs/16-context-protocol.md §5 | exports: CODEMAP_ROOTS, comparePaths, collectSourceFiles

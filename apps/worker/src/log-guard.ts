@@ -9,6 +9,8 @@ import { json } from './headers.ts';
 const ALLOWED_ORIGINS: ReadonlySet<string> = new Set([
   'https://earthaimap.com',
   'https://tokyo-sanpo-staging.kolom1357.workers.dev',
+  // staging 커스텀 도메인(킬 스위치 실검증 — 존 WAF 아래, ADR-0104).
+  'https://staging.earthaimap.com',
 ]);
 const ALLOWED_ORIGIN_PATTERNS: readonly RegExp[] = [
   // staging 프리뷰 별칭(`pr-<N>-…`)·버전 프리뷰(`<8 hex>-…`) — 이 계정 서브도메인만.

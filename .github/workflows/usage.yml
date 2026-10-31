@@ -1,17 +1,23 @@
-# Cloudflare 요금제 포함량 점검(M11-T06, 매일): 요금제 = CF_PLAN(저장소 변수 — 없으면 paid: Workers Paid + R2, 2026-10-31 사용자 확인),
+# Cloudflare 요금제 포함량 점검(M11-T06) + 비용 회로 차단기(ADR-0104, 30분마다): 요금제 = CF_PLAN(저장소 변수 — 없으면 paid: Workers Paid + R2, 2026-10-31 사용자 확인),
 # 청구 주기(매월 CF_BILLING_DAY일 시작) 누적이 포함량의 70 %를 넘으면 라벨 cf-usage 이슈를 만든다(열린 이슈가 있으면 본문만 갱신 — 알림은 처음 한 번).
 # 일일 값은 급증 참고표로만 쓴다. 토큰 권한 = Account Analytics: Read(+ 이름·로그용 권한은 docs/13-deployment.md §6).
+# 차단기: ours 지표 > 90 % 또는 account 예상 추가 요금 > $1 → 라벨 cf-kill-switch 이슈 + 시크릿 CF_KILLSWITCH_TOKEN이 있으면 WAF 규칙 sanpo-kill-switch를 켠다
+# (없으면 감시·이슈만). 해제는 자동으로 하지 않는다 — `pnpm killswitch off`(docs/13 §6). GitHub 일정은 몇 분 늦을 수 있고, 60일간 저장소 활동이 없으면 꺼진다.
 # 시크릿 값은 node 프로세스 env로만 전달한다. 시크릿이 없으면 건너뛰고 성공.
 name: Cloudflare usage
 
 on:
   schedule:
-    - cron: '0 0 * * *' # 매일 09:00 KST
+    - cron: '*/30 * * * *' # 30분마다(차단기). 70 % 이슈는 열린 것이 있으면 본문만 갱신 — 알림은 처음 한 번
   workflow_dispatch:
 
 permissions:
   contents: read
   issues: write
+
+concurrency:
+  group: cf-usage
+  cancel-in-progress: false
 
 jobs:
   usage:
@@ -29,7 +35,7 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         with:
           node-version: 24
-      - name: Usage vs plan allowance (issue above 70 % of the billing cycle)
+      - name: Usage vs plan allowance (issue above 70 %) + cost circuit breaker
         if: steps.gate.outputs.enabled == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -37,4 +43,7 @@ jobs:
           CF_PLAN: ${{ vars.CF_PLAN || 'paid' }}
           CF_BILLING_DAY: ${{ vars.CF_BILLING_DAY || '25' }}
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/cf-usage.ts --github-issue
+          # 차단 전용 존 토큰(Zone → WAF: Edit + Zone → Zone: Read). 없으면 차단을 건너뛴다.
+          CF_KILLSWITCH_TOKEN: ${{ secrets.CF_KILLSWITCH_TOKEN }}
+          CF_ZONE_ID: ${{ vars.CF_ZONE_ID }}
+        run: node scripts/cf-usage.ts --github-issue --kill-switch

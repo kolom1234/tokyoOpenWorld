@@ -100,12 +100,13 @@ describe('/api/log abuse defence (F03)', () => {
     for (const o of [
       'https://earthaimap.com',
       'https://tokyo-sanpo-staging.kolom1357.workers.dev',
+      'https://staging.earthaimap.com',
       'https://pr-30-tokyo-sanpo-staging.kolom1357.workers.dev',
       'http://localhost:5173',
       'http://127.0.0.1:8787',
     ])
       expect((await handleRequest(post(REPORT, { Origin: o }), env)).status).toBe(204);
-    expect(pts).toHaveLength(5);
+    expect(pts).toHaveLength(6);
     expect(isAllowedOrigin('https://x-tokyo-sanpo-staging.other.workers.dev')).toBe(false);
   });
 

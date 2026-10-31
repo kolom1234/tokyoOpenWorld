@@ -20,7 +20,10 @@
     "run_worker_first": ["/world/*", "/api/*"]
   },
   // 관측 로그(ADR-0103): 요청 URL의 쿼리 문자열은 로그·트레이스에서 지운다(redact_query_string — 기본 false였음). 보존 = Workers Paid 7일(설정 불가).
-  "observability": { "enabled": true, "redact_query_string": true },
+  // production 이벤트 샘플링 10 %(ADR-0104): 요청 폭주 때 Workers Logs 과금($0.60/백만)이 요청 과금($0.30/백만)의 2배로 붙지 않게. 오류 집계는 Analytics Engine(/api/log)·호출 지표(샘플링 무관).
+  "observability": { "enabled": true, "redact_query_string": true, "head_sampling_rate": 0.1 },
+  // 요청당 CPU 상한(ADR-0104): 2026-11-01 7일 실측 p99 3.6 ms·p99.9 4.5 ms(production), 5.3 ms(staging) → 약 10배 여유. 넘으면 그 요청만 Cloudflare 1102로 끝난다(최상위 catch로 못 잡는 플랫폼 상한).
+  "limits": { "cpu_ms": 50 },
   // 오류 보고(M11-T03): Workers Analytics Engine — Workers Paid 주기당 1,000만 점 포함(아직 미과금, docs/13 §6), 데이터셋은 첫 기록 때 생긴다. 조회 = `pnpm errors`(SQL API).
   "analytics_engine_datasets": [{ "binding": "LOGS", "dataset": "sanpo_errors" }],
   "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world", "DEPLOY_ENV": "production" },
@@ -33,6 +36,8 @@
       "name": "tokyo-sanpo-staging",
       "workers_dev": true,
       "preview_urls": true,
+      // staging은 디버깅용으로 전량 기록(쿼리는 지움).
+      "observability": { "enabled": true, "redact_query_string": true, "head_sampling_rate": 1 },
       "analytics_engine_datasets": [{ "binding": "LOGS", "dataset": "sanpo_errors_staging" }],
       "vars": { "LIVE_WEATHER": "true", "WORLD_BASE_URL": "/world", "DEPLOY_ENV": "staging" },
       "ratelimits": [{ "name": "LOG_LIMITER", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }],

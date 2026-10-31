@@ -28,7 +28,7 @@
 }
 ```
 - **접근 경로(ADR-0103)**: production = 커스텀 도메인 `earthaimap.com`만 — top-level `workers_dev: false`·`preview_urls: false`(workers.dev·버전 프리뷰 주소는 존 WAF·킬 스위치를 우회). `env.staging`은 PR 프리뷰(`pr-<N>` 별칭) 때문에 둘 다 `true`(staging 데이터만 — dev 버킷·staging KV·`sanpo_errors_staging`). production 스모크는 `https://earthaimap.com`.
-- **관측 로그(ADR-0103)**: `observability.redact_query_string: true`(env로 상속 — 2026-10-31 staging 확인: 배포 뒤 요청 URL은 쿼리 없이 기록, 표식 쿼리 0건). 보존 = Workers Paid 7일(설정 없음), 접근 = 계정 멤버(대시보드·Observability API 권한). Worker는 IP·UA·본문을 로그에 쓰지 않는다(`console.error`는 처리 안 된 예외 종류만). 샘플링은 §6 비용 표·킬 스위치 ADR-0104.
+- **관측 로그(ADR-0103)**: `observability.redact_query_string: true`(env로 상속 — 2026-10-31 staging 확인: 배포 뒤 요청 URL은 쿼리 없이 기록, 표식 쿼리 0건). 보존 = Workers Paid 7일(설정 없음), 접근 = 계정 멤버(대시보드·Observability API 권한). Worker는 IP·UA·본문을 로그에 쓰지 않는다(`console.error`는 처리 안 된 예외 종류만). 이벤트 샘플링 = production 0.1·staging 1(ADR-0104 — 폭주 때 로그 과금 억제, 오류 집계는 AE·호출 지표), 요청당 CPU 상한 `limits.cpu_ms = 50`(7일 p99.9 4.5–5.3 ms).
 - 로컬 개발: `env.local`(배포 금지)에만 R2/KV 바인딩 → `wrangler dev --env local`이 miniflare로 시뮬레이션. `pnpm dev` = Vite(5173, `/api`·`/world` → 8787 프록시) + wrangler dev(8787). 시드: `pnpm --filter @sanpo/worker seed:local` (ADR-0016).
 - 게임 빌드: `apps/game` Vite → `apps/game/dist`. 배포: `apps/worker`에서 `wrangler deploy`.
 - 정적 에셋 한도: 파일당 25 MiB, 버전당 파일 20,000(Free)/100,000(Paid). → **월드 데이터는 절대 정적 에셋에 넣지 않는다**(R2 전용). CI가 dist 내 25 MiB 초과 파일을 차단.
@@ -94,13 +94,22 @@
 
 - MVP 월드 ≈ 1.5 GB(L0 294셀 × 평균 3 MB + HLOD + shared) → 저장 무료 범위. 23구 전역 L0 ≈ 30–40 GB → 월 $0.5 내외.
 - Workers: 세션당 ~400 요청이면 포함량 1,000만 = 주기당 약 2.5만 세션. 정적 에셋 요청(`run_worker_first` 밖)은 Workers 요청 수에 들어가지 않는다. `/world/*`·`/api/*`만 Worker 호출.
-- **포함량 점검**(M11-T06, 2026-10-31 paid 기준으로 전환): `.github/workflows/usage.yml`(매일 09:00 KST) → `node scripts/cf-usage.ts --github-issue`. 요금제 = **`CF_PLAN=paid`**(저장소 Actions 변수 `CF_PLAN`, 없으면 paid — `free`면 예전 무료 일일 한도로 판정), 청구 시작일 `CF_BILLING_DAY`(없으면 25).
+- **포함량 점검**(M11-T06, 2026-10-31 paid 기준으로 전환): `.github/workflows/usage.yml`(**30분마다** — 2026-11-01부터, 차단기 §6.1) → `node scripts/cf-usage.ts --github-issue --kill-switch`. 요금제 = **`CF_PLAN=paid`**(저장소 Actions 변수 `CF_PLAN`, 없으면 paid — `free`면 예전 무료 일일 한도로 판정), 청구 시작일 `CF_BILLING_DAY`(없으면 25).
   - 판정: 청구 주기(25일 00:00 UTC부터) 누적 ÷ 포함량이 **70 % 초과**일 때만 라벨 `cf-usage` 이슈(열린 것이 있으면 본문 갱신). 주기 말 예상(카운터 = 누적 ÷ 경과 비율, 저장량 = 지금까지 평균과 최근 값)과 account 행의 **예상 추가 요금**(주기 말 예상 − 포함량 × 단가)을 같이 표시. 일일(UTC 오늘) 값은 급증 참고표(⚡ = 주기 안 이전 날 평균의 3배 이상이고 포함량 1 % 이상)로만 — 이슈를 열지 않는다.
   - "ours"(tokyo-sanpo Worker·KV·`sanpo-world-*` 버킷·`sanpo_errors*` 데이터셋)와 "account"(같은 계정 다른 프로젝트 포함)를 나눠 표기. account 행에는 사용량 상위 3개 Worker·KV 네임스페이스(제목)·버킷·데이터셋 이름과 비중 — ID·비밀값은 출력하지 않는다.
   - 측정: GraphQL Analytics(Workers·KV·DO `durableObjectsInvocationsAdaptiveGroups`·`durableObjectsPeriodicGroups.duration`·Queues `queueMessageOperationsAdaptiveGroups.billableOperations`·AE·R2). 저장량 = **누적 GB-월**(일별 최대의 합 ÷ 30 — R2 문서; 대시보드 값과 일치, GB = 10^9 B), 주기 말 예상 = 누적 + 최근 값 × 남은 날 ÷ 30. Workers Logs = Workers Observability 텔레메트리 쿼리로 console 줄(`cf-worker`) + 호출 로그(`cf-worker-event`)를 Worker별로 센다(span = 트레이스는 2026-12-01 전 미과금이라 제외). Paid 보존 7일 — 주기 경과가 7일 이하면 정확, 넘으면 최근 7일의 Worker별 호출당 로그 수 × 주기 호출 수로 외삽. 2026-12-01 이후 GB 단위 수집량은 API로 못 재므로 대시보드 Billing → Billable usage. Analytics Engine 읽기 쿼리는 측정하지 않음(미과금).
   - 대조: `node scripts/cf-usage.ts --at 2026-10-31T00:00:00Z`처럼 그 시각까지로 계산(이슈 없음). 대시보드 Billable usage는 **전날(UTC) 끝까지** 반영되므로 오늘 0시(UTC)로 맞춘다.
   - 토큰 권한 **Account Analytics: Read**(필수) + 이름용 **Workers KV Storage: Read**·**Workers Scripts: Read**(DO 네임스페이스)·**Queues: Read**(없으면 번호로 표기) + 로그용 **Workers Observability**(텔레메트리 쿼리 API가 Write 권한 요구 — 없으면 호출 수로 추정). Billable Usage API(`/billable-usage`, Billing: Read)는 alpha·deprecated라 쓰지 않는다. 로컬 실행 `node scripts/cf-usage.ts`(env `CF_PLAN=free` 등으로 바꿔 볼 수 있음).
   - 이력: 2026-10-19 첫 측정(무료 기준) ours 최대 R2 저장 18.3 %. 2026-10-31 이슈 #27(account KV 쓰기 130 %/일)은 이미 Paid인데 무료 일일 한도로 계산한 오탐 — 원인 = 같은 계정 다른 프로젝트(koreaaimap.com Worker `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). paid 기준 같은 날 KV 쓰기 주기 누적 7.6 %(주기 말 예상 35.8 %). 같은 날 DO·Queues·Observability 추가, 대시보드(10-25 ~ 10-30) 대조 — 전 항목 ±0.1 % 안(R2 저장 0.47 GB-월·DO Duration 14.55 GB-s·Queues 76,492 일치, 로그 95,128 ≈ 0.09M).
+
+### 6.1 비용 회로 차단기(킬 스위치, ADR-0104)
+- **감시**: `usage.yml` 30분마다 → `cf-usage.ts --github-issue --kill-switch`. 조건 = ours 지표 > 90 % **또는** account 주기 말 예상 추가 요금 > $1(카운터 외삽은 경과 3일 하한). 충족 → 라벨 `cf-kill-switch` 이슈(원인·수치·조치) + 시크릿 `CF_KILLSWITCH_TOKEN`이 있으면 존 WAF 규칙 `sanpo-kill-switch` 켬(없으면 차단 건너뜀 — 이슈에 표시).
+- **차단 범위**: `earthaimap.com`의 `/world/*`·`/api/*`만, Worker·R2 앞 엣지에서 503 `{"error":"maintenance"}`(Free 플랜이 사용자 응답을 거부하면 기본 403 페이지). 정적 게임 파일은 계속 → 게임 부팅 화면 "점검 중이에요".
+- **토큰(사람, 최소 권한)**: My Profile → API Tokens → Create Custom Token → Permissions `Zone · WAF · Edit` + `Zone · Zone · Read`, Zone Resources = Include · Specific zone · earthaimap.com, TTL 선택 → GitHub Secret `CF_KILLSWITCH_TOKEN`(+ 선택 Actions 변수 `CF_ZONE_ID` = 존 Overview의 Zone ID — 있으면 Zone Read 불필요). 로컬 조작은 같은 값을 환경 변수로.
+- **명령**: `pnpm killswitch status`(두 규칙 상태), `ensure`(빠진 규칙을 비활성으로 생성 — 멱등, 기존 규칙 보존), `off`(해제), `on --confirm-production`(수동 차단), `--target staging-test`(staging 시험 규칙, host `staging.earthaimap.com`).
+- **해제 절차(자동 재활성화 없음)**: ① 이슈의 원인 지표 확인(ours면 `pnpm errors`·Workers Logs·R2 지표로 남용 경로, account면 어느 프로젝트인지) ② 원인 차단(WAF 요청 제한·코드 수정·다른 프로젝트 조치) ③ `CF_KILLSWITCH_TOKEN=… pnpm killswitch off` ④ `https://earthaimap.com` 부팅·`/api/world/current` 200 확인 ⑤ 이슈 닫기. 같은 조건이 남아 있으면 다음 30분 점검에서 다시 켜진다.
+- **staging 실검증 준비(사람, 1회)**: Workers & Pages → tokyo-sanpo-staging → Settings → Domains & Routes → Add → Custom domain `staging.earthaimap.com`(workers.dev는 존 WAF 밖). `/api/log` Origin 허용 목록에 포함됨.
+- 추가 절감: `limits.cpu_ms = 50`, production 관측 샘플링 0.1(§2). Worker를 거치지 않는 월드 제공안 = ADR-0105(제안).
 
 ## 7. CI/CD (GitHub Actions)
 | 워크플로 | 트리거 | 단계 |
