@@ -24,7 +24,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 | 파일 | 책임 |
 |---|---|
 | index.html, vite.config.ts | Vite 엔트리. `three` → `three/webgpu` alias(addon 중복 번들 방지) + `sanpo-basis-transcoder`(`/basis/*` = three examples/jsm/libs/basis, dev 서빙·build 복사) + dev 서버 격리 헤더 + `/api`·`/world` → `wrangler dev`(8787) 프록시 + `sanpo-world-mini` 플러그인(dev 서빙, build 시 `dist/fixtures/world-mini` 복사, `SANPO_WORLD_MINI=0`이면 생략) + `sanpo-local-build`(dev 전용 `/local-world` → `data/build/<SANPO_LOCAL_BUILD | 최신>`) |
-| public/_headers | 정적 에셋 COOP/COEP/CORP/CSP·캐시 헤더(docs/13 §3) — Worker를 거치지 않는 응답용. `/basis/ktx2-worker.js`만 별도 CSP('unsafe-eval', ADR-0032) |
+| public/_headers | 정적 에셋 COOP/COEP/CORP/CSP·Referrer-Policy·Permissions-Policy·캐시 헤더(docs/13 §3) — Worker를 거치지 않는 응답용. HSTS는 넣지 않음(Cloudflare 존, ADR-0102). `/basis/ktx2-worker.js`만 별도 CSP('unsafe-eval', ADR-0032) |
 | vite.config.ts `sanpo-gpu-benchmarks` | detect-gpu 벤치마크 JSON → `/detect-gpu/*`(dev 서빙·build 복사) |
 | public/basis/ktx2-worker.js | KTX2 트랜스코더 부트스트랩 워커(첫 메시지 본문을 전역 eval — render `materials/ktx2-csp.ts`와 짝) |
 | src/main.ts | 엔트리: 상태 화면(숨김) + UI 셸(`#ui`, shell/bridge) → boot(view, flags, shell), `?probe=decode|physics`면 부트 대신 프로브, `?ui-sandbox=1`이면 UI만 |
@@ -84,7 +84,7 @@ Layer: L5 | Depends: 모든 @sanpo 패키지 | Used by: apps/worker(정적 에�
 test/caps.test.ts(WebGPU 3상태·격리·워커 수), test/boot.test.ts(루프·훅, 월드 상태 분류, 상태 문구, 플래그), test/world-load.test.ts(커밋된 world-mini를 가짜 fetch로: 4셀 로드, SPA 폴백·원점·포맷·크기 불일치 거부, `?world=mini`는 API 미호출),
 test/start-view.test.ts(시작 시점 = 지면 + 60 m·Scramble Square 조준), test/walk-physics.test.ts(실제 Jolt 같은 스레드 + traversal walk: 연석 0.15 m·계단 0.18 m 카메라 프레임당 < 3 cm), test/streaming-render.test.ts(적용 순서·바이트 예산·해제 순서·적용 전 해제·L3), test/overlay.test.ts(오버레이 문구), test/bookmarks.test.ts(뷰 조회·AGL 포즈·안정 판정).
 골든뷰(`pnpm golden`, 실제 GPU, CI 제외): `tests/golden/golden.spec.ts` — README 참조. 역 동선(`pnpm stations`, 실제 GPU, CI 제외): `tests/golden/stations.spec.ts`(모든 출구 계단 F 도착 = 승강장 윗면·여유·구덩이 아님·올라가기 거리).
-test/station.test.ts(개찰구 배치·통과·플랩·계단 닿음), test/platform-geo.test.ts(윗면 높이·여유·안전 도착·구덩이/승강장 밑), test/landing.test.ts(지면·지붕·선로·차도·경사·승강장(차양 아래)·가장자리·건물 안·머리 공간·링 대체·차선 폭).
+test/headers.test.ts(`public/_headers` Referrer·Permissions-Policy, HSTS 없음 — ADR-0102), test/station.test.ts(개찰구 배치·통과·플랩·계단 닿음), test/platform-geo.test.ts(윗면 높이·여유·안전 도착·구덩이/승강장 밑), test/landing.test.ts(지면·지붕·선로·차도·경사·승강장(차양 아래)·가장자리·건물 안·머리 공간·링 대체·차선 폭).
 E2E(Playwright, `pnpm test:e2e` — 빌드 + vite preview, Chromium은 `--enable-unsafe-swiftshader`, 로컬 다른 Chromium은 `PW_CHROMIUM_PATH`):
 `tests/e2e/boot.spec.ts`(`?world=mini` → `data-world=loaded`·셀 4·격리·콘솔 오류 없음),
 `tests/e2e/render.spec.ts`(`?world=mini&debug=1&backend=webgl` → 셀 4 렌더, 중앙 타워·하단 건물 픽셀 비율, O 테스트 전후 픽셀 차 0; 스크린샷 `test-results/screenshots/` → CI 아티팩트 `e2e-screenshots`).

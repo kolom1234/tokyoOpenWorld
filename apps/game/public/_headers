@@ -1,11 +1,15 @@
 # 정적 에셋 응답 헤더(Workers Static Assets). Worker 응답(/api/*, /world/*)은 apps/worker/src/headers.ts가 담당.
 # COOP/COEP → crossOriginIsolated(SharedArrayBuffer, Jolt 멀티스레드). see docs/13-deployment.md §3
+# HSTS는 넣지 않는다 — Cloudflare 존 설정(SSL/TLS → Edge Certificates)이 모든 응답에 붙인다(ADR-0102).
+# Permissions-Policy는 쓰지 않는 강력 기능만 끈다(gamepad·fullscreen·autoplay는 기본값 유지). Chromium이 모르는 기능 이름은 콘솔 오류가 나므로 넣지 않는다.
 /*
   Cross-Origin-Opener-Policy: same-origin
   Cross-Origin-Embedder-Policy: require-corp
   Cross-Origin-Resource-Policy: same-origin
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; img-src 'self' data: blob:; connect-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'
   X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), usb=()
 /basis/ktx2-worker.js
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self'

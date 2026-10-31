@@ -21,7 +21,8 @@ interface Env { ASSETS?: AssetsBinding; WORLD?: WorldBucket; CONFIG?: ConfigKv; 
 
 ## Invariants
 - 206 응답은 캐시에 넣지 않음. Range·조건부 요청은 캐시를 거치지 않음(ADR-0026). 404는 5분 캐시.
-- 모든 응답에 COOP/COEP/CORP 헤더(headers.ts 단일 출처).
+- 모든 응답에 COOP/COEP/CORP 헤더(headers.ts 단일 출처). 문서 정책 헤더(CSP·Referrer·Permissions)는 game `public/_headers`, HSTS는 Cloudflare 존 설정(ADR-0102).
+- `/api/health` = `{"ok":true}`만 — 바인딩·버전 등 내부 구성 비노출(ADR-0102).
 - 비밀값 없음(ODPT 키는 파이프라인 전용).
 
 ## Tests
