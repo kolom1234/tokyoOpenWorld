@@ -273,6 +273,9 @@ export interface SaveExport {
   thumbs: Record<string, string>;
 }
 
+/** 세이브 가져오기 실패 사유(ADR-0103): 형식이 아님·손상 | 파일이 상한보다 큼(읽기 전) | 배열·썸네일 합계가 상한 초과. */
+export type SaveImportProblem = 'invalid' | 'too_large' | 'too_many';
+
 export type StartChoice = { kind: 'continue' } | { kind: 'new'; at: string };
 
 export interface UiCommands {

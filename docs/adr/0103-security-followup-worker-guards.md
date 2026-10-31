@@ -50,6 +50,9 @@
 ### 디버그 기능
 18. production 배포 빌드만 `SANPO_DEBUG_TOOLS=0` → `__SANPO_DEBUG_TOOLS__` 상수 false. `main.ts`의 `?ui-sandbox=1`·`?probe=`·`?report=force` 분기가 죽은 코드가 되고 동적 import 청크까지 빠진다(2026-10-31 빌드 확인: 청크 0개, `__SANPO_DECODE_PROBE__` 문자열 없음). `?spawn=`·`?debug=1`은 탐방·지원용으로 유지. e2e(`ui.spec`·`decode.spec`·`physics.spec`)는 기본 빌드라 영향 없음.
 
+### 세이브 가져오기
+19. `SAVE_LIMITS`(ui): 파일 24 MiB를 `f.text()` 전에(설정 화면·게임 `importFile` 두 곳), 파싱 직후 마이그레이션·썸네일 디코드 전에 사진·썸네일 200개(= 사진 상한 MAX_PHOTOS)·발견/열림 2,000·발견당 사진 id 200·썸네일 하나 1,000,000자·합계 20,000,000자. 넘으면 저장 없이 `SaveImportError(problem)` → 사유별 안내(3개 언어). 정상 세이브(썸네일 360 px JPEG ≈ 20–60 KB × 200)는 상한의 절반 아래. 서버 업로드가 아닌 브라우저 자원 보호.
+
 ## Consequences
 - 다른 사이트의 브라우저는 `/api/log`에 쓸 수 없다(JSON은 프리플라이트 → 405, text/plain은 415). curl 등은 Origin을 빼면 통과하지만 IP당 분당 10회로 묶인다.
 - Rate Limiting 바인딩은 env 간 상속되지 않는다 → production·staging에 각각(namespace 1001·1002). 로컬·테스트는 바인딩 없음 = 제한 없음.

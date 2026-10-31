@@ -233,6 +233,8 @@
   "save.exported": "書き出しました — ダウンロードフォルダを確認してください",
   "save.imported": "読み込みました — 図鑑・地図・設定に反映しました",
   "save.invalid": "このファイルは東京さんぽのセーブではないか、壊れています",
+  "save.tooLarge": "ファイルが大きすぎます({mb} MB超) — 読み込みませんでした",
+  "save.tooMany": "セーブの項目が多すぎます(写真{photos}枚などの上限超過) — 読み込みませんでした",
   "save.failed": "失敗しました: {e}",
   "settings.colorVision": "色覚補正",
   "settings.colorVisionHint": "色の見分けにくいタイプに合わせて画面の色のコントラストを調整します。",

@@ -233,6 +233,8 @@
   "save.exported": "Exported — check your downloads folder",
   "save.imported": "Imported — applied to the field guide, map and settings",
   "save.invalid": "This file isn't a Tokyo Sanpo save, or it is damaged",
+  "save.tooLarge": "The file is too large (over {mb} MB) — nothing was imported",
+  "save.tooMany": "The save has too many entries (over {photos} photos or similar limits) — nothing was imported",
   "save.failed": "Failed: {e}",
   "settings.colorVision": "Color vision",
   "settings.colorVisionHint": "Adjusts color contrast for color vision deficiency types.",

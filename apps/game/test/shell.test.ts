@@ -289,4 +289,36 @@ describe('save (M10-T06)', () => {
     expect(b.travel.isUnlocked('poi:meiji-jingu')).toBe(true);
     expect(photos.map((p) => p.id)).toEqual(['p1']);
   });
+
+  it('refuses an oversize save file before reading it and over-limit content without writing (ADR-0103)', async () => {
+    const { importFile } = await import('../src/shell/save.ts');
+    const { SAVE_LIMITS, SaveImportError } = await import('@sanpo/ui');
+    let writes = 0;
+    const store = {
+      load: async () => null,
+      write: async () => {
+        writes++;
+      },
+      thumbs: async () => new Map(),
+    };
+    let read = false;
+    const text = async (): Promise<string> => {
+      read = true;
+      return '{}';
+    };
+    const huge = { size: SAVE_LIMITS.fileBytes + 1, text } as unknown as Blob;
+    await expect(importFile(huge, store)).rejects.toMatchObject({ problem: 'too_large' });
+    expect(read).toBe(false);
+    const many = new Blob([
+      JSON.stringify({
+        format: 'tokyo-sanpo-save',
+        save: { v: 2, photos: Array.from({ length: SAVE_LIMITS.photos + 1 }, (_, i) => ({ id: `p${i}` })) },
+      }),
+    ]);
+    const err = await importFile(many, store).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SaveImportError);
+    expect((err as InstanceType<typeof SaveImportError>).problem).toBe('too_many');
+    await expect(importFile(new Blob(['nope']), store)).rejects.toMatchObject({ problem: 'invalid' });
+    expect(writes).toBe(0);
+  });
 });

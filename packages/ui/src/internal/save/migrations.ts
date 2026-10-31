@@ -1,7 +1,9 @@
 // 세이브 스키마·마이그레이션(M10-T06, 12 §4): 버전 필드 + 단계별 함수 표. v1 = 12 §4 초안 모양(발견 id 배열·사진 메타), v2 = 지금(발견 기록·빠른 이동·사진 명소 연결).
 // 가져오기·IndexedDB 읽기 모두 migrateSave를 거친다 — 모르는·망가진 값은 고치거나 버린다(예외 대신 기본값). 순수 함수(테스트).
-import type { SaveData, SaveExport } from '../../api.ts';
+import type { Result } from '@sanpo/core';
+import type { SaveData, SaveExport, SaveImportProblem } from '../../api.ts';
 import { normalizeSettings } from '../settings.ts';
+import { SAVE_LIMITS, withinSaveLimits } from './limits.ts';
 
 export const SAVE_VERSION = 2;
 
@@ -91,19 +93,31 @@ export function migrateSave(raw: unknown): SaveData | null {
 
 const DATA_URL = /^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/;
 
-/** 내보내기 JSON 글 → 검사·마이그레이션(형식이 다르거나 망가지면 null). 썸네일은 이미지 data URL만. */
-export function parseSaveExport(text: string): SaveExport | null {
+/**
+ * 내보내기 JSON 글 → 검사·마이그레이션. 형식이 다르거나 망가지면 `invalid`, 배열 길이·썸네일 합계가 상한(SAVE_LIMITS)을 넘으면 `too_many`
+ * (마이그레이션·썸네일 디코드 전에 거른다). 썸네일은 이미지 data URL만.
+ */
+export function readSaveExport(text: string): Result<SaveExport, SaveImportProblem> {
+  const invalid = { ok: false, error: 'invalid' } as const;
+  if (text.length > SAVE_LIMITS.fileBytes) return { ok: false, error: 'too_large' };
   let raw: Raw;
   try {
     raw = obj(JSON.parse(text));
   } catch {
-    return null;
+    return invalid;
   }
-  if (raw.format !== 'tokyo-sanpo-save') return null;
+  if (raw.format !== 'tokyo-sanpo-save') return invalid;
+  if (!withinSaveLimits(raw)) return { ok: false, error: 'too_many' };
   const save = migrateSave(raw.save);
-  if (!save) return null;
+  if (!save) return invalid;
   const thumbs: Record<string, string> = {};
   for (const [id, url] of Object.entries(obj(raw.thumbs)))
-    if (ID.test(id) && typeof url === 'string' && DATA_URL.test(url) && url.length < 2_000_000) thumbs[id] = url;
-  return { format: 'tokyo-sanpo-save', save, settings: normalizeSettings(raw.settings), thumbs };
+    if (ID.test(id) && typeof url === 'string' && DATA_URL.test(url)) thumbs[id] = url;
+  return { ok: true, value: { format: 'tokyo-sanpo-save', save, settings: normalizeSettings(raw.settings), thumbs } };
+}
+
+/** readSaveExport의 null 버전(사유가 필요 없을 때). */
+export function parseSaveExport(text: string): SaveExport | null {
+  const r = readSaveExport(text);
+  return r.ok ? r.value : null;
 }
