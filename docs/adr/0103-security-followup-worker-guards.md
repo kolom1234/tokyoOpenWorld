@@ -40,6 +40,10 @@
 ### 대체 접근 경로
 15. production Worker의 `workers_dev`·`preview_urls`를 끈다(2026-10-31 실측: `https://tokyo-sanpo.kolom1357.workers.dev/api/health` 200 — 존 WAF·요청 제한·킬 스위치를 거치지 않는 우회 경로). staging은 PR 프리뷰 때문에 유지(staging 데이터만). production 배포 스모크·환경 URL = `https://earthaimap.com`, 스모크는 프레이밍 금지 헤더(`X-Frame-Options`·`frame-ancestors`)도 본다.
 
+### Deploy 승인 대상
+16. `deploy.yml`에 `supersede` 잡: 새 Deploy 실행이 시작되면 이보다 먼저 시작돼 production 승인을 기다리는(`status=waiting`) 실행을 REST로 취소. 그 사이 staging 단계였던 옛 실행은 production 잡 첫 단계(`GITHUB_SHA == main 머리`)에서 실패. production 잡은 `refs/heads/main` 실행만. 승인 화면에는 항상 최신 main 하나만 남는다.
+    `concurrency`만으로는 부족 — 승인 대기 잡이 그룹 안에서 "pending"으로 취소되는지는 문서상 보장이 없고, 같은 그룹이 staging 배포까지 막는다.
+
 ## Consequences
 - 다른 사이트의 브라우저는 `/api/log`에 쓸 수 없다(JSON은 프리플라이트 → 405, text/plain은 415). curl 등은 Origin을 빼면 통과하지만 IP당 분당 10회로 묶인다.
 - Rate Limiting 바인딩은 env 간 상속되지 않는다 → production·staging에 각각(namespace 1001·1002). 로컬·테스트는 바인딩 없음 = 제한 없음.
