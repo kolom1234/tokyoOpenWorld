@@ -188,8 +188,14 @@ function bundleVersion(): string {
   }
 }
 
+/**
+ * 진단 도구(`?ui-sandbox=1`·`?probe=`·`?report=force`) 포함 여부. production 배포 빌드만 `SANPO_DEBUG_TOOLS=0`(deploy.yml) → 조건이 상수 false가 돼
+ * 해당 동적 import 청크가 번들에서 빠진다(ADR-0103). dev·e2e·staging·PR 프리뷰는 포함.
+ */
+const DEBUG_TOOLS = process.env.SANPO_DEBUG_TOOLS !== '0';
+
 export default defineConfig({
-  define: { __SANPO_VERSION__: JSON.stringify(bundleVersion()) },
+  define: { __SANPO_VERSION__: JSON.stringify(bundleVersion()), __SANPO_DEBUG_TOOLS__: JSON.stringify(DEBUG_TOOLS) },
   plugins: [worldMiniFixture(), localBuild(), basisTranscoder(), gpuBenchmarks(), creditsFiles()],
   // three addon(KTX2Loader)·takram의 `three` import를 WebGPU 빌드 + 호환 이름(src/three-compat.ts)으로 — WebGL 렌더러 번들 제외.
   resolve: { alias: [{ find: /^three$/, replacement: resolve(import.meta.dirname, 'src/three-compat.ts') }] },

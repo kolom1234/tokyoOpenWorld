@@ -136,8 +136,10 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Build
         # 테스트 픽스처(world-mini)는 production 정적 에셋에서 뺀다(staging·PR preview만 `?world=mini` 지원, docs/13 §7).
+        # 진단 도구(`?ui-sandbox=1`·`?probe=`·`?report=force`)도 번들째 뺀다(ADR-0103). `?spawn=`·`?debug=1`은 유지.
         env:
           SANPO_WORLD_MINI: '0'
+          SANPO_DEBUG_TOOLS: '0'
         run: pnpm build && pnpm check:assets
       - name: Deploy to production
         id: deploy

@@ -1,5 +1,7 @@
 // 브라우저 엔트리: 상태 화면(e2e data-* — 화면에서는 UI 로딩 화면이 대신) + @sanpo/ui 셸 마운트 → boot(), 실패 시 오류 화면.
 // `?ui-sandbox=1` = 게임 없이 UI만(목 브리지 — 화면·언어 확인, M10-T01). see docs/modules/game.md
+// 진단 도구(UI 샌드박스·`?probe=`·`?report=force`)는 `__SANPO_DEBUG_TOOLS__`가 false인 production 빌드에서 청크째 빠진다(ADR-0103).
+// `?spawn=`·`?debug=1`은 탐방·지원용으로 production에도 남긴다.
 // UI 글꼴(OFL — docs/03 §4): 유니코드 범위 조각 woff2(가변 wght) 자체 호스팅 — 브라우저가 화면에 쓰인 글자의 조각만 받는다(font-display swap).
 import '@fontsource-variable/noto-sans-jp/wght.css';
 import '@fontsource-variable/noto-sans-kr/wght.css';
@@ -24,10 +26,10 @@ function uiRoot(): HTMLElement {
 
 const flags = parseFlags(location.search);
 const q = new URLSearchParams(location.search);
-if (q.get('ui-sandbox') === '1') {
+if (__SANPO_DEBUG_TOOLS__ && q.get('ui-sandbox') === '1') {
   root.classList.add('behind-ui');
   void import('./debug/ui-sandbox.ts').then((m) => m.runUiSandbox(uiRoot(), q));
-} else if (flags.probe === 'decode') {
+} else if (__SANPO_DEBUG_TOOLS__ && flags.probe === 'decode') {
   const view = mountStatusView(root);
   // 디버그 프로브: 렌더 없이 streaming 디코드 워커만 측정(e2e decode.spec.ts). 별도 청크로 동적 import.
   root.dataset.probe = 'running';
@@ -41,7 +43,7 @@ if (q.get('ui-sandbox') === '1') {
       root.dataset.probe = 'error';
       view.showError(`decode probe: ${e instanceof Error ? (e.stack ?? e.message) : String(e)}`);
     });
-} else if (flags.probe === 'physics') {
+} else if (__SANPO_DEBUG_TOOLS__ && flags.probe === 'physics') {
   const view = mountStatusView(root);
   // 물리 워커 프로브(M04-T01, e2e physics.spec.ts): Jolt 워커 + 상자 낙하. 별도 청크.
   root.dataset.probe = 'running';
@@ -74,7 +76,11 @@ if (q.get('ui-sandbox') === '1') {
         lang: () => document.documentElement.lang,
         mode: () => shell.ui.screen.peek(),
       },
-      { rate: DEFAULT_REPORT_RATE, force: q.get('report') === 'force', version: __SANPO_VERSION__ },
+      {
+        rate: DEFAULT_REPORT_RATE,
+        force: __SANPO_DEBUG_TOOLS__ && q.get('report') === 'force',
+        version: __SANPO_VERSION__,
+      },
     ),
   );
   // e2e·실제 GPU 측정 핸들(HUD 시그널 갱신 빈도·화면 상태 — 디버그 모드만).
