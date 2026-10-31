@@ -47,6 +47,11 @@ export interface LogDataset {
   writeDataPoint(p: { indexes?: string[]; blobs?: string[]; doubles?: number[] }): void;
 }
 
+/** Workers Rate Limiting 바인딩(`ratelimits`, F03) 중 사용하는 부분. 카운터는 PoP 단위·근사(정확한 전역 한도가 아님). */
+export interface RateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
 export interface Env {
   ASSETS?: AssetsBinding;
   /** R2 월드 데이터 버킷. 없으면 `/world/*` 비활성(503). */
@@ -57,4 +62,8 @@ export interface Env {
   WORLD_BASE_URL?: string;
   /** Workers Analytics Engine 데이터셋 `sanpo_errors`(M11-T03). 없으면 `/api/log`는 기록 없이 204. */
   LOGS?: LogDataset;
+  /** `/api/log` IP(해시) 요청 제한. 없으면(테스트) 제한 없음 — 대시보드 WAF 규칙이 앞단. */
+  LOG_LIMITER?: RateLimiter;
+  /** 배포 환경 `production`·`staging`·`local`(wrangler vars). production은 `kind:"test"` 보고를 거절한다. */
+  DEPLOY_ENV?: string;
 }

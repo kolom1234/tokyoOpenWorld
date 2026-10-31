@@ -1,11 +1,17 @@
-// `POST /api/log`(M11-T03, 01 §9·13 §4): 게임 오류 보고 → Workers Analytics Engine(데이터셋 sanpo_errors). 무료 플랜 하루 10만 점.
-// 개인정보 없음: IP·쿠키·User-Agent 원문·cf 위치(국가·도시)·요청 헤더를 쓰지 않는다. 본문은 허용 필드만 길이 자르고, 메시지·스택의 URL 질의·이메일·긴 숫자를 지운다.
-// 샘플링(1 %)은 게임이 세션 단위로 한다 — 여기서는 크기·형식만 검사. 바인딩이 없으면(로컬·테스트) 기록 없이 204.
+// `POST /api/log`(M11-T03, 01 §9·13 §4): 게임 오류 보고 → Workers Analytics Engine(데이터셋 sanpo_errors).
+// 개인정보 없음: 쿠키·User-Agent 원문·cf 위치(국가·도시)·요청 헤더를 기록하지 않는다. IP는 요청 제한 키(해시)로만 — 저장 안 함(log-guard.ts).
+// 본문은 허용 필드만 길이 자르고, 메시지·스택의 URL 질의·이메일·긴 숫자를 지운다. 샘플링(1 %)은 게임이 세션 단위로 — 샘플률은 허용 값만(F03, ADR-0103).
+// 바인딩이 없으면(로컬·테스트) 기록 없이 204.
 import type { Env } from '../env.ts';
 import { json } from '../headers.ts';
+import { guardLogRequest } from '../log-guard.ts';
 
 const MAX_BODY = 4096;
 const KINDS = new Set(['error', 'rejection', 'boot', 'worker', 'test']);
+/** 게임이 보내는 샘플률(error-report.ts DEFAULT_REPORT_RATE = 0.01, staging `?report=force` = 1)만 받는다 — 극소값으로 1/rate 가중 집계가 부풀지 않게. */
+export const REPORT_SAMPLE_RATES: readonly number[] = [0.01, 1];
+/** 샘플률이 빠진 보고 = 1(가중 1 — 추정치를 부풀리지 않는 쪽). */
+const DEFAULT_SAMPLE_RATE = 1;
 const BACKENDS = new Set(['webgpu', 'webgl2', 'none']);
 
 export interface ErrorReport {
@@ -23,7 +29,7 @@ export interface ErrorReport {
   browser: string;
   lang: string;
   mode: string;
-  /** 보낸 쪽 샘플률(0–1) — 집계 때 1/rate 가중. */
+  /** 보낸 쪽 샘플률(REPORT_SAMPLE_RATES 중 하나) — 집계 때 1/rate 가중. */
   sampleRate: number;
 }
 
@@ -43,14 +49,15 @@ export function scrub(s: unknown, max: number): string {
 const word = (s: unknown, max: number): string =>
   typeof s === 'string' ? s.replace(/[^\w .:/-]/g, '').slice(0, max) : '';
 
-/** 허용 필드만 꺼낸다(모르는 필드는 버림). 형식이 틀리면 null. */
-export function parseReport(raw: unknown): ErrorReport | null {
+/** 허용 필드만 꺼낸다(모르는 필드는 버림). 형식이 틀리면 null. `allowTest` = false(production)면 `kind:"test"`도 null. */
+export function parseReport(raw: unknown, allowTest = true): ErrorReport | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   const kind = typeof o.kind === 'string' && KINDS.has(o.kind) ? o.kind : null;
-  if (!kind) return null;
+  if (!kind || (kind === 'test' && !allowTest)) return null;
   const tier = typeof o.gpuTier === 'number' && Number.isInteger(o.gpuTier) ? Math.max(-1, Math.min(3, o.gpuTier)) : -1;
-  const rate = typeof o.sampleRate === 'number' && o.sampleRate > 0 && o.sampleRate <= 1 ? o.sampleRate : 1;
+  const rate = o.sampleRate === undefined ? DEFAULT_SAMPLE_RATE : o.sampleRate;
+  if (typeof rate !== 'number' || !REPORT_SAMPLE_RATES.includes(rate)) return null;
   return {
     kind,
     message: scrub(o.message, 200),
@@ -77,6 +84,8 @@ export function dataPoint(r: ErrorReport): { indexes: string[]; blobs: string[];
 
 export async function handleLog(request: Request, env: Env): Promise<Response> {
   if (request.method !== 'POST') return json(405, { error: 'method_not_allowed' });
+  const rejected = await guardLogRequest(request, env);
+  if (rejected !== undefined) return rejected;
   const len = Number(request.headers.get('Content-Length') ?? '0');
   if (len > MAX_BODY) return json(413, { error: 'too_large' });
   const text = await request.text();
@@ -87,7 +96,7 @@ export async function handleLog(request: Request, env: Env): Promise<Response> {
   } catch {
     return json(400, { error: 'bad_json' });
   }
-  const r = parseReport(raw);
+  const r = parseReport(raw, env.DEPLOY_ENV !== 'production');
   if (!r) return json(400, { error: 'bad_report' });
   env.LOGS?.writeDataPoint(dataPoint(r));
   return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });

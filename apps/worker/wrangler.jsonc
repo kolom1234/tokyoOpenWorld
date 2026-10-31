@@ -20,14 +20,17 @@
   "observability": { "enabled": true },
   // 오류 보고(M11-T03): Workers Analytics Engine — Workers Paid 주기당 1,000만 점 포함(아직 미과금, docs/13 §6), 데이터셋은 첫 기록 때 생긴다. 조회 = `pnpm errors`(SQL API).
   "analytics_engine_datasets": [{ "binding": "LOGS", "dataset": "sanpo_errors" }],
-  "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world" },
+  "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world", "DEPLOY_ENV": "production" },
+  // /api/log IP(해시) 요청 제한(F03, ADR-0103): 분당 10회 — 게임은 세션당 최대 3건. PoP 단위 근사 카운터, env 간 상속 안 됨(namespace_id = 계정 안 고유 정수).
+  "ratelimits": [{ "name": "LOG_LIMITER", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
   "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-prod" }],
   "kv_namespaces": [{ "binding": "CONFIG", "id": "938aa34bc73f4cce935ab383fbc0a098" }],
   "env": {
     "staging": {
       "name": "tokyo-sanpo-staging",
       "analytics_engine_datasets": [{ "binding": "LOGS", "dataset": "sanpo_errors_staging" }],
-      "vars": { "LIVE_WEATHER": "true", "WORLD_BASE_URL": "/world" },
+      "vars": { "LIVE_WEATHER": "true", "WORLD_BASE_URL": "/world", "DEPLOY_ENV": "staging" },
+      "ratelimits": [{ "name": "LOG_LIMITER", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }],
       "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-dev" }],
       "kv_namespaces": [{ "binding": "CONFIG", "id": "52e1d2e4354047cda47550e03f0750b4" }]
     },
@@ -35,7 +38,7 @@
       "name": "tokyo-sanpo-local",
       "workers_dev": false,
       "preview_urls": false,
-      "vars": { "LIVE_WEATHER": "true", "WORLD_BASE_URL": "/world" },
+      "vars": { "LIVE_WEATHER": "true", "WORLD_BASE_URL": "/world", "DEPLOY_ENV": "local" },
       "r2_buckets": [{ "binding": "WORLD", "bucket_name": "sanpo-world-local" }],
       "kv_namespaces": [{ "binding": "CONFIG", "id": "sanpo-config-local" }]
     }
