@@ -72,13 +72,28 @@
 - Worker 경유 요청은 요청 과금 대상이므로, 세션당 수백 셀 요청이 누적되면 `world.<domain>` R2 커스텀 도메인 + Cache Rules(Cache Everything, Edge TTL 1년) + R2 CORS(`GET`, origin = 게임 도메인)로 전환.
 - 클라이언트는 `/api/world/current`의 `baseUrl`만 따르므로 코드 변경 없음. 전환 절차는 ADR로 기록.
 
-## 6. 비용 추정 (2026-09 요금 기준)
-- R2: 저장 $0.015/GB-월(10 GB 무료), Class B 읽기 $0.36/백만(월 1,000만 무료), **egress 무료**.
+## 6. 비용·요금제 점검 (요금 2026-10-31 확인)
+- **현재 요금제(2026-10-31 사용자 확인)**: 이 Cloudflare 계정은 **Workers Paid**(월 최소 $5)와 **R2 Paid**를 구독(둘 다 계정 단위, 갱신 2026-11-25, 청구 주기 매월 25일 시작), 청구 예정액 $0. 포함량을 넘으면 차단되지 않고 **자동 과금**된다 — 비용 보호는 Worker 쪽 남용 차단(오류 API 남용·캐시 우회 R2 읽기)이 맡는다.
+- 포함량(청구 주기당, 계정 단위 — 같은 계정 다른 프로젝트와 공유)·초과 단가. 출처 developers.cloudflare.com `workers/platform/pricing`·`r2/pricing`·`analytics/analytics-engine/pricing`·`workers/observability/logs/workers-logs`·`observability/pricing`:
+
+| 항목 | 포함량/주기 | 초과 |
+|---|---|---|
+| Workers 요청 · CPU | 1,000만 · 3,000만 ms | $0.30/백만 · $0.02/백만 ms |
+| KV 읽기 · 쓰기 · 삭제 · 목록 | 1,000만 · 100만 · 100만 · 100만 | $0.50 · $5.00 · $5.00 · $5.00 /백만 |
+| KV 저장 | 1 GB | $0.50/GB-월 |
+| Analytics Engine 쓰기 · 읽기 | 1,000만 점 · 100만 쿼리 | $0.25/백만 점 · $1.00/백만 쿼리 — **아직 과금 안 함**(문서) |
+| Workers Logs | 2,000만 이벤트 | $0.60/백만. **2026-12-01부터 Observability 요금**: 수집 50 GB·저장 10 GB-월/주기, $0.25/GB·$0.10/GB-월 |
+| R2 Standard 저장 | 10 GB-월(일별 최대 저장량의 평균) | $0.015/GB-월 (Infrequent Access는 무료분 없음) |
+| R2 Class A · Class B · egress | 100만 · 1,000만 · — | $4.50 · $0.36 /백만 · egress 무료 |
+
 - MVP 월드 ≈ 1.5 GB(L0 294셀 × 평균 3 MB + HLOD + shared) → 저장 무료 범위. 23구 전역 L0 ≈ 30–40 GB → 월 $0.5 내외.
-- Workers: Free는 일 10만 요청 → 세션당 ~400 요청이면 일 250세션 한계. 공개 시 **Workers Paid 권장**. 정적 에셋 요청은 Worker를 호출하지 않으면 무료.
-- **무료 한도 일일 점검**(M11-T06, 사용자 결정 2026-10-19 — 무료 플랜으로 시작): `.github/workflows/usage.yml`(매일 09:00 KST) → `node scripts/cf-usage.ts --github-issue` — Workers 요청/일 100,000·KV 읽기 100,000/일·쓰기 1,000/일·R2 Class A 100만/월·Class B 1,000만/월·저장 10 GB·Analytics Engine 쓰기 100,000/일 대비 70 % 이상이면 라벨 `cf-usage` 이슈(열린 것이 있으면 본문 갱신). "ours"(tokyo-sanpo Worker·KV·`sanpo-world-*` 버킷)와 "account"(같은 계정 다른 프로젝트 포함 — 무료 한도는 계정 단위)를 나눠 표기. 토큰 권한 **Account | Account Analytics | Read**(Actions 시크릿 `CLOUDFLARE_API_TOKEN`에 필요 — 로컬 토큰은 확인됨). 로컬 실행 `node scripts/cf-usage.ts`.
-  - 2026-10-19 첫 측정: ours 최대 R2 저장 18.3 %(1.96 GB), Workers 2.0 %. account KV 쓰기 925 %(다른 프로젝트 namespace — tokyo-sanpo 아님).
-- 정적 에셋 요청(`run_worker_first` 밖)은 Workers 요청 수에 들어가지 않는다. `/world/*`·`/api/*`만 Worker 호출.
+- Workers: 세션당 ~400 요청이면 포함량 1,000만 = 주기당 약 2.5만 세션. 정적 에셋 요청(`run_worker_first` 밖)은 Workers 요청 수에 들어가지 않는다. `/world/*`·`/api/*`만 Worker 호출.
+- **포함량 점검**(M11-T06, 2026-10-31 paid 기준으로 전환): `.github/workflows/usage.yml`(매일 09:00 KST) → `node scripts/cf-usage.ts --github-issue`. 요금제 = **`CF_PLAN=paid`**(저장소 Actions 변수 `CF_PLAN`, 없으면 paid — `free`면 예전 무료 일일 한도로 판정), 청구 시작일 `CF_BILLING_DAY`(없으면 25).
+  - 판정: 청구 주기(25일 00:00 UTC부터) 누적 ÷ 포함량이 **70 % 초과**일 때만 라벨 `cf-usage` 이슈(열린 것이 있으면 본문 갱신). 주기 말 예상(카운터 = 누적 ÷ 경과 비율, 저장량 = 지금까지 평균과 최근 값)과 account 행의 **예상 추가 요금**(주기 말 예상 − 포함량 × 단가)을 같이 표시. 일일(UTC 오늘) 값은 급증 참고표(⚡ = 주기 안 이전 날 평균의 3배 이상이고 포함량 1 % 이상)로만 — 이슈를 열지 않는다.
+  - "ours"(tokyo-sanpo Worker·KV·`sanpo-world-*` 버킷·`sanpo_errors*` 데이터셋)와 "account"(같은 계정 다른 프로젝트 포함)를 나눠 표기. account 행에는 사용량 상위 3개 Worker·KV 네임스페이스(제목)·버킷·데이터셋 이름과 비중 — ID·비밀값은 출력하지 않는다.
+  - 측정 한계: Workers Logs = 호출 수로 추정(console.log 줄·샘플링 제외). 정확한 값과 2026-12-01 이후 GB 단위 수집량은 대시보드 Billing → Billable Usage. Analytics Engine 읽기 쿼리는 측정하지 않음(미과금). GB = 10^9 B(보수적).
+  - 토큰 권한 **Account Analytics: Read**(+ KV 제목용 **Workers KV Storage: Read** — 없으면 번호로 표기). 로컬 실행 `node scripts/cf-usage.ts`(env `CF_PLAN=free` 등으로 바꿔 볼 수 있음).
+  - 이력: 2026-10-19 첫 측정(무료 기준) ours 최대 R2 저장 18.3 %. 2026-10-31 이슈 #27(account KV 쓰기 130 %/일)은 이미 Paid인데 무료 일일 한도로 계산한 오탐 — 원인 = 같은 계정 다른 프로젝트(koreaaimap.com Worker `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). paid 기준 같은 날 KV 쓰기 주기 누적 7.6 %(주기 말 예상 35.8 %), 최대 항목 R2 저장 23.7 %.
 
 ## 7. CI/CD (GitHub Actions)
 | 워크플로 | 트리거 | 단계 |
@@ -108,7 +123,7 @@
 
 ## 9. 공개(production) 절차·롤백 (M11-T06)
 **전제(사람)**: ① 국토지리원 측량법 제30조 사용 승인 → 승인번호를 ATTRIBUTION `gsi-dem` 표기·화면 표기에 반영(03 §6.1) ② PR 병합 ③ 각 production 쓰기 직전 사용자 확인.
-요금제: Cloudflare 무료로 시작(사용자 결정 2026-10-19) — 정적 에셋 요청은 무료·무제한, Worker는 `/world/*`·`/api/*`만(하루 100,000 요청), 일일 점검 `usage.yml`(§6).
+요금제: Cloudflare 무료로 시작(사용자 결정 2026-10-19) → 현재 Workers Paid + R2 Paid(2026-10-31 확인) — 정적 에셋 요청은 무료·무제한, Worker는 `/world/*`·`/api/*`만, 포함량 점검 `usage.yml`(§6).
 
 | 단계 | 명령/위치 | 확인 |
 |---|---|---|

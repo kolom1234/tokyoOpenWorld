@@ -18,6 +18,14 @@ export async function accountId(): Promise<string> {
   return id;
 }
 
+/** REST GET → `result`(실패 = 예외 — 권한 없음 포함). */
+export async function rest<T>(path: string): Promise<{ result: T; result_info?: { total_pages?: number } }> {
+  const res = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token()}` } });
+  const j = (await res.json()) as { success: boolean; result: T; result_info?: { total_pages?: number } };
+  if (!res.ok || !j.success) throw new Error(`GET ${path.split('?')[0]?.replace(/[0-9a-f]{32}/g, '…')} ${res.status}`);
+  return j;
+}
+
 /** Workers Analytics Engine SQL API → 행 목록. */
 export async function aeSql<T = Record<string, unknown>>(acc: string, sql: string): Promise<T[]> {
   const res = await fetch(`${API}/accounts/${acc}/analytics_engine/sql`, {

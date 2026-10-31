@@ -1,5 +1,6 @@
-# Cloudflare 무료 한도 일일 점검(M11-T06, 사용자 결정 2026-10-19): Workers 요청·KV·R2·Analytics Engine 사용량이 무료 한도의 70 % 이상이면
-# 라벨 cf-usage 이슈를 만든다(열린 이슈가 있으면 본문만 갱신 — 알림은 처음 한 번). 토큰 권한 = Account | Account Analytics | Read.
+# Cloudflare 요금제 포함량 점검(M11-T06, 매일): 요금제 = CF_PLAN(저장소 변수 — 없으면 paid: Workers Paid + R2, 2026-10-31 사용자 확인),
+# 청구 주기(매월 CF_BILLING_DAY일 시작) 누적이 포함량의 70 %를 넘으면 라벨 cf-usage 이슈를 만든다(열린 이슈가 있으면 본문만 갱신 — 알림은 처음 한 번).
+# 일일 값은 급증 참고표로만 쓴다. 토큰 권한 = Account Analytics: Read(+ KV 이름 Workers KV Storage: Read). docs/13-deployment.md §6.
 # 시크릿 값은 node 프로세스 env로만 전달한다. 시크릿이 없으면 건너뛰고 성공.
 name: Cloudflare usage
 
@@ -28,10 +29,12 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         with:
           node-version: 24
-      - name: Usage vs free limits (issue at 70 %)
+      - name: Usage vs plan allowance (issue above 70 % of the billing cycle)
         if: steps.gate.outputs.enabled == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PLAN: ${{ vars.CF_PLAN || 'paid' }}
+          CF_BILLING_DAY: ${{ vars.CF_BILLING_DAY || '25' }}
           GH_TOKEN: ${{ github.token }}
         run: node scripts/cf-usage.ts --github-issue
