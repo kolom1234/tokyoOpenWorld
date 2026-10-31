@@ -19,7 +19,8 @@
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/world/*", "/api/*"]
   },
-  "observability": { "enabled": true },
+  // 관측 로그(ADR-0103): 요청 URL의 쿼리 문자열은 로그·트레이스에서 지운다(redact_query_string — 기본 false였음). 보존 = Workers Paid 7일(설정 불가).
+  "observability": { "enabled": true, "redact_query_string": true },
   // 오류 보고(M11-T03): Workers Analytics Engine — Workers Paid 주기당 1,000만 점 포함(아직 미과금, docs/13 §6), 데이터셋은 첫 기록 때 생긴다. 조회 = `pnpm errors`(SQL API).
   "analytics_engine_datasets": [{ "binding": "LOGS", "dataset": "sanpo_errors" }],
   "vars": { "LIVE_WEATHER": "false", "WORLD_BASE_URL": "/world", "DEPLOY_ENV": "production" },

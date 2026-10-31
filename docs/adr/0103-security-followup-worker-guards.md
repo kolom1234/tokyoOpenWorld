@@ -44,6 +44,9 @@
 16. `deploy.yml`에 `supersede` 잡: 새 Deploy 실행이 시작되면 이보다 먼저 시작돼 production 승인을 기다리는(`status=waiting`) 실행을 REST로 취소. 그 사이 staging 단계였던 옛 실행은 production 잡 첫 단계(`GITHUB_SHA == main 머리`)에서 실패. production 잡은 `refs/heads/main` 실행만. 승인 화면에는 항상 최신 main 하나만 남는다.
     `concurrency`만으로는 부족 — 승인 대기 잡이 그룹 안에서 "pending"으로 취소되는지는 문서상 보장이 없고, 같은 그룹이 staging 배포까지 막는다.
 
+### 관측 로그
+17. `observability.redact_query_string: true`(API 확인: 이전 production·staging 모두 `false`, 호출 로그 켜짐). staging 실측 — 배포 뒤 `?fv=1&redactcheck=…` 요청이 로그에 `…/api/world/current`로만 남음. 보존 기간은 요금제 고정(Paid 7일), 접근은 계정 권한. 애플리케이션 쪽은 원래 IP·UA·본문을 기록하지 않는다.
+
 ## Consequences
 - 다른 사이트의 브라우저는 `/api/log`에 쓸 수 없다(JSON은 프리플라이트 → 405, text/plain은 415). curl 등은 Origin을 빼면 통과하지만 IP당 분당 10회로 묶인다.
 - Rate Limiting 바인딩은 env 간 상속되지 않는다 → production·staging에 각각(namespace 1001·1002). 로컬·테스트는 바인딩 없음 = 제한 없음.
