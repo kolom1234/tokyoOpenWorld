@@ -119,6 +119,6 @@ jobs:
           tar -xzf "$tgz" -C "$RUNNER_TEMP" gitleaks
           "$RUNNER_TEMP/gitleaks" git . --redact --no-banner --exit-code 1
       # pnpm audit은 lockfile만 읽는다(설치 불필요). 예외가 필요하면 package.json pnpm.auditConfig.ignoreGhsas + ADR에 사유·만료.
-      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - name: Dependency audit (pnpm audit, all severities)
         run: pnpm audit --audit-level low
