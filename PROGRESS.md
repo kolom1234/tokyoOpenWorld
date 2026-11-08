@@ -1,15 +1,15 @@
 # PROGRESS
-Updated: 2026-11-08 (session #29 후속 — PR #30 병합 확인, 킬 스위치 감시 주기 수정, 브랜치 `claude/kill-switch-cron-offpeak`)
+Updated: 2026-11-08 (session #29 마무리 — production 배포 뒤 F01–F08 최종 판정, 브랜치 `claude/security-final-verdict`)
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
-## Current Task: 보안 후속 + 킬 스위치(ADR-0103·0104·0105) — **PR #30 병합(2026-10-31)**, production 승인 대기
-- Done: PR #30(1–13 전부 + staging 재검증 `docs/security/2026-10-security-followup.md` §1–3) 병합 → Deploy run #27(ac9bdee): supersede ✅·staging ✅·**production 승인 대기(2026-10-31부터)**.
-  2026-11-08: 킬 스위치 실검증은 사용자 결정으로 보류(토큰·`staging.earthaimap.com` 없음 — 환경 변수 없음, 기존 토큰 존 WAF 403, 도메인 NXDOMAIN). `*/30` 예약 실행 실측 29회/7.2일(간격 3–7시간) → `13,43 * * * *`(이 브랜치). cf-kill-switch 이슈 0건.
-- In progress: 이 브랜치 PR(감시 주기 + 보류 기록). 병합하면 새 Deploy가 run #27을 supersede한다 — 코드는 같으니 어느 run을 승인해도 결과는 같다.
-- Next step (정확히 한 걸음): 사용자가 production 승인 → "배포 완료" → Codex 스크립트 작업용 복사본(세션 scratchpad `repro-staging/`의 대상만 earthaimap.com으로)·TLS·HTTP 리다이렉트·HSTS·iframe 검사 → `docs/security/2026-10-security-followup.md` §4 F01–F08 최종표 커밋(새 브랜치·PR).
-- Blockers: 🔶 킬 스위치 차단 동작에 사람 준비 필요 — 존 한정 토큰 `Zone → WAF: Edit` + `Zone → Zone: Read`(GitHub Secret `CF_KILLSWITCH_TOKEN`, 로컬 실검증은 User 환경 변수), staging 커스텀 도메인 `staging.earthaimap.com`(docs/13 §6.1). 그 전까지 차단기는 감시·이슈만. 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
+## Current Task: 없음 — 보안 후속(ADR-0103·0104) production 반영·최종 판정 완료(2026-11-08)
+- Done: Deploy run #29(`main@9de2aea` = PR #30·#31·#32) production 승인·배포 → earthaimap.com 대상 Codex 스크립트·TLS·리다이렉트·HSTS·iframe·실제 GPU 재검증 → F01–F08 전부 **해결**(`docs/security/2026-10-security-followup.md` §4).
+- In progress: 없음.
+- Next step (정확히 한 걸음): 사용자가 킬 스위치 토큰을 준비하면 — GitHub Secret `CF_KILLSWITCH_TOKEN`(존 earthaimap.com 한정 `Zone → WAF: Edit` + `Zone → Zone: Read`) → `pnpm killswitch ensure`로 규칙 2개(비활성) 생성 → `staging.earthaimap.com` 커스텀 도메인 뒤 staging 시험 규칙 켜기/끄기 실검증(docs/13 §6.1).
+- Blockers: 🔶 킬 스위치 차단 동작 = 토큰 없음(감시·이슈만). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
 
 ## Recently Completed
+- 보안 점검(Codex 2026-10-23) 후속 + 비용 회로 차단기(2026-10-31~11-08, PR #30·#32, ADR-0103·0104·0105) — F03 `/api/log` 415·Origin 403·IP 해시 429·샘플률 허용 값·prod test 거절, F04 수신 바이트 4096 B, F05 쿼리 400·404 네거티브 캐시·current 엣지 30 s, F06 frame-ancestors·XFO, F07 Range 416·최상위 500, F08 vite 8.3.5·vitest 5.0.5·wrangler 4.153.0, production workers.dev 끔, Deploy supersede(실제로 #27·#28 취소 확인), 관측 쿼리 지움·샘플링 0.1·cpu_ms 50, 진단 도구 production 제외, 세이브 상한, Actions SHA·dependabot·security 잡, 킬 스위치(30분 감시 → 13·43분: `*/30`은 하루 ≈ 4회만 실행됨). production 최종 판정 F01–F08 해결.
 - Cloudflare 사용량 점검 paid 전환(2026-10-31, 사용자 요청) — 이슈 #27 kvWritesDay account 130 %는 무료 일일 한도로 계산한 오탐(같은 계정 다른 프로젝트 `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). 이제 Workers Paid 포함량(요청·CPU·Workers Logs(Observability 텔레메트리)·KV 읽기/쓰기/삭제/목록/저장·DO 요청·Duration·Queues 작업·Analytics Engine)·R2 무료분(Class A/B·Standard 누적 GB-월)의 청구 주기 누적 %, 70 % 초과만 이슈. 대시보드 Billable usage(10-25 ~ 10-30)와 `--at` 대조 — 전 항목 ±0.1 % 안. 첫 측정: account KV 쓰기 7.6 %·Queues 7.6 %(주기 말 예상 36–40 %).
 - Production 보안 후속(2026-10-31, 사용자 요청) — `/api/health` 바인딩 상세 제거(`{"ok":true}`), `_headers` `/*`에 `Referrer-Policy: strict-origin-when-cross-origin`·`Permissions-Policy`(쓰지 않는 센서·카메라·마이크·위치·결제·USB 등만 끔). HSTS는 이미 존 설정(`max-age=2592000`)이라 코드에 넣지 않음(테스트로 중복 차단). www는 DNS 레코드 없음(NXDOMAIN) → 사용자가 대시보드에서 `AAAA www 100::`(Proxied) + Redirect Rule 설정(docs/13 §9 4b) → https·http www 경로·쿼리 유지 301 한 번에 apex 200 ✅. ADR-0102
 - M11-T06 Production launch(2026-10-19) — 사용자 승인: prod 버킷 publish(롤백용 + 새 빌드)·KV 포인터 → PR #25 병합·Deploy 승인 → earthaimap.com 커스텀 도메인(API) → 공개 도메인 경유 파일 검증 불일치 0 → 롤백 리허설 4 s/원복 5 s → 공개 URL 스모크(첫 로드 25.6–26.0 MB, 첫 표시 HIT 8.5–12.1 s, 콘솔 오류 0). ⚠️ 배포 직후 첫 방문(엣지 MISS) 14.9–33 s.
@@ -19,7 +19,6 @@ Updated: 2026-11-08 (session #29 후속 — PR #30 병합 확인, 킬 스위치 
 - M11-T03 Error reporting(2026-10-19) — Worker `POST /api/log`(허용 필드·이메일/URL/긴 숫자 지움·IP/UA/위치 미사용) → Workers Analytics Engine(prod `sanpo_errors`·staging `sanpo_errors_staging`), 게임 `error-report.ts`(세션 1 %·3건·`?report=force`), `pnpm errors`(SQL API). 수락: staging 666dc839에 인위적 오류 2건 → 쿼리 2그룹 ✅. + `usage.yml`/`scripts/cf-usage.ts`(무료 한도 70 % 이슈 — 첫 측정 ours 최대 R2 18.3 %, account KV 쓰기 925 %는 다른 프로젝트). ADR-0098
 - M11-T05 License audit(2026-10-19) — 원문 재확인 표 03 §6.1(PLATEAU FAQ 手続き不要·상업 가능 ✅, KSJ N02 CC BY 4.0 ✅, Open-Meteo 비상업·production 호출 0 ✅, Freesound 22개 CC0 ✅, Rocketbox MIT ✅, 폰트 OFL ✅, npm 26개 GPL·NC 0 ✅, GSI DEM 🔶 측량법 제30조 사용 승인 신청 필요), ODbL 파생 DB `global/odbl/`(map 단계)·크레딧 링크, `/oss-licenses.txt` LICENSE 원문, 상표 스캔 CI 테스트(0건), 긴자선 미수록 크레딧 명시. ADR-0097
 - M10 잔여(2026-10-19) — physics `setPaused`(일시정지 = 물리 시각 정지), 포토 DOF = 출력 노드 교체(`post/output.ts`, 전체 재구성 없음), 사진 상한 200(오래된 것부터 — 도감 연결·IndexedDB 썸네일 정리), 로마자 방위 접두 하이픈(Nishi-Shinjuku), 한국어 파생 POI 이름 9곳 표기법 점검(수정 0), UI 글꼴 Noto Sans JP/KR Variable(fontsource 5.3.0 조각 woff2 — 타이틀 ja 278 KB·ko 178 KB·en 58 KB).
-- M10 마무리(2026-10-18) — MVP 재빌드(L0 294 + HLOD 177 + 머티리얼 32층 + 오디오 22 + map.pmtiles 1.45 MB, validate 0) → dev publish → staging. 실제 GPU staging(1600×900): HUD 시그널 8.1 Hz ≤ 10 ✅, 미니맵 0.018 ms/프레임(0.13 ms/회) ≤ 1 ✅, rAF p50 16.67·p95 16.84 ms, GPU 23.6 W(상한 33.9 W). 명소 봇 20/20(로컬 재빌드). 따라 해 보기 봇 전 단계 ✅. dev gc 대상 0.
 
 ## Backlog (M05 미구현·이번 세션 발견 — 사전 5 정리)
 - [signage] **창문 시트**(M05-T06 ⚠️): 상가 창 유리에 붙는 가상 광고·営業中 시트 미구현 — 파사드 1층 간판 띠와 같은 아틀라스로 창 셀 일부에 시트 텍스처(가상 브랜드, 로고 없음). 후보 시점 M09-T03(야간 점등) 전 또는 M10.
@@ -30,6 +29,7 @@ Updated: 2026-11-08 (session #29 후속 — PR #30 병합 확인, 킬 스위치 
 - [markings] 스크램블 외 OSM만 있는 횡단(≈ 950)의 ≤ 0.5 m 검증·보정(고해상도 정사영상 필요, ADR-0058).
 
 ## Known Issues
+- [network] (2026-11-08) 서울 회선에서 earthaimap.com·staging이 LAX PoP로 라우팅 — 캐시 HIT도 0.12 MB/s, 첫 로드 26 MB면 첫 화면까지 수 분(같은 시각 speed.cloudflare.com ICN 18.8 MB/s, 10-31엔 HKG). 배포 회귀 아님. 대응 후보: 다른 회선·시간대 재측정 → 지속되면 첫 로드 축소(셀·텍스처 지연 로드), Cloudflare 플랜(Pro)·Argo 검토, ADR-0105(R2 커스텀 도메인)는 PoP 문제를 못 푼다.
 - [launch] 배포·새 빌드 직후 엣지 캐시가 비어 첫 방문이 느리다(공개 URL 14.9–33 s, HIT 뒤 8.5–12.1 s). 대안: publish 뒤 공개 URL로 셀·공유 에셋을 한 번 GET(가까운 PoP만 데워짐)·R2 커스텀 도메인 CDN(§5). 첫 표시는 셰이더 컴파일(노트북 발열 시 7.7–8.9 s)이 대부분.
 - [render] 숨겨진 탭·크기 0 캔버스에서 선컴파일하면 SSR 블러 텍스처(1×1, mip 5)로 비동기 파이프라인 생성 오류 1건(실제 창에서는 없음) — 캔버스 크기 0이면 선컴파일을 늦추거나 SSR 최소 크기 검토.
 - [perf] (M11-T01 ⚠️) 1440p High 프레임 p50 15–25 ms·메인 p95 17–39 ms(render CPU = three WebGPU 드로우콜 비용 + GPU 대기), sim p95 ≈ 12–13 ms, 기준 GPU 2종 미측정 — ADR-0100 대안(셀 슬롯 병합·그림자 캐스터 축소·Medium 기본).

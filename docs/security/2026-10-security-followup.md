@@ -33,5 +33,28 @@ Codex 재현 스크립트는 원본을 수정하지 않고 **대상 URL만 바�
 - WAF 규칙 켜기/끄기 실검증: **사용자 결정으로 보류(2026-11-08)** — 존 WAF 토큰(`CF_KILLSWITCH_TOKEN`)과 staging 커스텀 도메인 `staging.earthaimap.com`이 아직 없다(2026-11-08 확인: 환경 변수 없음, 기존 토큰은 존 WAF 403, 도메인 NXDOMAIN). 그동안 production 동작 = 감시·이슈만(차단 건너뜀). 단위 테스트(규칙 식·멱등 ensure·PATCH·사용자 응답 거부 시 기본 차단)와 게임 점검 화면 테스트는 통과.
 - 감시 주기 실측(2026-11-01~08, `*/30`): 예약 실행 29회/7.2일(간격 3–7시간) — GitHub가 정각·30분 예약을 버림 → `13,43 * * * *`로 변경(후속 PR).
 
-## 4. production 최종 판정
-배포·승인 뒤 같은 스크립트와 TLS·HTTP 리다이렉트·HSTS·iframe 검사를 `https://earthaimap.com` 대상으로 다시 돌려 여기에 F01–F08 최종표(해결/부분/미해결 + 증거)를 남긴다.
+## 4. production 최종 판정 (2026-11-08, `https://earthaimap.com`)
+배포: GitHub Deploy run #29(`main@9de2aea` = PR #30 + #31 + #32) — supersede ✅(대기 중이던 run #27·#28을 자동 취소), staging ✅, production 승인 → `wrangler deploy` 06:04 UTC 100 %, `https://earthaimap.com` 스모크 ✅.
+Cloudflare API(설정 확인): production `workers.dev`·프리뷰 꺼짐(`tokyo-sanpo.kolom1357.workers.dev/api/health` → 404), `observability` 샘플링 0.1·`redact_query_string: true`, `limits.cpu_ms` 50, 바인딩 `LOG_LIMITER`(ratelimit)·`DEPLOY_ENV`.
+도구: Codex `live_audit.py`·`extra_live.py`·`dependency_tls_audit.py`(대상 원본 그대로 earthaimap.com — 작업용 복사본에서 실행), `local_security_checks.mjs`(§1과 같은 작업용 변경), `frame-test.html`(127.0.0.1:8766), 실제 GPU Chrome.
+
+| ID | 보고서(a752cd7) | production 지금 — 증거 | 판정 |
+|---|---|---|---|
+| F01 HTTP 평문·HSTS | `http-root`·`http-api`·`http-world` 200, HSTS 없음 | 6개 경로(문서·API·월드·없는 에셋·API 404·월드 404) 모두 `301 → https://…`(경로 유지), HTTPS 응답 HSTS `max-age=2592000` 한 번(중복 없음) | **해결**(존 설정) |
+| F02 TLS 1.0/1.1 | 수락 | TLS 1.0·1.1 서버가 `protocol_version` 경고로 거부, 1.2·1.3 성공(`dependency_tls_audit.py`·직접 검사 둘 다) | **해결**(존 설정) |
+| F03 오류 API 남용 | 외부 Origin + text/plain 204, 샘플률 1e-300 수락, 제한 없음 | `log-cross-site-plain-once` **415**, 외부 Origin JSON **403**, `sampleRate 1e-300` **400**, `kind:"test"`(자기 출처) **400**(production 거절), 요청 제한 바인딩 배포 확인(429 동작은 staging 실측 — production 부하 시험 안 함) | **해결** |
+| F04 본문 제한 | 끝까지 읽고 413, 7,528 B 한글 204 | `log-oversize`(4,097 B) **413**; 배포 코드 로컬 재현: 48 KiB 스트림 12 KiB에서 취소 413, 7,528 B 한글 JSON 413(Content-Type 없으면 415) | **해결** |
+| F05 캐시 우회·404 | 쿼리 MISS, 404 MISS→MISS | `manifest-query` **400**, `missing-object` → `world-missing-again` **MISS → HIT**, `manifest`·`-warm` HIT, `manifest-range` 206 BYPASS, `conditional-match` 304 | **해결** |
+| F06 iframe | 외부 출처 iframe에 게임 표시 | 127.0.0.1:8766 iframe → 콘솔 `Framing 'https://earthaimap.com/' violates … "frame-ancestors 'none'"` 차단, 모든 응답 `X-Frame-Options: DENY` | **해결** |
+| F07 Range·1101 | 범위 초과 500/1101, `bytes=bad` 206 | `range-out-of-bounds` **416** `bytes */725`(보안 헤더 유지), `range-syntax-invalid` **200** 전체(HIT), 사용자 입력 5xx 0(`nul`·`trace`는 Cloudflare 엣지 400/405) | **해결** |
+| F08 의존성 | 5패키지 20권고 | OSV querybatch 269 + 런타임 26 → **0건**, `pnpm audit` 0건, CI `security` 잡 | **해결** |
+
+보고서 §5 강화 항목: Actions SHA 고정·dependabot(첫 PR #31 병합)·`security` 잡 ✅, 대체 접근 경로(workers.dev) 꺼짐 ✅, 관측 로그 쿼리 지움 ✅(보존 7일은 요금제 고정), 디버그 기능 — production 번들에 `ui-sandbox`·`decode-probe`·`physics-probe`·`report=force` 없음 ✅(`?world=mini`는 경로 상수만, 픽스처 파일 없음), 세이브 가져오기 상한 ✅(단위 테스트), Referrer·Permissions-Policy ✅(PR #28).
+남은 위험·보류: ① 킬 스위치 **차단 동작은 꺼진 상태**(`CF_KILLSWITCH_TOKEN` 없음 → 감시·이슈만, WAF 켜기/끄기 실검증 보류 — §3) ② `/api/log` 요청 제한은 PoP 근사(순간 버스트 일부 통과) ③ Range·HEAD 요청은 여전히 R2 직행(비용 상한 = 킬 스위치, 구조 개선 = ADR-0105 제안) ④ 독립 리뷰(승인 0명)·HSTS preload 등 운영 결정 항목은 범위 밖.
+
+### 실제 GPU 회귀(production)
+RTX 3050 Laptop(33.8 W)·Chrome WebGPU·1600×900, 새 컨텍스트(캐시 없음): 타이틀 15.7–17.1 s → 새 산책 → HUD(WebGPU, crossOriginIsolated, `.tkc` 77, KTX2 11, WASM 2, 워커 스크립트 16, 오디오 6) → 지도(`map.pmtiles`) → HUD 70 s 뒤 IndexedDB `save/v2` 생성 → 새로 고침 → "이어하기" ✅. 콘솔 오류 0, 4xx/5xx 응답 0.
+첫 시도는 LAX 라우팅(아래)으로 첫 로드가 느려 타이틀이 120 s 안에 뜨지 않았다 — 같은 시각 staging·speed.cloudflare.com 대조로 배포 회귀가 아님을 확인한 뒤 대기 시간을 늘려 통과.
+
+### 관찰: 한국 회선의 먼 PoP 라우팅(보안 아님, 성능)
+2026-11-08 이 PC(서울)에서 earthaimap.com·staging(workers.dev) 모두 **LAX** PoP로 연결, 캐시 HIT 파일도 0.12 MB/s(1.71 MB 14 s, 큰 텍스처 60 s 초과). 같은 시각 `speed.cloudflare.com`은 ICN 18.8 MB/s. 10-31에는 HKG. 첫 로드 ≈ 26 MB라 이 상태면 첫 화면까지 수 분 — 배포 회귀가 아니라 Cloudflare가 이 회선의 요청을 어느 PoP로 보내는지의 문제(플랜·통신사 피어링에 따라 달라짐). 대응 후보는 PROGRESS Known Issues.
