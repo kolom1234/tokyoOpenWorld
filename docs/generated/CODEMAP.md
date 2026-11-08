@@ -32,7 +32,7 @@
 - `apps/game/src/shell/credits.ts` — 크레딧 모델(M10-T06, ADR-0096): 게임 빌드가 내보낸 /credits.json(sources.lock 모든 원천 + ATTRIBUTION)·/oss-licenses.json(런타임 의존 라이선스)을 처음 열 때 받는다. | exports: creditsOf, odblEntry, loadCredits
 - `apps/game/src/shell/fast-travel.ts` — 빠른 이동(타이틀 시작 지점·지도 — M10): 검은 막 → walk 재진입(먼 기준점 = 그 아래 지면을 콜라이더 적재 뒤 찾는다, ADR-0084 경로) → 착지 확인 → 막 걷기. | exports: TravelTarget, FastTravelDeps, arrived, fastTravel
 - `apps/game/src/shell/hud-state.ts` — HUD 안내 상태(문서당 하나): 상호작용 안내(출처별 칸 — 우선순위 순), 알림(seq), 역 근접 안내, 검은 막. 게임 배선이 쓰고 shell/bridge가 10 Hz로 UI(@sanpo/ui HUD)에 넘긴다. | exports: PROMPT_SLOTS, PromptSlot, HudState, hudStateOf, setPrompt, topPrompt, pushNotice, pushCaption, setGuide, setFade, setDrive, setTrain
-- `apps/game/src/shell/loading.ts` — 부팅 상태 → UI 로딩 화면(LoadingModel): StatusView(e2e data-* 속성 — 화면에서는 숨김)를 감싸 같은 호출을 시그널로도 보낸다. 순수 매핑 함수는 테스트. | exports: INITIAL_LOADING, loadingOfWorld, loadingOfBoot, loadingView
+- `apps/game/src/shell/loading.ts` — 부팅 상태 → UI 로딩 화면(LoadingModel): StatusView(e2e data-* 속성 — 화면에서는 숨김)를 감싸 같은 호출을 시그널로도 보낸다. 순수 매핑 함수는 테스트. | exports: INITIAL_LOADING, isEndStage, loadingOfWorld, loadingOfBoot, loadingView
 - `apps/game/src/shell/map-source.ts` — 지도 데이터 소스(M10-T03): 월드 빌드 global/map.pmtiles(파일 전체 — 수 MB, 처음 필요할 때 한 번) → 타일 MVT 디코드 → UI MapTileData. WF → 메르카토르는 @sanpo/geo. | exports: worldToMerc, createMapSource
 - `apps/game/src/shell/options.ts` — 셸 옵션: 메뉴 모드(타이틀·포인터 잠금 풀림 = 일시정지) 여부와 저장소. 개발·테스트 URL(?debug=1·?view=·?spawn=·?mode=·?probe=)은 메뉴 없이 곧바로 게임. | exports: menusEnabled, storageOf
 - `apps/game/src/shell/pause.ts` — 메뉴 일시정지(M10-T01): 게임 입력 끔(input.setEnabled) + 포인터 잠금 풀기 + 사용자 시계(custom)면 시계 멈춤. 재개 = 반대(+ 제스처 안이면 포인터 잠금 다시). | exports: PauseControl, createPause

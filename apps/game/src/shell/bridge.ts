@@ -21,7 +21,7 @@ import type { WorldView } from '../world-view.ts';
 import { createCommands, startPoints, travelToPos } from './commands.ts';
 import { loadCredits } from './credits.ts';
 import { hudStateOf, topPrompt } from './hud-state.ts';
-import { INITIAL_LOADING, loadingOfBoot } from './loading.ts';
+import { INITIAL_LOADING, isEndStage, loadingOfBoot } from './loading.ts';
 import { createMapSource, worldToMerc } from './map-source.ts';
 import { createPause } from './pause.ts';
 import { createPhoto, type PhotoControl } from './photo.ts';
@@ -152,7 +152,7 @@ function hudSystem(doc: Document, w: WorldView, shell: Shell, hud: Signal<HudMod
       if (!watching && w.wiring && w.streaming) watching = watchPlaces(w, places);
       const p = w.traversal.player.posWF;
       if (watching && acc === 0) loadPlaces(w, places, cellOf(0, p.x, p.z));
-      if (shell.loading.peek().stage !== 'ready' && shell.loading.peek().stage !== 'error') {
+      if (!isEndStage(shell.loading.peek().stage)) {
         const st = w.bootStage();
         shell.loading.value = { ...shell.loading.peek(), ...loadingOfBoot(st.boot, st.live) };
       }

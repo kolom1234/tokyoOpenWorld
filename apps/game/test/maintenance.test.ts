@@ -1,6 +1,6 @@
 // 킬 스위치(ADR-0104) 응답 → 점검 상태·로딩 단계: WAF 사용자 응답 503 maintenance 또는 기본 차단 페이지 403(JSON 아님).
 import { describe, expect, it } from 'vitest';
-import { loadingOfWorld } from '../src/shell/loading.ts';
+import { isEndStage, loadingOfWorld } from '../src/shell/loading.ts';
 import { fetchWorldStatus, isEdgeBlock } from '../src/world-status.ts';
 
 describe('kill-switch maintenance status', () => {
@@ -15,8 +15,15 @@ describe('kill-switch maintenance status', () => {
     const html = async () => new Response('<html>Sorry, you have been blocked</html>', { status: 403 });
     const s = await fetchWorldStatus(html, 1);
     expect(s).toEqual({ kind: 'maintenance' });
-    expect(loadingOfWorld(s)).toEqual({ stage: 'maintenance', error: null });
+    expect(loadingOfWorld(s)).toEqual({ stage: 'maintenance', error: null, detail: null });
     const json = async () => Response.json({ error: 'maintenance' }, { status: 503 });
     expect(await fetchWorldStatus(json, 1)).toEqual({ kind: 'maintenance' });
+  });
+
+  it('treats maintenance as an end stage so boot progress cannot overwrite it', () => {
+    expect(isEndStage('maintenance')).toBe(true);
+    expect(isEndStage('error')).toBe(true);
+    expect(isEndStage('ready')).toBe(true);
+    for (const s of ['caps', 'manifest', 'shaders', 'spawn'] as const) expect(isEndStage(s)).toBe(false);
   });
 });
