@@ -1,15 +1,15 @@
 # PROGRESS
-Updated: 2026-11-08 (M11-T06 비용 차단 토큰 등록·staging 실검증 완료 + 점검 화면 버그 수정, 브랜치 `codex/cost-killswitch-activation`)
+Updated: 2026-11-08 (킬 스위치 운영 반영 마무리 — PR #34 production 배포·점검 화면 확인, 브랜치 `claude/progress-killswitch-done`)
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
-## Current Task: 없음 — M11-T06 비용 회로 차단기 운영 준비 완료(2026-11-08)
-- Done: 사용자 승인으로 earthaimap.com 전용 WAF Edit·Zone Read 토큰 생성 → GitHub Secret·Windows 사용자 환경 변수 `CF_KILLSWITCH_TOKEN` 등록 → 규칙 2개 생성(기본 403) → staging 커스텀 도메인 연결 → API·월드 파일 200→403→200, 정적·production 200 유지. GitHub usage run `42456075881` 성공(Secret 주입 확인, breaker ok, 예상 추가 $0.00). 최종 두 규칙 비활성 = 자동 감시 대기, production 강제 차단은 하지 않음. 이어서 게임 화면 재검증에서 점검 화면이 "셰이더 준비 중"으로 덮이는 버그 발견 → `shell/loading.ts isEndStage` 수정·staging 재배포 → 차단 중 "점검 중이에요" 유지·해제 뒤 타이틀 정상(스크린샷 `docs/screenshots/followups/killswitch-staging-*.jpg`).
+## Current Task: 없음 — 보안 후속(ADR-0103)·비용 회로 차단기(ADR-0104) production 반영 완료(2026-11-08)
+- Done: PR #34(점검 화면 버그 수정 + 킬 스위치 활성화 기록) 병합 → Deploy #31 production 승인(`main@37f4073`, 100 %). production 번들 확인: 이 브라우저에서만 `/api/world/current`를 403 차단 페이지로 바꿔치기 → 20 s 뒤에도 "점검 중이에요"(WAF 규칙은 켜지 않음), 바꿔치기 없이 타이틀 정상, `smoke.sh https://earthaimap.com` ✅. WAF 규칙 2개(production·staging-test) 비활성. PC 사용자 환경 변수 `CF_KILLSWITCH_TOKEN` 삭제 확인(GitHub Secret만 유지).
 - In progress: 없음.
-- Next step (정확히 한 걸음): 이 브랜치 PR 병합 → Deploy production 승인(점검 화면 수정이 production에 들어가야 차단 시 화면이 맞다) → 다음 예약 `Cloudflare usage` 실행 시각을 보고 13·43분 cron의 실제 간격을 관찰한다.
-- Blockers: 킬 스위치 쪽 막힌 것 없음(토큰·도메인 준비 완료). 권장: PC 사용자 환경 변수 `CF_KILLSWITCH_TOKEN` 삭제(자동 감시는 GitHub Secret만 사용 — docs/13 §6.1). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
+- Next step (정확히 한 걸음): 며칠 뒤 `gh api "repos/kolom1234/tokyoOpenWorld/actions/workflows/usage.yml/runs?per_page=60"`으로 13·43분 예약 실행 간격을 확인한다(`*/30`일 때는 하루 ≈ 4회). 여전히 몇 시간 간격이면 외부 스케줄러(`workflow_dispatch` 호출) 검토 — ADR-0104 Consequences.
+- Blockers: 킬 스위치 쪽 없음(수동 조작은 토큰을 그 셸에서만 넣고 `pnpm killswitch status|off` — docs/13 §6.1). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
 
 ## Recently Completed
-- M11-T06 킬 스위치 활성화 준비(2026-11-08) — 최소 권한 토큰 생성·GitHub/PC 등록, 비활성 규칙 2개, `staging.earthaimap.com` → `tokyo-sanpo-staging`, staging 차단·복구 및 production 무영향 실검증, Actions 수동 실행 성공. docs/13 §6.1. 과금 절대 상한은 아님(예약·집계 지연, 다른 프로젝트·저장 비용은 차단 밖).
+- M11-T06 킬 스위치 활성화(2026-11-08, PR #34) — 최소 권한 토큰(earthaimap.com 존만, WAF Edit·Zone Read — 계정·Workers·R2·KV·DNS 거부 확인) → GitHub Secret(PC 환경 변수는 시험 뒤 삭제), 비활성 규칙 2개(Free 존 = 기본 403), `staging.earthaimap.com` → `tokyo-sanpo-staging`, staging 차단·복구 및 production 무영향 실검증, 점검 화면이 선컴파일 진행에 덮이던 버그 수정(`isEndStage`) → staging·production 화면 확인(스크린샷 `docs/screenshots/followups/killswitch-staging-*.jpg`). docs/13 §6.1. 과금 절대 상한은 아님(예약·집계 지연, 다른 프로젝트·저장 비용은 차단 밖).
 - 보안 점검(Codex 2026-10-23) 후속 + 비용 회로 차단기(2026-10-31~11-08, PR #30·#32, ADR-0103·0104·0105) — F03 `/api/log` 415·Origin 403·IP 해시 429·샘플률 허용 값·prod test 거절, F04 수신 바이트 4096 B, F05 쿼리 400·404 네거티브 캐시·current 엣지 30 s, F06 frame-ancestors·XFO, F07 Range 416·최상위 500, F08 vite 8.3.5·vitest 5.0.5·wrangler 4.153.0, production workers.dev 끔, Deploy supersede(실제로 #27·#28 취소 확인), 관측 쿼리 지움·샘플링 0.1·cpu_ms 50, 진단 도구 production 제외, 세이브 상한, Actions SHA·dependabot·security 잡, 킬 스위치(30분 감시 → 13·43분: `*/30`은 하루 ≈ 4회만 실행됨). production 최종 판정 F01–F08 해결.
 - Cloudflare 사용량 점검 paid 전환(2026-10-31, 사용자 요청) — 이슈 #27 kvWritesDay account 130 %는 무료 일일 한도로 계산한 오탐(같은 계정 다른 프로젝트 `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). 이제 Workers Paid 포함량(요청·CPU·Workers Logs(Observability 텔레메트리)·KV 읽기/쓰기/삭제/목록/저장·DO 요청·Duration·Queues 작업·Analytics Engine)·R2 무료분(Class A/B·Standard 누적 GB-월)의 청구 주기 누적 %, 70 % 초과만 이슈. 대시보드 Billable usage(10-25 ~ 10-30)와 `--at` 대조 — 전 항목 ±0.1 % 안. 첫 측정: account KV 쓰기 7.6 %·Queues 7.6 %(주기 말 예상 36–40 %).
 - Production 보안 후속(2026-10-31, 사용자 요청) — `/api/health` 바인딩 상세 제거(`{"ok":true}`), `_headers` `/*`에 `Referrer-Policy: strict-origin-when-cross-origin`·`Permissions-Policy`(쓰지 않는 센서·카메라·마이크·위치·결제·USB 등만 끔). HSTS는 이미 존 설정(`max-age=2592000`)이라 코드에 넣지 않음(테스트로 중복 차단). www는 DNS 레코드 없음(NXDOMAIN) → 사용자가 대시보드에서 `AAAA www 100::`(Proxied) + Redirect Rule 설정(docs/13 §9 4b) → https·http www 경로·쿼리 유지 301 한 번에 apex 200 ✅. ADR-0102
