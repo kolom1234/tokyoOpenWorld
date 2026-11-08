@@ -1,5 +1,5 @@
 // 부팅 상태 → UI 로딩 화면(LoadingModel): StatusView(e2e data-* 속성 — 화면에서는 숨김)를 감싸 같은 호출을 시그널로도 보낸다. 순수 매핑 함수는 테스트.
-import type { LoadingModel, Signal } from '@sanpo/ui';
+import type { LoadingModel, LoadingStage, Signal } from '@sanpo/ui';
 import type { BootStage } from '../boot-progress.ts';
 import { type Caps, IsolationMode, WebGpuStatus } from '../caps.ts';
 import type { StatusView } from '../status-view.ts';
@@ -14,6 +14,14 @@ export const INITIAL_LOADING: LoadingModel = {
   error: null,
 };
 
+/**
+ * 끝 상태 — 부팅 진행 보고(HUD 시스템 `loadingOfBoot`)로 덮지 않는다. 점검(킬 스위치)도 끝 상태: 월드 없이 렌더 선컴파일은 계속 돌므로
+ * 빼먹으면 점검 화면이 곧바로 "셰이더 준비 중"으로 바뀌어 멈춘 것처럼 보인다(2026-11-08 staging 실검증에서 발견).
+ */
+export function isEndStage(stage: LoadingStage): boolean {
+  return stage === 'ready' || stage === 'error' || stage === 'maintenance';
+}
+
 /** 월드 상태 → 단계(오류·미연결은 error). */
 export function loadingOfWorld(w: WorldStatus): Partial<LoadingModel> {
   switch (w.kind) {
@@ -22,7 +30,7 @@ export function loadingOfWorld(w: WorldStatus): Partial<LoadingModel> {
     case 'loaded':
       return { stage: 'shaders', progress: 0.2 };
     case 'maintenance':
-      return { stage: 'maintenance', error: null };
+      return { stage: 'maintenance', error: null, detail: null };
     case 'unconfigured':
     case 'no-build':
       return { stage: 'error', error: `world: ${w.kind}` };

@@ -31,6 +31,7 @@ Codex 재현 스크립트는 원본을 수정하지 않고 **대상 URL만 바�
 ## 3. 비용 회로 차단기 (ADR-0104)
 - 판정 실데이터(2026-11-01): `breaker: ok (account projected extra $0.00)` — ours 최대 0.0 %, account KV 쓰기 7.7 %(주기 말 35.7 %, 다른 프로젝트).
 - WAF 규칙 켜기/끄기 실검증: **완료(2026-11-08 후속, 사용자 승인)** — 존 한정 토큰(`CF_KILLSWITCH_TOKEN`)을 GitHub Secret·Windows 사용자 환경 변수에 등록하고 `staging.earthaimap.com`을 연결했다. API·활성 월드 파일 200→403→200, 정적 화면·production API 200 유지 확인. 최종 두 규칙 비활성(조건 발생 시 production 자동 차단 준비). Free 존은 기본 403 응답. usage run `42456075881` 성공·Secret 주입 확인·breaker ok. production 강제 차단은 시험하지 않았다(docs/13 §6.1).
+  게임 화면 재검증(같은 날): 점검 화면이 선컴파일 진행 보고에 덮이는 버그를 발견·수정(`isEndStage`) → staging 차단 중 "점검 중이에요" 유지·해제 뒤 타이틀 정상 — `docs/screenshots/followups/killswitch-staging-blocked.jpg`·`-restored.jpg`. 토큰 범위 점검: 보이는 존 = earthaimap.com 하나, 계정·Workers·R2·KV·DNS·SSL 거부, WAF 규칙 읽기·쓰기만, 만료 없음.
 - 감시 주기 실측(2026-11-01~08, `*/30`): 예약 실행 29회/7.2일(간격 3–7시간) — GitHub가 정각·30분 예약을 버림 → `13,43 * * * *`로 변경(후속 PR).
 
 ## 4. production 최종 판정 (2026-11-08, `https://earthaimap.com`)

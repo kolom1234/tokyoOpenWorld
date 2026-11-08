@@ -1,12 +1,12 @@
 # PROGRESS
-Updated: 2026-11-08 (M11-T06 비용 차단 토큰 등록·staging 실검증 완료, 브랜치 `codex/cost-killswitch-activation`)
+Updated: 2026-11-08 (M11-T06 비용 차단 토큰 등록·staging 실검증 완료 + 점검 화면 버그 수정, 브랜치 `codex/cost-killswitch-activation`)
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
 ## Current Task: 없음 — M11-T06 비용 회로 차단기 운영 준비 완료(2026-11-08)
-- Done: 사용자 승인으로 earthaimap.com 전용 WAF Edit·Zone Read 토큰 생성 → GitHub Secret·Windows 사용자 환경 변수 `CF_KILLSWITCH_TOKEN` 등록 → 규칙 2개 생성(기본 403) → staging 커스텀 도메인 연결 → API·월드 파일 200→403→200, 정적·production 200 유지. GitHub usage run `42456075881` 성공(Secret 주입 확인, breaker ok, 예상 추가 $0.00). 최종 두 규칙 비활성 = 자동 감시 대기, production 강제 차단은 하지 않음.
+- Done: 사용자 승인으로 earthaimap.com 전용 WAF Edit·Zone Read 토큰 생성 → GitHub Secret·Windows 사용자 환경 변수 `CF_KILLSWITCH_TOKEN` 등록 → 규칙 2개 생성(기본 403) → staging 커스텀 도메인 연결 → API·월드 파일 200→403→200, 정적·production 200 유지. GitHub usage run `42456075881` 성공(Secret 주입 확인, breaker ok, 예상 추가 $0.00). 최종 두 규칙 비활성 = 자동 감시 대기, production 강제 차단은 하지 않음. 이어서 게임 화면 재검증에서 점검 화면이 "셰이더 준비 중"으로 덮이는 버그 발견 → `shell/loading.ts isEndStage` 수정·staging 재배포 → 차단 중 "점검 중이에요" 유지·해제 뒤 타이틀 정상(스크린샷 `docs/screenshots/followups/killswitch-staging-*.jpg`).
 - In progress: 없음.
-- Next step (정확히 한 걸음): 다음 예약 `Cloudflare usage` 실행 시각·성공 여부를 확인해 13·43분 cron의 실제 지연을 관찰한다(수동 실행은 성공, 정시 실행 보장 아님).
-- Blockers: 킬 스위치 없음. 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
+- Next step (정확히 한 걸음): 이 브랜치 PR 병합 → Deploy production 승인(점검 화면 수정이 production에 들어가야 차단 시 화면이 맞다) → 다음 예약 `Cloudflare usage` 실행 시각을 보고 13·43분 cron의 실제 간격을 관찰한다.
+- Blockers: 킬 스위치 쪽 막힌 것 없음(토큰·도메인 준비 완료). 권장: PC 사용자 환경 변수 `CF_KILLSWITCH_TOKEN` 삭제(자동 감시는 GitHub Secret만 사용 — docs/13 §6.1). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
 
 ## Recently Completed
 - M11-T06 킬 스위치 활성화 준비(2026-11-08) — 최소 권한 토큰 생성·GitHub/PC 등록, 비활성 규칙 2개, `staging.earthaimap.com` → `tokyo-sanpo-staging`, staging 차단·복구 및 production 무영향 실검증, Actions 수동 실행 성공. docs/13 §6.1. 과금 절대 상한은 아님(예약·집계 지연, 다른 프로젝트·저장 비용은 차단 밖).
