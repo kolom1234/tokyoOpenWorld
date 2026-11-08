@@ -30,7 +30,7 @@ Codex 재현 스크립트는 원본을 수정하지 않고 **대상 URL만 바�
 
 ## 3. 비용 회로 차단기 (ADR-0104)
 - 판정 실데이터(2026-11-01): `breaker: ok (account projected extra $0.00)` — ours 최대 0.0 %, account KV 쓰기 7.7 %(주기 말 35.7 %, 다른 프로젝트).
-- WAF 규칙 켜기/끄기 실검증: **사용자 결정으로 보류(2026-11-08)** — 존 WAF 토큰(`CF_KILLSWITCH_TOKEN`)과 staging 커스텀 도메인 `staging.earthaimap.com`이 아직 없다(2026-11-08 확인: 환경 변수 없음, 기존 토큰은 존 WAF 403, 도메인 NXDOMAIN). 그동안 production 동작 = 감시·이슈만(차단 건너뜀). 단위 테스트(규칙 식·멱등 ensure·PATCH·사용자 응답 거부 시 기본 차단)와 게임 점검 화면 테스트는 통과.
+- WAF 규칙 켜기/끄기 실검증: **완료(2026-11-08 후속, 사용자 승인)** — 존 한정 토큰(`CF_KILLSWITCH_TOKEN`)을 GitHub Secret·Windows 사용자 환경 변수에 등록하고 `staging.earthaimap.com`을 연결했다. API·활성 월드 파일 200→403→200, 정적 화면·production API 200 유지 확인. 최종 두 규칙 비활성(조건 발생 시 production 자동 차단 준비). Free 존은 기본 403 응답. usage run `42456075881` 성공·Secret 주입 확인·breaker ok. production 강제 차단은 시험하지 않았다(docs/13 §6.1).
 - 감시 주기 실측(2026-11-01~08, `*/30`): 예약 실행 29회/7.2일(간격 3–7시간) — GitHub가 정각·30분 예약을 버림 → `13,43 * * * *`로 변경(후속 PR).
 
 ## 4. production 최종 판정 (2026-11-08, `https://earthaimap.com`)
@@ -50,7 +50,7 @@ Cloudflare API(설정 확인): production `workers.dev`·프리뷰 꺼짐(`tokyo
 | F08 의존성 | 5패키지 20권고 | OSV querybatch 269 + 런타임 26 → **0건**, `pnpm audit` 0건, CI `security` 잡 | **해결** |
 
 보고서 §5 강화 항목: Actions SHA 고정·dependabot(첫 PR #31 병합)·`security` 잡 ✅, 대체 접근 경로(workers.dev) 꺼짐 ✅, 관측 로그 쿼리 지움 ✅(보존 7일은 요금제 고정), 디버그 기능 — production 번들에 `ui-sandbox`·`decode-probe`·`physics-probe`·`report=force` 없음 ✅(`?world=mini`는 경로 상수만, 픽스처 파일 없음), 세이브 가져오기 상한 ✅(단위 테스트), Referrer·Permissions-Policy ✅(PR #28).
-남은 위험·보류: ① 킬 스위치 **차단 동작은 꺼진 상태**(`CF_KILLSWITCH_TOKEN` 없음 → 감시·이슈만, WAF 켜기/끄기 실검증 보류 — §3) ② `/api/log` 요청 제한은 PoP 근사(순간 버스트 일부 통과) ③ Range·HEAD 요청은 여전히 R2 직행(비용 상한 = 킬 스위치, 구조 개선 = ADR-0105 제안) ④ 독립 리뷰(승인 0명)·HSTS preload 등 운영 결정 항목은 범위 밖.
+남은 위험·보류: ① 킬 스위치는 토큰 등록·staging 실검증 완료했지만 실시간 과금 상한은 아님(예약·집계 지연, 다른 프로젝트·저장 비용은 차단 밖 — docs/13 §6.1) ② `/api/log` 요청 제한은 PoP 근사(순간 버스트 일부 통과) ③ Range·HEAD 요청은 여전히 R2 직행(요청 비용 억제 = 킬 스위치, 구조 개선 = ADR-0105 제안) ④ 독립 리뷰(승인 0명)·HSTS preload 등 운영 결정 항목은 범위 밖.
 
 ### 실제 GPU 회귀(production)
 RTX 3050 Laptop(33.8 W)·Chrome WebGPU·1600×900, 새 컨텍스트(캐시 없음): 타이틀 15.7–17.1 s → 새 산책 → HUD(WebGPU, crossOriginIsolated, `.tkc` 77, KTX2 11, WASM 2, 워커 스크립트 16, 오디오 6) → 지도(`map.pmtiles`) → HUD 70 s 뒤 IndexedDB `save/v2` 생성 → 새로 고침 → "이어하기" ✅. 콘솔 오류 0, 4xx/5xx 응답 0.

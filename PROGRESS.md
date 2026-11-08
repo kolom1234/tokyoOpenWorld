@@ -1,14 +1,15 @@
 # PROGRESS
-Updated: 2026-11-08 (session #29 마무리 — production 배포 뒤 F01–F08 최종 판정, 브랜치 `claude/security-final-verdict`)
+Updated: 2026-11-08 (M11-T06 비용 차단 토큰 등록·staging 실검증 완료, 브랜치 `codex/cost-killswitch-activation`)
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
-## Current Task: 없음 — 보안 후속(ADR-0103·0104) production 반영·최종 판정 완료(2026-11-08)
-- Done: Deploy run #29(`main@9de2aea` = PR #30·#31·#32) production 승인·배포 → earthaimap.com 대상 Codex 스크립트·TLS·리다이렉트·HSTS·iframe·실제 GPU 재검증 → F01–F08 전부 **해결**(`docs/security/2026-10-security-followup.md` §4).
+## Current Task: 없음 — M11-T06 비용 회로 차단기 운영 준비 완료(2026-11-08)
+- Done: 사용자 승인으로 earthaimap.com 전용 WAF Edit·Zone Read 토큰 생성 → GitHub Secret·Windows 사용자 환경 변수 `CF_KILLSWITCH_TOKEN` 등록 → 규칙 2개 생성(기본 403) → staging 커스텀 도메인 연결 → API·월드 파일 200→403→200, 정적·production 200 유지. GitHub usage run `42456075881` 성공(Secret 주입 확인, breaker ok, 예상 추가 $0.00). 최종 두 규칙 비활성 = 자동 감시 대기, production 강제 차단은 하지 않음.
 - In progress: 없음.
-- Next step (정확히 한 걸음): 사용자가 킬 스위치 토큰을 준비하면 — GitHub Secret `CF_KILLSWITCH_TOKEN`(존 earthaimap.com 한정 `Zone → WAF: Edit` + `Zone → Zone: Read`) → `pnpm killswitch ensure`로 규칙 2개(비활성) 생성 → `staging.earthaimap.com` 커스텀 도메인 뒤 staging 시험 규칙 켜기/끄기 실검증(docs/13 §6.1).
-- Blockers: 🔶 킬 스위치 차단 동작 = 토큰 없음(감시·이슈만). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
+- Next step (정확히 한 걸음): 다음 예약 `Cloudflare usage` 실행 시각·성공 여부를 확인해 13·43분 cron의 실제 지연을 관찰한다(수동 실행은 성공, 정시 실행 보장 아님).
+- Blockers: 킬 스위치 없음. 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
 
 ## Recently Completed
+- M11-T06 킬 스위치 활성화 준비(2026-11-08) — 최소 권한 토큰 생성·GitHub/PC 등록, 비활성 규칙 2개, `staging.earthaimap.com` → `tokyo-sanpo-staging`, staging 차단·복구 및 production 무영향 실검증, Actions 수동 실행 성공. docs/13 §6.1. 과금 절대 상한은 아님(예약·집계 지연, 다른 프로젝트·저장 비용은 차단 밖).
 - 보안 점검(Codex 2026-10-23) 후속 + 비용 회로 차단기(2026-10-31~11-08, PR #30·#32, ADR-0103·0104·0105) — F03 `/api/log` 415·Origin 403·IP 해시 429·샘플률 허용 값·prod test 거절, F04 수신 바이트 4096 B, F05 쿼리 400·404 네거티브 캐시·current 엣지 30 s, F06 frame-ancestors·XFO, F07 Range 416·최상위 500, F08 vite 8.3.5·vitest 5.0.5·wrangler 4.153.0, production workers.dev 끔, Deploy supersede(실제로 #27·#28 취소 확인), 관측 쿼리 지움·샘플링 0.1·cpu_ms 50, 진단 도구 production 제외, 세이브 상한, Actions SHA·dependabot·security 잡, 킬 스위치(30분 감시 → 13·43분: `*/30`은 하루 ≈ 4회만 실행됨). production 최종 판정 F01–F08 해결.
 - Cloudflare 사용량 점검 paid 전환(2026-10-31, 사용자 요청) — 이슈 #27 kvWritesDay account 130 %는 무료 일일 한도로 계산한 오탐(같은 계정 다른 프로젝트 `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). 이제 Workers Paid 포함량(요청·CPU·Workers Logs(Observability 텔레메트리)·KV 읽기/쓰기/삭제/목록/저장·DO 요청·Duration·Queues 작업·Analytics Engine)·R2 무료분(Class A/B·Standard 누적 GB-월)의 청구 주기 누적 %, 70 % 초과만 이슈. 대시보드 Billable usage(10-25 ~ 10-30)와 `--at` 대조 — 전 항목 ±0.1 % 안. 첫 측정: account KV 쓰기 7.6 %·Queues 7.6 %(주기 말 예상 36–40 %).
 - Production 보안 후속(2026-10-31, 사용자 요청) — `/api/health` 바인딩 상세 제거(`{"ok":true}`), `_headers` `/*`에 `Referrer-Policy: strict-origin-when-cross-origin`·`Permissions-Policy`(쓰지 않는 센서·카메라·마이크·위치·결제·USB 등만 끔). HSTS는 이미 존 설정(`max-age=2592000`)이라 코드에 넣지 않음(테스트로 중복 차단). www는 DNS 레코드 없음(NXDOMAIN) → 사용자가 대시보드에서 `AAAA www 100::`(Proxied) + Redirect Rule 설정(docs/13 §9 4b) → https·http www 경로·쿼리 유지 301 한 번에 apex 200 ✅. ADR-0102
