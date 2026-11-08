@@ -30,7 +30,8 @@ Codex 재현 스크립트는 원본을 수정하지 않고 **대상 URL만 바�
 
 ## 3. 비용 회로 차단기 (ADR-0104)
 - 판정 실데이터(2026-11-01): `breaker: ok (account projected extra $0.00)` — ours 최대 0.0 %, account KV 쓰기 7.7 %(주기 말 35.7 %, 다른 프로젝트).
-- WAF 규칙 켜기/끄기 실검증: **대기** — 존 WAF 토큰(`CF_KILLSWITCH_TOKEN`)과 staging 커스텀 도메인 `staging.earthaimap.com`이 필요(PROGRESS Blockers). 단위 테스트(규칙 식·멱등 ensure·PATCH·사용자 응답 거부 시 기본 차단)와 게임 점검 화면 테스트는 통과.
+- WAF 규칙 켜기/끄기 실검증: **사용자 결정으로 보류(2026-11-08)** — 존 WAF 토큰(`CF_KILLSWITCH_TOKEN`)과 staging 커스텀 도메인 `staging.earthaimap.com`이 아직 없다(2026-11-08 확인: 환경 변수 없음, 기존 토큰은 존 WAF 403, 도메인 NXDOMAIN). 그동안 production 동작 = 감시·이슈만(차단 건너뜀). 단위 테스트(규칙 식·멱등 ensure·PATCH·사용자 응답 거부 시 기본 차단)와 게임 점검 화면 테스트는 통과.
+- 감시 주기 실측(2026-11-01~08, `*/30`): 예약 실행 29회/7.2일(간격 3–7시간) — GitHub가 정각·30분 예약을 버림 → `13,43 * * * *`로 변경(후속 PR).
 
 ## 4. production 최종 판정
 배포·승인 뒤 같은 스크립트와 TLS·HTTP 리다이렉트·HSTS·iframe 검사를 `https://earthaimap.com` 대상으로 다시 돌려 여기에 F01–F08 최종표(해결/부분/미해결 + 증거)를 남긴다.
