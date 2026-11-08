@@ -119,27 +119,25 @@ The project documentation is written in Korean. Start with [`CLAUDE.md`](CLAUDE.
 오프라인 파이프라인이 원천 데이터를 **TKC 셀 컨테이너**로 굽고, Cloudflare R2에 빌드 단위로 올립니다. 브라우저는 플레이어 주변 셀만 스트리밍하며, 무거운 작업(디코드·물리·군중/교통)은 전부 워커에서 돌립니다.
 
 ```mermaid
-flowchart TB
-  subgraph OFF["오프라인 · tools/pipeline (Docker)"]
-    SRC["원천 데이터<br/>PLATEAU · GSI DEM<br/>OSM · KSJ N02 · e-Stat"]
-    PIPE["normalize → build<br/>TKC 셀 · HLOD · 지도"]
+flowchart LR
+  subgraph OFF["오프라인 (Docker)"]
+    PIPE["tools/pipeline<br/>PLATEAU · GSI · OSM<br/>→ TKC 셀 · HLOD"]
   end
   subgraph CF["Cloudflare"]
-    R2[("R2<br/>world/buildId/**")]
-    W["Worker<br/>정적 번들<br/>/world/* · /api/*"]
-    KV[("KV<br/>활성 buildId")]
+    R2[("R2<br/>월드 빌드")]
+    KV[("KV<br/>현재 buildId")]
+    W["Worker<br/>정적 번들<br/>/world · /api"]
   end
   subgraph BR["브라우저 · apps/game"]
-    MAIN["Main 스레드<br/>입력 · 이동 · 스트리밍<br/>렌더 · UI"]
-    DEC["decode.worker ×N<br/>TKC · meshopt"]
+    MAIN["Main 스레드<br/>입력 · 렌더 · UI"]
+    DEC["decode.worker ×N<br/>TKC 디코드"]
     PHY["physics.worker<br/>Jolt 120 Hz"]
-    SIM["sim.worker<br/>군중 · 교통 · 열차<br/>30 Hz"]
+    SIM["sim.worker<br/>군중 · 교통 · 열차"]
   end
-  SRC --> PIPE
-  PIPE -- "pnpm pipeline publish" --> R2
+  PIPE -- publish --> R2
   R2 --> W
-  KV -. "현재 빌드" .-> W
-  W -- "셀 스트리밍" --> MAIN
+  KV -.-> W
+  W -- 스트리밍 --> MAIN
   MAIN <--> DEC
   MAIN <--> PHY
   MAIN <--> SIM
