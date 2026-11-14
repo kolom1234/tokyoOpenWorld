@@ -5,7 +5,7 @@
   "type": "module",
   "dependencies": {
     "@dgreenheck/ez-tree": "1.1.0",
-    "@gltf-transform/core": "4.5.0",
+    "@gltf-transform/core": "4.5.1",
     "@gltf-transform/extensions": "4.5.0",
     "@recast-navigation/core": "0.43.1",
     "@recast-navigation/generators": "0.43.1",
