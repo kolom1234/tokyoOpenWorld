@@ -70,6 +70,7 @@ MVP 구역: 시부야–하라주쿠–신주쿠 (약 3.6 × 5.4 km). 이후 23�
 ```
 apps/game        브라우저 클라이언트 (Vite). 조립(Composition Root)만 담당
 apps/worker      Cloudflare Worker (정적 에셋 + R2 월드 데이터 + API)
+apps/usage-cron  비용 감시 트리거 Worker (30분 Cron → GitHub usage.yml, ADR-0106)
 packages/core    공통 타입, 이벤트버스, 로거, rng, 설정, 수학
 packages/geo     좌표 변환 (EPSG:6668/6677 ↔ WF), 셀 인덱싱
 packages/tile-format  TKC 컨테이너 인코더/디코더 (파이프라인·런타임 공용)

@@ -3,19 +3,22 @@
 # 일일 값은 급증 참고표로만 쓴다. 토큰 권한 = Account Analytics: Read(+ 이름·로그용 권한은 docs/13-deployment.md §6).
 # 차단기: ours 지표 > 90 % 또는 account 예상 추가 요금 > $1 → 라벨 cf-kill-switch 이슈 + 시크릿 CF_KILLSWITCH_TOKEN이 있으면 WAF 규칙 sanpo-kill-switch를 켠다
 # (없으면 감시·이슈만). 해제는 자동으로 하지 않는다 — `pnpm killswitch off`(docs/13 §6). GitHub 일정은 몇 분 늦을 수 있고, 60일간 저장소 활동이 없으면 꺼진다.
+# 30분 실행의 주 트리거 = Cloudflare Cron Worker `sanpo-usage-cron`(apps/usage-cron)의 workflow_dispatch(ADR-0106) — 아래 schedule은 백업.
+# 감시 지연 경보: 변수 USAGE_CRON_ACTIVE=true이면 직전 성공 실행과 2시간 넘게 벌어졌을 때 라벨 cf-usage-watchdog 이슈(트리거·PAT 고장 감지).
 # 시크릿 값은 node 프로세스 env로만 전달한다. 시크릿이 없으면 건너뛰고 성공.
 name: Cloudflare usage
 
 on:
   schedule:
-    # 30분마다(차단기)를 정각·30분이 아닌 13·43분에 — GitHub는 부하가 큰 시각(정시 등)의 예약 실행을 늦추거나 버린다
-    # (`*/30`일 때 2026-11-01~08 실측 29회/7.2일, 간격 3–7시간, ADR-0104). 70 % 이슈는 열린 것이 있으면 본문만 갱신 — 알림은 처음 한 번.
+    # 백업 트리거. GitHub는 부하가 큰 시각의 예약 실행을 늦추거나 버린다 — `*/30` 29회/7.2일, `13,43` 22회/6일(2026-11-08~14) 실측.
+    # 정시성은 apps/usage-cron(Cloudflare Cron → workflow_dispatch, ADR-0106)이 맡는다. 70 % 이슈는 열린 것이 있으면 본문만 갱신 — 알림은 처음 한 번.
     - cron: '13,43 * * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
   issues: write
+  actions: read # 감시 지연 경보: 직전 실행 시각 조회
 
 concurrency:
   group: cf-usage
@@ -37,6 +40,25 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         with:
           node-version: 24
+      - name: Watchdog — gap since the last successful check (ADR-0106)
+        if: steps.gate.outputs.enabled == 'true' && vars.USAGE_CRON_ACTIVE == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prev=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/usage.yml/runs?status=success&per_page=1" --jq '.workflow_runs[0].created_at // empty')
+          [ -n "$prev" ] || exit 0
+          gap=$(( $(date -u +%s) - $(date -u -d "$prev" +%s) ))
+          echo "gap since last successful check: $((gap / 60)) min (this run: $GITHUB_EVENT_NAME)"
+          [ "$gap" -gt 7200 ] || exit 0
+          body="비용 감시 실행 간격 $((gap / 60))분(2시간 초과) — 30분 트리거 sanpo-usage-cron(apps/usage-cron, ADR-0106)이 멈췄을 수 있다. 직전 성공 ${prev}, 이번 실행 ${GITHUB_EVENT_NAME}. 확인: Cloudflare 대시보드 Workers & Pages → sanpo-usage-cron → 로그(Cron 실패·workflow_dispatch 401/403), PAT(GITHUB_DISPATCH_TOKEN) 만료. 절차 docs/13 §6.1."
+          echo "::warning::$body"
+          open=$(gh issue list --label cf-usage-watchdog --state open --json number --jq '.[0].number // empty')
+          if [ -n "$open" ]; then
+            gh issue edit "$open" --body "$body"
+          else
+            gh label create cf-usage-watchdog --force --color FBCA04 --description 'Cost watch cadence gap' >/dev/null
+            gh issue create --title '비용 감시 실행 간격 2시간 초과' --label cf-usage-watchdog --body "$body"
+          fi
       - name: Usage vs plan allowance (issue above 70 %) + cost circuit breaker
         if: steps.gate.outputs.enabled == 'true'
         env:

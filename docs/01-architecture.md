@@ -80,6 +80,7 @@ tokyo-sanpo/
 | L4 | `ui` | core (게임 상태는 `UiBridge` 인터페이스로 주입받음) |
 | L5 | `apps/game` | 전부 |
 | — | `apps/worker` | core, tile-format(타입만) |
+| — | `apps/usage-cron` | (없음 — 비용 감시 트리거 Worker, ADR-0106) |
 | — | `tools/pipeline` | core, geo, tile-format (three는 헤드리스 유틸 용도만 허용) |
 
 핵심: **streaming은 render/physics/sim을 모른다.** `CellPayload`를 `onReady` 콜백으로 내보내고, `apps/game/src/wiring/`가 각 소비자에 전달한다.

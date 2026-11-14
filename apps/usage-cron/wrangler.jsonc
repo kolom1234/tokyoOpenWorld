@@ -1,0 +1,16 @@
+// 비용 회로 차단기 감시 트리거(ADR-0106): 30분마다 GitHub `usage.yml`을 workflow_dispatch로 실행하는 별도 Worker. see docs/13-deployment.md §6.1
+// 비밀값 GITHUB_DISPATCH_TOKEN은 `pnpm --filter @sanpo/usage-cron exec wrangler secret put GITHUB_DISPATCH_TOKEN`(사람)으로만.
+// 공개 경로 없음: workers.dev·프리뷰·라우트 모두 끔(fetch는 404). 배포 = `pnpm --filter @sanpo/usage-cron deploy`(수동 — 게임 배포와 별개).
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "sanpo-usage-cron",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  // 정시·30분(UTC). Cloudflare Cron Trigger는 몇 초 안에 실행된다 — GitHub 예약 실행(13·43분)은 백업으로 남긴다.
+  "triggers": { "crons": ["*/30 * * * *"] },
+  "vars": { "GITHUB_REPO": "kolom1234/tokyoOpenWorld", "WORKFLOW": "usage.yml", "REF": "main" },
+  "observability": { "enabled": true, "redact_query_string": true },
+  "limits": { "cpu_ms": 50 }
+}
