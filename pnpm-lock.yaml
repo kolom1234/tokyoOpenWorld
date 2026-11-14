@@ -159,8 +159,8 @@ importers:
         specifier: workspace:*
         version: link:../tile-format
       jolt-physics:
-        specifier: 1.1.0
-        version: 1.1.0
+        specifier: 1.1.1
+        version: 1.1.1
 
   packages/render:
     dependencies:
@@ -1221,8 +1221,8 @@ packages:
     peerDependencies:
       react: ^19.0.0
 
-  jolt-physics@1.1.0:
-    resolution: {integrity: sha512-Erl+X0yK2f9/8Wrl55Nb2y9FYS5xDx375EabnHq+TbSDYEuPZBLvpaLV4nbc1M5gyA5Llbug81wSj1zSMRUr7Q==}
+  jolt-physics@1.1.1:
+    resolution: {integrity: sha512-kMCQu/b4wbHwy7EgZWaSbUyDthIKZUvAGGqta4pBF4Pdq+ljWaNvQoa5hPr/PkVCUVsqcoLwXITUm6975mQhiQ==}
 
   json-schema-traverse@1.0.0:
     resolution: {integrity: sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug==}
@@ -2388,7 +2388,7 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
-  jolt-physics@1.1.0: {}
+  jolt-physics@1.1.1: {}
 
   json-schema-traverse@1.0.0: {}
 
