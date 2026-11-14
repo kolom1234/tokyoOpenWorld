@@ -1,12 +1,12 @@
 # PROGRESS
-Updated: 2026-11-08 (킬 스위치 운영 반영 마무리 — PR #34 production 배포·점검 화면 확인, 브랜치 `claude/progress-killswitch-done`)
+Updated: 2026-11-14 (비용 감시 30분 트리거 — Cloudflare Cron Worker, 브랜치 `claude/usage-cron-trigger`)
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
-## Current Task: 없음 — 보안 후속(ADR-0103)·비용 회로 차단기(ADR-0104) production 반영 완료(2026-11-08)
-- Done: PR #34(점검 화면 버그 수정 + 킬 스위치 활성화 기록) 병합 → Deploy #31 production 승인(`main@37f4073`, 100 %). production 번들 확인: 이 브라우저에서만 `/api/world/current`를 403 차단 페이지로 바꿔치기 → 20 s 뒤에도 "점검 중이에요"(WAF 규칙은 켜지 않음), 바꿔치기 없이 타이틀 정상, `smoke.sh https://earthaimap.com` ✅. WAF 규칙 2개(production·staging-test) 비활성. PC 사용자 환경 변수 `CF_KILLSWITCH_TOKEN` 삭제 확인(GitHub Secret만 유지).
+## Current Task: 비용 감시 30분 트리거(ADR-0106) — 코드·배포 완료, 사람 1회 설정 대기
+- Done: GitHub 예약 실행 실측 `13,43` 22회/6일(하루 3–4회) → 별도 Worker `sanpo-usage-cron`(`apps/usage-cron`, Cron `*/30` → `usage.yml` workflow_dispatch, 공개 경로 없음) + `usage.yml` 감시 지연 경보(변수 `USAGE_CRON_ACTIVE=true`일 때 2시간 초과 → 라벨 `cf-usage-watchdog` 이슈, 실데이터 간격 계산 확인) + ADR-0106·docs/13 §6.1·모듈 카드. 테스트 1,005 통과.
 - In progress: 없음.
-- Next step (정확히 한 걸음): 며칠 뒤 `gh api "repos/kolom1234/tokyoOpenWorld/actions/workflows/usage.yml/runs?per_page=60"`으로 13·43분 예약 실행 간격을 확인한다(`*/30`일 때는 하루 ≈ 4회). 여전히 몇 시간 간격이면 외부 스케줄러(`workflow_dispatch` 호출) 검토 — ADR-0104 Consequences.
-- Blockers: 킬 스위치 쪽 없음(수동 조작은 토큰을 그 셸에서만 넣고 `pnpm killswitch status|off` — docs/13 §6.1). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
+- Next step (정확히 한 걸음): 사용자가 fine-grained PAT(이 저장소, Actions: Read and write)를 만들어 `pnpm --filter @sanpo/usage-cron exec wrangler secret put GITHUB_DISPATCH_TOKEN` → 다음 :00/:30 뒤 Actions에 `workflow_dispatch` 실행 확인 → `gh variable set USAGE_CRON_ACTIVE --body true`.
+- Blockers: 🔶 PAT(사람). Dependabot PR #37–#41 결정 대기(#41 @types/node 26·#39 TS 7은 닫고 무시 설정 권장, #37 포맷, #38 픽스처 재생성, #40 통과). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
 
 ## Recently Completed
 - M11-T06 킬 스위치 활성화(2026-11-08, PR #34) — 최소 권한 토큰(earthaimap.com 존만, WAF Edit·Zone Read — 계정·Workers·R2·KV·DNS 거부 확인) → GitHub Secret(PC 환경 변수는 시험 뒤 삭제), 비활성 규칙 2개(Free 존 = 기본 403), `staging.earthaimap.com` → `tokyo-sanpo-staging`, staging 차단·복구 및 production 무영향 실검증, 점검 화면이 선컴파일 진행에 덮이던 버그 수정(`isEndStage`) → staging·production 화면 확인(스크린샷 `docs/screenshots/followups/killswitch-staging-*.jpg`). docs/13 §6.1. 과금 절대 상한은 아님(예약·집계 지연, 다른 프로젝트·저장 비용은 차단 밖).

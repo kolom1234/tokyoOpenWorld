@@ -14,6 +14,7 @@ const LAYERS = {
   'packages/traversal': ['core', 'geo', 'input', 'physics'],
   'packages/ui': ['core'],
   'apps/worker': ['core', 'tile-format'],
+  'apps/usage-cron': [],
   'tools/pipeline': ['core', 'geo', 'tile-format'],
   'tools/codemap': ['core'],
 };

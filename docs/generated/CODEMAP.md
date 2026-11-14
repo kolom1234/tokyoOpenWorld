@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 612개.
+> 파일 613개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -76,6 +76,9 @@
 - `apps/game/src/world-rail.ts` — 철도 적재(M07-T03, ADR-0072): 첫 표시 뒤 world `global/rail.bin`(gzip — DecompressionStream) + `global/timetables/index.json`·노선 파일 → | exports: RailData, loadRail, startTrainsLater, sendRailStatics, trainPhysicsSystem
 - `apps/game/src/world-status.ts` — 부트 4단계: GET /api/world/current?fv= → 활성 월드 빌드 조회(킬 스위치 차단 = 점검 상태). see docs/13-deployment.md §4, §8 | exports: WorldStatus, isEdgeBlock, fetchWorldStatus
 - `apps/game/src/world-view.ts` — 부트 7–9단계 조립: render + input + traversal(로딩 중 freecam → 첫 표시에 walk — 09 §1 기본, `?mode=freecam`·골든뷰는 freecam 유지) + 카메라 배선, 월드 로드 후 streaming(디코드 워커) + streaming→render·physics 배선. | exports: SPAWN_READY_RADIUS_M, WorldView, WorldViewDeps, createWorldView
+
+## apps/usage-cron
+- `apps/usage-cron/src/index.ts` — 비용 회로 차단기 감시 트리거(ADR-0106): Cloudflare Cron Trigger(30분마다) → GitHub `workflow_dispatch`로 `usage.yml` 실행. | exports: Env, CronContext, DEFAULTS, dispatchRequest, dispatch, default
 
 ## apps/worker
 - `apps/worker/src/cache.ts` — 엣지 캐시(`caches.default`) 접근. Workers 밖(Vitest·브라우저)에서는 undefined → 캐시 생략. see docs/13-deployment.md §4 | exports: EdgeCache, edgeCache
