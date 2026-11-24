@@ -1,14 +1,15 @@
 # PROGRESS
-Updated: 2026-11-14 (비용 감시 30분 트리거 — Cloudflare Cron Worker, 브랜치 `claude/usage-cron-trigger`)
+Updated: 2026-11-25 (Dependabot 정리 — 브랜치 `claude/deps-2026-11-25`)
 
 ## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
 ## Current Task: 비용 감시 30분 트리거(ADR-0106) — 코드·배포 완료, 사람 1회 설정 대기
 - Done: GitHub 예약 실행 실측 `13,43` 22회/6일(하루 3–4회) → 별도 Worker `sanpo-usage-cron`(`apps/usage-cron`, Cron `*/30` → `usage.yml` workflow_dispatch, 공개 경로 없음) + `usage.yml` 감시 지연 경보(변수 `USAGE_CRON_ACTIVE=true`일 때 2시간 초과 → 라벨 `cf-usage-watchdog` 이슈, 실데이터 간격 계산 확인) + ADR-0106·docs/13 §6.1·모듈 카드. 테스트 1,005 통과.
 - In progress: 없음.
 - Next step (정확히 한 걸음): 사용자가 fine-grained PAT(이 저장소, Actions: Read and write)를 만들어 `pnpm --filter @sanpo/usage-cron exec wrangler secret put GITHUB_DISPATCH_TOKEN` → 다음 :00/:30 뒤 Actions에 `workflow_dispatch` 실행 확인 → `gh variable set USAGE_CRON_ACTIVE --body true`.
-- Blockers: 🔶 PAT(사람). Dependabot PR #37–#41 결정 대기(#41 @types/node 26·#39 TS 7은 닫고 무시 설정 권장, #37 포맷, #38 픽스처 재생성, #40 통과). 🔶 측량법 승인(03 §6.1). ODPT 키 없음.
+- Blockers: 🔶 PAT(사람 — 2026-11-25 확인: 11-08 이후 `workflow_dispatch` 0회). 🔶 측량법 승인(03 §6.1 — production 공개 중인데 승인번호 미표기). ODPT 키 없음.
 
 ## Recently Completed
+- Dependabot 정리(2026-11-25, 브랜치 `claude/deps-2026-11-25`): #38 gltf-transform core 4.5.1(plateau-mini `expected.json` glb 해시 2개 재계산 — 테스트와 같은 `plateauMiniSnapshot`, world-mini는 그대로 유효)·#40 jolt 1.1.1·#43 dev-tooling(Biome 2.6.6·Playwright 1.65·depcruise 18.7.2·Vitest 5.1·Vite 8.3.6·wrangler 4.158)·#44 pnpm/action-setup 6.1.1(composite 셋업도 — Dependabot이 `.github/actions/*`를 안 봐서 `directories` 추가)을 한 PR로. Biome 2.6이 Markdown·YAML을 검사 → Markdown 포매터 끔·YAML 작은따옴표, 새로 잡힌 미사용 import 4개 제거. #39 TS 7(JS 컴파일러 API 없음)·#41 @types/node 26(Node 22 하한)은 닫고 `ignore`(semver-major). docs/02 버전 표 갱신.
 - M11-T06 킬 스위치 활성화(2026-11-08, PR #34) — 최소 권한 토큰(earthaimap.com 존만, WAF Edit·Zone Read — 계정·Workers·R2·KV·DNS 거부 확인) → GitHub Secret(PC 환경 변수는 시험 뒤 삭제), 비활성 규칙 2개(Free 존 = 기본 403), `staging.earthaimap.com` → `tokyo-sanpo-staging`, staging 차단·복구 및 production 무영향 실검증, 점검 화면이 선컴파일 진행에 덮이던 버그 수정(`isEndStage`) → staging·production 화면 확인(스크린샷 `docs/screenshots/followups/killswitch-staging-*.jpg`). docs/13 §6.1. 과금 절대 상한은 아님(예약·집계 지연, 다른 프로젝트·저장 비용은 차단 밖).
 - 보안 점검(Codex 2026-10-23) 후속 + 비용 회로 차단기(2026-10-31~11-08, PR #30·#32, ADR-0103·0104·0105) — F03 `/api/log` 415·Origin 403·IP 해시 429·샘플률 허용 값·prod test 거절, F04 수신 바이트 4096 B, F05 쿼리 400·404 네거티브 캐시·current 엣지 30 s, F06 frame-ancestors·XFO, F07 Range 416·최상위 500, F08 vite 8.3.5·vitest 5.0.5·wrangler 4.153.0, production workers.dev 끔, Deploy supersede(실제로 #27·#28 취소 확인), 관측 쿼리 지움·샘플링 0.1·cpu_ms 50, 진단 도구 production 제외, 세이브 상한, Actions SHA·dependabot·security 잡, 킬 스위치(30분 감시 → 13·43분: `*/30`은 하루 ≈ 4회만 실행됨). production 최종 판정 F01–F08 해결.
 - Cloudflare 사용량 점검 paid 전환(2026-10-31, 사용자 요청) — 이슈 #27 kvWritesDay account 130 %는 무료 일일 한도로 계산한 오탐(같은 계정 다른 프로젝트 `orange-brook-ac24`의 KV `CITYDATA_KV` 쓰기). 이제 Workers Paid 포함량(요청·CPU·Workers Logs(Observability 텔레메트리)·KV 읽기/쓰기/삭제/목록/저장·DO 요청·Duration·Queues 작업·Analytics Engine)·R2 무료분(Class A/B·Standard 누적 GB-월)의 청구 주기 누적 %, 70 % 초과만 이슈. 대시보드 Billable usage(10-25 ~ 10-30)와 `--at` 대조 — 전 항목 ±0.1 % 안. 첫 측정: account KV 쓰기 7.6 %·Queues 7.6 %(주기 말 예상 36–40 %).

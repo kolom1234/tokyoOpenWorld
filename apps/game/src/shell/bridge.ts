@@ -4,7 +4,6 @@ import { type CellKey, type GameSystem, unpackCellKey, type Vec3d } from '@sanpo
 import { cellOf } from '@sanpo/geo';
 import {
   type CreditsModel,
-  computed,
   type DiscoveryModel,
   effect,
   type HudModel,

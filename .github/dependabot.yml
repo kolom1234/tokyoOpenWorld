@@ -3,7 +3,8 @@
 version: 2
 updates:
   - package-ecosystem: github-actions
-    directory: /
+    # '/'는 .github/workflows만 본다 — composite 액션(.github/actions/setup)의 pnpm/action-setup 등은 따로 지정.
+    directories: ['/', '/.github/actions/*']
     schedule:
       interval: weekly
       day: monday
@@ -26,6 +27,13 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    ignore:
+      # TS 7(네이티브 컴파일러)은 JS 컴파일러 API가 없다 — scripts/lib/size-rules.ts·tools/codemap이 쓴다. 전환은 별도 ADR(docs/02).
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # 타입은 지원 하한 Node 22 API로 고정(ADR-0011·0014) — 26은 TypedArray<ArrayBufferLike> 변경으로 tsc 실패.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       dev-tooling:
         dependency-type: development
