@@ -10,6 +10,6 @@
     "@sanpo/core": "workspace:*",
     "@sanpo/geo": "workspace:*",
     "@sanpo/tile-format": "workspace:*",
-    "jolt-physics": "1.1.0"
+    "jolt-physics": "1.1.1"
   }
 }

@@ -1,7 +1,7 @@
 // 날씨 서비스(10 §3·§8 WeatherService, M09-T01 — ADR-0076): auto(기후표 마르코프 + 젖음 적분, 게임 시각 순수 함수) / live(실시간 표본 + 젖음 램프) / fixed.
 // 값은 게임 시각마다 캐시(같은 ms = 같은 객체), 젖음은 게임 1분 해상도로 다시 적분(그 사이는 이웃 분 선형 보간).
 import type { WeatherParams } from '@sanpo/core';
-import type { LiveWeatherSample, WeatherClimateFile, WeatherMode, WeatherService } from '../../api.ts';
+import type { WeatherClimateFile, WeatherMode, WeatherService } from '../../api.ts';
 import { liveParams } from './live-mapper.ts';
 import { createMarkovCache, weatherAt } from './markov.ts';
 import { stepWetness, wetnessAt } from './wetness.ts';

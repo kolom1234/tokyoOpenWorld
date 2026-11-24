@@ -24,6 +24,12 @@
   "javascript": {
     "formatter": { "quoteStyle": "single" }
   },
+  "markdown": {
+    "formatter": { "enabled": false }
+  },
+  "yaml": {
+    "formatter": { "quoteStyle": "single" }
+  },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,

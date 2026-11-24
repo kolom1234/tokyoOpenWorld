@@ -9,7 +9,7 @@
 | 렌더러 | **three.js `WebGPURenderer`** + TSL | 0.186.1 | MIT | WebGPU 기본 + WebGL2 자동 폴백, TSL 노드 셰이더가 양쪽 백엔드 공통. r186 기준 `SunLight`(CSM), `ClusteredLightsNode`, `SSGINode`, `SSRNode`, `GTAONode`, `TRAANode`, `TAAUNode`, `BloomNode`, `Lut3DNode`, `LightProbeGrid` 등 사실적 렌더링 부품이 addon으로 존재 |
 | 대기/하늘 | `@takram/three-atmosphere` (`/webgpu` export) | 0.19.1 (+ `patches/` three r186 호환, ADR-0028) | MIT | Bruneton 정밀 대기 산란, 하늘·태양·공중원근·조도. WebGPU 엔트리 제공 |
 | 지리 유틸 | `@takram/three-geospatial` (`/webgpu`) | 0.9.1 (+ `patches/`) | MIT | 대기 모듈 의존 |
-| 물리 | **Jolt Physics** `jolt-physics` (wasm, multithread 빌드) | 1.1.0 | MIT | 차량(WheeledVehicle/Motorcycle 컨트롤러: 엔진·변속기·차동·타이어 마찰곡선), CharacterVirtual(계단·경사·이동발판), 대규모 정적 메시 성능. AAA 채택 실적 |
+| 물리 | **Jolt Physics** `jolt-physics` (wasm, multithread 빌드) | 1.1.1 | MIT | 차량(WheeledVehicle/Motorcycle 컨트롤러: 엔진·변속기·차동·타이어 마찰곡선), CharacterVirtual(계단·경사·이동발판), 대규모 정적 메시 성능. AAA 채택 실적 |
 | 내비/군중 | `@recast-navigation/core` (sim 워커 WASM) | 0.43.1 | MIT | Detour 타일 NavMesh + DetourCrowd(ADR-0063 — three 연동 패키지는 안 씀) |
 | 메시 가속 | `three-mesh-bvh` | 0.9.15 | MIT | 레이캐스트(카메라 충돌, 픽킹) |
 | 압축 디코드 | `meshoptimizer` (디코더) / three `KTX2Loader` (Basis) | 1.3.0 / three 내장 | MIT / Apache-2.0 | glTF `EXT_meshopt_compression`, `KHR_texture_basisu` |
@@ -26,18 +26,18 @@
 |---|---|---|
 | 런타임 | Node.js 24 LTS (`.nvmrc`=24, `engines` ≥22.12 허용 — ADR-0011) | 24.x (하한 22.12) |
 | 패키지 매니저 | pnpm (workspaces) | 10.34.5 (`packageManager` 필드 고정) |
-| 언어 | TypeScript | 6.0.3 (`typescript-eslint` 호환 범위 < 6.1. TS 7 전환은 별도 ADR) |
-| 번들러 | Vite | 8.3.5 (보안 권고 대응 2026-10-31 — ≥ 8.3.3, ADR-0103) |
-| CF 배포 | `wrangler` (선택: `@cloudflare/vite-plugin` 1.60.2 — 도입 시 ADR) | 4.153.0 (miniflare 5.20261023.0-beta → sharp 0.35.5·undici 7.30.1, ADR-0103) |
-| 린트/포맷 | Biome | 2.5.14 |
-| 의존 규칙 | dependency-cruiser | 18.4.0 |
-| 단위 테스트 | Vitest | 5.0.5 (`@vitest/mocker` 5.0.5) |
+| 언어 | TypeScript | 6.0.3 (`typescript-eslint` 호환 범위 < 6.1. TS 7 전환은 별도 ADR — TS 7은 JS 컴파일러 API(`scripts/lib/size-rules.ts`·codemap이 사용)가 없어 Dependabot major 무시) |
+| 번들러 | Vite | 8.3.6 (보안 권고 대응 2026-10-31 — ≥ 8.3.3, ADR-0103) |
+| CF 배포 | `wrangler` (선택: `@cloudflare/vite-plugin` 1.60.2 — 도입 시 ADR) | 4.158.0 (miniflare 5.20261104.0-beta → sharp 0.35.5·undici 7.30.1, ADR-0103) |
+| 린트/포맷 | Biome | 2.6.6 (2.6부터 Markdown·YAML도 검사 — Markdown 포매터는 끔(문서는 손 서식·줄 예산), YAML은 작은따옴표) |
+| 의존 규칙 | dependency-cruiser | 18.7.2 |
+| 단위 테스트 | Vitest | 5.1.0 (`@vitest/mocker` 5.1.0) |
 | PMTiles 호환 검사 | `pmtiles`(공식 JS 리더) — tile-format 테스트 전용 devDependency, 런타임은 자체 리더(ADR-0093) | 4.5.0 (BSD-3-Clause) |
 | JSON Schema 검증 | `ajv` (draft 2020-12, `ajv/dist/2020`) — 테스트·파이프라인 validate 전용, 런타임 번들 금지 (ADR-0017) | 8.20.0 (MIT) |
-| E2E/골든뷰 | Playwright | 1.63.0 |
+| E2E/골든뷰 | Playwright | 1.65.0 |
 | 타입 | `@types/three` | 0.186.0 |
-| 타입(Node 툴·스크립트) | `@types/node` — 하한 Node 22 API로 고정(ADR-0011·0014) | 22.20.4 |
-| CI 액션 | `actions/checkout` v7.0.1·`actions/setup-node` v7.1.0, `pnpm/action-setup` v6.0.10, `actions/upload-artifact` v7.0.2, `actions/github-script` v9.0.0 | **전체 커밋 SHA 고정**(주석에 태그) + `.github/dependabot.yml` 주간·7일 cooldown(ADR-0103) |
+| 타입(Node 툴·스크립트) | `@types/node` — 하한 Node 22 API로 고정(ADR-0011·0014) | 22.20.4 (Dependabot major 무시) |
+| CI 액션 | `actions/checkout` v7.0.1·`actions/setup-node` v7.1.0, `pnpm/action-setup` v6.1.1, `actions/upload-artifact` v7.0.2, `actions/github-script` v9.0.0 | **전체 커밋 SHA 고정**(주석에 태그) + `.github/dependabot.yml` 주간·7일 cooldown(ADR-0103, composite `.github/actions/*` 포함) |
 
 ## 3. 데이터 파이프라인 도구 (`tools/pipeline`)
 | 도구 | 용도 | 라이선스 |
@@ -47,7 +47,7 @@
 | **PLATEAU GIS Converter (nusamai) CLI** v0.1.19 | 비교·회귀용 A안 리더(ADR-0007), HLOD 원천 변환 후보 | MIT |
 | GDAL/OGR 3.13.3 (이미지 `ghcr.io/osgeo/gdal:ubuntu-small-3.13.3` 기반; `gdalwarp`, `ogr2ogr`) | DEM 재투영·모자이크, 벡터 변환 | MIT |
 | osmium-tool | OSM PBF 추출/필터 (`osmium extract`, `tags-filter`, `export`) | GPL-3.0 (도구 실행만, 링크 안 함) |
-| `@gltf-transform/core,extensions` 4.5.0 | glb 작성·읽기, `EXT_meshopt_compression`·`KHR_mesh_quantization` (functions는 sharp 네이티브 의존으로 미사용, ADR-0018) | MIT |
+| `@gltf-transform/core` 4.5.1 · `extensions` 4.5.0 | glb 작성·읽기, `EXT_meshopt_compression`·`KHR_mesh_quantization` (functions는 sharp 네이티브 의존으로 미사용, ADR-0018) | MIT |
 | `meshoptimizer` 1.3.0 (encode, reorder, simplify) | 압축·정점 캐시 재정렬, LOD 단순화(지형은 RTIN, ADR-0018) | MIT |
 | `earcut` 3.0.2 (+ `@types/earcut` 3.0.0) | 건물 면 폴리곤 삼각분할 | ISC |
 | `ajv` 8.20.0 | validate 단계 JSON Schema 검사 | MIT |

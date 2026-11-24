@@ -2,7 +2,7 @@
 // 영역 빌드(cells.idx·world.json). see docs/04-data-pipeline.md §4.3–4.4, docs/05-tile-format.md §1–3
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type CellKey, type Logger, unpackCellKey } from '@sanpo/core';
+import { type CellKey, unpackCellKey } from '@sanpo/core';
 import {
   type CellsIndexEntry,
   type MetaPlaceName,
@@ -49,7 +49,6 @@ import {
   type CellWindow,
   cropWindow,
   DEM_MARGIN,
-  type DemWindow,
   demHeightAt,
   paddedCellWindow,
   readDemWindow,
