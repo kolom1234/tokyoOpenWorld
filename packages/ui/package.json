@@ -10,6 +10,6 @@
     "@preact/signals": "2.11.2",
     "@sanpo/core": "workspace:*",
     "idb-keyval": "6.3.0",
-    "preact": "10.29.8"
+    "preact": "11.2.0"
   }
 }
