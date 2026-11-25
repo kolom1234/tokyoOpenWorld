@@ -10,12 +10,12 @@
 | 대기/하늘 | `@takram/three-atmosphere` (`/webgpu` export) | 0.19.1 (+ `patches/` three r186 호환, ADR-0028) | MIT | Bruneton 정밀 대기 산란, 하늘·태양·공중원근·조도. WebGPU 엔트리 제공 |
 | 지리 유틸 | `@takram/three-geospatial` (`/webgpu`) | 0.9.1 (+ `patches/`) | MIT | 대기 모듈 의존 |
 | 물리 | **Jolt Physics** `jolt-physics` (wasm, multithread 빌드) | 1.1.1 | MIT | 차량(WheeledVehicle/Motorcycle 컨트롤러: 엔진·변속기·차동·타이어 마찰곡선), CharacterVirtual(계단·경사·이동발판), 대규모 정적 메시 성능. AAA 채택 실적 |
-| 내비/군중 | `@recast-navigation/core` (sim 워커 WASM) | 0.43.1 | MIT | Detour 타일 NavMesh + DetourCrowd(ADR-0063 — three 연동 패키지는 안 씀) |
+| 내비/군중 | `@recast-navigation/core` (sim 워커 WASM) | 0.44.0 | MIT | Detour 타일 NavMesh + DetourCrowd(ADR-0063 — three 연동 패키지는 안 씀) |
 | 메시 가속 | `three-mesh-bvh` | 0.9.15 | MIT | 레이캐스트(카메라 충돌, 픽킹) |
 | 압축 디코드 | `meshoptimizer` (디코더) / three `KTX2Loader` (Basis) | 1.3.0 / three 내장 | MIT / Apache-2.0 | glTF `EXT_meshopt_compression`, `KHR_texture_basisu` |
 | 태양·달 위치 | `suncalc` | 2.0.2 | BSD-2 | 검증된 천문 계산 |
 | 절차적 나무 | `@dgreenheck/ez-tree` | 1.1.0 | MIT | 파이프라인에서 수종별 나무 메시 생성(런타임 의존 아님) |
-| UI | `preact` + `@preact/signals` | 10.29.8 / 2.11.2 | MIT | 작은 번들, 시그널로 HUD 갱신 최소화 |
+| UI | `preact` + `@preact/signals` | 11.2.0 / 2.11.4 (preact ≥ 11.1은 signals ≥ 2.11.4 필요 — 함께 올린다) | MIT | 작은 번들, 시그널로 HUD 갱신 최소화 |
 | 로컬 저장 | `idb-keyval` | 6.3.0 | Apache-2.0 | IndexedDB 간단 래퍼(세이브 — apps/game `shell/save.ts`, 설정은 localStorage ADR-0091) |
 | 워커 RPC | `comlink` | 4.4.2 | Apache-2.0 | 타입 안전 워커 명령 채널 (대용량은 SAB 직접) |
 | GPU 티어 | `@pmndrs/detect-gpu` | 6.0.23 | MIT | 초기 품질 티어 추정(render, M03-T08) — 벤치마크 JSON은 apps/game이 `/detect-gpu/`로 자체 호스팅(기본 unpkg는 CSP·외부 의존) |
@@ -27,16 +27,16 @@
 | 런타임 | Node.js 24 LTS (`.nvmrc`=24, `engines` ≥22.12 허용 — ADR-0011) | 24.x (하한 22.12) |
 | 패키지 매니저 | pnpm (workspaces) | 10.34.5 (`packageManager` 필드 고정) |
 | 언어 | TypeScript | 6.0.3 (`typescript-eslint` 호환 범위 < 6.1. TS 7 전환은 별도 ADR — TS 7은 JS 컴파일러 API(`scripts/lib/size-rules.ts`·codemap이 사용)가 없어 Dependabot major 무시) |
-| 번들러 | Vite | 8.3.6 (보안 권고 대응 2026-10-31 — ≥ 8.3.3, ADR-0103) |
-| CF 배포 | `wrangler` (선택: `@cloudflare/vite-plugin` 1.60.2 — 도입 시 ADR) | 4.158.0 (miniflare 5.20261104.0-beta → sharp 0.35.5·undici 7.30.1, ADR-0103) |
-| 린트/포맷 | Biome | 2.6.6 (2.6부터 Markdown·YAML도 검사 — Markdown 포매터는 끔(문서는 손 서식·줄 예산), YAML은 작은따옴표) |
-| 의존 규칙 | dependency-cruiser | 18.7.2 |
+| 번들러 | Vite | 8.3.8 (보안 권고 대응 2026-10-31 — ≥ 8.3.3, ADR-0103) |
+| CF 배포 | `wrangler` (선택: `@cloudflare/vite-plugin` 1.60.2 — 도입 시 ADR) | 4.164.0 (miniflare 5.20261117.0-beta → sharp 0.35.5·undici 7.30.1, ADR-0103) |
+| 린트/포맷 | Biome | 2.6.8 (2.6부터 Markdown·YAML도 검사 — Markdown 포매터는 끔(문서는 손 서식·줄 예산), YAML은 작은따옴표) |
+| 의존 규칙 | dependency-cruiser | 18.8.0 |
 | 단위 테스트 | Vitest | 5.1.0 (`@vitest/mocker` 5.1.0) |
 | PMTiles 호환 검사 | `pmtiles`(공식 JS 리더) — tile-format 테스트 전용 devDependency, 런타임은 자체 리더(ADR-0093) | 4.5.0 (BSD-3-Clause) |
 | JSON Schema 검증 | `ajv` (draft 2020-12, `ajv/dist/2020`) — 테스트·파이프라인 validate 전용, 런타임 번들 금지 (ADR-0017) | 8.20.0 (MIT) |
-| E2E/골든뷰 | Playwright | 1.65.0 |
+| E2E/골든뷰 | Playwright | 1.65.1 (Chromium 159) |
 | 타입 | `@types/three` | 0.186.0 |
-| 타입(Node 툴·스크립트) | `@types/node` — 하한 Node 22 API로 고정(ADR-0011·0014) | 22.20.4 (Dependabot major 무시) |
+| 타입(Node 툴·스크립트) | `@types/node` — 하한 Node 22 API로 고정(ADR-0011·0014) | 22.20.5 (Dependabot major 무시) |
 | CI 액션 | `actions/checkout` v7.0.1·`actions/setup-node` v7.1.0, `pnpm/action-setup` v6.1.1, `actions/upload-artifact` v7.0.2, `actions/github-script` v9.0.0 | **전체 커밋 SHA 고정**(주석에 태그) + `.github/dependabot.yml` 주간·7일 cooldown(ADR-0103, composite `.github/actions/*` 포함) |
 
 ## 3. 데이터 파이프라인 도구 (`tools/pipeline`)
