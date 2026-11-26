@@ -1,34 +1,15 @@
 // 절차 파사드 ③ 벽 재질(07 §5-3): 클래스 + 건물 해시(tintIdx)로 텍스처 배열 그룹·레이어 선택 × 클래스 팔레트 틴트. 지붕은 평지붕 콘크리트/경사 기와.
+
+import { FACADE_PALETTE, FACADE_WALL_CHOICES } from '@sanpo/core';
 import { float, hash, int, mix, normalize, normalWorld, select, uniformArray, vec2, vec3 } from 'three/tsl';
 import { Vector3 } from 'three/webgpu';
 import { MATERIAL_GROUPS, type MaterialGroup, type MaterialLibrary } from '../library.ts';
 import { type LayerSample, sampleLayer } from '../textured.ts';
 import type { B, F, FacadeInputs, I, V3 } from './grid.ts';
 
-/** 클래스별 벽 그룹 후보 4개(해시로 선택) — 순서 = FACADE_CLASS. 같은 그룹 반복 = 가중치. */
-const WALL_CHOICES: readonly (readonly MaterialGroup[])[] = [
-  ['tile', 'concrete', 'metal', 'alc'], // office
-  ['tile', 'tile', 'plaster', 'concrete'], // mansion
-  ['siding', 'plaster', 'siding', 'tile'], // house
-  ['tile', 'metal', 'plaster', 'concrete'], // commercial
-  ['concrete', 'tile', 'concrete', 'alc'], // public
-  ['metal', 'alc', 'metal', 'concrete'], // industrial
-];
-
-/**
- * 틴트 팔레트(선형 배수) 8색 — 도쿄 거리의 흰·베이지·회색·갈색 계열. tintIdx로 고른다.
- * 텍스처 알베도에 곱하므로 1 근처(과포화 방지).
- */
-const PALETTE = [
-  new Vector3(1.05, 1.03, 1.0),
-  new Vector3(1.0, 0.95, 0.86),
-  new Vector3(0.9, 0.9, 0.92),
-  new Vector3(0.98, 0.88, 0.76),
-  new Vector3(0.78, 0.72, 0.66),
-  new Vector3(1.02, 1.0, 0.95),
-  new Vector3(0.86, 0.9, 0.95),
-  new Vector3(0.95, 0.92, 0.9),
-];
+/** 벽 그룹 후보·팔레트 = @sanpo/core facade-table(파이프라인 실측 tint 고르기와 같은 표, M12-T06). */
+const PALETTE = FACADE_PALETTE.map(([r, g, b]) => new Vector3(r, g, b));
+const WALL_CHOICES = FACADE_WALL_CHOICES as readonly (readonly MaterialGroup[])[];
 const palette = uniformArray<'vec3'>(PALETTE, 'vec3');
 const choices = uniformArray<'float'>(
   WALL_CHOICES.flat().map((g) => MATERIAL_GROUPS.indexOf(g)),

@@ -26,7 +26,7 @@ src/stages/build/terrain-rtin.ts RTIN 정확 오차 단순화 + 경계 강제 (M
 src/stages/build/terrain-mesh.ts terrain.mesh(float32 POSITION, int8 NORMAL, _SURF, _SKY — 하늘 가시도 = sky-cell·sky-visibility 1 m DSM 지평선, M12-T05) (M01-T05; `_SURF` 경계 RTIN 세분 — 차도 1 m·그 밖 4 m, M03-T06)
 src/stages/build/surface-class.ts `_SURF` 분류 격자: 셀+8이웃 정규화 도로(roads/<cellId>.ndjson.gz) → 257² 스캔라인 래스터(M03-T06, ADR-0031)
 src/stages/build/buildings-mesh.ts buildings.mesh(u16 POSITION·균일 scale, _BLDG, _FACADE, UV0, TEXCOORD_1) + meta.buildings (M01-T05, M03-T04)
-src/stages/build/facade-params.ts  용도·높이·층 → `_FACADE`(class·tint·상점·커튼월·창 시드, L0·HLOD 공용, ADR-0030)
+src/stages/build/facade-params.ts  용도·높이·층 → `_FACADE`(class·tint·상점·커튼월·창 시드, L0·HLOD 공용, ADR-0030) 실측(M12-T06): facade-tint `loadFacadeMeasures`가 등록되면 PLATEAU 텍스처 벽 색 → Lab 최근접 tintIdx(재질 레이어 평균 × 팔레트 예측, core facade-table)·유리 비율 → 커튼월(`cli-facades.ts` `facades --prep`). hlod/l1-trees: L1 trees.inst(M12-T07).
 src/stages/build/wall-planes.ts    벽 평면 군집(방향 1°·15 cm → u 원점·폭 공유)·벽과 동일 평면 부속물 판정
 src/stages/build/manifest.ts     buildId·world.json (M01-T05)
 src/stages/build/assemble.ts     셀 TKC 조립 + 영역 빌드(cells.idx·world.json) (M01-T05)

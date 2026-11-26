@@ -1,6 +1,6 @@
 // M05-T04 나무 렌더: 계절 표(07 §8 날짜), LOD 띠 히스테리시스, 블록 조각(셀 로컬·yaw·수종), 풀 채우기(렌더 원점 평행이동·용량 절단).
 import { packCellKey } from '@sanpo/core';
-import { TREE_SPECIES, writeTrees } from '@sanpo/tile-format';
+import { parseTrees, TREE_SPECIES, writeTrees } from '@sanpo/tile-format';
 import { BufferAttribute, BufferGeometry, MeshStandardNodeMaterial } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { TREE_EDGES, treeBandOf, treeBlocksOf } from '../src/internal/trees/blocks.ts';
@@ -144,5 +144,42 @@ describe('tree blocks and pools', () => {
     expect(f.update({ x: 0, y: 2, z: 0 }, { x: 0, y: 0, z: 0 }, false)).toBe(false);
     expect(f.stats()).toMatchObject({ instances: 1, visible: 0, ready: false });
     f.dispose();
+  });
+});
+
+describe('L1 far trees (M12-T07)', () => {
+  const batchOf = (trees: { x: number; z: number }[]) => {
+    const r = parseTrees(
+      writeTrees(
+        trees.map((t, i) => ({ species: TREE_SPECIES.zelkova, seed: i, x: t.x, y: 30, z: t.z, height: 10, crownR: 3 })),
+      ),
+    );
+    if (!r.ok) throw new Error('trees');
+    return r.value;
+  };
+
+  it('hides L1 blocks where the L0 cell has its own trees, and shows them again when it leaves', () => {
+    const f = createTreeField();
+    // L1 (0, 0): 나무 하나는 L0 (0, 0) 자리(10, 10), 하나는 L0 (2, 1) 자리(600, 300).
+    f.addCell(
+      packCellKey(1, 0, 0),
+      { x: 0, y: 0, z: 0 },
+      batchOf([
+        { x: 10, z: 10 },
+        { x: 600, z: 300 },
+      ]),
+    );
+    expect(f.stats().instances).toBe(2);
+    f.addCell(
+      packCellKey(0, 0, 0),
+      { x: 0, y: 0, z: 0 },
+      batchOf([
+        { x: 12, z: 11 },
+        { x: 40, z: 40 },
+      ]),
+    );
+    expect(f.stats().instances).toBe(3); // L0 2 + L1 남은 1
+    f.removeCell(packCellKey(0, 0, 0));
+    expect(f.stats().instances).toBe(2);
   });
 });

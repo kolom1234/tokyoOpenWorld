@@ -1,6 +1,6 @@
 // 나무 필드(M05-T04): 셀 추가·제거·카메라 → 블록 LOD 띠(blocks.ts) → 풀 채우기(pools.ts). 풀 = 수종 × LOD0/1 × {수피, 잎} + 임포스터 1개(전 수종).
 // 에셋(trees.glb·잎·임포스터 아틀라스)은 첫 표시 뒤 attach — 그 전엔 셀 조각만 기억한다(풀 없음). see ADR-0052
-import type { CellKey, Vec3d } from '@sanpo/core';
+import { type CellKey, packCellKey, unpackCellKey, type Vec3d } from '@sanpo/core';
 import type { TreeBatch } from '@sanpo/tile-format';
 import { Group, type Material } from 'three/webgpu';
 import type { TreeAssets } from './assets.ts';
@@ -92,20 +92,43 @@ class TreeFieldImpl implements TreeField {
     for (const k of this.pools.keys()) this.dirty.add(k);
   }
 
+  /** 그릴 블록: L0 셀 블록 전부 + L1(원경) 블록 중 그 자리 L0 셀 나무가 없는 것(M12-T07 — 겹쳐 두 번 그리지 않게). */
+  private *active(): Generator<TreeBlock> {
+    for (const blocks of this.cells.values())
+      for (const b of blocks) if (!b.l0 || !this.cells.has(packCellKey(0, b.l0.ix, b.l0.iz))) yield b;
+  }
+
   private fill(key: string, origin: Readonly<Vec3d>): void {
     const pool = this.pools.get(key);
     if (!pool) return;
     const parts: { s: TreeSlice; b: TreeBlock }[] = [];
+    for (const b of this.active())
+      for (const [sp, s] of b.species) if (s.band >= 0 && keyOf(sp, s.band) === key) parts.push({ s, b });
+    this.dropped.set(key, writeTreePool(pool, parts, origin));
+  }
+
+  /** L0 셀이 들어오거나 나가면 그 자리 L1 블록의 풀을 다시 채운다. */
+  private touchFar(l0: CellKey): void {
+    const { ix, iz } = unpackCellKey(l0);
     for (const blocks of this.cells.values())
       for (const b of blocks)
-        for (const [sp, s] of b.species) if (s.band >= 0 && keyOf(sp, s.band) === key) parts.push({ s, b });
-    this.dropped.set(key, writeTreePool(pool, parts, origin));
+        if (b.l0?.ix === ix && b.l0.iz === iz)
+          for (const [sp, s] of b.species) if (s.band >= 0) this.dirty.add(keyOf(sp, s.band));
   }
 
   addCell(key: CellKey, originWF: Readonly<Vec3d>, batch: TreeBatch | undefined): void {
     this.removeCell(key);
     if (!batch || batch.count === 0) return;
-    this.cells.set(key, treeBlocksOf(originWF, batch));
+    const level = unpackCellKey(key).level;
+    const blocks = treeBlocksOf(originWF, batch, level === 1 ? 1024 : 256);
+    if (level === 1)
+      for (const b of blocks) {
+        const cx = originWF.x + (b.min[0] + b.max[0]) / 2;
+        const cz = originWF.z + (b.min[2] + b.max[2]) / 2;
+        b.l0 = { ix: Math.floor(cx / 256), iz: Math.floor(cz / 256) };
+      }
+    this.cells.set(key, blocks);
+    if (level === 0) this.touchFar(key);
     this.lastCam = undefined;
   }
 
@@ -114,6 +137,7 @@ class TreeFieldImpl implements TreeField {
     if (!blocks) return;
     this.cells.delete(key);
     for (const b of blocks) for (const [sp, s] of b.species) if (s.band >= 0) this.dirty.add(keyOf(sp, s.band));
+    if (unpackCellKey(key).level === 0) this.touchFar(key);
   }
 
   update(cam: Readonly<Vec3d>, origin: Readonly<Vec3d>, force: boolean): boolean {
@@ -153,9 +177,9 @@ class TreeFieldImpl implements TreeField {
   }
 
   stats(): TreeFieldStats {
+    // 그릴 나무 = L0 + 그 자리 L0가 없는 L1(원경) 블록.
     let instances = 0;
-    for (const blocks of this.cells.values())
-      for (const b of blocks) for (const s of b.species.values()) instances += s.n;
+    for (const b of this.active()) for (const s of b.species.values()) instances += s.n;
     let visible = 0;
     let pools = 0;
     for (const p of this.pools.values()) {

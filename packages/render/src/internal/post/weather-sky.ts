@@ -3,6 +3,7 @@
 // 연무 색 = 자동 노출이 잰 장면 평균 휘도 × 1.5(낮 밝은 회색, 밤 어두움) — CPU 갱신. 밤에는 구름 밑면·연무에 도시 불빛 반사(주황, 장면 평균 휘도 비례).
 // 맑은 날 도시 연무(M12-T03): 경계층 에어로졸 소광 β(z) = β₀ e^(−z/H)를 광선을 따라 해석 적분 — 지평선은 뿌옇고 천정은 맑다. β₀ = 계절(1월 시정 ≈ 39 km → 7월 ≈ 16 km)·바람.
 // see docs/07-rendering.md §6(안개)·§8(구름), ADR-0076
+import { tslHash } from '@sanpo/core';
 import { depthToViewZ, inverseProjectionMatrix, inverseViewMatrix } from '@takram/three-geospatial/webgpu';
 import {
   abs,
@@ -262,12 +263,8 @@ export function weatherSky(
 
 // ── CPU 짝(태양 가림): 셰이더와 같은 잡음으로 태양 방향 구름 덮임을 계산 → 직사광 감쇠(구름 그림자가 흘러간다). ──
 
-/** three TSL `hash`(PCG — Hash.js)와 같은 값. */
-export function tslHash(seed: number): number {
-  const state = (Math.imul(Math.trunc(seed) >>> 0, 747796405) + 2891336453) >>> 0;
-  const word = Math.imul(((state >>> ((state >>> 28) + 4)) ^ state) >>> 0, 277803737) >>> 0;
-  return (((word >>> 22) ^ word) >>> 0) / 2 ** 32;
-}
+/** three TSL `hash`의 CPU 짝(@sanpo/core — 파이프라인도 쓴다, M12-T06). */
+export { tslHash };
 
 function valueNoiseCpu(x: number, z: number): number {
   const qx = x + NOISE_OFFSET;

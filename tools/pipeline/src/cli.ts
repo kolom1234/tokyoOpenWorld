@@ -9,6 +9,7 @@ import { parseArgs, promisify } from 'node:util';
 import { type CellKey, createLogger, packCellKey } from '@sanpo/core';
 import { FORMAT_VERSION } from '@sanpo/tile-format';
 import * as assetStages from './cli-assets.ts';
+import { facades } from './cli-facades.ts';
 import { landcover } from './cli-landcover.ts';
 import * as mapStages from './cli-map.ts';
 import * as railStages from './cli-rail.ts';
@@ -372,6 +373,7 @@ const STAGES: Record<string, (args: string[]) => Promise<void>> = {
   normalize,
   build,
   'hlod-prep': hlodPrep,
+  facades: (args) => facades({ repoRoot: REPO_ROOT, log: log.child('facades'), readArea, lockSources }, args),
   landcover: (args) => landcover({ repoRoot: REPO_ROOT, log: log.child('landcover'), readArea, lockSources }, args),
   hlod,
   materials: (args) => assetStages.materials(assets, args),

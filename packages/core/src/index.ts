@@ -3,6 +3,13 @@ export * from './api.ts';
 export { cellIdString, packCellKey, unpackCellKey } from './internal/cell-key.ts';
 export { mergeConfig } from './internal/config.ts';
 export { createEventBus } from './internal/event-bus.ts';
+export {
+  FACADE_PALETTE,
+  FACADE_WALL_CHOICES,
+  facadeLayerIndex,
+  facadeWallGroup,
+  tslHash,
+} from './internal/facade-table.ts';
 export { hash32 } from './internal/hash.ts';
 export { createLogger } from './internal/logger.ts';
 export {
