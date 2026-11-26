@@ -71,7 +71,7 @@ export function createMaterialRegistry(
       let m = hlod.get(key);
       if (m === undefined) {
         const spec = HLOD_COLORS[id] ?? FALLBACK;
-        m = createHlodMaterial(id, spec.color, spec.roughness, fading);
+        m = createHlodMaterial(id, spec.color, spec.roughness, fading, lib);
         hlod.set(key, m);
       }
       return m;

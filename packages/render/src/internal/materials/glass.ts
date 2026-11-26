@@ -29,7 +29,7 @@ export const glassRoughness = uniform(0.06);
 /** 투과율: 일반 유리 / 커튼월(반사 코팅·색유리). */
 const TRANSMIT_CLEAR = 0.8;
 const TRANSMIT_CURTAIN = 0.35;
-const BLIND_COLOR = vec3(0.6, 0.58, 0.54);
+export const BLIND_COLOR = vec3(0.6, 0.58, 0.54);
 
 export interface GlassInput {
   /** 유리 마스크 0..1. */

@@ -30,9 +30,9 @@ export const FACADE_FLAG = { retail: 1, curtainWall: 2 } as const;
 
 /**
  * 클래스별 기본값 (x 층고 m, y 베이 폭 m, z 창 폭 비, w 창 높이 비) — 07 §5: 오피스 3.8/1.8, 주거 2.9, 맨션 베이 3.0, 주택 1.8(창 드문드문).
- * 순서 = FACADE_CLASS.
+ * 순서 = FACADE_CLASS. HLOD 파사드(hlod-facade.ts)도 같은 표로 창 격자를 그린다.
  */
-const CLASS_TABLE = [
+export const FACADE_CLASS_TABLE: readonly Vector4[] = [
   new Vector4(3.8, 1.8, 0.82, 0.55), // office
   new Vector4(2.9, 3.0, 0.62, 0.62), // mansion
   new Vector4(2.9, 2.2, 0.5, 0.45), // house
@@ -40,6 +40,10 @@ const CLASS_TABLE = [
   new Vector4(3.8, 3.0, 0.7, 0.5), // public
   new Vector4(4.5, 6.0, 0.35, 0.25), // industrial
 ];
+/** 창 아랫변 높이(층고 비): 오피스·공공 / 나머지(windows.ts). */
+export const WINDOW_SILL = { office: 0.25, other: 0.32 } as const;
+/** 커튼월: 베이 목표 폭·스팬드럴(층 바닥부터 불투명)·위 여백·좌우 여백(m) — windows.ts. */
+export const CURTAIN = { bayM: 1.5, spandrelM: 0.9, topM: 0.05, sideM: 0.05 } as const;
 /** 상점 1층 층고(m, 07 §5-1). */
 export const RETAIL_FLOOR_M = 4.5;
 /** 층고 보정 범위(`floors`로 나눈 값이 이상할 때). */
@@ -108,7 +112,7 @@ export interface FacadeGrid {
   isParapet: B;
 }
 
-const table = uniformArray<'vec4'>(CLASS_TABLE, 'vec4');
+const table = uniformArray<'vec4'>([...FACADE_CLASS_TABLE], 'vec4');
 
 export function facadeGrid(i: FacadeInputs): FacadeGrid {
   const params = vec4(table.element(i.cls));
@@ -122,7 +126,7 @@ export function facadeGrid(i: FacadeInputs): FacadeGrid {
   const floorIdx = select(isGround, float(0), floor(above.div(floorH)).add(1));
   const ly = select(isGround, i.v, above.sub(floorIdx.sub(1).mul(floorH)));
   const thisFloorH = select(isGround, groundH, floorH);
-  const bayTarget = select(i.curtain, float(1.5), params.y);
+  const bayTarget = select(i.curtain, float(CURTAIN.bayM), params.y);
   const bays = max(floor(i.faceW.div(bayTarget).add(0.5)), 1);
   const bayW = i.faceW.div(bays).max(0.01);
   const bayIdx = min(floor(i.u.div(bayW)), bays.sub(1));

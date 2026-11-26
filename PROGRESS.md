@@ -1,14 +1,17 @@
 # PROGRESS
-Updated: 2026-11-26 (Dependabot 2차 정리 — 브랜치 `claude/deps-2026-11-26`)
+Updated: 2026-11-26 (M12-T01 HLOD 파사드 — 브랜치 `claude/m12-t01-hlod-facade`)
 
-## Current Milestone: M11 Hardening & Beta ✅ — **공개 https://earthaimap.com** (2026-10-19)
-## Current Task: 비용 감시 30분 트리거(ADR-0106) — 코드·배포 완료, 사람 1회 설정 대기
-- Done: GitHub 예약 실행 실측 `13,43` 22회/6일(하루 3–4회) → 별도 Worker `sanpo-usage-cron`(`apps/usage-cron`, Cron `*/30` → `usage.yml` workflow_dispatch, 공개 경로 없음) + `usage.yml` 감시 지연 경보(변수 `USAGE_CRON_ACTIVE=true`일 때 2시간 초과 → 라벨 `cf-usage-watchdog` 이슈, 실데이터 간격 계산 확인) + ADR-0106·docs/13 §6.1·모듈 카드. 테스트 1,005 통과.
+## Current Milestone: M12 Visual Fidelity I (그래픽 개선 1단계 — 서버 요청 증가 0). M11 ✅ 공개 https://earthaimap.com (2026-10-19)
+## Current Task: M12-T01 HLOD facade(S3) — 구현·검증 완료, PR 대기
+- Done: `materials/hlod-facade.ts`(L0와 같은 레이어 평균색·팔레트·클래스 창 격자, 낮 유리·밤 점등 같은 칸, 칸 ≤ 1 px 기대값, 오피스 ≥ 22층 커튼월 근사, 밑동 AO) + walls.ts `wallLayer`·`wallTint` 분리, ADR-0107, 골든뷰 before/after `docs/screenshots/M12/T01/`, perf 상공 비행 p50 +0.2 ms.
 - In progress: 없음.
-- Next step (정확히 한 걸음): 사용자가 fine-grained PAT(이 저장소, Actions: Read and write)를 만들어 `pnpm --filter @sanpo/usage-cron exec wrangler secret put GITHUB_DISPATCH_TOKEN` → 다음 :00/:30 뒤 Actions에 `workflow_dispatch` 실행 확인 → `gh variable set USAGE_CRON_ACTIVE --body true`.
-- Blockers: 🔶 PAT(사람 — 2026-11-25 확인: 11-08 이후 `workflow_dispatch` 0회). 🔶 측량법 승인(03 §6.1 — production 공개 중인데 승인번호 미표기). ODPT 키 없음.
+- Next step (정확히 한 걸음): PR 병합 뒤 M12-T02(S5 연무·LUT) 블록 추가(`/new-task`) — 또는 아래 ⚠️ 원경 지형 회귀를 먼저.
+- Blockers: 🔶 PAT(usage-cron ADR-0106, 사람 1회 — 2026-11-25 확인: 11-08 이후 `workflow_dispatch` 0회): fine-grained PAT(이 저장소, Actions: Read and write) → `pnpm --filter @sanpo/usage-cron exec wrangler secret put GITHUB_DISPATCH_TOKEN` → 다음 :00/:30 뒤 Actions에 `workflow_dispatch` 실행 확인 → `gh variable set USAGE_CRON_ACTIVE --body true`. 🔶 측량법 승인(03 §6.1 — production 공개 중인데 승인번호 미표기). ODPT 키 없음.
+- ⚠️ 발견(2026-11-26, main에도 있음): ① **원경(HLOD) 지형이 그려지지 않는다** — hlod.mesh `terrain_ground` 프리미티브는 디코드·메시 생성되는데(요요기 뷰 72셀) 화소 0(발광 빨강 강제해도 검정) → 상공에서 땅이 검게(낮)·하늘색(밤) 보임. M05 골든뷰(10-02)엔 베이지로 보였다. ② 상공(300 m+)에서 군중 처음 채우기가 끝나지 않는다(`crowd-sim.ts` spawnCandidate `halfExtents.y = 150` — 플레이어 높이 기준) → 항공 골든뷰 ready 안 됨·원경 군중 0. ③ 골든 ready가 HLOD 도착 전에 나는 경우가 있다(aerial-shinjuku-400m 1회 원경 0).
 
 ## Recently Completed
+- M12-T01 HLOD 파사드(2026-11-26, 브랜치 `claude/m12-t01-hlod-facade`, ADR-0107): 원경 건물 = L0 파사드 근사(레이어 평균 알베도·ORM × 팔레트 × 얼룩 평균, L0 클래스 표 창 격자·유리·블라인드·프레임 몫, 밤 점등 같은 칸, 커튼월 = 오피스 ≥ 22층, 밑동 AO). 서버·데이터 변화 0, HLOD 머티리얼 2개 그대로. 로드맵 M12 Visual Fidelity I 신설(확장은 M13+). perf(RTX 3050 노트북, 2쌍): 상공 비행 p50 +0.2 ms·장면 패스 비중 48.6 → 48.7 %, 도보는 열 상태 변동으로 판정 보류(같은 열 쌍 +0.3 / +1.9 ms).
+- 비용 감시 30분 트리거(2026-11-14, PR #42, ADR-0106): GitHub 예약 실행 실측 `13,43` 22회/6일 → 별도 Worker `sanpo-usage-cron`(`apps/usage-cron`, Cron `*/30` → `usage.yml` workflow_dispatch, 공개 경로 없음) + `usage.yml` 감시 지연 경보(`USAGE_CRON_ACTIVE=true`일 때 2시간 초과 → 라벨 `cf-usage-watchdog` 이슈). 남은 것 = PAT(Blockers).
 - Dependabot 2차 정리(2026-11-26, 브랜치 `claude/deps-2026-11-26`): 1차(PR #45) 병합 직후 열린 #46 preact 11.2.0 + #48 @preact/signals 2.11.4(preact ≥ 11.1은 signals ≥ 2.11.4 필요 — 함께)·#47/#50 recast-navigation core·generators 0.44.0(generators가 core를 정확히 고정 — 함께, 누수 수정·SLSA provenance 확인)·#49 dev-tooling(Biome 2.6.8·Playwright 1.65.1 = Chromium 159·@types/node 22.20.5·depcruise 18.8.0·Vite 8.3.8·wrangler 4.164.0)을 한 PR로(#51). 뒤이은 #52 Vitest 5.1.1은 사용자가 직접 병합 → docs/02만 맞춤. preact 11 깨는 변경(px 자동 접미 제거·`defaultProps`·`component.base`·`useRef()` 타입) 대조 — UI 코드 영향 0. #44는 #45로 이미 반영. docs/02 버전 표 갱신.
 - Dependabot 정리(2026-11-25, 브랜치 `claude/deps-2026-11-25`): #38 gltf-transform core 4.5.1(plateau-mini `expected.json` glb 해시 2개 재계산 — 테스트와 같은 `plateauMiniSnapshot`, world-mini는 그대로 유효)·#40 jolt 1.1.1·#43 dev-tooling(Biome 2.6.6·Playwright 1.65·depcruise 18.7.2·Vitest 5.1·Vite 8.3.6·wrangler 4.158)·#44 pnpm/action-setup 6.1.1(composite 셋업도 — Dependabot이 `.github/actions/*`를 안 봐서 `directories` 추가)을 한 PR로. Biome 2.6이 Markdown·YAML을 검사 → Markdown 포매터 끔·YAML 작은따옴표, 새로 잡힌 미사용 import 4개 제거. #39 TS 7(JS 컴파일러 API 없음)·#41 @types/node 26(Node 22 하한)은 닫고 `ignore`(semver-major). docs/02 버전 표 갱신.
 - M11-T06 킬 스위치 활성화(2026-11-08, PR #34) — 최소 권한 토큰(earthaimap.com 존만, WAF Edit·Zone Read — 계정·Workers·R2·KV·DNS 거부 확인) → GitHub Secret(PC 환경 변수는 시험 뒤 삭제), 비활성 규칙 2개(Free 존 = 기본 403), `staging.earthaimap.com` → `tokyo-sanpo-staging`, staging 차단·복구 및 production 무영향 실검증, 점검 화면이 선컴파일 진행에 덮이던 버그 수정(`isEndStage`) → staging·production 화면 확인(스크린샷 `docs/screenshots/followups/killswitch-staging-*.jpg`). docs/13 §6.1. 과금 절대 상한은 아님(예약·집계 지연, 다른 프로젝트·저장 비용은 차단 밖).
