@@ -2,8 +2,7 @@
 // 더미 정점 속성은 실제 셀과 같은 이름·형식이어야 같은 파이프라인이 캐시된다(dummyGeometry).
 import type { Logger } from '@sanpo/core';
 import {
-  BufferAttribute,
-  BufferGeometry,
+  type BufferGeometry,
   type Camera,
   Group,
   type Material,
@@ -12,35 +11,66 @@ import {
   type Scene,
   type WebGPURenderer,
 } from 'three/webgpu';
+import { buildGeometry } from '../scene/cell-node.ts';
 import { createHlodFades } from './hlod.ts';
 import { HLOD_MATERIAL_IDS, type MaterialRegistry, PRECOMPILE_IDS } from './registry.ts';
 
-/** 실제 셀과 같은 속성 형식(cell-node 변환 후): 지형 f32 위치·f32 `_surf`, 건물 u16 위치·f32 UV·f32 `_bldg`·unorm8×4 `_facade`, 노면 표시 u16 위치·f32 `_paint`, 전선 u16 위치·snorm8 `_off`, 랜드마크 u16 위치·f32 UV·f32 `_lmat`, HLOD u16 위치·f32 `_child`(건물 + f32 UV·`_facade`). */
-function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
-  const g = new BufferGeometry();
-  const quantized = hlod || ['facade_default', 'road_marking', 'power_wire', 'landmark'].includes(id);
-  const pos = quantized ? new Uint16Array([0, 0, 0, 1, 0, 0, 0, 0, 1]) : new Float32Array([0, 0, 0, 1, 0, 0, 0, 0, 1]);
-  g.setAttribute('position', new BufferAttribute(pos, 3));
-  g.setAttribute('normal', new BufferAttribute(new Int8Array([0, 127, 0, 0, 127, 0, 0, 127, 0]), 3, true));
+type RawAttr = readonly [
+  ctor: Int8ArrayConstructor | Uint8ArrayConstructor | Uint16ArrayConstructor | Float32ArrayConstructor,
+  itemSize: number,
+  normalized: boolean,
+];
+
+/**
+ * 디코더 출력 형식(DecodedMesh 규약 — POSITION은 셀 로컬 float32, 양자화는 디코더가 해제, ADR-0020)의 glTF 속성.
+ * three 파이프라인 캐시 키(RenderObject.getGeometryCacheKey)는 이름·성분 수·정규화만 보고 **배열 타입은 보지 않는데**,
+ * 정점 버퍼 형식(바이트 폭)은 파이프라인에 고정된다 → 더미 형식이 실제와 다르면 실제 셀이 더미용 파이프라인으로 그려져
+ * 위치가 깨진다(HLOD 지형이 통째로 사라졌던 원인 — M12, u16 위치 더미).
+ */
+const BASE_ATTRS: Readonly<Record<string, RawAttr>> = {
+  POSITION: [Float32Array, 3, false],
+  NORMAL: [Int8Array, 3, true],
+};
+const L0_ATTRS: Readonly<Record<string, Readonly<Record<string, RawAttr>>>> = {
+  terrain_ground: { _SURF: [Uint8Array, 1, false] },
+  facade_default: {
+    TEXCOORD_0: [Float32Array, 2, false],
+    TEXCOORD_1: [Float32Array, 2, false],
+    _BLDG: [Uint16Array, 1, false],
+    _FACADE: [Uint8Array, 4, true],
+  },
+  road_marking: { _PAINT: [Uint8Array, 1, false] },
+  power_wire: { _OFF: [Int8Array, 3, true] },
+  landmark: { TEXCOORD_0: [Float32Array, 2, false], _LMAT: [Uint8Array, 1, false] },
+};
+const HLOD_ATTRS: Readonly<Record<string, Readonly<Record<string, RawAttr>>>> = {
+  terrain_ground: { _SURF: [Uint8Array, 1, false], _CHILD: [Uint8Array, 1, false] },
+  facade_default: {
+    TEXCOORD_0: [Float32Array, 2, false],
+    _FACADE: [Uint8Array, 4, true],
+    _CHILD: [Uint8Array, 1, false],
+  },
+};
+const TRIANGLE = [0, 0, 0, 1, 0, 0, 0, 0, 1];
+
+/** 실제 셀과 같은 속성 형식: 디코더 규약 형식의 더미 프리미티브를 셀과 **같은 변환**(cell-node buildGeometry — 1성분 정수 → f32 등)으로. */
+export function dummyGeometry(id: string, hlod: boolean): BufferGeometry {
+  const spec = { ...BASE_ATTRS, ...(hlod ? HLOD_ATTRS[id] : L0_ATTRS[id]) };
+  const attributes = Object.fromEntries(
+    Object.entries(spec).map(([name, [Ctor, itemSize, normalized]]) => {
+      const array = new Ctor(3 * itemSize);
+      if (name === 'POSITION') array.set(TRIANGLE);
+      if (name === 'NORMAL') array.set([0, 127, 0, 0, 127, 0, 0, 127, 0]);
+      return [name, { array, itemSize, normalized }];
+    }),
+  );
   // 셀 메시는 색인이 있다 — 파이프라인 캐시 키에 `index`가 들어간다(ADR-0086).
-  g.setIndex(new BufferAttribute(new Uint16Array([0, 1, 2]), 1));
-  if (hlod) g.setAttribute('_child', new BufferAttribute(new Float32Array(3), 1));
-  if (hlod && id === 'facade_default') {
-    g.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
-    g.setAttribute('_facade', new BufferAttribute(new Uint8Array(12), 4, true));
-  } else if (id === 'terrain_ground') g.setAttribute('_surf', new BufferAttribute(new Float32Array(3), 1));
-  else if (id === 'road_marking') g.setAttribute('_paint', new BufferAttribute(new Float32Array(3), 1));
-  else if (id === 'power_wire') g.setAttribute('_off', new BufferAttribute(new Int8Array(9), 3, true));
-  else if (id === 'landmark') {
-    g.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
-    g.setAttribute('_lmat', new BufferAttribute(new Float32Array(3), 1));
-  } else if (id === 'facade_default') {
-    g.setAttribute('uv', new BufferAttribute(new Float32Array(6), 2));
-    g.setAttribute('uv1', new BufferAttribute(new Float32Array(6), 2));
-    g.setAttribute('_bldg', new BufferAttribute(new Float32Array(3), 1));
-    g.setAttribute('_facade', new BufferAttribute(new Uint8Array(12), 4, true));
-  }
-  return g;
+  return buildGeometry({
+    materialId: id,
+    attributes,
+    index: new Uint16Array([0, 1, 2]),
+    boundsLocal: { min: [0, 0, 0], max: [1, 1, 1] },
+  });
 }
 
 /** 실제 셀 메시와 같은 캐시 키: L0는 그림자를 받고(receiveShadow — 셰이더가 다르다), HLOD는 받지 않는다(cell-node). */
