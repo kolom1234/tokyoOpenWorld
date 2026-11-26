@@ -7,7 +7,9 @@ import {
   chooseTint,
   curtainFromGlass,
   type MaterialsAvg,
+  measuredFacade,
   predictWall,
+  setFacadeMeasures,
   toLab,
 } from '../src/stages/build/facade-tint.ts';
 import { measureBuilding, type RgbImage, sampleSurface, srgbToLinear } from '../src/stages/derive/facade-measure.ts';
@@ -96,10 +98,53 @@ describe('facade tint choice (M12-T06)', () => {
     }
   });
 
-  it('marks curtain walls from the measured glass ratio (offices only)', () => {
+  it('with a group, only picks tints that keep that wall group', () => {
+    for (const hashTint of [5, 61, 130, 222]) {
+      const group = facadeWallGroup(0, hashTint);
+      for (const target of [3, 77, 200]) {
+        const t = chooseTint(0, predictWall(0, target, mats), mats, 7, group);
+        expect(facadeWallGroup(0, t)).toBe(group);
+      }
+    }
+  });
+
+  it('marks curtain walls from the measured glass ratio (offices of 35 m or more only)', () => {
     expect(curtainFromGlass(true, 40, 0.5)).toBe(true);
     expect(curtainFromGlass(true, 40, 0.3)).toBe(false);
     expect(curtainFromGlass(true, 120, 0.32)).toBe(true);
     expect(curtainFromGlass(false, 120, 0.9)).toBe(false);
+    // 띠창 저층 오피스는 어두운 화소가 많아도 커튼월이 아니다.
+    expect(curtainFromGlass(true, 20, 0.9)).toBe(false);
+  });
+
+  it('registry keeps the hash wall group per building and corrects a blue cast (grey world)', () => {
+    // 같은 벽색 두 벌: 하나는 푸른 기(항공 사진), 하나는 무채색 — 회색 세계 보정 뒤 같은 tint.
+    const ids = Array.from({ length: 40 }, (_, i) => `b${i}`);
+    const blue = new Map(
+      ids.map((id, i) => [
+        id,
+        { wall: [0.1 + i * 0.002, 0.12 + i * 0.002, 0.2 + i * 0.002] as [number, number, number], glass: 0.2 },
+      ]),
+    );
+    const grey = new Map(
+      ids.map((id, i) => [
+        id,
+        { wall: [0.15 + i * 0.003, 0.15 + i * 0.003, 0.15 + i * 0.003] as [number, number, number], glass: 0.2 },
+      ]),
+    );
+    const pick = (measures: typeof blue) => {
+      setFacadeMeasures({ measures, mats });
+      return ids.map((id, i) => measuredFacade(id, 1, i * 6)?.tint as number);
+    };
+    try {
+      const a = pick(blue);
+      for (const [i] of ids.entries()) expect(facadeWallGroup(1, a[i] as number)).toBe(facadeWallGroup(1, i * 6));
+      const b = pick(grey);
+      const same = a.filter((t, i) => t === b[i]).length;
+      expect(same).toBeGreaterThan(ids.length * 0.6);
+      expect(measuredFacade('missing', 1, 3)).toBeUndefined();
+    } finally {
+      setFacadeMeasures(null);
+    }
   });
 });

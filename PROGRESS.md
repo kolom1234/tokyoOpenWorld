@@ -1,12 +1,13 @@
 # PROGRESS
-Updated: 2026-11-26 (M12-T01 HLOD 파사드 — 브랜치 `claude/m12-t01-hlod-facade`)
+Updated: 2026-11-27 (M12-T06 S1 선택 수정 — 브랜치 `claude/m12-s1-fix`)
 
 ## Current Milestone: M12 Visual Fidelity I (그래픽 개선 1단계 — 서버 요청 증가 0). M11 ✅ 공개 https://earthaimap.com (2026-10-19)
-## Current Task: M12-T06 S1 PLATEAU 텍스처 실측 + M12-T07 S6 원경 나무 — 코드 완료, PR 대기 → 다음 = 월드 재빌드 (사용자 지시 2026-11-26: S1–S6 전부 자율 진행, 마지막 production 배포 승인만 질문)
+## Current Task: M12 S1–S6 월드 재빌드·검증 → staging → production 승인 질문 (사용자 지시 2026-11-26: S1–S6 전부 자율 진행, 마지막 production 배포 승인만 질문)
 - Done: S1 `facades --prep`(컨테이너 /tmp unzip + magick 256 px → 7,595/44,292동 측정, 표본 4,950만) + facade-tint(렌더 예측 Lab 최근접, ΔE 3 이내 후보는 건물 해시 → 191 tint) + core facade-table·tslHash. S6 hlod L1 trees.inst(자식 L0 합침) + TreeField L0 겹침 숨김. ADR-0111·0112.
 - ⚠️ 로컬 빌드 `20261018-82db354-aa09c5ca`에 landcover를 설치해 시험함(world.json 수정) — 배포는 새 빌드로만(같은 id 재게시 금지).
-- In progress: 없음.
-- Next step (정확히 한 걸음): 새 월드 빌드(컨테이너): build(L0, `_SKY`·실측 tint) → hlod(L1 나무·tint) → materials·landcover·map·rail 등 shared/global 설치 → validate → 로컬 골든뷰·perf → staging publish·확인 → 사용자에게 production 배포(코드 + 월드 current) 승인 질문.
+- 전체 빌드 1차 `20261126-7784be4-aa09c5ca`(main 7aec03c와 같은 트리, validate 0, L0 271 MB(+12 MB `_SKY`)·516파일 395 MB): 골든뷰에서 S1 회귀 — 색만으로 tint를 고르면 벽 그룹이 몰림(오피스 metal 69 %·맨션 plaster 78 %), 저층 오피스 띠창이 커튼월로 → 수정(해시 그룹 유지·회색 세계 화이트밸런스·커튼월 35 m 이상, ADR-0111 Amendment).
+- In progress: S1 선택 수정 PR → 재빌드.
+- Next step (정확히 한 걸음): 수정 커밋으로 재빌드(컨테이너 `docker/run.sh node tools/pipeline/src/cli.ts` build → hlod → materials → audio → map → landcover → validate, 같은 --build-id) → 로컬 골든뷰·perf → staging publish·확인 → 사용자에게 production 배포(코드 Deploy 승인 + prod 버킷 publish·current) 승인 질문.
 - Blockers: 🔶 PAT(usage-cron ADR-0106, 사람 1회 — 2026-11-25 확인: 11-08 이후 `workflow_dispatch` 0회): fine-grained PAT(이 저장소, Actions: Read and write) → `pnpm --filter @sanpo/usage-cron exec wrangler secret put GITHUB_DISPATCH_TOKEN` → 다음 :00/:30 뒤 Actions에 `workflow_dispatch` 실행 확인 → `gh variable set USAGE_CRON_ACTIVE --body true`. 🔶 측량법 승인(03 §6.1 — production 공개 중인데 승인번호 미표기). ODPT 키 없음.
 - ⚠️ 발견(2026-11-26): ① 원경 지형 미표시 → M12-T02에서 수정. ② 상공(300 m+)에서 군중 처음 채우기가 끝나지 않는다(`crowd-sim.ts` spawnCandidate `halfExtents.y = 150` — 플레이어 높이 기준) → 항공 골든뷰 ready 안 됨·원경 군중 0. ③ 골든 ready가 HLOD 도착 전에 나는 경우가 있다(aerial-shinjuku-400m 1회 원경 0).
 
