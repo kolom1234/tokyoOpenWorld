@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 613개.
+> 파일 614개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -201,14 +201,15 @@
 - `packages/render/src/internal/materials/decal.ts` — M_DECAL(07 §4, M05-T02): 노면 표시 — 정점 `_PAINT`(0 흰·1 황) 색, 도료 마모 = 노이즈 알파 테스트(벗겨진 곳은 버려 아스팔트가 보임), | exports: createDecalMaterial
 - `packages/render/src/internal/materials/facade/balcony.ts` — 절차 파사드 ⑥ 맨션 발코니(07 §5-7, M05-T07): 맨션 클래스 2층 이상 층마다 — 앞 난간판(층 바닥 0.12–1.1 m, 건물마다 유리풍 또는 콘크리트 판), | exports: BalconySample, facadeBalcony
 - `packages/render/src/internal/materials/facade/details.ts` — 절차 파사드 ⑤ 디테일(07 §5-8): 층간 줄눈(슬래브 띠), 빗물 얼룩(상단→하단 그라디언트 × 가로 저주파 노이즈), 지면 AO, 모서리 AO, 옥상 두겁 띠. | exports: FacadeDetails, facadeDetails
-- `packages/render/src/internal/materials/facade/grid.ts` — 절차 파사드 ① 입력·층/베이 격자(07 §5-1·2): `_FACADE`(unorm8×4 → class·floors·tint·flags), UV0 = (면 시작점부터 m, 건물 바닥부터 m), | exports: F, I, B, V3, FACADE_CLASS, FACADE_CLASS_COUNT, FACADE_FLAG, RETAIL_FLOOR_M, FacadeInputs, facadeInputs, FacadeGrid, facadeGrid
-- `packages/render/src/internal/materials/facade/index.ts` — 절차 파사드 머티리얼(M_FACADE, 07 §5): 격자(grid) → 벽 재질(walls) + 창(windows) + 1층 상점(retail) + 디테일(details) + 맨션 발코니(balcony, 시차 격자) → PBR. | exports: createFacadeMaterial
+- `packages/render/src/internal/materials/facade/grid.ts` — 절차 파사드 ① 입력·층/베이 격자(07 §5-1·2): `_FACADE`(unorm8×4 → class·floors·tint·flags), UV0 = (면 시작점부터 m, 건물 바닥부터 m), | exports: F, I, B, V3, FACADE_CLASS, FACADE_CLASS_COUNT, FACADE_FLAG, FACADE_CLASS_TABLE, WINDOW_SILL, CURTAIN, RETAIL_FLOOR_M, FacadeInputs, facadeInputs, FacadeGrid, facadeGrid
+- `packages/render/src/internal/materials/facade/index.ts` — 절차 파사드 머티리얼(M_FACADE, 07 §5): 격자(grid) → 벽 재질(walls) + 창(windows) + 1층 상점(retail) + 디테일(details) + 맨션 발코니(balcony, 시차 격자) → PBR. | exports: FRAME_COLOR, createFacadeMaterial
 - `packages/render/src/internal/materials/facade/interior.ts` — 절차 파사드 ④ 실내 매핑(07 §5-4, M03-T05): 베이 × 층 = 방 한 칸. 시선 광선을 방 상자(폭 = 베이, 높이 = 층, 깊이 = 클래스별)에 | exports: InteriorSample, facadeInterior
 - `packages/render/src/internal/materials/facade/retail.ts` — 절차 파사드 ④ 1층 상점(07 §5-6, flags.retail): 쇼윈도(0.3–3.2 m, 베이마다 멀리언), 간판 띠(3.35–4.2 m — 가상 브랜드 아틀라스(M05-T06, signs/atlas): | exports: RetailSample, facadeRetail
-- `packages/render/src/internal/materials/facade/walls.ts` — 절차 파사드 ③ 벽 재질(07 §5-3): 클래스 + 건물 해시(tintIdx)로 텍스처 배열 그룹·레이어 선택 × 클래스 팔레트 틴트. 지붕은 평지붕 콘크리트/경사 기와. | exports: WallSample, facadeWall, wallFloor
-- `packages/render/src/internal/materials/facade/windows.ts` — 절차 파사드 ② 창(07 §5-2·4 일부): 베이 안 사각 SDF(프레임 두께·화면 공간 안티에일리어싱) + 클래스별 배치(오피스 띠창, 맨션 발코니 문, | exports: WindowMasks, facadeWindows
-- `packages/render/src/internal/materials/glass.ts` — M_GLASS 셰이딩(07 §4·§5-4, M03-T05): 유리 = 어두운 반사 유전체(PBR 스페큘러 — 환경 프로브, SSR은 T07) + 투과로 보이는 실내(발광 채널, | exports: interiorExposure, glassRoughness, GlassInput, GlassOutput, glassShading
-- `packages/render/src/internal/materials/hlod.ts` — HLOD 머티리얼: 기본 단색 PBR + 자식 16영역 표시·디더 페이드. 셀별 페이드 16개는 per-object uniform(vec4 × 4, objectGroup)으로, | exports: HlodFadeData, createHlodFades, HLOD_NIGHT_GAIN, createHlodMaterial
+- `packages/render/src/internal/materials/facade/walls.ts` — 절차 파사드 ③ 벽 재질(07 §5-3): 클래스 + 건물 해시(tintIdx)로 텍스처 배열 그룹·레이어 선택 × 클래스 팔레트 틴트. 지붕은 평지붕 콘크리트/경사 기와. | exports: WallSample, wallLayer, wallTint, facadeWall, wallFloor
+- `packages/render/src/internal/materials/facade/windows.ts` — 절차 파사드 ② 창(07 §5-2·4 일부): 베이 안 사각 SDF(프레임 두께·화면 공간 안티에일리어싱) + 클래스별 배치(오피스 띠창, 맨션 발코니 문, | exports: GLASS_TINT, WindowMasks, facadeWindows
+- `packages/render/src/internal/materials/glass.ts` — M_GLASS 셰이딩(07 §4·§5-4, M03-T05): 유리 = 어두운 반사 유전체(PBR 스페큘러 — 환경 프로브, SSR은 T07) + 투과로 보이는 실내(발광 채널, | exports: interiorExposure, glassRoughness, BLIND_COLOR, GlassInput, GlassOutput, glassShading
+- `packages/render/src/internal/materials/hlod-facade.ts` — HLOD 건물 파사드(07 §3·§5, M12-T01): L0 절차 파사드(facade/*)를 단순화 원경 메시에 근사 — 원경 전환 때 색·창 크기가 이어지게. | exports: HLOD_NIGHT_GAIN, HLOD_CURTAIN_MIN_FLOORS, HlodFacadeNodes, hlodFacade
+- `packages/render/src/internal/materials/hlod.ts` — HLOD 머티리얼: 기본 단색 PBR + 자식 16영역 표시·디더 페이드. 셀별 페이드 16개는 per-object uniform(vec4 × 4, objectGroup)으로, | exports: HlodFadeData, createHlodFades, createHlodMaterial
 - `packages/render/src/internal/materials/ktx2-csp.ts` — KTX2Loader 워커를 CSP 호환으로(M03-T06, ADR-0032): 기본 init()은 트랜스코더 본문을 Blob 워커로 띄운다 → blob 워커는 페이지 CSP를 물려받고 | exports: KTX2_BOOTSTRAP_FILE, workerBody, useBootstrapWorker
 - `packages/render/src/internal/materials/landmark.ts` — 랜드마크 머티리얼(M05-T05, overrides.mesh): 정점 `_LMAT`(파이프라인 overrides/spec.ts LMAT 순서) → 표 색·거칠기·금속도 + 종류별 절차 무늬 | exports: LANDMARK_KINDS, screenExposure, lines, createLandmarkMaterial
 - `packages/render/src/internal/materials/library.ts` — 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + 실내 큐브맵 배열(M03-T05) + manifest(그룹·타일 크기·평균색). | exports: MATERIAL_GROUPS, MaterialGroup, MAX_LAYERS, MAX_ROOMS, MaterialsManifest, LibraryState, LibraryStats, MaterialLibrary, createMaterialLibrary

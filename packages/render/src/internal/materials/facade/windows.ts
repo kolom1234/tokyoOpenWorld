@@ -2,10 +2,15 @@
 // 주택 드문드문, 커튼월 거의 전면 + 스팬드럴). 유리 셰이딩(반사·실내·블라인드)은 glass.ts·interior.ts(M03-T05).
 import { abs, float, fwidth, hash, max, mix, select, smoothstep, vec3 } from 'three/tsl';
 import type { B, F, FacadeGrid, FacadeInputs, V3 } from './grid.ts';
-import { FACADE_CLASS } from './grid.ts';
+import { CURTAIN, FACADE_CLASS, WINDOW_SILL } from './grid.ts';
 
 /** 창 프레임 두께(m). */
 const FRAME_M = 0.07;
+/** 유리 선형 색 범위(창마다 h1로 섞고 0.75–1.25배) — HLOD 파사드도 같은 값. */
+export const GLASS_TINT = [
+  [0.018, 0.024, 0.03],
+  [0.03, 0.036, 0.04],
+] as const;
 
 export interface WindowMasks {
   /** 창 전체(프레임 포함) 0..1. */
@@ -37,7 +42,7 @@ function rectSdf(lx: F, ly: F, cx: F, cy: F, hw: F, hh: F): F {
 function layout(i: FacadeInputs, g: FacadeGrid, h1: F): [F, F, F] {
   const fh = g.thisFloorH;
   const officeLike = i.cls.equal(FACADE_CLASS.office).or(i.cls.equal(FACADE_CLASS.public));
-  const sill = select(officeLike, fh.mul(0.25), fh.mul(0.32));
+  const sill = select(officeLike, fh.mul(WINDOW_SILL.office), fh.mul(WINDOW_SILL.other));
   let hh: F = fh.mul(g.params.w).mul(0.5);
   let hw: F = g.bayW.mul(g.params.z).mul(0.5);
   let cy: F = sill.add(hh);
@@ -46,9 +51,9 @@ function layout(i: FacadeInputs, g: FacadeGrid, h1: F): [F, F, F] {
   hh = select(door, float(1.05), hh);
   cy = select(door, float(1.2), cy);
   // 커튼월: 층 거의 전체 유리, 스팬드럴(층 바닥 0.9 m)만 불투명.
-  hh = select(i.curtain, fh.sub(0.95).mul(0.5), hh);
-  cy = select(i.curtain, fh.add(0.85).mul(0.5), cy);
-  hw = select(i.curtain, g.bayW.mul(0.5).sub(0.05), hw);
+  hh = select(i.curtain, fh.sub(CURTAIN.spandrelM + CURTAIN.topM).mul(0.5), hh);
+  cy = select(i.curtain, fh.add(CURTAIN.spandrelM - CURTAIN.topM).mul(0.5), cy);
+  hw = select(i.curtain, g.bayW.mul(0.5).sub(CURTAIN.sideM), hw);
   return [cy, hw, hh];
 }
 
@@ -65,7 +70,7 @@ export function facadeWindows(i: FacadeInputs, g: FacadeGrid, skip: B): WindowMa
   const window = select(none, float(0), fill(d, aa));
   const glass = select(none, float(0), fill(d.add(FRAME_M), aa));
   const tintJitter = h2.mul(0.5).add(0.75);
-  const glassColor = mix(vec3(0.018, 0.024, 0.03), vec3(0.03, 0.036, 0.04), h1).mul(tintJitter);
+  const glassColor = mix(vec3(...GLASS_TINT[0]), vec3(...GLASS_TINT[1]), h1).mul(tintJitter);
   const blind = select(i.curtain, float(0), h1.mul(h2).mul(1.4).min(0.7));
   const blindMask = select(g.ly.greaterThan(cy.add(hh).sub(blind.mul(hh).mul(2))), float(1), float(0));
   return { window, glass, frame: window.sub(glass).max(0), glassColor, blind, blindMask, cell };

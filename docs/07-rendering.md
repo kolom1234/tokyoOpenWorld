@@ -29,6 +29,8 @@ scene
 ## 3. 셀 → 메시 변환
 - `DecodedMesh` → `BufferGeometry` (TypedArray 그대로 `BufferAttribute`), 머티리얼 클래스별 공유 머티리얼 인스턴스.
 - 셀당 드로우콜 목표: L0 ≤ 30, L1 ≤ 8, L2/L3 ≤ 4. HLOD는 머티리얼별 1개(현재 지형·건물 = 2, ADR-0025).
+- HLOD 건물 = L0 파사드 근사(M12-T01, `materials/hlod-facade.ts`): 벽 = L0와 같은 레이어 평균 알베도·ORM × 팔레트 × 빗물 얼룩 평균, 창 = L0 클래스 표 격자(면 폭 맞춤 없음)의 유리·블라인드·프레임 몫,
+  밤 점등도 같은 창 사각형, 칸 ≤ 1 px면 기대값. 커튼월 비트가 hlod.mesh에 없어 오피스 ≥ 22층만 커튼월. 밑동 = 지면 AO 0–1.2 m(L0와 같음) × 골목 하늘 가림 0.75 → 6 m 위 1.
 - 소품/나무: 타입별 **전역 InstancedMesh 풀**(셀별이 아님) + 셀별 인스턴스 범위 할당 → 드로우콜 = 타입 수 × LOD 수.
   구현(M05-T03, ADR-0051) `props/{geo,models,blocks,pools}.ts`: 코드 절차 모델(정점색, LOD 0/1/2), **LOD당 풀 1개**(전 종류 합친 기하 + 인스턴스 종류 번호 — three r186은 InstancedMesh마다 노드 빌드 ≈ 140 ms라 종류 × LOD 풀 대신), 64 m 블록 거리 LOD(0 ≤ 40·1 ≤ 150·2 ≤ 종류별 80–600 m, 히스테리시스 2 m, 카메라 1 m 이동마다), 바뀐 LOD만 재작성.
 - 컬링: 셀 AABB 프러스텀 컬링(CPU) + 인스턴스는 거리 LOD 선택(CPU, 셀 단위 매 4프레임).

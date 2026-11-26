@@ -17,7 +17,7 @@ import { facadeWindows } from './windows.ts';
 /** 밤 1층 간판 띠 발광 배율(장면 단위 — 실제 GPU에서 조정). */
 const FASCIA_NIGHT_GLOW = 0.7;
 /** 창 프레임(알루미늄 새시) 선형 색·거칠기. */
-const FRAME_COLOR = vec3(0.32, 0.33, 0.34);
+export const FRAME_COLOR = vec3(0.32, 0.33, 0.34);
 
 export function createFacadeMaterial(lib: MaterialLibrary): Material {
   const m = new MeshStandardNodeMaterial({ roughness: 0.8, metalness: 0 });

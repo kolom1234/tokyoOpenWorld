@@ -19,7 +19,8 @@
 | M09 | Weather, Night, Audio | 날씨·비 표현·구름·야간 조명·사운드·계절 | `roadmap/M09.md` |
 | M10 | UI/UX | 셸·HUD·지도·도감·포토모드·세이브·크레딧 | `roadmap/M10.md` |
 | M11 | Hardening & Beta | 성능 예산 달성·누수 점검·라이선스 감사·프로덕션 배포 | `roadmap/M11.md` |
-| M12+ | Expansion | 긴자·마루노우치 → 아키하바라·우에노 → … (영역 JSON 추가 중심) | (MVP 후 작성) |
+| M12 | Visual Fidelity I | 원경(HLOD) 파사드·지면·대기를 실측·L0와 맞춤(서버 요청 증가 0) — 그래픽 개선 1–2단계 | `roadmap/M12.md` |
+| M13+ | Expansion | 긴자·마루노우치 → 아키하바라·우에노 → … (영역 JSON 추가 중심) | (MVP 후 작성) |
 
 ## 병렬화 가능 구간
 - M03(렌더)과 M04(물리)는 M02 이후 병렬 가능.
