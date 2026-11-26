@@ -64,6 +64,8 @@ export const TRAIN_BODY_STRIDE = 10;   // 칸 물리 레코드: id, x,y,z(WF 레
 // ── 함수 (index.ts ← internal/*) ──
 packCellKey(level, ix, iz): CellKey; unpackCellKey(k); cellIdString(k): CellId      // 범위 밖 → RangeError
 createRng(seed): Rng; hash32(...parts: Array<string|number>): number                 // ADR-0012
+tslHash(seed): number                       // three TSL hash(PCG)의 CPU 짝(정수부만) — render·pipeline 공용(M12-T06)
+FACADE_WALL_CHOICES·FACADE_PALETTE·facadeWallGroup(cls, tint)·facadeLayerIndex(range, tint)  // 파사드 벽 재질 선택 표(셰이더 walls.ts = 파이프라인 실측 tint 예측, M12-T06)
 createEventBus(log); createLogger(opts?); createScheduler(deps); MAX_DT_REAL_S = 0.1
 mergeConfig<T>(defaults: T, ...overrides: NoInfer<DeepPartial<T>>[]): T               // 입력 불변, __proto__ 등 차단
 createWorkerSupervisor(deps): WorkerSupervisor

@@ -1,6 +1,7 @@
 // 절차 파사드 파라미터(M03-T04, 07 §5): PLATEAU 건물 용도 코드·높이·층수 → `_FACADE`(u8×4: class, floors, tintIdx, flags).
 // 렌더 파사드 셰이더(packages/render materials/facade/*)가 같은 코드표를 쓴다 — 바꾸면 양쪽 + 05 §4를 함께 갱신.
 import { hash32, WORLD_SEED } from '@sanpo/core';
+import { curtainFromGlass, measuredFacade, TOWER_GLASS_M } from './facade-tint.ts';
 
 /** `_FACADE.class`(05 §4). 렌더 `FACADE_CLASS`와 같은 값. */
 export const FACADE_CLASS = { office: 0, mansion: 1, house: 2, commercial: 3, public: 4, industrial: 5 } as const;
@@ -34,8 +35,7 @@ const USAGE_CLASS: Readonly<Record<string, FacadeClass>> = {
 const RETAIL_USAGE = new Set(['413', '414']);
 /** 주택이 이보다 높으면 맨션으로(PLATEAU 411 오분류·대형 주택 대응). */
 const HOUSE_MAX_M = 15;
-/** 커튼월: 오피스가 이 높이 이상이면 항상, OFFICE_GLASS_M 이상이면 해시 40%. */
-const TOWER_GLASS_M = 90;
+/** 커튼월(측정 없음): 오피스가 TOWER_GLASS_M(facade-tint) 이상이면 항상, OFFICE_GLASS_M 이상이면 해시 40%. */
 const OFFICE_GLASS_M = 35;
 
 function classOf(usage: string | null, heightM: number): FacadeClass {
@@ -65,9 +65,12 @@ export function facadeParams(b: FacadeInput): [number, number, number, number] {
     (b.usage !== null && RETAIL_USAGE.has(b.usage)) ||
     (cls === FACADE_CLASS.office && b.heightM < 60 && (h & 0x300) !== 0);
   if (retail && b.floors >= 1) flags |= FACADE_FLAG.retail;
-  const glassy =
-    cls === FACADE_CLASS.office &&
-    (b.heightM >= TOWER_GLASS_M || (b.heightM >= OFFICE_GLASS_M && ((h >>> 20) & 0xff) < 102));
+  // 실측(M12-T06): PLATEAU 텍스처 벽 색 → tintIdx, 유리 비율 → 커튼월. 없으면 해시(높이 + 40 %).
+  const m = measuredFacade(b.id, cls);
+  const glassy = m
+    ? curtainFromGlass(cls === FACADE_CLASS.office, b.heightM, m.glass)
+    : cls === FACADE_CLASS.office &&
+      (b.heightM >= TOWER_GLASS_M || (b.heightM >= OFFICE_GLASS_M && ((h >>> 20) & 0xff) < 102));
   if (glassy) flags |= FACADE_FLAG.curtainWall;
-  return [cls, Math.min(Math.max(b.floors, 1), 255), h & 0xff, flags];
+  return [cls, Math.min(Math.max(b.floors, 1), 255), m ? m.tint : h & 0xff, flags];
 }

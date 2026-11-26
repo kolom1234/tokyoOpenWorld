@@ -53,6 +53,7 @@ import {
   paddedCellWindow,
   readDemWindow,
 } from './dem-window.ts';
+import { loadFacadeMeasures } from './facade-tint.ts';
 import { encodeTerrainHeight } from './heightfield.ts';
 import { type LanesCellStats, lanesCell } from './lanes-cell.ts';
 import { worldJson } from './manifest.ts';
@@ -344,6 +345,7 @@ export async function buildArea(input: AreaBuildInput): Promise<CellBuildStats[]
       BUILD_MARGIN,
       join(outDir, '.work'),
     ));
+  loadFacadeMeasures(join(input.normalizedDir, '..', 'derived'), log); // PLATEAU 텍스처 실측 → tintIdx(M12-T06)
   const files = aroundReader(input.normalizedDir);
   const places = readPlaces(input.normalizedDir);
   rmSync(outDir, { recursive: true, force: true });
