@@ -31,7 +31,7 @@
 | CF 배포 | `wrangler` (선택: `@cloudflare/vite-plugin` 1.60.2 — 도입 시 ADR) | 4.164.0 (miniflare 5.20261117.0-beta → sharp 0.35.5·undici 7.30.1, ADR-0103) |
 | 린트/포맷 | Biome | 2.6.8 (2.6부터 Markdown·YAML도 검사 — Markdown 포매터는 끔(문서는 손 서식·줄 예산), YAML은 작은따옴표) |
 | 의존 규칙 | dependency-cruiser | 18.8.0 |
-| 단위 테스트 | Vitest | 5.1.0 (`@vitest/mocker` 5.1.0) |
+| 단위 테스트 | Vitest | 5.1.1 (`@vitest/mocker` 5.1.1) |
 | PMTiles 호환 검사 | `pmtiles`(공식 JS 리더) — tile-format 테스트 전용 devDependency, 런타임은 자체 리더(ADR-0093) | 4.5.0 (BSD-3-Clause) |
 | JSON Schema 검증 | `ajv` (draft 2020-12, `ajv/dist/2020`) — 테스트·파이프라인 validate 전용, 런타임 번들 금지 (ADR-0017) | 8.20.0 (MIT) |
 | E2E/골든뷰 | Playwright | 1.65.1 (Chromium 159) |
