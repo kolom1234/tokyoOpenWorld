@@ -10,6 +10,8 @@ import { insideRings } from './roads.ts';
 export interface FootprintSource {
   minY: number;
   ground: RingsWF[];
+  /** 건물 꼭대기(모든 면 최고 y) — 하늘 가시도 DSM(M12-T05). */
+  topY?: number;
 }
 
 export function footprintSources(buildings: readonly BuildingRecord[]): FootprintSource[] {
@@ -19,7 +21,11 @@ export function footprintSources(buildings: readonly BuildingRecord[]): Footprin
     let minY = Number.POSITIVE_INFINITY;
     for (const rings of ground)
       for (const r of rings) for (let i = 1; i < r.length; i += 3) minY = Math.min(minY, r[i] as number);
-    if (Number.isFinite(minY) && ground.length > 0) out.push({ minY, ground });
+    let topY = Number.NEGATIVE_INFINITY;
+    for (const s of b.surfaces)
+      for (const r of s.ringsWF) for (let i = 1; i < r.length; i += 3) topY = Math.max(topY, r[i] as number);
+    if (Number.isFinite(minY) && ground.length > 0)
+      out.push({ minY, ground, ...(Number.isFinite(topY) ? { topY } : {}) });
   }
   return out;
 }

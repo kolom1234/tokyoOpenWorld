@@ -232,7 +232,7 @@ function startLateLayers(
   wlog: Logger,
 ): void {
   const { render, late } = v;
-  loadMaterialsLater(render, world.materialsUrl, late, wlog);
+  loadMaterialsLater(render, world.materialsUrl, late, wlog, world.landcoverUrl);
   loadAvatarLater(render, late, wlog);
   if (deps.trees === false) late.treesSettled = true;
   else loadTreesLater(render, late, wlog);

@@ -7,6 +7,7 @@ import { loadCrowdAssets } from './crowd/assets.ts';
 import { createCrowdMaterial, outfitU } from './crowd/material.ts';
 import { createFrameSystems } from './frame.ts';
 import { nightU, updateNight } from './lighting/night.ts';
+import { loadLandcover } from './materials/landcover.ts';
 import { compileDetached, precompileBase, precompileMaterials, yieldFrame } from './materials/precompile.ts';
 import { setColorVision } from './post/color-vision.ts';
 import { dofBokehU, dofFocusU, dofRangeU, exposureBiasU } from './post/photo.ts';
@@ -219,7 +220,10 @@ async function bindTrains(ctx: RenderContext, buf: SharedInstanceBuffer): Promis
 
 function loaders(
   ctx: RenderContext,
-): Pick<RenderService, 'precompile' | 'precompileLate' | 'loadAvatar' | 'loadTrees' | 'loadSignage' | 'loadCrowd'> {
+): Pick<
+  RenderService,
+  'precompile' | 'precompileLate' | 'loadAvatar' | 'loadTrees' | 'loadSignage' | 'loadCrowd' | 'loadLandcover'
+> {
   const { renderer, view, graph, log } = ctx;
   return {
     precompile: (onProgress) => precompileAll(ctx, onProgress),
@@ -236,6 +240,10 @@ function loaders(
     async loadTrees(urls) {
       await loadTreesInto(ctx, urls);
       log.info('trees attached');
+    },
+    async loadLandcover(url) {
+      const m = await loadLandcover(url);
+      log.info(`landcover ${m.width}×${m.height} @ ${m.step} m`);
     },
     async loadSignage(urls) {
       await loadSignageInto(ctx, urls);

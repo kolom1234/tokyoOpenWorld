@@ -17,7 +17,7 @@ interface WorldManifest {
   buildId: string;
   crs: { projected: string; E0: number; N0: number };
   spawn: { posWF: [number, number, number]; yawDeg?: number };
-  files: { cellsIndex: string; materials?: string };
+  files: { cellsIndex: string; materials?: string; landcover?: string };
 }
 
 export interface LoadedWorld {
@@ -36,6 +36,8 @@ export interface LoadedWorld {
   spawnCells: CellKey[];
   /** 공유 머티리얼 매니페스트(world.json files.materials). 픽스처(world-mini)는 텍스처가 없어 생략. */
   materialsUrl?: string;
+  /** 원경 지면 분류(world.json files.landcover, M12-T04) — 옛 빌드·픽스처는 없음(단색 원경 지면). */
+  landcoverUrl?: string;
 }
 
 type FetchLike = (input: string) => Promise<Response>;
@@ -106,6 +108,9 @@ export async function loadWorld(
     spawnCells,
     ...(source !== 'fixture' && m.value.files.materials
       ? { materialsUrl: `${baseUrl}/${m.value.files.materials}` }
+      : {}),
+    ...(source !== 'fixture' && m.value.files.landcover
+      ? { landcoverUrl: `${baseUrl}/${m.value.files.landcover}` }
       : {}),
   });
 }

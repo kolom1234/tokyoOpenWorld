@@ -5,6 +5,7 @@
 import { abs, attribute, dot, max, positionLocal, step, uniform, vec4 } from 'three/tsl';
 import { type Material, MeshStandardNodeMaterial, type Object3D, Vector4 } from 'three/webgpu';
 import { hlodFacade } from './hlod-facade.ts';
+import { landcoverNodes } from './landcover.ts';
 import type { MaterialLibrary } from './library.ts';
 
 /** 셀 메시 userData에 두는 페이드(자식 4개씩 vec4 × 4). 같은 셀의 지형·건물 메시가 같은 배열을 공유한다. */
@@ -41,6 +42,11 @@ export function createHlodMaterial(
     m.metalnessNode = f.metalness;
     m.aoNode = f.ao;
     m.emissiveNode = f.emissive;
+  } else if (name === 'terrain_ground' && lib) {
+    // 원경 지면 분류(M12-T04): 토지피복 텍스처 → 레이어 평균색·물 거칠기.
+    const t = landcoverNodes(lib);
+    m.colorNode = t.color;
+    m.roughnessNode = t.roughness;
   }
   m.name = fading ? `hlod:${name}:fade` : `hlod:${name}`;
   m.alphaHash = fading;

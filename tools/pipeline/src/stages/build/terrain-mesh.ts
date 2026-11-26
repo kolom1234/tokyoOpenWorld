@@ -18,6 +18,8 @@ export interface TerrainGeometry {
   normals: Int8Array;
   surf: Uint8Array;
   indices: Uint32Array;
+  /** 정점 하늘 가시도(M12-T05) — 있으면 `_SKY`. */
+  sky?: Uint8Array;
 }
 
 /** 전체 격자 정점(로컬 x = 열, z = 행, y = DEM). */
@@ -102,6 +104,7 @@ export function encodeTerrainMesh(g: TerrainGeometry): Promise<Uint8Array> {
           POSITION: { array: g.positions, itemSize: 3 },
           NORMAL: { array: g.normals, itemSize: 3, normalized: true },
           _SURF: { array: g.surf, itemSize: 1 },
+          ...(g.sky ? { _SKY: { array: g.sky, itemSize: 1 } } : {}),
         },
         indices: g.indices,
       },

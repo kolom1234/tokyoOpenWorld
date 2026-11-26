@@ -329,6 +329,8 @@ export interface RenderService extends SystemProvider {
    * 첫 표시 뒤에 부른다(초기 다운로드 밖). 그 전 셀의 나무도 기억했다가 그린다.
    */
   loadTrees(urls: TreeAssetUrls): Promise<void>;
+  /** 원경 지면 분류(M12-T04): world.json `files.landcover` → 토지피복 텍스처 → HLOD 지형 색. 첫 표시 뒤. 없거나 실패 = 단색 지면. */
+  loadLandcover(url: string): Promise<void>;
   /** 간판 아틀라스(M05-T06) 적재 → 간판 머티리얼 선컴파일 → 셀 props.inst 간판 종류 + 파사드 1층 간판 띠에 가상 브랜드. */
   loadSignage(urls: SignageAssetUrls): Promise<void>;
   /** 군중 팩 적재 → 머티리얼 선컴파일 → pedestrians 레이어를 그리기 시작(M06-T01). 첫 표시 뒤에 부른다. */

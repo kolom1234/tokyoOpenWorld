@@ -39,7 +39,9 @@ export function threeAttributeName(gltfName: string): string {
  * 1성분 정수 속성(`_CHILD` u8·`_SURF` u8·`_BLDG` u16·`_PAINT` u8·`_LMAT` u8) → float32: WebGPU 코어에 1성분 8/16비트 정점 형식이 없고,
  * WebGL2는 정수 입력에 vertexAttribIPointer가 필요해 셰이더·버퍼 타입이 어긋난다. 셀당 정점 수만큼 1회 변환.
  */
-const F32_ATTRIBUTES: ReadonlySet<string> = new Set(['_CHILD', '_SURF', '_BLDG', '_PAINT', '_LMAT']);
+const F32_ATTRIBUTES: ReadonlySet<string> = new Set(['_CHILD', '_SURF', '_BLDG', '_PAINT', '_LMAT', '_SKY']);
+/** `_SKY`(M12-T05, 하늘 가시도 u8)를 읽는 L0 머티리얼 — 옛 빌드·픽스처처럼 없으면 255(열린 하늘)로 채운다(정점 형식이 늘 같게). */
+const SKY_MATERIALS: ReadonlySet<string> = new Set(['terrain_ground', 'facade_default']);
 
 function floatAttribute(a: Primitive['attributes'][string]): BufferAttribute {
   const src = a.array as Uint8Array | Uint16Array;
@@ -59,6 +61,11 @@ export function buildGeometry(p: Primitive): BufferGeometry {
     // `_FACADE`(u8×4): 정규화로 넘겨 unorm8x4(양 백엔드 공통, 복사 없음) → 셰이더에서 ×255.
     const normalized = name === '_FACADE' ? true : a.normalized;
     g.setAttribute(threeAttributeName(name), new BufferAttribute(a.array as Float32Array, a.itemSize, normalized));
+  }
+  // HLOD(`_CHILD` 있음)는 `_sky`를 읽지 않는다 — L0만 채운다.
+  if (SKY_MATERIALS.has(p.materialId) && !p.attributes._SKY && !p.attributes._CHILD) {
+    const n = (p.attributes.POSITION?.array.byteLength ?? 0) / 12;
+    g.setAttribute('_sky', new BufferAttribute(new Float32Array(n).fill(255), 1));
   }
   if (p.index) g.setIndex(new BufferAttribute(p.index, 1));
   const box = new Box3(new Vector3(...p.boundsLocal.min), new Vector3(...p.boundsLocal.max));
