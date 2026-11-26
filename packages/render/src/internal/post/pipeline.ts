@@ -54,6 +54,7 @@ import { type RainUniforms, rainLayers } from '../weather/rain.ts';
 import { composeAerial, LowResAerialNode } from './aerial.ts';
 import { filterAo } from './ao-filter.ts';
 import { type AutoExposure, createAutoExposure } from './exposure.ts';
+import type { GradeMood } from './lut.ts';
 import { outputSwitch } from './output.ts';
 import { applyDof, exposureBiasU } from './photo.ts';
 import { type WeatherSkyUniforms, weatherSky } from './weather-sky.ts';
@@ -84,6 +85,8 @@ export interface PostPipeline {
    * 전체 후처리 재구성(씬 머티리얼 재컴파일 4.8 s)이 아니라 출력 사각형·DOF 내부 패스만 컴파일. 직접 렌더 = 무시.
    */
   setDof(on: boolean): void;
+  /** 분위기 그레이딩(M12-T03): 태양 고도·구름·비·안개·밤 → 3D LUT 재굽기(조각, 직접 렌더·LUT 끔 = 무시). */
+  setGrade(m: GradeMood, nowS: number): void;
   /**
    * 머티리얼 선컴파일 대상(ADR-0086): 씬 패스 렌더 타깃 + MRT — 캔버스로 컴파일하면 다른 변형(출력 형식·MRT 출력)이라 첫 프레임에 다시 동기 컴파일한다.
    * 직접 렌더 = null(캔버스 그대로).
@@ -115,6 +118,7 @@ export function createDirectRender(renderer: WebGPURenderer, scene: Scene, camer
     exposure: () => null,
     setRenderScale() {},
     setDof() {},
+    setGrade() {},
     compileTarget: () => null,
     dispose() {},
   };
@@ -345,6 +349,7 @@ export function createPostPipeline(
       if (sc.ssr) sc.ssr.resolutionScale = 0.5 * scale;
     },
     setDof: out.setDof,
+    setGrade: out.setGrade,
     compileTarget: () => ({
       target: scenePass.renderTarget,
       mrt: scenePass.getMRT(),

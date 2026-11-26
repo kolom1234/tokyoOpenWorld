@@ -1,9 +1,11 @@
 // 날씨 하늘(M09-T02 — ADR-0077): 공중원근 뒤 하늘 화소에 2D 구름층(고도 1.6 km 평면, 값 잡음 fbm 4옥타브, 바람에 흐름) + 비·안개 연무(거리 지수).
 // 구름 밝기 = 그 화소 하늘 휘도 × (얇은 = 2.2 … 두꺼운 밑면 = 0.75) + 태양 쪽 은빛 가장자리 — 대기 모델의 절대 단위를 몰라도 하늘과 어울린다(흐린 날 = 회색 하늘).
 // 연무 색 = 자동 노출이 잰 장면 평균 휘도 × 1.5(낮 밝은 회색, 밤 어두움) — CPU 갱신. 밤에는 구름 밑면·연무에 도시 불빛 반사(주황, 장면 평균 휘도 비례).
-// see docs/07-rendering.md §8(구름), ADR-0076
+// 맑은 날 도시 연무(M12-T03): 경계층 에어로졸 소광 β(z) = β₀ e^(−z/H)를 광선을 따라 해석 적분 — 지평선은 뿌옇고 천정은 맑다. β₀ = 계절(1월 시정 ≈ 39 km → 7월 ≈ 16 km)·바람.
+// see docs/07-rendering.md §6(안개)·§8(구름), ADR-0076
 import { depthToViewZ, inverseProjectionMatrix, inverseViewMatrix } from '@takram/three-geospatial/webgpu';
 import {
+  abs,
   dot,
   exp,
   Fn,
@@ -44,6 +46,18 @@ const UPPER_WIND = 4;
 const HAZE_MIN = 0;
 const FOG_DENSITY = 0.005;
 const RAIN_HAZE = 0.00012;
+/**
+ * 도시 연무(M12-T03): 해수면 소광 β₀(1/m, 대기 모델 Mie 위에 더함). Koschmieder 시정 V = 3.912/β —
+ * 1월 1.0e-4(≈ 39 km, 맑은 겨울 — 후지산이 보이는 날) ↔ 7월 2.4e-4(≈ 16 km, 습한 여름). 척도 높이 1 km(경계층), 하늘 광선 40 km.
+ */
+const URBAN_HAZE_WINTER = 1.0e-4;
+const URBAN_HAZE_SUMMER = 2.4e-4;
+const HAZE_SCALE_H_M = 1000;
+const SKY_RAY_M = 40_000;
+/** 바람이 연무를 씻는 정도: β₀ /= 1 + 풍속 / 이 값(m/s). */
+const WIND_CLEAR_MS = 6;
+/** 연무 색 = 장면 평균 휘도 × 약간 푸른 회색, 태양 쪽 전방 산란 밝게(낮). */
+const HAZE_TINT = [0.94, 0.97, 1.03] as const;
 /** 맑은 밤 지평선 광해 = 장면 평균 휘도(연무 색) × 이 값(M09-T03). */
 const SKY_GLOW = 0.9;
 
@@ -54,6 +68,8 @@ export interface WeatherSkyUniforms {
   readonly windZ: UniformNode<'float', number>;
   readonly sunDir: UniformNode<'vec3', Vector3>;
   readonly haze: UniformNode<'float', number>;
+  /** 도시 연무 해수면 소광 β₀(1/m, M12-T03). */
+  readonly urban: UniformNode<'float', number>;
   readonly hazeLum: UniformNode<'float', number>;
   readonly night: UniformNode<'float', number>;
 }
@@ -66,6 +82,7 @@ export function createWeatherSkyUniforms(): WeatherSkyUniforms {
     windZ: uniform(0),
     sunDir: uniform(new Vector3(0, 1, 0)),
     haze: uniform(HAZE_MIN),
+    urban: uniform(URBAN_HAZE_WINTER),
     hazeLum: uniform(0.1),
     night: uniform(0),
   };
@@ -84,6 +101,8 @@ export function updateWeatherSky(
     night: number;
     sceneLum: number | undefined;
     dtS: number;
+    /** 게임 시각(ms, UTC) — 계절 연무. 없으면 겨울 값. */
+    gameMs?: number;
   },
 ): void {
   u.cover.value = Math.min(Math.max(o.cover, 0), 1);
@@ -93,8 +112,34 @@ export function updateWeatherSky(
   u.sunDir.value.set(o.sun.x, o.sun.y, o.sun.z).normalize();
   // 안개는 제곱(약한 흐림 0.05 = 시정 수백 km → 거의 0, 안개 상태 0.75 = 시정 ≈ 1 km).
   u.haze.value = HAZE_MIN + Math.max(o.fog, 0) ** 2 * FOG_DENSITY + Math.max(o.rainMmH, 0) * RAIN_HAZE;
+  u.urban.value = urbanHazeOf(o.gameMs ?? 0, Math.hypot(o.windX, o.windZ));
   if (o.sceneLum !== undefined && Number.isFinite(o.sceneLum)) u.hazeLum.value = o.sceneLum * 1.5;
   u.night.value = o.night;
+}
+
+const DAY_MS = 86_400_000;
+const JST_MS = 9 * 3_600_000;
+
+/** 도시 연무 β₀(1/m): 계절 코사인(1월 15일 최소 ↔ 7월 중순 최대, JST 날짜) ÷ (1 + 풍속/6). 결정론(시각·바람만). */
+export function urbanHazeOf(gameMs: number, windMs: number): number {
+  const day = Math.floor((gameMs + JST_MS) / DAY_MS);
+  const doy = (((day - 14) % 365.2425) + 365.2425) % 365.2425; // 1월 15일 = 0
+  const summer = 0.5 - 0.5 * Math.cos((2 * Math.PI * doy) / 365.2425);
+  const b = URBAN_HAZE_WINTER + (URBAN_HAZE_SUMMER - URBAN_HAZE_WINTER) * summer;
+  return b / (1 + Math.max(windMs, 0) / WIND_CLEAR_MS);
+}
+
+/**
+ * 연무 광학 깊이: ∫₀ᵈ β₀ e^(−(h₀ + t·dy)/H) dt = β₀ e^(−h₀/H) · d · (1 − e^(−k))/k, k = dy·d/H(k → 0이면 1 − k/2).
+ * 내려다보는 광선(k < 0)은 아래로 갈수록 짙고, 위로 가는 하늘 광선은 경계층을 벗어나며 포화한다.
+ */
+function urbanDepth(beta: F, camY: F, dirY: F, dist: F): F {
+  const k = dirY.mul(dist).div(HAZE_SCALE_H_M);
+  const shape = select(abs(k).lessThan(1e-3), float(1).sub(k.mul(0.5)), float(1).sub(exp(k.negate())).div(k));
+  return beta
+    .mul(exp(camY.max(0).negate().div(HAZE_SCALE_H_M)))
+    .mul(dist)
+    .mul(shape);
 }
 
 /** 잡음 격자 양수 오프셋·행 폭: 씨앗 = ix + iz × 행 < 2^24(float32 정수 정확 — GPU·CPU 같은 값). */
@@ -165,7 +210,9 @@ export function weatherSky(
   reversed: boolean,
 ): V4 {
   return Fn(() => {
-    const ray = viewRay(depth, camera, reversed);
+    const r0 = viewRay(depth, camera, reversed);
+    // 광선 값은 If 블록 앞에서 변수로 확정 — 블록 안에서 처음 빌드되면 선언·대입이 블록에 갇혀 블록 밖 연무가 잘못된 값을 읽는다(M12-T03).
+    const ray = { dir: r0.dir.toVar(), dist: r0.dist.toVar(), sky: r0.sky.toVar() };
     const out = vec3(color.rgb).toVar();
     const mask = float(0).toVar();
     If(ray.sky, () => {
@@ -187,6 +234,25 @@ export function weatherSky(
       .sub(exp(dist.mul(u.haze).negate()))
       .mul(select(ray.sky, float(0.8), float(1)));
     out.assign(mix(out, vec3(u.hazeLum), fog));
+    // 도시 연무(M12-T03): 광선 적분 광학 깊이 → 투과율, 색 = 장면 휘도 × 푸른 회색 × 태양 쪽 전방 산란(낮).
+    // 하늘 화소의 ray.dist는 무한대 — 같은 식에 섞지 않고 따로 계산(섞으면 NaN → 검은 하늘).
+    const groundDist = ray.dist.min(SKY_RAY_M);
+    const tauSky = urbanDepth(u.urban, camWF.y, ray.dir.y.max(0), float(SKY_RAY_M));
+    const tauGround = urbanDepth(u.urban, camWF.y, ray.dir.y, groundDist);
+    const urban = float(1).sub(exp(select(ray.sky, tauSky, tauGround).negate()));
+    const forward = pow(max(dot(ray.dir, u.sunDir), 0), 6)
+      .mul(0.6)
+      .mul(float(1).sub(u.night))
+      .add(1);
+    out.assign(
+      mix(
+        out,
+        vec3(...HAZE_TINT)
+          .mul(u.hazeLum)
+          .mul(forward),
+        urban,
+      ),
+    );
     // 밤: 구름 밑면·연무에 도시 불빛 반사(주황) — 장면 평균 휘도 비례.
     const glow = mask.max(fog.mul(0.5)).mul(u.night).mul(u.cover.mul(0.7).add(0.2));
     out.addAssign(vec3(1, 0.62, 0.38).mul(u.hazeLum.mul(1.4)).mul(glow));

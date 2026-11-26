@@ -76,6 +76,12 @@ function syncWeather(ctx: RenderContext, dtS: number, rebased: boolean): void {
   const o = view.renderOriginWF;
   ctx.sky.camWF.value.set(o.x + view.camera.position.x, o.y + view.camera.position.y, o.z + view.camera.position.z);
   updateWeatherSky(ctx.sky.u, { ...ctx.weather, sceneLum: ctx.post.exposure()?.lum, dtS: dtS });
+  // 분위기 그레이딩(M12-T03): 바뀔 때만 LUT 재굽기(조각).
+  const w = ctx.weather;
+  ctx.post.setGrade(
+    { sunY: w.sun.y, cover: w.cover, rainMmH: w.rainMmH, fog: w.fog, night: w.night },
+    performance.now() / 1000,
+  );
   // 태양 가림(M09-T02): 태양 방향 구름 덮임(셰이더와 같은 잡음) + 흐림 정도 → 직사광(흐름에 따라 구름 그림자가 지나간다).
   const occl = Math.max(cloudAlphaCpu(ctx.sky.u, ctx.weather.sun, ctx.sky.camWF.value), ctx.weather.cover ** 2);
   ctx.atmosphere.light.color.setScalar(1 - 0.88 * occl);
