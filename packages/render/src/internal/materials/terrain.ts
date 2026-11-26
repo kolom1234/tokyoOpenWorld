@@ -22,6 +22,7 @@ import { applyWetness } from '../weather/wetness.ts';
 import { MATERIAL_GROUPS, type MaterialGroup, type MaterialLibrary } from './library.ts';
 import { type NoiseBank, noiseBank } from './noise.ts';
 import { asphaltVariation, macroTint, NO_VARIATION, pavingVariation, type Variation } from './road.ts';
+import { skyAo } from './sky-ao.ts';
 import { sampleLayer, tsToWorld, worldToView } from './textured.ts';
 
 type F = TslNode<'float'>;
@@ -196,7 +197,7 @@ export function createTerrainMaterial(lib: MaterialLibrary, env: EnvUniforms, op
   m.colorNode = wet.albedo;
   m.roughnessNode = wet.roughness;
   m.metalnessNode = float(0);
-  m.aoNode = mix(pOrm.x, q.orm.x, top.s);
+  m.aoNode = mix(pOrm.x, q.orm.x, top.s).mul(skyAo());
   m.normalNode = worldToView(wet.normalW);
   return m;
 }

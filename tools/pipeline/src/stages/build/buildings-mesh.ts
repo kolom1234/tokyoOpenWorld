@@ -186,11 +186,15 @@ export function quantizePositions(pos: readonly number[], b: Aabb): { q: Uint16A
  * 셀 건물 레코드 → buildings.mesh glb + meta.buildings. 결정론(gmlId 순, meshopt 재정렬).
  * renderSkip(M05-T05 랜드마크 오버라이드가 대체하는 gmlId)은 렌더에서 빼고 충돌·meta에는 남긴다.
  */
+/** 정점 하늘 가시도(M12-T05): 셀 로컬 위치·법선(÷ nScale = 단위) → u8. */
+export type SkyFn = (pos: ArrayLike<number>, nrm: ArrayLike<number>, count: number, nScale: number) => Uint8Array;
+
 export async function buildBuildings(
   records: readonly BuildingRecord[],
   originWF: Vec3Tuple,
   renderSkip: ReadonlySet<string> = new Set(),
   colliderSkip: ReadonlySet<string> = new Set(),
+  sky?: SkyFn,
 ): Promise<BuildingsBuild> {
   const sorted = [...records].sort((a, b) => (a.gmlId < b.gmlId ? -1 : a.gmlId > b.gmlId ? 1 : 0));
   const s = new Stream();
@@ -221,11 +225,11 @@ export async function buildBuildings(
   };
   if (s.count === 0) return { glb: null, meta, aabbLocal: null, vertices: 0, tris: 0, sources, collision };
   const aabbLocal = boundsOf(s.pos);
-  const glb = await encodeBuildings(s, aabbLocal);
+  const glb = await encodeBuildings(s, aabbLocal, sky?.(s.pos, s.nrm, s.count, 127));
   return { glb, meta, aabbLocal, vertices: s.count, tris, sources, collision };
 }
 
-async function encodeBuildings(s: Stream, b: Aabb): Promise<Uint8Array> {
+async function encodeBuildings(s: Stream, b: Aabb, sky?: Uint8Array): Promise<Uint8Array> {
   await MeshoptEncoder.ready;
   const indices = Uint32Array.from(s.idx);
   const [remap, unique] = MeshoptEncoder.reorderMesh(indices, true, false);
@@ -246,6 +250,7 @@ async function encodeBuildings(s: Stream, b: Aabb): Promise<Uint8Array> {
           TEXCOORD_1: { array: re(Float32Array.from(s.uv1), 2), itemSize: 2 },
           _BLDG: { array: re(Uint16Array.from(s.bldg), 1), itemSize: 1 },
           _FACADE: { array: re(Uint8Array.from(s.facade), 4), itemSize: 4 },
+          ...(sky ? { _SKY: { array: re(sky, 1), itemSize: 1 } } : {}),
         },
         indices,
       },

@@ -1,6 +1,7 @@
 // 선컴파일 더미 = 실제 셀 속성 형식(M12): three 파이프라인 캐시 키는 배열 타입을 보지 않는데 정점 버퍼 형식은 파이프라인에 고정된다 →
 // 더미가 u16 위치였을 때 실제 셀(f32 위치, DecodedMesh 규약)이 더미 파이프라인으로 그려져 HLOD 지형이 사라졌다.
-// 기대값 = 실제 world 빌드(20261018-82db354-aa09c5ca) 셀을 buildGeometry로 변환한 속성 서명(2026-11-26 실측).
+// 기대값 = 실제 world 빌드(20261018-82db354-aa09c5ca) 셀을 buildGeometry로 변환한 속성 서명(2026-11-26 실측) + `_sky`(M12-T05 —
+// 새 빌드는 u8 → f32, 옛 빌드는 cell-node가 255로 채움, 어느 쪽이든 같은 형식).
 import type { BufferGeometry } from 'three/webgpu';
 import { describe, expect, it } from 'vitest';
 import { dummyGeometry } from '../src/internal/materials/precompile.ts';
@@ -18,8 +19,9 @@ function signature(g: BufferGeometry): string {
 }
 
 const REAL_L0: Readonly<Record<string, string>> = {
-  terrain_ground: '_surf:Float32x1 normal:Int8x3n position:Float32x3',
-  facade_default: '_bldg:Float32x1 _facade:Uint8x4n normal:Int8x3n position:Float32x3 uv:Float32x2 uv1:Float32x2',
+  terrain_ground: '_sky:Float32x1 _surf:Float32x1 normal:Int8x3n position:Float32x3',
+  facade_default:
+    '_bldg:Float32x1 _facade:Uint8x4n _sky:Float32x1 normal:Int8x3n position:Float32x3 uv:Float32x2 uv1:Float32x2',
   road_marking: '_paint:Float32x1 normal:Int8x3n position:Float32x3',
   power_wire: '_off:Int8x3n normal:Int8x3n position:Float32x3',
   landmark: '_lmat:Float32x1 normal:Int8x3n position:Float32x3 uv:Float32x2',

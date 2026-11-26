@@ -39,7 +39,7 @@ import {
   withOverrideCollider,
   yRange,
 } from './assemble-util.ts';
-import { type Aabb, BUILDING_MATERIAL, buildBuildings } from './buildings-mesh.ts';
+import { type Aabb, BUILDING_MATERIAL, buildBuildings, type SkyFn } from './buildings-mesh.ts';
 import { audioOf, encodeMeta, lightsOf } from './cell-extras.ts';
 import { type CellBuildStats, cellStats } from './cell-stats.ts';
 import { buildCollision } from './collision.ts';
@@ -62,6 +62,7 @@ import { type PropCellOutput, propsCell } from './props-cell.ts';
 import { trackBuildings } from './rail-buildings.ts';
 import { cutRailWalls, railCorridorOf } from './rail-walls.ts';
 import { buildRoads } from './roads-mesh.ts';
+import { cellSky } from './sky-cell.ts';
 import { buildTerrainGeometry, encodeTerrainMesh, TERRAIN_MATERIAL } from './terrain-mesh.ts';
 
 /** 성형 창 여유(m) = 성형 국소 반경 + 법선 여유. */
@@ -254,11 +255,16 @@ function navOf(
 }
 
 /** 건물(M07-T04 선로 위 건물 = 충돌 제외 + 선로·승강장 구간 벽 잘라내기, ADR-0075). */
-function buildingsOf(input: CellBuildInput, originWF: Vec3Tuple, renderSkip: ReadonlySet<string> | undefined) {
+function buildingsOf(
+  input: CellBuildInput,
+  originWF: Vec3Tuple,
+  renderSkip: ReadonlySet<string> | undefined,
+  sky: SkyFn,
+) {
   const tb = trackBuildings(input.buildings, input.rail);
   const cor = input.rail ? railCorridorOf(input.rail) : undefined;
   const recs = cor ? input.buildings.map((b) => cutRailWalls(b, cor)) : input.buildings;
-  return buildBuildings(recs, originWF, new Set(renderSkip ?? []), tb.colliderSkip);
+  return buildBuildings(recs, originWF, new Set(renderSkip ?? []), tb.colliderSkip, sky);
 }
 
 /** 셀 1개 → TKC 바이트 + 통계. 같은 입력 → 같은 바이트. */
@@ -267,6 +273,9 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
   const originWF: Vec3Tuple = [ix * CELL_SIZE_M, 0, iz * CELL_SIZE_M];
   const sc = shapeCell(input, originWF);
   const terrain = await buildTerrainGeometry(sc.window, sc.surf, sc.tol);
+  // 하늘 가시도(M12-T05): 지형·도로·건물 정점 `_SKY`.
+  const sky = cellSky(originWF[0], originWF[2], sc.window, input);
+  terrain.sky = sky(terrain.positions, terrain.normals, terrain.positions.length / 3, 127);
   const terrainAt = terrainLookup({ pos: terrain.positions, idx: terrain.indices });
   const ov = input.overrides
     ? await overrideCell(input.overrides, input.buildings, originWF, terrainAt, {
@@ -274,9 +283,9 @@ export async function buildCell(input: CellBuildInput): Promise<{ tkc: Uint8Arra
         ...(input.rail ? { rail: input.rail } : {}),
       })
     : null;
-  const bld = await buildingsOf(input, originWF, ov?.renderSkip);
+  const bld = await buildingsOf(input, originWF, ov?.renderSkip, sky);
   const own = input.cellRoads ?? [];
-  const roads = await buildRoads(own, sc.index, originWF[0], originWF[2], sc.shaped, terrainAt);
+  const roads = await buildRoads(own, sc.index, originWF[0], originWF[2], sc.shaped, terrainAt, sky);
   const props = await propCell(input, originWF, sc, terrainAt);
   const { decals, decalTris, marks } = await markCell(input, originWF, terrainAt, props?.wires);
   const bc = withOverrideCollider(bld.collision, ov);

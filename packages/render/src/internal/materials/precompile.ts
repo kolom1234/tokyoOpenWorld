@@ -32,12 +32,13 @@ const BASE_ATTRS: Readonly<Record<string, RawAttr>> = {
   NORMAL: [Int8Array, 3, true],
 };
 const L0_ATTRS: Readonly<Record<string, Readonly<Record<string, RawAttr>>>> = {
-  terrain_ground: { _SURF: [Uint8Array, 1, false] },
+  terrain_ground: { _SURF: [Uint8Array, 1, false], _SKY: [Uint8Array, 1, false] },
   facade_default: {
     TEXCOORD_0: [Float32Array, 2, false],
     TEXCOORD_1: [Float32Array, 2, false],
     _BLDG: [Uint16Array, 1, false],
     _FACADE: [Uint8Array, 4, true],
+    _SKY: [Uint8Array, 1, false],
   },
   road_marking: { _PAINT: [Uint8Array, 1, false] },
   power_wire: { _OFF: [Int8Array, 3, true] },

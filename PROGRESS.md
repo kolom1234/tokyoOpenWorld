@@ -2,15 +2,16 @@
 Updated: 2026-11-26 (M12-T01 HLOD 파사드 — 브랜치 `claude/m12-t01-hlod-facade`)
 
 ## Current Milestone: M12 Visual Fidelity I (그래픽 개선 1단계 — 서버 요청 증가 0). M11 ✅ 공개 https://earthaimap.com (2026-10-19)
-## Current Task: M12-T04 S2 원경 지면 분류 — 완료, PR 대기 (사용자 지시 2026-11-26: S1–S6 전부 자율 진행, 마지막 production 배포 승인만 질문)
-- Done: `landcover --prep`(osmium, hlodExtentWF 48 km — 30만 OSM 피처 + DEM 해면 → 3072² 16 m RGBA 2.59 MB, 88 s) + `landcover --build-id`(shared/landcover + world.json + ODbL README) + 렌더 `materials/landcover.ts`(HLOD 지형 월드 xz 샘플링 → 레이어 평균색·물) + 게임 지연 적재. ADR-0109, 골든뷰 `docs/screenshots/M12/T04/after/`.
-- ⚠️ 로컬 빌드 `20261018-82db354-aa09c5ca`에 landcover를 설치해 시험함(world.json 수정) — 배포는 새 빌드로만(같은 id 재게시 금지).
+## Current Task: M12-T05 S4 정점 하늘 가시도 — 완료, PR 대기 (사용자 지시 2026-11-26: S1–S6 전부 자율 진행, 마지막 production 배포 승인만 질문)
+- Done: 파이프라인 `sky-visibility.ts`·`sky-cell.ts`(1 m DSM 12 방위 지평선 → `_SKY` u8, 지형·도로·건물) + 렌더 `sky-ao.ts`(간접광 × mix(0.35, 1, 하늘)) + cell-node 없으면 255. plateau-mini expected 재계산. 3×3 셀 시험 빌드에서 켜고/끄고 비교(평균 휘도 −7.8, 38.6 % 화소 어두워짐 — 골목 벽·고층 아랫부분) → `docs/screenshots/M12/T05/`. ADR-0110.
+- ⚠️ 로컬 빌드 `20261018-82db354-aa09c5ca`에 landcover를 설치해 시험함(world.json 수정) — 배포는 새 빌드로만(같은 id 재게시 금지). 시험용 부분 빌드는 지웠다.
 - In progress: 없음.
-- Next step (정확히 한 걸음): M12-T05 S4(빌드 때 정점 AO·하늘 가시도) 블록 추가 → 구현. 이후 S1 → S6 → 월드 재빌드(landcover --prep 포함) → 배포 승인 질문.
+- Next step (정확히 한 걸음): M12-T06 S1(PLATEAU 텍스처 → 건물별 파사드 파라미터) 블록 추가 → 스파이크(메시 53393596). 이후 S6 → 월드 재빌드(landcover --prep 포함) → staging 확인 → 배포 승인 질문.
 - Blockers: 🔶 PAT(usage-cron ADR-0106, 사람 1회 — 2026-11-25 확인: 11-08 이후 `workflow_dispatch` 0회): fine-grained PAT(이 저장소, Actions: Read and write) → `pnpm --filter @sanpo/usage-cron exec wrangler secret put GITHUB_DISPATCH_TOKEN` → 다음 :00/:30 뒤 Actions에 `workflow_dispatch` 실행 확인 → `gh variable set USAGE_CRON_ACTIVE --body true`. 🔶 측량법 승인(03 §6.1 — production 공개 중인데 승인번호 미표기). ODPT 키 없음.
 - ⚠️ 발견(2026-11-26): ① 원경 지형 미표시 → M12-T02에서 수정. ② 상공(300 m+)에서 군중 처음 채우기가 끝나지 않는다(`crowd-sim.ts` spawnCandidate `halfExtents.y = 150` — 플레이어 높이 기준) → 항공 골든뷰 ready 안 됨·원경 군중 0. ③ 골든 ready가 HLOD 도착 전에 나는 경우가 있다(aerial-shinjuku-400m 1회 원경 0).
 
 ## Recently Completed
+- M12-T05 S4 정점 하늘 가시도(2026-11-27, 브랜치 `claude/m12-s4-sky`, ADR-0110): 빌드 때 `_SKY`(지형·도로·건물) → 골목·고층 사이 간접광 차폐. 옛 빌드 호환(255).
 - M12-T04 S2 원경 지면 분류(2026-11-27, 브랜치 `claude/m12-s2-hlod-surf`, ADR-0109): 토지피복 텍스처 1장(공원·물·바다·선로·도로) → HLOD 지형. Docker Desktop 백엔드가 낡은 유닉스 소켓(`AppData/Local/Docker/run/dockerInference`, 11-01)을 못 지워 시작 실패 → run 폴더를 `run.stale-20261127`로 치우고 재시작해 해결.
 - M12-T03 S5 도시 연무·분위기 그레이딩(2026-11-26, 브랜치 `claude/m12-s5-haze-lut`, ADR-0108): 맑은 날 도시 연무(계절 시정 39 ↔ 16 km)·흐림/황혼/밤 LUT. 실사 사진 기반 맞춤은 사용권 있는 참조 사진이 생기면(⚠️ 사람).
 - M12-T02 HLOD 지형 회귀(2026-11-26, 브랜치 `claude/m12-hlod-terrain`): 선컴파일 더미 u16 위치가 실제 f32 셀과 같은 three 파이프라인 캐시 키를 써서(배열 타입 미포함) 실제 HLOD 셀이 잘못된 정점 형식으로 그려짐 → 더미를 디코더 규약 형식 + `buildGeometry`로. L0 더미(파사드·노면 표시·전선·랜드마크)도 u16 → f32로 맞춤. 항공·지상 골든뷰 확인.

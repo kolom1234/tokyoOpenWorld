@@ -5,6 +5,7 @@ import { type Material, MeshStandardNodeMaterial } from 'three/webgpu';
 import { nightU, windowNightGain } from '../../lighting/night.ts';
 import { glassShading } from '../glass.ts';
 import type { MaterialLibrary } from '../library.ts';
+import { skyAo } from '../sky-ao.ts';
 import { perturbWorld } from '../textured.ts';
 import { facadeBalcony } from './balcony.ts';
 import { facadeDetails } from './details.ts';
@@ -62,6 +63,7 @@ export function createFacadeMaterial(lib: MaterialLibrary): Material {
   m.roughnessNode = rough;
   m.metalnessNode = metal;
   m.aoNode = mix(float(1), wall.orm.x, opaque)
+    .mul(skyAo())
     .mul(d.ao)
     .mul(mix(bal.ao, float(1), bal.front));
   // 벽 법선 맵은 불투명 벽 부분에만(유리·프레임은 평면).

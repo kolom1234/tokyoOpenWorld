@@ -9,7 +9,7 @@ import { bilinear } from '../derive/grid.ts';
 import { isWalk, type RoadIndex } from '../derive/roads.ts';
 import { addWalkTop, emptyMesh, type MeshBuf, TOP_OFFSET_M, topWriter } from '../derive/sidewalks.ts';
 import type { ShapedGround } from '../derive/terrain-shape.ts';
-import { boundsOf, quantizePositions } from './buildings-mesh.ts';
+import { boundsOf, quantizePositions, type SkyFn } from './buildings-mesh.ts';
 import { remapVertices, TERRAIN_MATERIAL } from './terrain-mesh.ts';
 
 const INT8_MAX = 127;
@@ -34,7 +34,7 @@ function append(dst: MeshBuf, src: MeshBuf): void {
 }
 
 /** 위치 = u16 양자화(셀 로컬 AABB, 균일 스케일 ≈ 4 mm — 건물과 같은 방식, 윗면 +8 mm 여유 안), 법선 int8, `_SURF` u8. */
-async function encode(m: MeshBuf): Promise<Uint8Array> {
+async function encode(m: MeshBuf, sky?: SkyFn): Promise<Uint8Array> {
   await MeshoptEncoder.ready;
   const indices = Uint32Array.from(m.idx);
   const [remap, unique] = MeshoptEncoder.reorderMesh(indices, true, false);
@@ -51,6 +51,9 @@ async function encode(m: MeshBuf): Promise<Uint8Array> {
           POSITION: { array: remapVertices(q, 3, remap, unique), itemSize: 3 },
           NORMAL: { array: remapVertices(nrm, 3, remap, unique), itemSize: 3, normalized: true },
           _SURF: { array: remapVertices(Uint8Array.from(m.surf), 1, remap, unique), itemSize: 1 },
+          ...(sky
+            ? { _SKY: { array: remapVertices(sky(m.pos, m.nrm, m.pos.length / 3, 1), 1, remap, unique), itemSize: 1 } }
+            : {}),
         },
         indices,
       },
@@ -102,6 +105,7 @@ export async function buildRoads(
   oz: number,
   shaped: ShapedGround,
   terrainAt?: TerrainAt,
+  sky?: SkyFn,
 ): Promise<RoadsBuild> {
   const top = (x: number, z: number): number => bilinear(shaped.grid, shaped.top, x, z);
   const base = (x: number, z: number): number => bilinear(shaped.grid, shaped.base, x, z);
@@ -131,7 +135,7 @@ export async function buildRoads(
   const collider = { pos: Array.from(tops.pos), idx: Array.from(tops.idx) };
   const tris = all.idx.length / 3;
   return {
-    glb: tris > 0 ? await encode(all) : null,
+    glb: tris > 0 ? await encode(all, sky) : null,
     vertices: all.pos.length / 3,
     tris,
     collider,

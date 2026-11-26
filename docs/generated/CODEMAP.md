@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 617개.
+> 파일 620개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -219,6 +219,7 @@
 - `packages/render/src/internal/materials/prop.ts` — 소품 머티리얼(M05-T03, 07 §4): 절차 모델 정점색 × 인스턴스 색(자판기 가상 브랜드, 그 밖 흰색) — 전 종류 한 머티리얼·LOD당 풀 1개. | exports: createPropMaterial, createWireMaterial
 - `packages/render/src/internal/materials/registry.ts` — 머티리얼 ID → 공유 머티리얼 + HLOD 변형(자식 페이드, M02-T05). 셀 머티리얼은 라이브러리 텍스처 배열을 쓴다(M03-T01, 적재 전 평균색). | exports: MaterialRegistry, PRECOMPILE_IDS, HLOD_MATERIAL_IDS, createMaterialRegistry
 - `packages/render/src/internal/materials/road.ts` — M_ROAD 변형(07 §4, M03-T06): 아스팔트 보수 패치·유분 얼룩·바랜 구간, 보도 명암·때, 공통 거시 명암. 추가 표본 없이 noiseBank 채널만. | exports: Variation, NO_VARIATION, macroTint, asphaltVariation, pavingVariation
+- `packages/render/src/internal/materials/sky-ao.ts` — 빌드 때 구운 하늘 가시도(M12-T05, ADR-0110) → 간접광 차폐: 정점 `_sky`(0..255, cell-node가 f32로 — 없으면 255) → mix(바닥, 1, 하늘). | exports: SKY_AO_FLOOR, skyAo
 - `packages/render/src/internal/materials/terrain.ts` — M_TERRAIN(07 §4, M03-T06): `_SURF` 스플랫 — 정점 원-핫(8클래스, 보간) → 픽셀마다 상위 2클래스 노이즈 경계 혼합. | exports: TerrainOptions, createTerrainMaterial
 - `packages/render/src/internal/materials/textured.ts` — 라이브러리 텍스처 표본 함수(sampleLayer·법선 변환, M03-T01). 지형은 terrain.ts(M03-T06), 파사드는 facade/(M03-T04). | exports: LayerSample, sampleLayer, tsToWorld, worldToView, perturbWorld
 - `packages/render/src/internal/post/aerial.ts` — 저해상도 공중원근(M03 보강 2, ADR-0039): takram aerialPerspective는 픽셀마다 산란 LUT·투과 조회(1080p Medium, 15 W에서 GPU의 ≈ 19 %). | exports: AERIAL_SCALE, LowResAerialNode, composeAerial
@@ -508,7 +509,7 @@
 - `tools/pipeline/src/stages/build/area-reader.ts` — 영역 빌드 입력 읽기: 정규화 층 파일(셀별 ndjson.gz) + 8-이웃 캐시(도로 조각·건물 발자국·교량·계단·道路標示). assemble.ts buildArea가 쓴다. | exports: readLayer, aroundReader, railNetworkFor
 - `tools/pipeline/src/stages/build/assemble-util.ts` — 셀 조립 보조(assemble.ts에서 분리 — 400줄 한도): 스트림 합치기·AABB·창 자르기. | exports: mergeStreams, withOverrideCollider, outward, union, yRange, crop, unionBounds, roadSources
 - `tools/pipeline/src/stages/build/assemble.ts` — L0 셀 조립: 지형 성형(M05-T01) → terrain.mesh + terrain.height + buildings.mesh + roads.mesh(보도·연석) + collision.bin + meta.json → TKC, | exports: BUILD_MARGIN, CellBuildInput, CellParts, buildCell, AreaBuildInput, unionBounds, buildArea, CellBuildStats
-- `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, boundsOf, quantizePositions, buildBuildings
+- `tools/pipeline/src/stages/build/buildings-mesh.ts` — buildings.mesh 섹션 + meta.buildings: 건물 면 삼각분할(평면 법선) → u16 양자화(균일 스케일) → glb. see docs/04-data-pipeline.md §4.4-2, docs/05-tile-format.md §4 | exports: BUILDING_MATERIAL, Aabb, BuildingsBuild, boundsOf, quantizePositions, SkyFn, buildBuildings
 - `tools/pipeline/src/stages/build/cell-extras.ts` — 셀 조립 보조(assemble.ts 400줄 제한): meta.json 인코딩·lights.bin(M09-T03)·audio.json(M09-T04). see docs/05-tile-format.md §4 | exports: encodeMeta, lightsOf, audioOf
 - `tools/pipeline/src/stages/build/cell-stats.ts` — 셀 빌드 통계(로그·테스트): 지형·건물·도로·데칼·소품·나무·랜드마크·충돌. see docs/04-data-pipeline.md §4.4 | exports: CellBuildStats, StatsParts, cellStats
 - `tools/pipeline/src/stages/build/collision.ts` — collision.bin 섹션(04 §4.4-6, 05 §6): 건물 렌더 면(벽·지붕·부속물) → 1 mm 용접 → meshopt 단순화(절대 오차 0.3 m) → | exports: SIMPLIFY_ERROR_M, MAX_CHUNK_TRIS, LAYER_TERRAIN, GROUND_SIMPLIFY_ERROR_M, CollisionBuild, weld, buildCollision
@@ -537,6 +538,8 @@
 - `tools/pipeline/src/stages/build/rail-platform-align.ts` — 승강장 높이 맞춤(M07-T06 — ADR-0081): 섬식 승강장 하나를 두 선로가 쓰는데 DEM 표본 레일 높이가 선로마다 달라(하라주쿠 내회·외회 1.3 m) | exports: ALIGN_MARGIN_M, RAMP_M, AlignReport, alignPlatformRails
 - `tools/pipeline/src/stages/build/rail-walls.ts` — 역 건물 선로 구간 벽 잘라내기(⓪ M09 사전, ADR-0075): PLATEAU 역사·선로 위 빌딩의 벽 중 선로 회랑(중심선 ± CORRIDOR_HALF_M)·승강장과 겹치는 | exports: CORRIDOR_HALF_M, BAND_BELOW_M, BAND_ABOVE_M, LINTEL_TOP_M, ENVELOPE_M, RailCorridor, railCorridorOf, railCorridor, subtractRect, WallCutStats, cutRailWalls
 - `tools/pipeline/src/stages/build/roads-mesh.ts` — roads.mesh 섹션(M05-T01, 05 §4): 보도·교통섬 윗면(성형 윗면 + 6 mm, 2 m 격자 조각) + 연석 세로 면 + 바깥 가장자리 치마 → | exports: RoadsBuild, TerrainAt, buildRoads
+- `tools/pipeline/src/stages/build/sky-cell.ts` — 셀 하늘 가시도 조립(M12-T05, ADR-0110): 지면 = 영역 DEM(groundAround, 셀 밖 포함) 또는 셀 DEM 창(가장자리 클램프) + | exports: cellSky
+- `tools/pipeline/src/stages/build/sky-visibility.ts` — 정점 하늘 가시도(M12-T05, S4 — ADR-0110): 셀 + 여유 96 m의 1 m DSM(지면 + 건물 지붕 높이)에서 정점마다 12 방위 지평선 각을 훑어 | exports: SKY_MARGIN_M, DsmBuilding, SkyField, createSkyField, skyAttribute
 - `tools/pipeline/src/stages/build/surface-class.ts` — 지형 표면 분류(M03-T06, 05 §4 `_SURF`): PLATEAU 도로 폴리곤(TrafficArea) → 셀 1 m 격자(257²) 분류 래스터. | exports: SURF, rasterizeRings, surfaceGrid
 - `tools/pipeline/src/stages/build/terrain-mesh.ts` — terrain.mesh 섹션: 1 m 격자 → RTIN 단순화(정확 오차 ≤ 5 cm, 경계 정점 잠금, `_SURF` 경계 ≤ 2 m 세분) → meshopt 재정렬 → glb. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: TERRAIN_SIMPLIFY_ERROR_M, TERRAIN_MATERIAL, TerrainGeometry, remapVertices, buildTerrainGeometry, encodeTerrainMesh
 - `tools/pipeline/src/stages/build/terrain-rtin.ts` — 지형 단순화: RTIN(직각 이등변 삼각형 이분 계층) + 정확 오차(삼각형 내부 모든 격자 샘플) + 경계 정점 강제. see docs/04-data-pipeline.md §4.4-1, §6, docs/adr/0018-cell-mesh-build.md | exports: rtinTriangulate
