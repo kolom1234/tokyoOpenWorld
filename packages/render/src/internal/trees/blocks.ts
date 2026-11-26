@@ -23,15 +23,20 @@ export interface TreeBlock {
   min: [number, number, number];
   max: [number, number, number];
   species: Map<number, TreeSlice>;
+  /** L1 셀(원경 나무, M12-T07)의 블록이면 그 블록이 속한 L0 셀(WF 256 m 격자 ix, iz) — 그 L0 셀 나무가 있으면 숨긴다. */
+  l0?: { ix: number; iz: number };
 }
 
-export function treeBlocksOf(origin: Readonly<Vec3d>, batch: TreeBatch): TreeBlock[] {
+/** 셀 trees.inst → 64 m 블록. cellM = 셀 한 변(L0 256 m, L1 1024 m). */
+export function treeBlocksOf(origin: Readonly<Vec3d>, batch: TreeBatch, cellM = 256): TreeBlock[] {
+  const n = Math.max(1, Math.round(cellM / BLOCK_M));
   const per = new Map<number, Map<number, number[]>>();
   for (let i = 0; i < batch.count; i++) {
     const r = treeRecordAt(batch, i);
     if (!TREE_SPECIES_IDS.includes(r.species)) continue;
     const b =
-      Math.min(3, Math.max(0, Math.floor(r.z / BLOCK_M))) * 4 + Math.min(3, Math.max(0, Math.floor(r.x / BLOCK_M)));
+      Math.min(n - 1, Math.max(0, Math.floor(r.z / BLOCK_M))) * n +
+      Math.min(n - 1, Math.max(0, Math.floor(r.x / BLOCK_M)));
     const m = per.get(b) ?? new Map<number, number[]>();
     const list = m.get(r.species) ?? [];
     list.push(i);
@@ -40,7 +45,7 @@ export function treeBlocksOf(origin: Readonly<Vec3d>, batch: TreeBatch): TreeBlo
   }
   const out: TreeBlock[] = [];
   for (const [id, m] of per) {
-    const [bx, bz] = [id % 4, Math.floor(id / 4)];
+    const [bx, bz] = [id % n, Math.floor(id / n)];
     const blk: TreeBlock = {
       origin: { ...origin },
       min: [bx * BLOCK_M, Infinity, bz * BLOCK_M],

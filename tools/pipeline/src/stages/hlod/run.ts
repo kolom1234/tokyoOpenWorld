@@ -18,6 +18,7 @@ import {
 import { readNdjsonGz } from '../../lib/ndjson-gz.ts';
 import type { BuildingRecord } from '../../readers/plateau/types.ts';
 import { readDemWindow } from '../build/dem-window.ts';
+import { loadFacadeMeasures } from '../build/facade-tint.ts';
 import type { AreaDef } from '../build/manifest.ts';
 import type { OverrideSet } from '../build/overrides/index.ts';
 import { cutRailWalls, railCorridorOf } from '../build/rail-walls.ts';
@@ -25,6 +26,7 @@ import { type ChildGeometry, encodeHlod, type HlodEncoded } from './child-split.
 import { type FarDem, readFarDem } from './dem-far.ts';
 import type { FarBuilding } from './far-buildings.ts';
 import { buildL1, L1_PARAMS } from './l1.ts';
+import { l1Trees } from './l1-trees.ts';
 import { buildL2, type FarLevelParams, L2_PARAMS } from './l2.ts';
 import { buildL3, L3_PARAMS } from './l3.ts';
 import { readFarBuildings } from './tokyo23-lod1.ts';
@@ -88,6 +90,8 @@ function writeCell(
   const originWF: Vec3Tuple = [ix * size, 0, iz * size];
   const add = (v: Vec3Tuple, f: (x: number) => number): Vec3Tuple =>
     v.map((c, k) => f((c + (originWF[k] as number)) * 1000) / 1000) as Vec3Tuple;
+  // 원경 나무(M12-T07): L1은 자식 L0 trees.inst를 합친다(임포스터 띠로 그려진다).
+  const trees = level === 1 ? l1Trees(outDir, key) : null;
   const tkc = writeTkc(
     {
       cell: { level, ix, iz },
@@ -95,9 +99,12 @@ function writeCell(
       originWF,
       aabbWF: { min: add(b.enc.aabbLocal.min, Math.floor), max: add(b.enc.aabbLocal.max, Math.ceil) },
       materials: b.enc.materials,
-      stats: { tris: b.enc.tris, colliderTris: 0, instances: 0 },
+      stats: { tris: b.enc.tris, colliderTris: 0, instances: trees?.count ?? 0 },
     },
-    [{ type: 'hlod.mesh', sources: b.sources, data: b.enc.glb }],
+    [
+      { type: 'hlod.mesh', sources: b.sources, data: b.enc.glb },
+      ...(trees ? [{ type: 'trees.inst' as const, sources: trees.sources, data: trees.data }] : []),
+    ],
   );
   const dir = join(outDir, `L${level}`, String(ix));
   mkdirSync(dir, { recursive: true });
@@ -226,6 +233,7 @@ async function farCell(c: Ctx, key: CellKey): Promise<Built & { attempts: number
 /** L1–L3 빌드 → TKC + cells.idx 병합(해당 레벨 기존 항목은 교체). */
 export async function runHlod(input: HlodInput): Promise<HlodCellStats[]> {
   const { area, log } = input;
+  loadFacadeMeasures(input.derivedDir, log); // L1 건물도 L0와 같은 실측 tint(M12-T06)
   if (!area.hlodExtentWF) throw new Error(`area ${area.id}: hlodExtentWF missing`);
   const idxPath = join(input.outDir, 'cells.idx');
   const idx = readCellsIndex(readFileSync(idxPath));
