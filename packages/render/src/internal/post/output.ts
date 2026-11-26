@@ -5,7 +5,7 @@ import { renderOutput, texture3D, uniform, vec4 } from 'three/tsl';
 import type { RenderPipeline, Node as TslNode } from 'three/webgpu';
 import type { PostEffects } from '../../api.ts';
 import { colorVisionU } from './color-vision.ts';
-import { createGradeLut, LUT_SIZE } from './lut.ts';
+import { createGradeLut, createGradeUpdater, type GradeMood, LUT_SIZE } from './lut.ts';
 
 type V4 = TslNode<'vec4'>;
 
@@ -19,8 +19,13 @@ export function outputSwitch(
   fx: PostEffects,
   makeDof: () => unknown,
   nodes: { dispose(): void }[],
-): { lut: ReturnType<typeof createGradeLut> | undefined; setDof(on: boolean): void } {
+): {
+  lut: ReturnType<typeof createGradeLut> | undefined;
+  setDof(on: boolean): void;
+  setGrade(m: GradeMood, nowS: number): void;
+} {
   const lut = fx.lut ? createGradeLut() : undefined;
+  const grader = lut ? createGradeUpdater(lut) : undefined;
   const finish = (h: V4): V4 => {
     // 색각 보정(M11-T04): 선형 HDR에 행렬(끔 = 단위 행렬).
     let out: V4 = renderOutput(vec4(colorVisionU.mul(h.rgb), h.a) as unknown as V4);
@@ -34,6 +39,9 @@ export function outputSwitch(
   pipeline.outputNode = base;
   return {
     lut,
+    setGrade(m, nowS) {
+      grader?.update(m, nowS);
+    },
     setDof(want) {
       if (want === on) return;
       on = want;
