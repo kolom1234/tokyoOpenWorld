@@ -107,6 +107,7 @@ data/build/<buildId>/                        (build/hlod/validate)
 - L1 = 영역 L0의 부모. 영역 밖 자식은 23구 원경 박스 + 원경 DEM. L2/L3 = `hlodExtentWF` 전체(`plateau-tokyo23` LOD1, 23구 밖은 지형만). `hlodExtentWF`는 L3(16384 m) 격자에 정렬(3×3 L3 셀이 23구 전체를 덮음).
 - 자식 분할: 건물 = 중심점(normalize와 같은 `centroidXZ`)의 자식, 지형 = 자식 정사각형별 65² RTIN 패치 + 네 변 스커트(깊이 = 격자 간격). 자식 번호는 정점 속성 `_CHILD`(머티리얼별 프리미티브 1개). 예산 초과 시 단순화 강화 재시도(ADR-0024).
 - 원경 지면 분류(M12-T04, ADR-0109): `landcover --prep`(컨테이너 — 간토 PBF를 hlodExtentWF로 osmium extract → 물·녹지·선로 면, 도로·선로 선(등급별 반폭) + 원경 DEM 해면 → 8 m 분류 → 16 m RGBA 비율 PNG `data/derived/landcover/`) → `landcover --build-id <id>`(→ `shared/landcover/` + world.json `files.landcover` + ODbL README 고지). 셀·HLOD 메시는 그대로.
+- 파사드 실측(M12-T06, ADR-0111): `facades --prep`(컨테이너 — 영역 L0 건물이 쓰는 PLATEAU appearance 폴더만 unzip(컨테이너 /tmp) → ImageMagick 256 px PPM → 벽 UV 다각형 20×20 표본: 어두운 화소 = 유리, 나머지 중앙값 = 벽 색) → `data/derived/facades/measures.json`. build·hlod 시작 때 `loadFacadeMeasures`(재질 매니페스트 평균색으로 렌더 예측 → Lab 최근접 tintIdx, 유리 비율 → 커튼월). 원경 나무(M12-T07): hlod L1 = 자식 L0 trees.inst 합침(관목 제외).
 - 야간용: L1–L3 건물 `_FACADE.flags` = 점등 단계(하위 4비트, 용도별) + 창 패턴 시드(상위 4비트)(원거리 야경, 05 §4).
 
 ### 4.6 validate (실패 시 publish 차단)
