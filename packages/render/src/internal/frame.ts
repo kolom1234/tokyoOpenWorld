@@ -3,6 +3,7 @@ import type { GameSystem } from '@sanpo/core';
 import { type PerspectiveCamera, Quaternion, Vector2, Vector3, type WebGPURenderer } from 'three/webgpu';
 import { NIGHT_LIGHTS_ACTIVE, type RenderContext } from './context.ts';
 import { nightU } from './lighting/night.ts';
+import { setLandcoverOrigin } from './materials/landcover.ts';
 import { cloudAlphaCpu, updateWeatherSky } from './post/weather-sky.ts';
 
 /** 01-architecture §5 phase 표. */
@@ -74,6 +75,7 @@ function syncWeather(ctx: RenderContext, dtS: number, rebased: boolean): void {
   const pxAngle = (2 * Math.tan((view.camera.fov * Math.PI) / 360)) / Math.max(1, ctx.canvas.height);
   ctx.rain.update({ ...ctx.weather, dtS: dtS, pxAngle });
   const o = view.renderOriginWF;
+  setLandcoverOrigin(o);
   ctx.sky.camWF.value.set(o.x + view.camera.position.x, o.y + view.camera.position.y, o.z + view.camera.position.z);
   updateWeatherSky(ctx.sky.u, { ...ctx.weather, sceneLum: ctx.post.exposure()?.lum, dtS: dtS });
   // 분위기 그레이딩(M12-T03): 바뀔 때만 LUT 재굽기(조각).

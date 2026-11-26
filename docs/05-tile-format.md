@@ -30,7 +30,7 @@ credits.json                  출처 표기
   "cellSize": 256, "levels": [256, 1024, 4096, 16384],
   "areas": [{ "id": "mvp-shibuya-shinjuku", "l0": { "minIx": -7, "maxIx": 6, "minIz": -17, "maxIz": 3 } }],
   "spawn": { "posWF": [-22.3, 0, 8.6], "yawDeg": 0 },
-  "files": { "cellsIndex": "cells.idx", "materials": "shared/materials/manifest.json", "rail": "global/rail.bin", "map": "global/map.pmtiles" },
+  "files": { "cellsIndex": "cells.idx", "materials": "shared/materials/manifest.json", "rail": "global/rail.bin", "map": "global/map.pmtiles", "landcover": "shared/landcover/landcover.json" },
   "createdAt": "2026-11-01T00:00:00Z"
 }
 ```

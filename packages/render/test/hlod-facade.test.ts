@@ -1,4 +1,4 @@
-// HLOD 파사드(M12-T01): 건물 HLOD만 L0 근사 노드(색·거칠기·금속도·AO·밤 창)를 갖고, 지형 HLOD는 단색 그대로.
+// HLOD 파사드(M12-T01): 건물 HLOD는 L0 근사 노드(색·거칠기·금속도·AO·밤 창), 지형 HLOD는 원경 지면 분류(M12-T04) 색·거칠기만.
 // 창 사각형은 L0 클래스 표(facade/grid.ts)로 그린다 — 표의 창 비가 칸 안에 들어가야 원경 창이 이웃 칸과 겹치지 않는다.
 import { describe, expect, it } from 'vitest';
 import {
@@ -31,8 +31,10 @@ describe('HLOD facade (M12-T01)', () => {
       for (const k of ['colorNode', 'roughnessNode', 'metalnessNode', 'aoNode', 'emissiveNode'] as const)
         expect(b[k], `${k} fading=${fading}`).toBeTruthy();
       expect(b.alphaHash).toBe(fading);
+      // 지형 HLOD = 원경 지면 분류(M12-T04): 색·거칠기만(창·발광 없음).
       const t = r.getHlod('terrain_ground', fading) as unknown as NodeMat;
-      expect(t.colorNode).toBeFalsy();
+      expect(t.colorNode).toBeTruthy();
+      expect(t.roughnessNode).toBeTruthy();
       expect(t.emissiveNode).toBeFalsy();
     }
     r.dispose();

@@ -3,7 +3,7 @@
 <!-- 자동 생성 파일 — `pnpm codemap`(tools/codemap)으로만 갱신한다. 직접 편집 금지. see docs/16-context-protocol.md §5 -->
 
 > 형식: `경로 — 책임(파일 첫 줄 주석) | exports: 심볼…`. **grep으로만 사용**(전체 read 금지). 테스트 파일은 제외.
-> 파일 614개.
+> 파일 617개.
 
 ## apps/game
 - `apps/game/src/boot-flags.ts` — URL 플래그 보조 파서(boot.ts 400줄 제한으로 분리): 태양·군중·오디오. see docs/15-conventions.md §8 | exports: sunFlag, crowdFlag, audioFlagsOf
@@ -211,6 +211,7 @@
 - `packages/render/src/internal/materials/hlod-facade.ts` — HLOD 건물 파사드(07 §3·§5, M12-T01): L0 절차 파사드(facade/*)를 단순화 원경 메시에 근사 — 원경 전환 때 색·창 크기가 이어지게. | exports: HLOD_NIGHT_GAIN, HLOD_CURTAIN_MIN_FLOORS, HlodFacadeNodes, hlodFacade
 - `packages/render/src/internal/materials/hlod.ts` — HLOD 머티리얼: 기본 단색 PBR + 자식 16영역 표시·디더 페이드. 셀별 페이드 16개는 per-object uniform(vec4 × 4, objectGroup)으로, | exports: HlodFadeData, createHlodFades, createHlodMaterial
 - `packages/render/src/internal/materials/ktx2-csp.ts` — KTX2Loader 워커를 CSP 호환으로(M03-T06, ADR-0032): 기본 init()은 트랜스코더 본문을 Blob 워커로 띄운다 → blob 워커는 페이지 CSP를 물려받고 | exports: KTX2_BOOTSTRAP_FILE, workerBody, useBootstrapWorker
+- `packages/render/src/internal/materials/landcover.ts` — 원경 지면 분류(M12-T04, ADR-0109): 파이프라인 `landcover` 텍스처(RGBA = 물·녹지·도로·선로 비율, 16 m, hlodExtentWF 전체)를 | exports: landcoverOriginU, LandcoverMeta, landcoverNodes, applyLandcover, loadLandcover, setLandcoverOrigin
 - `packages/render/src/internal/materials/landmark.ts` — 랜드마크 머티리얼(M05-T05, overrides.mesh): 정점 `_LMAT`(파이프라인 overrides/spec.ts LMAT 순서) → 표 색·거칠기·금속도 + 종류별 절차 무늬 | exports: LANDMARK_KINDS, screenExposure, lines, createLandmarkMaterial
 - `packages/render/src/internal/materials/library.ts` — 공유 머티리얼 라이브러리(M03-T01, 07 §4): KTX2 텍스처 배열 3장(albedo sRGB·normal·ORM) + 실내 큐브맵 배열(M03-T05) + manifest(그룹·타일 크기·평균색). | exports: MATERIAL_GROUPS, MaterialGroup, MAX_LAYERS, MAX_ROOMS, MaterialsManifest, LibraryState, LibraryStats, MaterialLibrary, createMaterialLibrary
 - `packages/render/src/internal/materials/noise.ts` — 셰이더 2D 값 노이즈(TSL): 지형 안티타일링·아스팔트 변형·물웅덩이 마스크(M03-T06). 입력 = 월드 고정 좌표(worldOffset 적용, m). | exports: noiseTexture, lattice, NoiseBank, noiseBank
@@ -464,6 +465,7 @@
 - `tools/pipeline/src/checks/rail-photo.ts` — M07-T01 수락: 선로 중심선 vs GSI 항공사진(seamlessphoto z18 ≈ 0.49 m/px, 검증 전용 — photo-tiles.ts) ≤ 1 m. | exports: TOLERANCE_M, symmetryCenter
 - `tools/pipeline/src/checks/terrain-gsi.ts` — M01-T03 수락 검증: dem_1m.tif 표고 vs 地理院地図 표시값(GSI 표고 API) 비교 + GDAL/@sanpo/geo 투영 일치 확인. 네트워크 필요(CI 제외).
 - `tools/pipeline/src/cli-assets.ts` — CLI 에셋 단계(cli.ts에서 분리): materials(KTX2 배열, M03-T01), characters(Rocketbox → 플레이어 아바타·군중 팩, ADR-0057), trees(수종·잎·임포스터, M05-T04), signage(간판 아틀라스, M05-T06). | exports: AssetCtx, materials, trees, signage, characters, audio
+- `tools/pipeline/src/cli-landcover.ts` — CLI 원경 지면 분류(M12-T04, cli.ts 400줄 제한으로 분리): `landcover --prep`(osmium 컨테이너 — 간토 PBF + 원경 DEM → data/derived/landcover)· | exports: LandcoverCtx, LANDCOVER_WORLD_PATH, landcover
 - `tools/pipeline/src/cli-map.ts` — CLI 지도·지명·도감 단계(cli.ts 400줄 제한으로 분리, M10): normalize --layer areas(e-Stat + KEN_ALL → places.json), map --build-id(→ global/map.pmtiles + global/odbl/ ODbL 파생 DB), | exports: MapCtx, areaCellKeys, normalizeAreasLayer, map, poiWikidata, poiReview
 - `tools/pipeline/src/cli-rail.ts` — CLI 철도 단계(cli.ts에서 분리, M07): fetch(N02·ODPT GTFS → data/raw, sha256 lock), rail(OSM 철도 정규화 → 노선 파생 → global/rail.bin), | exports: RailCtx, fetchSources, rail, timetables
 - `tools/pipeline/src/cli-release.ts` — CLI 공개 운영(M11-T06, cli.ts 400줄 제한으로 분리): `current --env dev|prod [--build-id <id>]` — 활성 빌드 포인터 보기/바꾸기(롤백 = 직전 buildId로, 파일 재업로드 없음). | exports: current
@@ -606,13 +608,14 @@
 - `tools/pipeline/src/stages/hlod/l1.ts` — L1 HLOD(1024 m = L0 4×4): 영역 안 자식 = L0 정규화 건물(LOD2/3 면) 병합 → meshopt simplify 25% + dem_1m 4 m 지형, | exports: L1_PARAMS, L1Sources, addSimplifiedBuildings, farIn, L1Result, buildL1
 - `tools/pipeline/src/stages/hlod/l2.ts` — L2 HLOD(4096 m = L1 4×4): 건물 = LOD1 박스(방향 사각형, 높이 유지) — 크고 높은 건물 우선 상한까지, 나머지는 64 m 블록 매스. | exports: FarLevelParams, L2_PARAMS, FarLevelResult, splitBoxes, buildFarLevel, buildL2
 - `tools/pipeline/src/stages/hlod/l3.ts` — L3 HLOD(16384 m = L2 4×4): 블록 단위 압출 매스(128 m 격자, 면적 가중 높이) + 초고층(≥ 80 m)만 개별 박스(스카이라인). | exports: L3_PARAMS, buildL3
+- `tools/pipeline/src/stages/hlod/landcover.ts` — 원경 지면 분류(M12-T04, S2): hlodExtentWF 전체의 토지피복 가중치 텍스처 — HLOD 지형 셰이더가 월드 xz로 샘플링한다(셀·HLOD 메시 변경 없음). | exports: LC, LandClass, LC_STEP_M, LC_OUT_STEP_M, LANDCOVER_FILTERS, LcFeature, classifyOsm, halfWidthOf, LcGrid, createLcGrid, paintSea, paintFeatures, toWeights, featuresOf, extractLandcoverOsm, readLandcoverFeatures, LandcoverMeta, writeLandcover
 - `tools/pipeline/src/stages/hlod/run.ts` — hlod 단계: L1(영역 L0의 부모)·L2/L3(hlodExtentWF 전체) → hlod.mesh 1섹션 TKC, 크기 예산 초과 시 단순화 강화 후 재시도, | exports: FAR_SOURCES, HlodInput, HlodCellStats, runHlod
 - `tools/pipeline/src/stages/hlod/tokyo23-lod1.ts` — 23구 원경 건물 추출: plateau-tokyo23 zip의 udx/bldg/*.gml을 풀지 않고 `unzip -p` 스트림 → SAX 리더 → FarBuilding | exports: FAR_BUILDINGS_DIR, listBldgMembers, extractMember, ExtractInput, extractTokyo23, readFarBuildings
 - `tools/pipeline/src/stages/hlod/tokyo23-lod1.worker.ts` — 워커 스레드: zip 멤버 1개씩 받아 원경 건물 줄을 돌려준다(tokyo23-lod1.ts runPool).
 - `tools/pipeline/src/stages/map/clip.ts` — 지도 타일 기하(M10-T03): 타일 정수 좌표 사각형(버퍼 포함)으로 면(Sutherland–Hodgman)·선(선분 자르기·분할) 자르기, Douglas–Peucker 단순화. 순수 함수(테스트). | exports: Pts, simplifyLine, clipRing, clipLine, quantize, ringArea, orient
 - `tools/pipeline/src/stages/map/collect.ts` — 지도 원천 수집(M10-T03): 정규화 데이터 → 지도 피처(WF xz). 건물 = PLATEAU 바닥 링(셀 소유), 도로·공원·물 = 정규화 OSM(셀 중복 id 제거), 철도·역 = 빌드 global/rail.bin, | exports: MapGeom, MapFeature, collectMapFeatures
 - `tools/pipeline/src/stages/map/index.ts` — `pnpm pipeline map --build-id <id>`(M10-T03): 정규화 데이터 + 빌드 rail.bin → global/map.pmtiles(MVT z13–16) + map-report.json. 외부 지도 타일 서비스 없음 — 출처 = OSM(ODbL)·PLATEAU·GSI·e-Stat. | exports: MAP_ATTRIBUTION, MAP_SOURCES, runMap
-- `tools/pipeline/src/stages/map/odbl.ts` — ODbL 4.6 파생 DB 공개(M11-T05, 03 §6 — ADR-0097): 빌드에 쓰인 OSM 정규화 데이터(셀별 GeoJSONSeq + 철도) + 우리 보정(content/markings)을 | exports: ODBL_FILES, collectOsmDerived, odblReadme, writeOdblPackage
+- `tools/pipeline/src/stages/map/odbl.ts` — ODbL 4.6 파생 DB 공개(M11-T05, 03 §6 — ADR-0097): 빌드에 쓰인 OSM 정규화 데이터(셀별 GeoJSONSeq + 철도) + 우리 보정(content/markings)을 | exports: ODBL_FILES, collectOsmDerived, odblReadme, LANDCOVER_ODBL_NOTE, ensureLandcoverNote, writeOdblPackage
 - `tools/pipeline/src/stages/map/tiles.ts` — 지도 타일러(M10-T03): WF 피처 → 경위도 → 웹 메르카토르 타일(z 13–16, extent 4096, 버퍼 64) → 자르기·단순화·정수화 → MVT 레이어. PMTiles는 index.ts가 쓴다. | exports: MAP_MIN_ZOOM, MAP_MAX_ZOOM, EXTENT, MAP_LAYERS, lonLatToMerc, TileStats, buildTiles
 - `tools/pipeline/src/stages/materials/encode.ts` — 자산 zip → 레이어 PNG(ImageMagick: 리사이즈·ORM 채널 패킹) → KTX2 배열(toktx: 알베도 ETC1S sRGB, 법선·ORM UASTC+RDO+zstd, 밉맵). | exports: ENCODE_ARGS, LayerImages, prepareLayer, encodeArray
 - `tools/pipeline/src/stages/materials/fetch.ts` — ambientCG zip 받기 + sha256 고정(data/sources.lock.json `ambientcg`.sha256 맵). 불일치 = 중단, 미기록 = --update-lock일 때만 기록. | exports: AmbientLock, sha256Of, FetchAssetsInput, fetchAssets

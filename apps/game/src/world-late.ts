@@ -54,17 +54,21 @@ export interface LateState {
 }
 
 /** 텍스처는 첫 표시 뒤(초기 다운로드 예산 밖, 14 §2). 실패하면 평균색으로 계속. */
-export function loadMaterialsLater(render: RenderService, url: string | undefined, late: LateState, log: Logger): void {
-  if (url === undefined) {
+export function loadMaterialsLater(
+  render: RenderService,
+  url: string | undefined,
+  late: LateState,
+  log: Logger,
+  landcoverUrl?: string,
+): void {
+  // 원경 지면 분류(M12-T04)도 같은 "머티리얼 안정" 조건 — 골든뷰가 단색 원경 지면으로 찍히지 않게.
+  const jobs: Promise<unknown>[] = [];
+  if (url !== undefined) jobs.push(render.loadMaterials(url).catch((e: unknown) => log.warn('materials', e)));
+  if (landcoverUrl !== undefined)
+    jobs.push(render.loadLandcover(landcoverUrl).catch((e: unknown) => log.warn('landcover', e)));
+  void Promise.allSettled(jobs).then(() => {
     late.materialsSettled = true;
-    return;
-  }
-  void render
-    .loadMaterials(url)
-    .catch((e: unknown) => log.warn('materials', e))
-    .finally(() => {
-      late.materialsSettled = true;
-    });
+  });
 }
 
 /** 플레이어 아바타(파이프라인 `characters`, Microsoft Rocketbox MIT — ADR-0057). Vite가 해시 에셋으로 만든다(/assets/*, immutable). */

@@ -45,6 +45,21 @@ export function odblReadme(o: { buildId: string; features: number; osmExtract: s
   ].join('\n');
 }
 
+/** 원경 토지피복(M12-T04, ADR-0109)도 같은 OSM 추출본의 파생 DB — README에 고지(래스터 자체가 빌드에 공개, 방법 = 파이프라인 `landcover`). */
+export const LANDCOVER_ODBL_NOTE = [
+  'shared/landcover/landcover.png (+ landcover.json) is also a derived database of the same OpenStreetMap extract',
+  '(water, green, rail and road areas rasterised to 16 m - pipeline stage `landcover`), offered under ODbL 1.0.',
+  '',
+].join('\n');
+
+/** global/odbl/README.txt에 토지피복 고지가 없으면 덧붙인다(map·landcover 단계 어느 쪽이 먼저 돌아도). */
+export function ensureLandcoverNote(buildDir: string): void {
+  const readme = join(buildDir, 'global', 'odbl', ODBL_FILES[2]);
+  if (!existsSync(readme) || !existsSync(join(buildDir, 'shared', 'landcover', 'landcover.json'))) return;
+  const text = readFileSync(readme, 'utf8');
+  if (!text.includes('shared/landcover/')) writeFileSync(readme, `${text}${LANDCOVER_ODBL_NOTE}`);
+}
+
 export function writeOdblPackage(o: {
   repoRoot: string;
   normalizedDir: string;
@@ -60,5 +75,6 @@ export function writeOdblPackage(o: {
   const corr = join(o.repoRoot, 'content', 'markings', 'osm-crossing-corrections.json');
   writeFileSync(join(dir, ODBL_FILES[1]), existsSync(corr) ? readFileSync(corr) : '[]\n');
   writeFileSync(join(dir, ODBL_FILES[2]), odblReadme({ buildId: o.buildId, features, osmExtract: o.osmExtract }));
+  ensureLandcoverNote(o.buildDir);
   return { features, bytes: gz.length };
 }

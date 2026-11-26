@@ -2,14 +2,16 @@
 Updated: 2026-11-26 (M12-T01 HLOD 파사드 — 브랜치 `claude/m12-t01-hlod-facade`)
 
 ## Current Milestone: M12 Visual Fidelity I (그래픽 개선 1단계 — 서버 요청 증가 0). M11 ✅ 공개 https://earthaimap.com (2026-10-19)
-## Current Task: M12-T03 S5 도시 연무·분위기 그레이딩 — 완료, PR 대기 (사용자 지시 2026-11-26: S1–S6 전부 자율 진행, 마지막 production 배포 승인만 질문)
-- Done: `post/weather-sky.ts` 도시 연무(β₀ e^(−z/1 km) 광선 해석 적분, 계절·바람, 태양 쪽 전방 산란) + `post/lut.ts` 분위기 4종 가중 LUT(낮 = 기존 그대로, 조각 재굽기 p99 ≈ 1.3 ms) + PostPipeline.setGrade. TSL `If` 스코프 함정 수정(광선 값 toVar — 검은 하늘). ADR-0108, 골든뷰 `docs/screenshots/M12/T03/after/`(6장).
+## Current Task: M12-T04 S2 원경 지면 분류 — 완료, PR 대기 (사용자 지시 2026-11-26: S1–S6 전부 자율 진행, 마지막 production 배포 승인만 질문)
+- Done: `landcover --prep`(osmium, hlodExtentWF 48 km — 30만 OSM 피처 + DEM 해면 → 3072² 16 m RGBA 2.59 MB, 88 s) + `landcover --build-id`(shared/landcover + world.json + ODbL README) + 렌더 `materials/landcover.ts`(HLOD 지형 월드 xz 샘플링 → 레이어 평균색·물) + 게임 지연 적재. ADR-0109, 골든뷰 `docs/screenshots/M12/T04/after/`.
+- ⚠️ 로컬 빌드 `20261018-82db354-aa09c5ca`에 landcover를 설치해 시험함(world.json 수정) — 배포는 새 빌드로만(같은 id 재게시 금지).
 - In progress: 없음.
-- Next step (정확히 한 걸음): M12-T04 S2(원경 지면 분류 `_SURF` — 파이프라인 HLOD 지형 + 렌더) 블록 추가 → 구현. 이후 S4 → S1 → S6 → 월드 재빌드 → 배포 승인 질문.
+- Next step (정확히 한 걸음): M12-T05 S4(빌드 때 정점 AO·하늘 가시도) 블록 추가 → 구현. 이후 S1 → S6 → 월드 재빌드(landcover --prep 포함) → 배포 승인 질문.
 - Blockers: 🔶 PAT(usage-cron ADR-0106, 사람 1회 — 2026-11-25 확인: 11-08 이후 `workflow_dispatch` 0회): fine-grained PAT(이 저장소, Actions: Read and write) → `pnpm --filter @sanpo/usage-cron exec wrangler secret put GITHUB_DISPATCH_TOKEN` → 다음 :00/:30 뒤 Actions에 `workflow_dispatch` 실행 확인 → `gh variable set USAGE_CRON_ACTIVE --body true`. 🔶 측량법 승인(03 §6.1 — production 공개 중인데 승인번호 미표기). ODPT 키 없음.
 - ⚠️ 발견(2026-11-26): ① 원경 지형 미표시 → M12-T02에서 수정. ② 상공(300 m+)에서 군중 처음 채우기가 끝나지 않는다(`crowd-sim.ts` spawnCandidate `halfExtents.y = 150` — 플레이어 높이 기준) → 항공 골든뷰 ready 안 됨·원경 군중 0. ③ 골든 ready가 HLOD 도착 전에 나는 경우가 있다(aerial-shinjuku-400m 1회 원경 0).
 
 ## Recently Completed
+- M12-T04 S2 원경 지면 분류(2026-11-27, 브랜치 `claude/m12-s2-hlod-surf`, ADR-0109): 토지피복 텍스처 1장(공원·물·바다·선로·도로) → HLOD 지형. Docker Desktop 백엔드가 낡은 유닉스 소켓(`AppData/Local/Docker/run/dockerInference`, 11-01)을 못 지워 시작 실패 → run 폴더를 `run.stale-20261127`로 치우고 재시작해 해결.
 - M12-T03 S5 도시 연무·분위기 그레이딩(2026-11-26, 브랜치 `claude/m12-s5-haze-lut`, ADR-0108): 맑은 날 도시 연무(계절 시정 39 ↔ 16 km)·흐림/황혼/밤 LUT. 실사 사진 기반 맞춤은 사용권 있는 참조 사진이 생기면(⚠️ 사람).
 - M12-T02 HLOD 지형 회귀(2026-11-26, 브랜치 `claude/m12-hlod-terrain`): 선컴파일 더미 u16 위치가 실제 f32 셀과 같은 three 파이프라인 캐시 키를 써서(배열 타입 미포함) 실제 HLOD 셀이 잘못된 정점 형식으로 그려짐 → 더미를 디코더 규약 형식 + `buildGeometry`로. L0 더미(파사드·노면 표시·전선·랜드마크)도 u16 → f32로 맞춤. 항공·지상 골든뷰 확인.
 - M12-T01 HLOD 파사드(2026-11-26, 브랜치 `claude/m12-t01-hlod-facade`, ADR-0107): 원경 건물 = L0 파사드 근사(레이어 평균 알베도·ORM × 팔레트 × 얼룩 평균, L0 클래스 표 창 격자·유리·블라인드·프레임 몫, 밤 점등 같은 칸, 커튼월 = 오피스 ≥ 22층, 밑동 AO). 서버·데이터 변화 0, HLOD 머티리얼 2개 그대로. 로드맵 M12 Visual Fidelity I 신설(확장은 M13+). perf(RTX 3050 노트북, 2쌍): 상공 비행 p50 +0.2 ms·장면 패스 비중 48.6 → 48.7 %, 도보는 열 상태 변동으로 판정 보류(같은 열 쌍 +0.3 / +1.9 ms).

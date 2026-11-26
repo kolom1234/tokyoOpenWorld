@@ -96,6 +96,7 @@ export function worldJson(o: { buildId: string; area: AreaDef }): string {
       materials: 'shared/materials/manifest.json',
       rail: 'global/rail.bin',
       map: 'global/map.pmtiles',
+      landcover: 'shared/landcover/landcover.json',
     },
     createdAt: createdAtOf(o.buildId),
   };

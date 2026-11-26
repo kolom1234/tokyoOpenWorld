@@ -119,7 +119,7 @@ runHlod({ area, buildId, normalizedDir, derivedDir, outDir, levels, log, overrid
 buildL1(key, { l0Buildings, dem1m, farDem, far, overrides? }, ratio);   // overrides = 랜드마크를 L0와 같은 셸·부품으로(대체 건물 대신, ADR-0068)
   buildFarLevel(key, far, dem, params)  // → ChildGeometry[16] → encodeHlod
 ```
-- 실행: `docker/run.sh node tools/pipeline/src/cli.ts hlod-prep [--step buildings|dem] [--workers 14]` → `build` → `hlod --build-id <id>` → `validate`.
+- 실행: `docker/run.sh node tools/pipeline/src/cli.ts hlod-prep [--step buildings|dem] [--workers 14]` → `build` → `hlod --build-id <id>` → `validate`. 원경 지면 분류(M12-T04, ADR-0109): `docker/run.sh pnpm pipeline landcover --prep`(osmium — `stages/hlod/landcover.ts`: 분류·칠하기 순서 녹지 → 물 → 선로 → 도로·해면·16 m 비율 PNG) → `pnpm pipeline landcover --build-id <id>`(`cli-landcover.ts` — shared/landcover + world.json + ODbL README 고지, Node만).
 - 예산: L1 3e6 B, L2/L3 2e6 B(10진). 초과 시 L1 비율 × 0.6ⁿ, L2/L3 박스 × 0.6ⁿ·매스 격자 × 2(≤ 4회).
 
 ## Publish (M02-T06, ADR-0026)
