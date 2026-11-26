@@ -66,8 +66,9 @@ async function withRetry<T>(what: string, fn: () => Promise<T>, log: Logger): Pr
   }
 }
 
-/** 공유 에셋: 머티리얼 KTX2 배열·manifest(M03-T01, materials --build-id가 설치), 오디오 Opus·manifest(M09-T04, audio --build-id). */
-const SHARED_FILE_RE = /^shared\/(materials\/[A-Za-z0-9_-]+\.(json|ktx2)|audio\/[A-Za-z0-9_-]+\.(json|ogg))$/;
+/** 공유 에셋: 머티리얼 KTX2 배열·manifest(M03-T01, materials --build-id가 설치), 오디오 Opus·manifest(M09-T04, audio --build-id), 원경 토지피복 PNG·json(M12-T04, landcover --build-id). */
+const SHARED_FILE_RE =
+  /^shared\/(materials\/[A-Za-z0-9_-]+\.(json|ktx2)|audio\/[A-Za-z0-9_-]+\.(json|ogg)|landcover\/landcover\.(json|png))$/;
 /** 전역 파일(M07): 철도 망·시간표, 지도(M10-T03 map.pmtiles), ODbL 파생 DB(M11-T05 global/odbl/). */
 const GLOBAL_FILE_RE =
   /^global\/(rail\.bin|map\.pmtiles|timetables\/[A-Za-z0-9_-]+\.json|odbl\/(osm-derived\.geojsonseq\.gz|osm-crossing-corrections\.json|README\.txt))$/;
@@ -82,7 +83,15 @@ export function buildFiles(dir: string): string[] {
         const relDir = relative(dir, p).replaceAll('\\', '/');
         if (
           /^L[0-3]$|^-?\d+$/.test(name) ||
-          ['shared', 'shared/materials', 'shared/audio', 'global', 'global/timetables', 'global/odbl'].includes(relDir)
+          [
+            'shared',
+            'shared/materials',
+            'shared/audio',
+            'shared/landcover',
+            'global',
+            'global/timetables',
+            'global/odbl',
+          ].includes(relDir)
         )
           walk(p);
         continue;
@@ -117,6 +126,7 @@ function contentType(path: string): string {
   if (path.endsWith('.txt')) return 'text/plain; charset=utf-8';
   if (path.endsWith('.gz')) return 'application/gzip';
   if (path.endsWith('.ogg')) return 'audio/ogg';
+  if (path.endsWith('.png')) return 'image/png';
   return path.endsWith('.ktx2') ? 'image/ktx2' : 'application/octet-stream';
 }
 

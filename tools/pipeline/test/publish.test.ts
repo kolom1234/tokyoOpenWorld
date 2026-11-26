@@ -128,7 +128,7 @@ describe('s3 uploader', () => {
 });
 
 describe('publish', () => {
-  it('lists shared/materials manifest and KTX2 arrays but no other shared files', () => {
+  it('lists shared/materials manifest and KTX2 arrays, land cover (M12-T04) but no other shared files', () => {
     const dir = mkdtempSync(join(tmpdir(), 'sanpo-publish-'));
     try {
       mkdirSync(join(dir, 'shared', 'materials'), { recursive: true });
@@ -136,6 +136,9 @@ describe('publish', () => {
       for (const f of ['manifest.json', 'albedo.ktx2', 'notes.txt'])
         writeFileSync(join(dir, 'shared', 'materials', f), 'x');
       writeFileSync(join(dir, 'shared', 'readme.json'), 'x');
+      mkdirSync(join(dir, 'shared', 'landcover'), { recursive: true });
+      for (const f of ['landcover.json', 'landcover.png', 'work.png'])
+        writeFileSync(join(dir, 'shared', 'landcover', f), 'x');
       writeFileSync(join(dir, '.work', 'dem.tif'), 'x');
       writeFileSync(join(dir, 'world.json'), '{}');
       mkdirSync(join(dir, 'global'), { recursive: true });
@@ -149,6 +152,8 @@ describe('publish', () => {
         'global/odbl/README.txt',
         'global/odbl/osm-crossing-corrections.json',
         'global/odbl/osm-derived.geojsonseq.gz',
+        'shared/landcover/landcover.json',
+        'shared/landcover/landcover.png',
         'shared/materials/albedo.ktx2',
         'shared/materials/manifest.json',
         'world.json',
