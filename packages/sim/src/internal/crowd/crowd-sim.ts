@@ -18,6 +18,9 @@ import { type CrossingHit, crossingPoints, keepLeftLat, type V3 } from './route.
 const KIND = 0x70656441; // 'pedA'
 const xz = (p: V3) => ({ x: p.x, z: p.z });
 const HALF = { x: 8, y: 6, z: 8 };
+/** 스폰 후보 세로 반폭: 지상(도보·차량)은 ±150 m(가까운 층), 그보다 높은 자유비행 카메라는 이 높이(WF y, TP — 지하 승강장보다 아래)까지 닿게(M12-T08). */
+const SPAWN_REACH_Y = 150;
+const SPAWN_FLOOR_Y = -100;
 /** 시야 밖 판정: 카메라 전방과 이 각보다 벌어지면(cos). */
 const OUT_OF_VIEW_COS = Math.cos((65 * Math.PI) / 180);
 
@@ -78,12 +81,16 @@ function randomWalkPoint(nav: NavWorld, center: V3, r: number, seed: number): V3
   return q.randomPoint;
 }
 
-/** 면적 균일 스폰 후보: 원 안 무작위 xz → 가장 가까운 걷는 폴리곤(4 m 안, 세로 ±150 m — freecam 상공에서도). 연결성과 무관(섬 같은 작은 영역도). */
+/**
+ * 면적 균일 스폰 후보: 원 안 무작위 xz → 가장 가까운 걷는 폴리곤(4 m 안). 연결성과 무관(섬 같은 작은 영역도).
+ * 세로는 지상 ±150 m, 카메라가 그보다 높으면(자유비행 300 m+) SPAWN_FLOOR_Y까지 — 예전엔 ±150 m 고정이라 상공에서 후보 0 → 처음 채우기가 끝나지 않았다.
+ */
 function spawnCandidate(c: Ctx, center: V3, r: number, seed: number): V3 | undefined {
   const a = ((seed & 0xffff) / 0x10000) * Math.PI * 2;
   const d = Math.sqrt(((seed >>> 16) & 0xffff) / 0x10000) * r;
   const p = { x: center.x + Math.cos(a) * d, y: center.y, z: center.z + Math.sin(a) * d };
-  const q = c.nav.query.findNearestPoly(p, { filter: c.nav.allFilter, halfExtents: { x: 4, y: 150, z: 4 } });
+  const hy = Math.max(SPAWN_REACH_Y, center.y - SPAWN_FLOOR_Y);
+  const q = c.nav.query.findNearestPoly(p, { filter: c.nav.allFilter, halfExtents: { x: 4, y: hy, z: 4 } });
   if (!q.success || !q.nearestRef || (c.nav.navMesh.getPolyFlags(q.nearestRef).flags ?? 0) & NAV_FLAG.cross)
     return undefined;
   return q.nearestPoint;
