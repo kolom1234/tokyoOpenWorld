@@ -44,6 +44,7 @@ clock/(world-clock — 모드·운행일 요일, astronomy — suncalc → 도�
 IDM 단일 차로 수렴, 신호 사이클, 운동 프로파일(시간 점프 일관성), 시간표 컴파일, 날씨 전이 확률 합=1, 공휴일 판정, 밀도 곡선.
 
 ## Status
+M12-T08: `crowd/crowd-sim.ts spawnCandidate` 세로 반폭 = max(150, 카메라 y + 100) — 자유비행 상공(300 m+)에서도 처음 채우기가 끝난다(항공 골든 ready). 공개 API 변화 없음.
 M09-T05(ADR-0080): `SimDeps.holidays?: HolidaysFile { holidays: {date, name}[] }`(content/sim/holidays-jp.json — 법 규칙 생성 2026–2035) → `clock/holidays.ts` 표 → 운행일 `dayType` 휴일, `SimDeps.season?: SeasonTableFile { keys: {day, foliageTint, bloom, leafDensity, outfitPalette}[] }`(content/sim/season.json) → `season.ts` 보간 → environment().season, `CrowdParams.density.diurnalHoliday?[24]`(토·휴일 곡선 — 메인이 비(dayRatio)를 밀도 배율에 곱해 워커로).
 M09-T01(ADR-0076): `weather/{markov,wetness,live-mapper,service}.ts` — `SimService.weather: WeatherService{params, mode, stateId, setMode('auto'|'live'|'fixed', fixed?), setLive(LiveWeatherSample)}`, `SimDeps.weatherClimate`(content/sim/weather-climate.json — `WeatherClimateFile`), environment().weather·wind = 날씨(시각 순수 함수 — 다시 뽑기 마르코프 + 6 h 젖음 적분).
 M06-T07: `crowd/agent-fsm.ts` 늦은 출발 금지(`canMakeIt`)·대기 깊이 4.5 m, `crowd/crowd-sim.ts` 핫스팟 건너편 목적지(`acrossHotspot`)·`inspect()`(시험), `agents-detour` 분리 가중 1.5 — ADR-0067.
@@ -60,6 +61,7 @@ M03-T03: 시계·천문·environment(ADR-0029). M06-T01: sim.worker + SAB + 더�
 `test/traffic.test.ts`(M06-T05 수락): world-mini 차선 셀 병합(포털), IDM, 10분 교착 0·적신호 통과 0·메이지도리 평균 속도 비율 기록(⚠️ 0.36 < 0.4).
 `test/scramble-showcase.test.ts`(M06-T07 수락 — 리뷰 체크리스트 수치): world-mini 정오 3주기 — 대기 군집(끝 ≥ 8·합 ≥ 80·깊이 p90 2.5–6 m·가로 ≥ 0.6), 대각 20–40 %(실측 27 %), 출발 p50 ≤ 1.5·p90 ≤ 3 s, 점멸 출발 0, 차량 녹색 때 띠 안 ≤ 5명.
 M06-T06: 키네마틱 프레임 = 플레이어 60 m 안·공유 치수, 출력 중심 틱당 튐 < 0.3 m, 적·황 대기 중 횡단보도 위 정차 0(규칙 없으면 35 %).
+`test/crowd-altitude.test.ts`(M12-T08): 카메라 400·1,000 m에서도 지상과 같은 틱(≈ 95틱)에 처음 채우기 끝·사람 높이 = 지면.
 `test/crowd-lod.test.ts`(M06-T04 수락): 선 플레이어 총 950–1,000·틱 p95 ≤ 12 ms, 걷는 플레이어 승강격 100+회에 같은 사람 위치가 한 틱 0.25 m 넘게 안 튐.
 `test/crowd-agents.test.ts`(M06-T03 수락): world-mini 실데이터 스크램블 nav 64타일·신호 횡단, 횡단 띠로만 건너는 경로, 250명 적색 대기 → 녹색 동시 횡단 틱 p95 ≤ 12 ms·관통 0·내비 밖 0.
 `test/crowd-worker.test.ts`: SAB 이중 영역 게시·front 뒤집기, 더미 결정론·원 궤도·접선 yaw·anim/rate 인코딩.
