@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>別紙 — 測量成果の使用承認申請（TOKYO SANPO）</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 16mm 16mm; }
+  body { font-family: "Yu Gothic", "YuGothic", "Meiryo", sans-serif; font-size: 10.5pt; line-height: 1.6; color: #111; }
+  h1 { font-size: 13pt; text-align: right; font-weight: normal; margin: 0 0 4mm; }
+  h2 { font-size: 11pt; margin: 5mm 0 1.5mm; }
+  h3 { font-size: 10.5pt; margin: 3mm 0 1mm; text-decoration: underline; font-weight: normal; }
+  p, li { margin: 0 0 1mm; }
+  ol, ul { margin: 0 0 1mm; padding-left: 6mm; }
+  table { border-collapse: collapse; width: 100%; margin: 1mm 0 2mm; font-size: 9.5pt; }
+  th, td { border: 1px solid #555; padding: 1mm 2mm; vertical-align: top; text-align: left; }
+  th { background: #eee; font-weight: normal; white-space: nowrap; }
+  .page-break { break-before: page; }
+  .note { font-size: 9pt; color: #333; }
+  figure { margin: 2mm 0; }
+  figcaption { font-size: 9pt; color: #333; }
+</style>
+</head>
+<body>
+<h1>別紙</h1>
+
+<h2>【使用目的】</h2>
+<p>Webブラウザで動作する無料の3D散策ゲーム「TOKYO SANPO」（https://earthaimap.com）において、東京の地形を立体的に再現するため。</p>
+<p>利用者はWebブラウザ上で、実際の地理空間データから再現した仮想の東京を歩く・電車や車・自転車に乗る・上空を飛ぶなどして、街並みや景色を見て回る（戦闘・競争の要素はない）。インターネット上で広く一般に無料で公開する。</p>
+
+<h2>【システムの概要・機能】</h2>
+<ul>
+  <li>Webアプリケーション（WebGPU／WebGL2による3DCG）として構築し、インターネット上で一般に公開する。誰でもアクセスして操作できる。</li>
+  <li>地形・建物・道路・樹木等をあらかじめ加工した3Dデータ（独自形式のセルファイル）をWebサーバ（Cloudflare R2）に保存し、閲覧者のブラウザが視点の位置に応じて必要な範囲を読み込み、3DCGとして描画する。</li>
+  <li>測量成果は地形（地面の起伏）の作成にのみ使用する。建物・道路等は国土交通省 PLATEAU 3D都市モデル、OpenStreetMap 等のデータから作成する。</li>
+  <li>ゲーム内の2D地図画面は OpenStreetMap 等から作成した独自の地図であり、測量成果（標高値）は使用しない。</li>
+</ul>
+
+<h2>【使用する測量成果】</h2>
+<table>
+  <tr><th>(1)</th><td>基盤地図情報 数値標高モデル 1mメッシュ（DEM1A・航空レーザ測量）<br>2次メッシュ 533935、533945（作成年月日 2025年8月22日）</td></tr>
+  <tr><th>(2)</th><td>基盤地図情報 数値標高モデル 5mメッシュ（DEM5A・航空レーザ測量）<br>2次メッシュ 533935、533945（作成年月日 2025年8月22日）— (1)の欠測部の補完のみ</td></tr>
+  <tr><th>(3)</th><td>地理院タイル 標高タイル（基盤地図情報 数値標高モデル、PNG形式 dem_png）<br>ズームレベル14、タイル番号 x = 14541〜14566、y = 6436〜6461（676枚）</td></tr>
+</table>
+
+<h2>【測量地域】</h2>
+<p>下図「使用範囲図」のとおり。</p>
+<ul>
+  <li>(1)(2)：東京都渋谷区・新宿区を中心とする2次メッシュ 533935、533945 の範囲（赤枠）。</li>
+  <li>(3)：東京23区を中心とする約52km四方（東京都・神奈川県・埼玉県・千葉県の各一部を含む。青枠）。</li>
+</ul>
+
+<h2>【使用方法】</h2>
+<h3>・作成工程　詳細地形（ゲームの中心部：渋谷・原宿・新宿 約3.6km×5.4km とその周辺）</h3>
+<ol>
+  <li>基盤地図情報ダウンロードサービスから(1)(2)を取得する（JPGIS（GML）形式）。</li>
+  <li>GDAL により平面直角座標系第IX系（JGD2011）の1m間隔の格子に再標本化する（(1)は双一次補間、(1)の欠測部のみ(2)を双三次補間で補完、残る欠測は周囲からの逆距離加重補間）。</li>
+  <li>ゲーム用に地形を成形する：建物の底面の範囲を建物の最低地盤高で平坦化、車道を横断勾配2%の舗装面に整形、歩道を車道より0.15m高く（縁石）する。公園等は元の標高を維持する。</li>
+  <li>256m四方のセルごとに次の2種類を作成し、建物・道路等のデータとともに独自バイナリ形式（TKC）のセルファイルに格納する。
+    <ol type="a">
+      <li>表示用の三角形メッシュ（RTIN法で簡略化、鉛直誤差5cm以内。頂点に法線・空の見え方の係数・路面種別を付加）。</li>
+      <li>物理演算（歩行者・車両の接地判定）用の高さ格子（1m間隔 257×257点、0.01m単位の16ビット整数、gzip圧縮）。</li>
+    </ol>
+  </li>
+  <li>遠景用に、成形後の1m格子を4m間隔に簡略化したメッシュ（1km四方のセル）を作成する。</li>
+</ol>
+<h3>・作成工程　広域の遠景地形（東京23区を中心とする約52km四方）</h3>
+<ol>
+  <li>(3)の標高タイル676枚を取得する。</li>
+  <li>8m間隔の格子に再標本化し、遠景用のメッシュ（4m・16m・64m間隔、RTIN法で簡略化、1km・4km・16km四方のセル）を作成する。建物は PLATEAU 等から作成した簡略形状を重ねる。</li>
+  <li>データのない部分（海面）を海として扱い、遠景の地表の色分け（水面の判別）にも用いる。</li>
+</ol>
+<h3>・作成したデータの公開</h3>
+<p>作成したセルファイル等をWebサーバ（Cloudflare R2 オブジェクトストレージ）に保存し、ゲームが閲覧者のブラウザに配信して3DCGとして表示する。</p>
+
+<h3>・データの構造、編集方法及び精度等</h3>
+<ul>
+  <li>座標はゲーム独自のメートル座標（平面直角座標系第IX系を平行移動したもの）。</li>
+  <li>表示用メッシュは簡略化しており（平地では数十〜数百m規模の三角形）、色・質感はゲーム側で独自に付加する。標高値を数値・等高線・段彩として表示することはない。</li>
+  <li>編集は独自に作成したデータ変換プログラム（Node.js、GDAL）で行う。</li>
+  <li>高度な精度は必要としない。</li>
+</ul>
+
+<h3>・独自に用意する情報</h3>
+<p>建物（国土交通省 PLATEAU 3D都市モデル）、道路・鉄道・緑地・水部等（OpenStreetMap、PLATEAU）、地名（e-Stat 等）、樹木・人・車両・電車等の3Dモデル、天候・時刻・音響の表現。</p>
+
+<h3>・出力される地図の形態並びに精度（縮尺、色調、地図記号等）</h3>
+<p>3DCGによる立体表示のため固定の縮尺はなく、視点（地上の目線から上空まで）に応じて連続的に変化する。色調は写実的な表現（サンプル図参照）。地図記号は用いない。</p>
+
+<h3>・完成品の出力方法</h3>
+<ul>
+  <li>閲覧者のブラウザの画面上に3DCGとして表示する。標高値を数値で表示・出力・ダウンロードする機能はない。</li>
+  <li>配信データはゲーム表示用の独自バイナリ形式（glTF・gzip）であり、一般のGISソフトでそのまま読むことはできない。ただし閲覧者のブラウザが受信するデータであるため、解析すれば加工後の地形（成形済みの1m間隔の高さ格子を含む）を取り出すことは技術的には可能である。これは座標系・格子・値が加工により元の測量成果とは異なるものである。</li>
+</ul>
+
+<h3>・記録媒体の種類</h3>
+<p>Webサーバ（Cloudflare R2 オブジェクトストレージ）。</p>
+
+<h3>・プリントアウトする場合の配布対象</h3>
+<p>プリントアウトしたものを配布する予定はない。閲覧者はスクリーンショットやゲーム内の写真モードで画面の画像を保存できる。</p>
+
+<h3>・ネットワーク化の有無</h3>
+<p>ネットワーク化あり。インターネット上で広く一般に公開する。</p>
+
+<h3>・出典及び承認番号の表示</h3>
+<p>ゲーム画面の右下に出典（「標高: 国土地理院」等）を常時表示しており、承認後はここに承認番号を併記する。ゲーム内のクレジット画面にも出典・承認番号を記載する。</p>
+
+<h3>・データの更新</h3>
+<p>新しい版の測量成果への更新や、対象範囲の拡大（東京23区全体へ拡張予定）を行う場合は、改めて申請する。</p>
+
+<h3>・参考（申請対象外と考えるもの）</h3>
+<p class="note">地理院タイル「全国最新写真（シームレス）」ズームレベル18を、渋谷駅前の横断歩道4本の位置の照合（OpenStreetMap の線の平行移動量・幅の補正値の算出）に参照した。写真そのものはゲームのデータに含めず、表示もしない。</p>
+
+<div class="page-break"></div>
+<h2>【使用範囲図】</h2>
+<figure>
+<!-- 경위도 등장방형(경도 × cos 35.7°). 1° 위도 = 1000 px. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 560" width="100%" font-family="Yu Gothic, Meiryo, sans-serif">
+  <defs>
+    <style>
+      .grid { stroke: #ccc; stroke-width: 1; }
+      .glabel { font-size: 11px; fill: #666; }
+      .tile { fill: rgba(40,90,200,0.06); stroke: #2a5ac8; stroke-width: 2.5; }
+      .mesh { fill: rgba(220,30,30,0.10); stroke: #d01e1e; stroke-width: 2.5; }
+      .l0 { fill: none; stroke: #1a8a3a; stroke-width: 2; stroke-dasharray: 6 3; }
+      .pt { fill: #222; }
+      .ptl { font-size: 11px; fill: #222; }
+      .lab { font-size: 12px; }
+    </style>
+  </defs>
+  <!-- 범위: 경도 139.48–140.10, 위도 35.47–35.98 -->
+  <g id="plot"></g>
+</svg>
+<figcaption>青枠：(3) 標高タイル z14（x 14541〜14566、y 6436〜6461、676枚 — 経度 139.5044°〜140.0757°、緯度 35.4965°〜35.9602°）。赤枠：(1)(2) 2次メッシュ 533935・533945（経度 139.625°〜139.75°、緯度 35.5833°〜35.75°）。緑の破線：ゲームの詳細表示範囲（約3.6km×5.4km）。点は位置の目安（駅等の概略位置）。背景地図なしの模式図。</figcaption>
+</figure>
+<script>
+  // 정적 계산(인쇄 전 실행) — 좌표 → SVG
+  const LON0 = 139.48, LAT1 = 35.98, K = 1000, C = Math.cos(35.7 * Math.PI / 180), OX = 40, OY = 20;
+  const X = (lon) => OX + (lon - LON0) * C * K, Y = (lat) => OY + (LAT1 - lat) * K;
+  const g = document.getElementById('plot');
+  const add = (tag, attrs, text) => { const e = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text) e.textContent = text; g.append(e); return e; };
+  const rect = (w, s, e, n, cls) => add('rect', { x: X(w), y: Y(n), width: X(e) - X(w), height: Y(s) - Y(n), class: cls });
+  for (let lon = 139.5; lon <= 140.1001; lon += 0.1) { add('line', { x1: X(lon), y1: Y(35.98), x2: X(lon), y2: Y(35.47), class: 'grid' }); add('text', { x: X(lon) - 14, y: Y(35.47) + 14, class: 'glabel' }, lon.toFixed(1) + '°E'); }
+  for (let lat = 35.5; lat <= 35.9501; lat += 0.1) { add('line', { x1: X(139.48), y1: Y(lat), x2: X(140.1), y2: Y(lat), class: 'grid' }); add('text', { x: 2, y: Y(lat) + 4, class: 'glabel' }, lat.toFixed(1) + '°N'); }
+  rect(139.50439, 35.49646, 140.07568, 35.96022, 'tile');
+  add('text', { x: X(139.52), y: Y(35.94), class: 'lab', fill: '#2a5ac8' }, '(3) 標高タイル z14 676枚');
+  rect(139.625, 35.58333, 139.75, 35.66667, 'mesh');
+  rect(139.625, 35.66667, 139.75, 35.75, 'mesh');
+  add('text', { x: X(139.628), y: Y(35.735), class: 'lab', fill: '#d01e1e' }, '533945');
+  add('text', { x: X(139.628), y: Y(35.6517), class: 'lab', fill: '#d01e1e' }, '533935');
+  add('text', { x: X(139.628), y: Y(35.7575), class: 'lab', fill: '#d01e1e' }, '(1)(2) 2次メッシュ');
+  rect(139.68093, 35.65032, 139.72060, 35.69883, 'l0');
+  const pts = [['新宿駅', 139.7006, 35.6896, 0, -4], ['渋谷駅', 139.7016, 35.6580, 0, 14], ['東京駅', 139.7671, 35.6812, 0, -4], ['羽田空港', 139.7798, 35.5494, 0, -4], ['池袋駅', 139.7109, 35.7295, 0, -4], ['品川駅', 139.7387, 35.6285, 0, -4]];
+  for (const [n, lon, lat, dx, dy] of pts) { add('circle', { cx: X(lon), cy: Y(lat), r: 3, class: 'pt' }); add('text', { x: X(lon) + 5 + dx, y: Y(lat) + dy, class: 'ptl' }, n); }
+  add('text', { x: X(139.92), y: Y(35.56), class: 'ptl', fill: '#2a5ac8' }, '東京湾');
+</script>
+</body>
+</html>
