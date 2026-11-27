@@ -2,7 +2,7 @@
 Updated: 2026-11-27 (M12 S1–S6 production 반영 — 브랜치 `claude/m12-prod-records`)
 
 ## Current Milestone: M12 Visual Fidelity I (그래픽 개선 1단계 — 서버 요청 증가 0) — S1–S6 ✅ production 반영(2026-11-27). M11 ✅ 공개 https://earthaimap.com (2026-10-19)
-## Current Task: M12-T08 상공 군중 처음 채우기 — 완료(PR, 2026-11-27). production 반영 = 다음 코드 Deploy(사용자 승인). 다음 그래픽 단계(분석의 A등급 이하)는 사용자와 정한다.
+## Current Task: 없음 — M12-T08 상공 군중 처음 채우기 완료·production 반영(2026-11-27 Deploy e9b9b1a, 사용자 승인 — earthaimap.com 항공 골든 2장 군중 켠 채 ready, 군중 700·900). 다음 그래픽 단계(분석의 A등급 이하)는 사용자와 정한다.
 - Done: S1 `facades --prep`(컨테이너 /tmp unzip + magick 256 px → 7,595/44,292동 측정, 표본 4,950만) + facade-tint(렌더 예측 Lab 최근접, ΔE 3 이내 후보는 건물 해시 → 191 tint) + core facade-table·tslHash. S6 hlod L1 trees.inst(자식 L0 합침) + TreeField L0 겹침 숨김. ADR-0111·0112.
 - ⚠️ 로컬 빌드 `20261018-82db354-aa09c5ca`에 landcover를 설치해 시험함(world.json 수정) — 배포는 새 빌드로만(같은 id 재게시 금지).
 - 전체 빌드 1차 `20261126-7784be4-aa09c5ca`(main 7aec03c와 같은 트리, validate 0, L0 271 MB(+12 MB `_SKY`)·516파일 395 MB): 골든뷰에서 S1 회귀 — 색만으로 tint를 고르면 벽 그룹이 몰림(오피스 metal 69 %·맨션 plaster 78 %), 저층 오피스 띠창이 커튼월로 → 수정(해시 그룹 유지·회색 세계 화이트밸런스·커튼월 35 m 이상, ADR-0111 Amendment).
