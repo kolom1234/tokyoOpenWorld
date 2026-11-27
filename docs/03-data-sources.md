@@ -1,7 +1,7 @@
 # 03 — Data Sources & Licensing
 
 > 규칙: 여기 없는 데이터/에셋은 사용 금지. 추가 시 이 표 + `content/ATTRIBUTION.json` + `data/sources.lock.json` 동시 갱신.
-> ⚠ 표시 = 배포 전 원문 약관 재확인 필요. **M11-T05 감사(2026-10-19) 완료** — 결과·근거 원문 = §6.1. 남은 것은 ⚠가 아니라 🔶(사람 신청 대기) 1건: 국토지리원 측량법 제30조 사용 승인.
+> ⚠ 표시 = 배포 전 원문 약관 재확인 필요. **M11-T05 감사(2026-10-19) 완료** — 결과·근거 원문 = §6.1. 남은 것은 ⚠가 아니라 🔶(사람 신청 대기) 1건: 국토지리원 측량법 제30조 사용 승인(신청 자료 `docs/legal/gsi-30/`).
 
 ## 1. 지리 공간 데이터
 | ID | 데이터 | 제공 | 사용 레이어 | 라이선스 / 출처 표기 |
@@ -75,7 +75,7 @@
 | 대상 | 원문 | 결론 |
 |---|---|---|
 | PLATEAU | [PLATEAU FAQ](https://www.mlit.go.jp/plateau/faq/) 「手続き不要です… CC BY4.0等のオープンライセンス」「商用利用も可能です」, [사이트 폴리시](https://www.mlit.go.jp/plateau/site-policy/) PDL 1.0(CC BY 4.0 호환, ODbL과 함께 쓰는 것 허용), 가공 시 「を加工して作成」 별도 표기, 정부가 만든 것처럼 보이게 하지 말 것 | ✅ 표기 그대로. 측량법은 공공측량 성과 원본 입수 절차(오픈데이터 이용자 해당 없음) |
-| GSI DEM1A/5A(기반지도정보) | [측량성과 이용 절차](https://www.gsi.go.jp/LAW/2930-index.html)·[承認申請Q&A](https://www.gsi.go.jp/LAW/2930-qa.html): Q2-4 「…数値標高モデル…立体的な地図を作成するような場合は、測量法第30条に基づく『測量成果の使用承認申請書』の提出が必要」, Q5-4 기반지도정보는 무상 승인, Q4-3 수수료 없음, Q5-1 처리 7–14일, Q5-2 시스템·웹은 승인번호·출처를 표시 화면에 상시 | 🔶 **사용자 신청 필요** — [측량성과 원스톱 서비스](https://service.gsi.go.jp/onestop/)(사전 판단 [이용 절차 내비](https://service.gsi.go.jp/onestop/navi/index/)) → 「地図・空中写真等の複製または使用承認申請」 → 사용(제30조). 승인번호를 ATTRIBUTION `gsi-dem`·화면 오른쪽 아래 표기에 추가. **production 공개(M11-T06)는 승인 뒤** |
+| GSI DEM1A/5A(기반지도정보) | [측량성과 이용 절차](https://www.gsi.go.jp/LAW/2930-index.html)·[承認申請Q&A](https://www.gsi.go.jp/LAW/2930-qa.html): Q2-4 「…数値標高モデル…立体的な地図を作成するような場合は、測量法第30条に基づく『測量成果の使用承認申請書』の提出が必要」, Q5-4 기반지도정보는 무상 승인, Q4-3 수수료 없음, Q5-1 처리 7–14일, Q5-2 시스템·웹은 승인번호·출처를 표시 화면에 상시 | 🔶 **사용자 신청 필요** — [측량성과 원스톱 서비스](https://service.gsi.go.jp/onestop/)(사전 판단 [이용 절차 내비](https://service.gsi.go.jp/onestop/navi/index/)) → 「地図・空中写真等の複製または使用承認申請」 → 사용(제30조). 신청서 입력값·첨부 PDF(別紙·使用範囲図·完成見本)·따라 하기 = `docs/legal/gsi-30/`(2026-11-27 준비). 승인번호를 ATTRIBUTION `gsi-dem`·화면 오른쪽 아래 표기에 추가. **production 공개(M11-T06)는 승인 뒤** |
 | GSI 標高タイル·写真 | Q1-12 「地理院タイルは出典の明示のみで申請不要」(실시간 읽기), 콘텐츠 이용규약 PDL 1.0 | ✅ 사진 = 검증 전용(배포 없음). 標高タイル은 가공 재배포라 위 신청서에 함께 적는다(보수적) |
 | KSJ N02 | [N02 페이지](https://nlftp.mlit.go.jp/ksj/gml/datalist/KsjTmplt-N02-2024.html) 「2020年（令和2年）以降：オープンデータ（CC_BY_4.0）」 | ✅ 2025년도판 CC BY 4.0(상업 가능) |
 | Open-Meteo | [Terms](https://open-meteo.com/en/terms) 「You may only use the free API services for non-commercial purposes」, 비상업 예 = 구독·광고 없는 개인·비영리 사이트 | ✅ production 호출 0(LIVE_WEATHER=false). 켜면 크레딧 'Open-Meteo.com (CC BY 4.0)' |
